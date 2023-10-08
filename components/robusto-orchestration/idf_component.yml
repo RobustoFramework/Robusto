@@ -1,8 +1,0 @@
-version: "0.1.0"
-description: "Robusto orchestration component"
-url: https://github.com/RobustoFramework
-
-dependencies:
-  # Required IDF version
-  idf: ">=4.1"
-

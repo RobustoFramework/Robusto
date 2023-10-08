@@ -1,0 +1,9 @@
+# Kconfig file for Robusto v0.1.0
+menu "Robusto Configuration"
+    orsource "base/Kconfig"                   
+    orsource "network/Kconfig"
+    orsource "server/Kconfig"
+    orsource "ui/Kconfig"
+    orsource "misc/Kconfig"
+endmenu
+
