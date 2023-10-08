@@ -1,3 +1,4 @@
+[![Join the chat at https://app.gitter.im/#/room/!WtMzOtrXhykXImnhsr:gitter.im](https://badges.gitter.im/Join%20Chat.svg)](https://app.gitter.im/#/room/!WtMzOtrXhykXImnhsr:gitter.im?utm_source=badge&utm_medium=badge&utm_content=badge)
 # The Robusto framework
 
 ## Getting started
