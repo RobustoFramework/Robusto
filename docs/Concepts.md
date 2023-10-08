@@ -27,23 +27,29 @@ A [transmission medium](https://en.wikipedia.org/wiki/Transmission_medium) is so
 When to use [“medium” or “media”](https://proofed.com/writing-tips/word-choice-media-vs-mediums/) is kind of complex, so Robusto just uses either when it wants to. It seems to be mostly “media”, though.
 
 
-# Messages
+# Message
 A [message](https://en.wikipedia.org/wiki/Message) is, unsurprisingly, a unit of communication between two peers. In addition to the actual data being sent, it also has a preamble, with information of what kind of communication it is, if it has string data, binary data, or both.
 
 
-# Service
-Functionality that a Peer can provide to another peer.  
-For example, a peer has an UMTS modem and is able to forward information to sites on the internet. 
-Using that, a peer collecting some sensor data, can use that service to send MQTT message to mqtt.eclipseproject.io. 
+# Service 
+For example, a peer has an UMTS modem and is able to forward information to sites on the internet. Using that, a function collecting some sensor data, can use that service to send MQTT message to mqtt.eclipseproject.io. 
+Services are started and stopped depending on what runlevel (see below) the want to belong to.
 
+# Network service
+A network service is functionality that a Peer can provide to _another peers_, basically it is a callback to which requests are routed if they provide the proper service id.
+An example would be a service on a boat that collects speed and sensor data from legacy functions and sends it to an NMEA 2000 network. 
+
+## Combinations
+
+It is quite possible, and quite normal, to combine services and network services.
+One example is the Publisher Subscriber service in Robusto-misc, whose queue is started using a service. Code running on the same peer can interact with the service. But a network service is also started to respond to publications and subscription request.
 
 # Applications
 The things that the someone actually wants to happen.  
 Like an autopilot remote, reacting to user clicking a button, sending an NMEA2000 message to turn 10 degrees to starbord to the peer with the NMEA2000 service.
 
 # Runlevel
-Runlevels are levels of functionality, a concept taken from Linux init.
-In Robusto, it is the same, but the levels are different, only the first two levels is set by Robusto.
+Runlevels are levels of functionality, a concept taken from (Linux init)[https://en.wikipedia.org/wiki/Runlevel]. In Robusto, it is the same, but the levels are different, only the first two levels is set by Robusto.
 
 **Level 0**
 The system has not been initialized.
@@ -58,16 +64,13 @@ Asynchronous functionality can be used.
 
 **Level 3**
 High level services started. 
-The system can respond to queries.
+The system can respond to requests.
 
 **Level 4**
 The application is running in slept mode, an energy saving mode.
 It wakes up occationally to do the things it needs, and then goes to sleep again.
-It might be controlled by an orchestrator, to wake up in a timely mode.
+It might be controlled by an Conductor, to wake up in a timely mode.
 In this mode, the network be available, but peers, while remembered on a relation id level, might not be presented yet.
-
-
-TODO: Add a cached peer in RTC memory, and put the rest in flash.
 
 **Level 5**
 The application is running in woke mode. 
@@ -75,16 +78,19 @@ As in life, this means that the peer is fully aware aware and informed.
 Similarly, this take more effort, and therefore more energy,
 
 
- made by Robusto of different aspects of the conditions under which an application runs.  
+# Work in progress
+The following concepts are WIP and
+## Connection level
+The connection level is  made by Robusto of different aspects of the conditions under which an application runs.  
 They help applications gracefully adjust to a changing environment, and helps Robusto stay Robust.  
 A level is always either `high`, `medium`, `low` or `problem` and may concern things like connectivity, memory or load. 
 
 For example, a relation may have a poor connectivity, it is out of range for ESP-NOW or Wifi and has to resort to LoRa, its connection level will be `low`, and the application will have to adjust to the fact that it cannot send that picture right now, but a descriptive message will have to do. After a while, as the other peer moves close and the level increases to `medium`, pictures, but not moving images, may be sent as well. At some later point it went out of range completely and level become `problem`, and then all interaction will have to wait until until things work again. 
 
 
-# Groups
+## Groups
 A group, or peer group, is a group of peers that have decided that they have some relation to each other.  
 It is usable for things like communicating the same message to several peers, collect information from the group, sharing information on services, or just to group peers for other purposes. 
 
-Notably, the “Network” concept is absent from Robusto. Partly because Groups does all that’s needed but partly because there are already so many other “Networks”, like the Wi-fi network or the some carriers’ cell network. Also because “network” usually implies some specific technology or standard, like [802.11n](https://en.wikipedia.org/wiki/IEEE_802.11). Robusto is actively the opposite of that.
+
 
