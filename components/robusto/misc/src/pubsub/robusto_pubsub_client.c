@@ -1,4 +1,5 @@
 #include "robusto_pubsub_client.h"
+#if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
 #include <robusto_message.h>
 #include <robusto_peer.h>
 #include <robusto_network_service.h>
@@ -249,3 +250,4 @@ rob_ret_val_t robusto_pubsub_client_init(char *_log_prefix)
     pubsub_client_log_prefix = _log_prefix;
     return ROB_OK;
 };
+#endif

@@ -44,11 +44,11 @@
 #include <stdio.h>
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-#include "ble/ble_spp.h"
+#include <network/src/media/ble/ble_spp.h>
 #endif
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-#include <src/media/espnow/espnow_peer.h>
+#include <network/src/media/espnow/espnow_peer.h>
 #endif
 
 /* Used for creating new peer handles*/

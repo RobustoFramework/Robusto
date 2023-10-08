@@ -5,5 +5,6 @@ url: https://github.com/RobustoFramework
 dependencies:
   # Required IDF version
   idf: ">=4.1"
+  ssd1306: "^1.0"
   RadioLib:
     git: https://github.com/jgromes/RadioLib.git

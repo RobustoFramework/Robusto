@@ -28,11 +28,10 @@ FILE(GLOB rob_sources
 
 "server/src/*.c"
 "server/src/queue/*.c" 
-"server/rc/memory/*.*" 
+"server/src/memory/*.*" 
 "server/src/concurrency/*.c" 
 "server/src/repeater/*.*" 
 
-"ui/include/*.h"
 "ui/src/*.c"
 )
 
@@ -48,4 +47,5 @@ idf_component_register(
         esp_wifi esp_adc 
         # Screen
         ssd1306
+        
 )

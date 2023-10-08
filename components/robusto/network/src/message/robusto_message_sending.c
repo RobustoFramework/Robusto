@@ -35,13 +35,13 @@
 
 #ifdef ESP_PLATFORM
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-#include <src/media/i2c/i2c_messaging.h>
+#include <network/src/media/i2c/i2c_messaging.h>
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
-#include <src/media/lora/lora_messaging.hpp>
+#include <network/src/media/lora/lora_messaging.hpp>
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-#include <src/media/espnow/espnow_messaging.h>
+#include <network/src/media/espnow/espnow_messaging.h>
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 #include "../media/i2c/i2c_messaging.h"

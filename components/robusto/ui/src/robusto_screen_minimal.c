@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <robusto_logging.h>
 #include <robusto_system.h>
-#include "ssd1306.h"
+#include <ssd1306.h>
 #include <stdint.h>
 
 static ssd1306_handle_t ssd1306_dev = NULL;

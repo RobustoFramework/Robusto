@@ -14,9 +14,9 @@
 #include <robusto_logging.h>
 #include <robusto_system.h>
 #ifdef ESP_PLATFORM
-    #include <src/media/mock/mock_messaging.h>
+    #include <network/src/media/mock/mock_messaging.h>
 #else
-    #include "../components/robusto-network/src/media/mock/mock_messaging.h"
+    #include "../components/robusto/network/src/media/mock/mock_messaging.h"
 #endif
 /* We reserve the first byte that we use for internal signaling.
  * For example, when data has been transmitted, and how it went. */

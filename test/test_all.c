@@ -18,7 +18,9 @@
 #include "tst_message_building.h"
 #include "tst_system.h"
 #include "tst_media.h"
+#if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
 #include "tst_pubsub.h"
+#endif
 
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 #include "tst_message_sending_mock.h"
@@ -144,10 +146,10 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
-
+#if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     RUN_TEST(tst_pubsub); 
     robusto_yield();
-
+#endif
     // TODO: Add a message parsing unit test
 
     /**

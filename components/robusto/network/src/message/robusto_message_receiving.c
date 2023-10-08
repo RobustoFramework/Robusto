@@ -35,10 +35,10 @@
 #include <inttypes.h>
 #include <string.h>
 #ifdef ESP_PLATFORM
-#include <src/media/i2c/i2c_messaging.h>
-#include <src/media/espnow/espnow_messaging.h>
-#include <src/media/lora/lora_messaging.hpp>
-#include <src/media/mock/mock_messaging.h>
+#include <network/src/media/i2c/i2c_messaging.h>
+#include <network/src/media/espnow/espnow_messaging.h>
+#include <network/src/media/lora/lora_messaging.hpp>
+#include <network/src/media/mock/mock_messaging.h>
 #else
 #include "../media/i2c/i2c_messaging.h"
 #include "../media/mock/mock_messaging.h"
