@@ -1,0 +1,13 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/qos/robusto_qos_init.h" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/qos/robusto_qos_init.h">
+<area shape="rect" id="Node000001" title="QoS functionality initialization." alt="" coords="451,5,663,91"/>
+<area shape="rect" id="Node000002" href="$qos__heartbeat_8c.html" title="Robusto hearbeats implementation." alt="" coords="5,139,207,225"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="437,81,219,142,208,145,206,140,217,136,435,76"/>
+<area shape="rect" id="Node000003" href="$qos__recovery_8c.html" title="QoS failure recovery." alt="" coords="231,139,432,225"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="474,101,405,141,402,136,471,96"/>
+<area shape="rect" id="Node000004" href="$qos__scoring_8c.html" title="QoS scoring implementation." alt="" coords="456,139,657,225"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="559,106,559,139,554,139,554,106"/>
+<area shape="rect" id="Node000005" href="$qos__state_8c.html" title="The QoS state machine." alt="" coords="682,147,919,217"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="649,96,738,144,735,148,647,101"/>
+<area shape="rect" id="Node000006" href="$robusto__qos__init_8c.html" title="QoS functionality initialization." alt="" coords="944,139,1156,225"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="678,72,801,101,932,136,944,140,943,145,931,142,800,107,677,78"/>
+</map>

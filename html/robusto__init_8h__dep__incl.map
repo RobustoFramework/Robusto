@@ -1,0 +1,13 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;base/include/robusto_init.h" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;base/include/robusto_init.h">
+<area shape="rect" id="Node000001" title="Initialization functionality." alt="" coords="462,5,689,76"/>
+<area shape="rect" id="Node000002" href="$init__native_8c.html" title="Robusto initialization for the native platform (Linux/Windows/MacOS)." alt="" coords="5,124,207,210"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="448,70,336,95,219,127,208,130,206,125,217,121,335,90,447,65"/>
+<area shape="rect" id="Node000003" href="$init__robusto_8c.html" title="Initialization for Robusto." alt="" coords="231,124,432,210"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="496,85,416,126,413,121,493,80"/>
+<area shape="rect" id="Node000004" href="$robusto__misc__init_8c.html" title="Robusto misc initialization." alt="" coords="456,132,695,202"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="578,91,578,131,573,131,573,91"/>
+<area shape="rect" id="Node000005" href="$robusto__network__init_8c.html" title="Robusto networking initialization." alt="" coords="719,124,920,210"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="657,80,737,121,735,126,655,85"/>
+<area shape="rect" id="Node000006" href="$robusto__server__init_8c.html" title="Robusto server initialization." alt="" coords="944,124,1145,210"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="704,65,816,90,933,121,944,125,943,130,932,127,815,95,703,70"/>
+</map>

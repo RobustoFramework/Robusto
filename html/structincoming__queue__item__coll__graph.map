@@ -1,0 +1,9 @@
+<map id="incoming_queue_item" name="incoming_queue_item">
+<area shape="rect" id="Node000001" title=" " alt="" coords="61,183,208,208"/>
+<area shape="rect" id="Node000002" href="$structrobusto__message.html" title=" " alt="" coords="72,94,196,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="137,134,137,182,132,182,132,134"/>
+<area shape="rect" id="Node000003" href="$structmessage__context.html" title=" " alt="" coords="5,5,130,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="88,41,127,92,123,95,83,44"/>
+<area shape="rect" id="Node000004" href="$structrobusto__peer.html" title=" " alt="" coords="154,5,250,31"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="186,45,146,95,141,92,182,41"/>
+</map>

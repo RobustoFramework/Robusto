@@ -1,0 +1,34 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;server/src/repeater/robusto_repeater.c" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;server/src/repeater/robusto_repeater.c">
+<area shape="rect" id="Node000001" title="Base repeatomg functionality." alt="" coords="365,5,566,91"/>
+<area shape="rect" id="Node000002" href="$robusto__repeater_8h.html" title="Base repeating functionality." alt="" coords="320,139,449,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="434,93,405,129,401,126,430,89"/>
+<area shape="rect" id="Node000008" href="$robusto__server__init_8h_source.html" title=" " alt="" coords="153,139,296,165"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="366,94,267,135,265,130,364,89"/>
+<area shape="rect" id="Node000009" href="$robusto__concurrency_8h.html" title="Functionality for generic handling of concurrency; tasks/threads and their synchronization." alt="" coords="473,139,624,165"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="502,89,531,126,527,129,498,93"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="669,213,743,238"/>
+<area shape="poly" id="edge19_Node000001_Node000010" title=" " alt="" coords="564,89,602,111,638,137,669,168,692,199,688,202,665,171,635,141,599,116,561,94"/>
+<area shape="rect" id="Node000012" href="$robusto__logging_8h.html" title="Logging functionality." alt="" coords="5,139,129,165"/>
+<area shape="poly" id="edge15_Node000001_Node000012" title=" " alt="" coords="365,78,130,137,128,132,364,73"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="700,139,760,165"/>
+<area shape="poly" id="edge18_Node000001_Node000013" title=" " alt="" coords="568,86,687,131,685,136,566,91"/>
+<area shape="rect" id="Node000003" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="148,213,234,238"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="352,168,238,210,236,205,351,163"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="257,213,336,238"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="371,167,324,205,321,201,368,163"/>
+<area shape="rect" id="Node000006" href="$robusto__retval_8h.html" title="Return values functionality." alt="" coords="359,213,474,238"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="392,164,407,198,403,200,387,166"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="145,286,237,312"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="194,239,194,271,188,271,188,239"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="384,286,449,312"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="419,239,419,271,414,271,414,239"/>
+<area shape="poly" id="edge8_Node000008_Node000003" title=" " alt="" coords="221,166,205,200,200,198,216,164"/>
+<area shape="poly" id="edge10_Node000009_Node000003" title=" " alt="" coords="486,168,248,215,247,210,485,163"/>
+<area shape="poly" id="edge13_Node000009_Node000006" title=" " alt="" coords="527,168,452,208,450,203,525,163"/>
+<area shape="poly" id="edge11_Node000009_Node000007" title=" " alt="" coords="543,166,520,200,488,240,445,279,442,275,484,237,515,197,539,163"/>
+<area shape="poly" id="edge12_Node000009_Node000010" title=" " alt="" coords="576,163,667,204,665,209,574,168"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="548,213,645,238"/>
+<area shape="poly" id="edge14_Node000009_Node000011" title=" " alt="" coords="558,163,582,199,578,202,554,166"/>
+<area shape="poly" id="edge16_Node000012_Node000003" title=" " alt="" coords="89,163,159,203,156,207,87,168"/>
+<area shape="poly" id="edge17_Node000012_Node000007" title=" " alt="" coords="75,164,100,200,117,220,138,236,196,263,259,281,319,290,369,295,369,300,318,296,258,286,194,268,135,241,113,224,95,204,71,167"/>
+</map>

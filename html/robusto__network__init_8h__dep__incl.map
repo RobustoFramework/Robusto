@@ -1,0 +1,15 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_network_init.h" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_network_init.h">
+<area shape="rect" id="Node000001" title="The Robusto networking initialization." alt="" coords="580,5,790,91"/>
+<area shape="rect" id="Node000002" href="$incoming_8c.html" title="Handling of incoming messaging &#45; were the media put incoming messages." alt="" coords="5,139,207,225"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="565,69,400,99,219,142,208,145,206,140,217,136,399,94,564,64"/>
+<area shape="rect" id="Node000003" href="$robusto__message_8c.html" title="Robusto functionality for messages." alt="" coords="231,139,432,225"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="567,96,433,146,431,141,565,91"/>
+<area shape="rect" id="Node000004" href="$robusto__message__building_8c.html" title="Robusto messaging functionality." alt="" coords="456,139,657,225"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="636,103,599,141,596,137,632,100"/>
+<area shape="rect" id="Node000005" href="$robusto__peers_8c.html" title="The Robusto peer management." alt="" coords="681,147,947,217"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="738,100,782,144,778,148,734,103"/>
+<area shape="rect" id="Node000006" href="$robusto__qos__init_8c.html" title="QoS functionality initialization." alt="" coords="972,139,1184,225"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="805,85,960,136,972,141,970,146,958,142,803,90"/>
+<area shape="rect" id="Node000007" href="$robusto__network__init_8c.html" title="Robusto networking initialization." alt="" coords="1208,139,1409,225"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="805,62,991,91,1095,112,1197,136,1208,140,1207,145,1196,142,1094,117,990,96,804,67"/>
+</map>

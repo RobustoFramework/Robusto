@@ -1,0 +1,7 @@
+<map id="robusto_message" name="robusto_message">
+<area shape="rect" id="Node000001" title=" " alt="" coords="72,94,196,120"/>
+<area shape="rect" id="Node000002" href="$structmessage__context.html" title=" " alt="" coords="5,5,130,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="88,41,127,92,123,95,83,44"/>
+<area shape="rect" id="Node000003" href="$structrobusto__peer.html" title=" " alt="" coords="154,5,250,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="186,45,146,95,141,92,182,41"/>
+</map>

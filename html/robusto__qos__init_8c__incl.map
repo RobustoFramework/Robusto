@@ -1,0 +1,13 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/qos/robusto_qos_init.c" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/qos/robusto_qos_init.c">
+<area shape="rect" id="Node000001" title="QoS functionality initialization." alt="" coords="57,5,269,91"/>
+<area shape="rect" id="Node000002" href="$robusto__network__init_8h.html" title="The Robusto networking initialization." alt="" coords="5,139,158,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="131,93,102,129,98,126,127,89"/>
+<area shape="rect" id="Node000003" href="$robusto__qos__init_8h.html" title="QoS functionality initialization." alt="" coords="182,139,309,165"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="199,89,229,126,224,129,195,93"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="154,213,233,238"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="239,166,213,202,209,199,235,163"/>
+<area shape="rect" id="Node000005" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="256,213,342,238"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="256,163,283,199,279,202,252,166"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="253,286,345,312"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="302,239,302,271,296,271,296,239"/>
+</map>

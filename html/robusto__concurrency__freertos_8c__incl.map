@@ -1,0 +1,18 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;server/src/concurrency/robusto_concurrency_freertos.c" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;server/src/concurrency/robusto_concurrency_freertos.c">
+<area shape="rect" id="Node000001" title="The Robusto concurrency implementation for freeRTOS&#45;compatible platforms." alt="" coords="102,5,310,91"/>
+<area shape="rect" id="Node000002" href="$robusto__concurrency_8h.html" title="Functionality for generic handling of concurrency; tasks/threads and their synchronization." alt="" coords="131,139,282,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="209,91,209,124,204,124,204,91"/>
+<area shape="rect" id="Node000003" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="9,213,94,238"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="181,168,92,208,90,204,179,163"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="207,286,272,312"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="193,167,177,181,164,199,156,218,159,237,177,260,200,277,197,281,173,263,154,239,151,218,159,196,173,178,189,163"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="169,213,243,238"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="209,165,209,198,204,198,204,165"/>
+<area shape="rect" id="Node000007" href="$robusto__retval_8h.html" title="Return values functionality." alt="" coords="268,213,382,238"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="228,163,294,202,291,207,225,167"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="406,213,502,238"/>
+<area shape="poly" id="edge8_Node000002_Node000008" title=" " alt="" coords="249,163,399,205,397,211,248,168"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,286,98,312"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="54,239,54,271,49,271,49,239"/>
+<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="312,241,266,279,263,275,309,237"/>
+</map>

@@ -1,0 +1,78 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_peer.h" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_peer.h">
+<area shape="rect" id="Node000001" title="Provides the Robusto peer interface." alt="" coords="2361,5,2614,76"/>
+<area shape="rect" id="Node000002" href="$robusto__pubsub__client_8h_source.html" title=" " alt="" coords="5,124,207,210"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="2346,44,1892,46,1279,57,964,67,670,82,417,101,313,113,226,127,207,131,206,126,226,121,312,108,417,96,670,76,964,62,1279,51,1892,41,2346,39"/>
+<area shape="rect" id="Node000003" href="$robusto__incoming_8h_source.html" title=" " alt="" coords="282,258,493,343"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="2346,47,1886,57,1294,74,770,97,596,111,541,119,513,126,477,153,447,187,423,224,406,259,401,256,419,222,443,184,473,149,510,122,540,113,595,106,770,92,1294,68,1886,51,2346,42"/>
+<area shape="rect" id="Node000005" href="$incoming_8c.html" title="Handling of incoming messaging &#45; were the media put incoming messages." alt="" coords="169,525,371,611"/>
+<area shape="poly" id="edge26_Node000001_Node000005" title=" " alt="" coords="2346,45,1887,49,1290,60,998,71,741,85,543,103,474,114,428,127,373,150,333,174,301,208,272,259,260,293,252,328,247,401,252,469,262,524,257,525,247,470,242,401,247,327,255,291,268,257,297,205,329,170,371,145,426,121,473,109,542,98,740,80,997,66,1290,55,1887,43,2346,40"/>
+<area shape="rect" id="Node000007" href="$incoming__network_8c.html" title="Handling of incoming networking&#45;control&#45;related messaging." alt="" coords="567,391,768,477"/>
+<area shape="poly" id="edge27_Node000001_Node000007" title=" " alt="" coords="2347,48,1962,57,1476,74,1034,97,875,111,781,127,707,147,649,168,624,182,601,201,579,226,558,259,548,281,545,300,548,319,558,342,575,368,597,389,593,393,571,371,553,345,543,321,539,300,543,279,553,256,575,223,597,197,621,178,647,163,706,142,780,121,874,106,1034,91,1476,68,1961,52,2346,42"/>
+<area shape="rect" id="Node000009" href="$robusto__message_8h.html" title="Provides the Robusto messaging interface." alt="" coords="1905,124,2115,210"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="2347,81,2116,141,2115,136,2346,76"/>
+<area shape="rect" id="Node000011" href="$mock__messaging_8h.html" title="This is a mock implementation of a general messaging media." alt="" coords="793,258,995,343"/>
+<area shape="poly" id="edge30_Node000001_Node000011" title=" " alt="" coords="2346,45,2162,50,1930,63,1677,87,1549,105,1424,127,1307,154,1192,189,996,260,994,255,1190,184,1306,149,1423,121,1548,100,1676,82,1930,58,2161,45,2346,40"/>
+<area shape="rect" id="Node000013" href="$mock__recover_8c.html" title="Mock connection recovery implementation." alt="" coords="1019,258,1220,343"/>
+<area shape="poly" id="edge36_Node000001_Node000013" title=" " alt="" coords="2347,58,2128,84,1847,125,1693,152,1536,183,1379,219,1227,260,1221,262,1219,257,1225,255,1378,214,1535,178,1692,147,1846,120,2127,78,2346,53"/>
+<area shape="rect" id="Node000017" href="$robusto__peer_8c.html" title="The Robusto peer implementation." alt="" coords="2248,265,2506,336"/>
+<area shape="poly" id="edge37_Node000001_Node000017" title=" " alt="" coords="2470,90,2394,266,2389,264,2465,88"/>
+<area shape="rect" id="Node000018" href="$robusto__peers_8c.html" title="The Robusto peer management." alt="" coords="2530,265,2797,336"/>
+<area shape="poly" id="edge38_Node000001_Node000018" title=" " alt="" coords="2521,86,2642,263,2638,266,2516,89"/>
+<area shape="rect" id="Node000019" href="$robusto__presentation_8c.html" title="The Robusto peer presentation protocol implementation." alt="" coords="2821,258,3037,343"/>
+<area shape="poly" id="edge39_Node000001_Node000019" title=" " alt="" coords="2560,81,2858,255,2855,259,2557,86"/>
+<area shape="rect" id="Node000020" href="$qos__heartbeat_8c.html" title="Robusto hearbeats implementation." alt="" coords="3061,258,3263,343"/>
+<area shape="poly" id="edge40_Node000001_Node000020" title=" " alt="" coords="2603,79,2722,122,3062,255,3060,260,2720,126,2602,84"/>
+<area shape="rect" id="Node000021" href="$qos__recovery_8c.html" title="QoS failure recovery." alt="" coords="3287,258,3488,343"/>
+<area shape="poly" id="edge41_Node000001_Node000021" title=" " alt="" coords="2629,69,2849,121,3064,184,3275,255,3287,259,3285,264,3273,260,3062,189,2848,127,2627,74"/>
+<area shape="rect" id="Node000022" href="$qos__state_8c.html" title="The QoS state machine." alt="" coords="3513,265,3750,336"/>
+<area shape="poly" id="edge46_Node000001_Node000022" title=" " alt="" coords="2629,44,2858,54,3120,70,3347,92,3427,106,3474,122,3495,141,3504,162,3512,184,3527,208,3555,237,3585,263,3582,267,3552,241,3523,211,3507,186,3500,164,3491,144,3471,126,3426,111,3347,98,3120,75,2858,59,2628,49"/>
+<area shape="rect" id="Node000023" href="$lora__peer_8h.html" title="The LoRa peer implementation." alt="" coords="3537,124,3739,210"/>
+<area shape="poly" id="edge28_Node000001_Node000023" title=" " alt="" coords="2628,39,2808,44,3031,57,3275,81,3398,99,3519,121,3538,126,3536,131,3517,127,3398,104,3275,87,3030,62,2807,49,2628,45"/>
+<area shape="rect" id="Node000025" href="$mock__peer_8h_source.html" title=" " alt="" coords="3763,124,3964,210"/>
+<area shape="poly" id="edge31_Node000001_Node000025" title=" " alt="" coords="2629,43,2894,53,3217,69,3527,91,3655,105,3752,121,3763,124,3762,129,3751,127,3654,111,3527,97,3217,74,2894,58,2628,49"/>
+<area shape="rect" id="Node000027" href="$mock__queue_8h.html" title="Mock queue and worker implementation." alt="" coords="793,124,995,210"/>
+<area shape="poly" id="edge33_Node000001_Node000027" title=" " alt="" coords="2347,53,1879,82,1294,127,995,157,995,151,1294,121,1879,77,2346,47"/>
+<area shape="rect" id="Node000029" href="$qos__recovery_8h.html" title="QoS failure recovery." alt="" coords="3260,124,3461,210"/>
+<area shape="poly" id="edge42_Node000001_Node000029" title=" " alt="" coords="2629,51,2890,78,3040,98,3189,121,3260,136,3259,142,3188,127,3039,103,2889,83,2628,56"/>
+<area shape="rect" id="Node000030" href="$qos__scoring_8c.html" title="QoS scoring implementation." alt="" coords="3988,124,4189,210"/>
+<area shape="poly" id="edge45_Node000001_Node000030" title=" " alt="" coords="2629,42,2939,49,3327,64,3704,87,3859,103,3977,121,3988,124,3987,129,3976,127,3858,108,3703,93,3327,69,2938,55,2629,47"/>
+<area shape="rect" id="Node000004" href="$robusto__network__service_8h.html" title="Robusto service functionality." alt="" coords="333,391,543,477"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="411,356,424,390,419,392,406,358"/>
+<area shape="poly" id="edge6_Node000003_Node000005" title=" " alt="" coords="345,357,323,393,297,461,280,525,275,524,292,460,318,390,340,354"/>
+<area shape="poly" id="edge7_Node000003_Node000007" title=" " alt="" coords="491,347,579,388,576,393,489,352"/>
+<area shape="rect" id="Node000008" href="$incoming__queue_8c.html" title="The queue for incoming messages." alt="" coords="1113,391,1315,477"/>
+<area shape="poly" id="edge8_Node000003_Node000008" title=" " alt="" coords="508,331,556,341,682,359,781,366,880,373,1006,389,1113,408,1112,413,1006,394,879,379,780,372,681,364,555,346,507,336"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="375,488,325,527,322,523,372,484"/>
+<area shape="rect" id="Node000006" href="$incoming__service_8c.html" title="Handling of incoming service calls." alt="" coords="395,525,596,611"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="464,489,479,524,475,526,460,492"/>
+<area shape="poly" id="edge10_Node000009_Node000003" title=" " alt="" coords="1890,175,1206,208,830,232,674,246,556,260,493,273,492,267,555,255,674,241,830,227,1206,202,1890,170"/>
+<area shape="poly" id="edge11_Node000009_Node000007" title=" " alt="" coords="1890,189,1718,212,1619,217,1491,220,1427,224,1367,231,1316,243,1278,260,1268,269,1262,279,1257,301,1251,324,1244,335,1233,346,1193,363,1140,374,1078,380,1012,383,881,385,825,388,781,394,769,397,768,392,780,389,825,382,881,379,1011,377,1078,375,1139,369,1191,358,1230,341,1240,332,1246,322,1251,300,1257,277,1264,266,1275,255,1314,238,1366,226,1426,219,1491,215,1619,212,1718,207,1890,183"/>
+<area shape="poly" id="edge12_Node000009_Node000008" title=" " alt="" coords="1890,188,1718,212,1632,218,1522,224,1413,235,1369,246,1335,260,1314,278,1303,297,1293,319,1279,345,1246,393,1241,390,1274,342,1289,316,1298,294,1310,274,1333,255,1367,241,1412,230,1521,218,1632,213,1718,207,1890,183"/>
+<area shape="rect" id="Node000010" href="$mock__expectations_8c.html" title="Configures the mocking backend." alt="" coords="1347,258,1548,343"/>
+<area shape="poly" id="edge13_Node000009_Node000010" title=" " alt="" coords="1891,189,1732,219,1560,260,1549,263,1548,258,1559,255,1731,214,1890,184"/>
+<area shape="poly" id="edge14_Node000009_Node000011" title=" " alt="" coords="1890,178,1424,210,1182,234,1082,247,1007,260,996,263,994,258,1005,255,1082,241,1181,228,1424,205,1890,172"/>
+<area shape="poly" id="edge16_Node000009_Node000013" title=" " alt="" coords="1890,189,1718,212,1583,224,1478,229,1373,237,1240,260,1221,265,1220,260,1239,255,1372,232,1477,223,1583,219,1718,207,1890,184"/>
+<area shape="rect" id="Node000014" href="$robusto__message_8c.html" title="Robusto functionality for messages." alt="" coords="1572,258,1773,343"/>
+<area shape="poly" id="edge17_Node000009_Node000014" title=" " alt="" coords="1892,217,1774,262,1773,258,1890,212"/>
+<area shape="rect" id="Node000015" href="$robusto__message__building_8c.html" title="Robusto messaging functionality." alt="" coords="1797,258,1999,343"/>
+<area shape="poly" id="edge18_Node000009_Node000015" title=" " alt="" coords="1967,223,1936,259,1932,256,1963,219"/>
+<area shape="rect" id="Node000016" href="$robusto__message__sending_8c.html" title="Robusto functionality for receiving messages." alt="" coords="2023,258,2224,343"/>
+<area shape="poly" id="edge19_Node000009_Node000016" title=" " alt="" coords="2058,219,2089,256,2085,259,2054,223"/>
+<area shape="poly" id="edge20_Node000009_Node000017" title=" " alt="" coords="2130,208,2281,262,2279,267,2128,213"/>
+<area shape="poly" id="edge21_Node000009_Node000018" title=" " alt="" coords="2130,183,2314,214,2519,255,2547,262,2546,267,2517,260,2313,219,2130,188"/>
+<area shape="poly" id="edge22_Node000009_Node000019" title=" " alt="" coords="2130,171,2269,180,2439,196,2625,220,2809,255,2821,258,2820,263,2808,260,2624,226,2439,201,2269,185,2129,176"/>
+<area shape="poly" id="edge23_Node000009_Node000020" title=" " alt="" coords="2130,166,2310,170,2540,184,2795,211,2924,230,3049,255,3062,258,3060,263,3048,260,2923,236,2794,216,2540,189,2310,176,2130,171"/>
+<area shape="poly" id="edge24_Node000009_Node000021" title=" " alt="" coords="2130,170,2394,181,2723,199,3043,224,3174,239,3275,255,3287,258,3286,263,3273,260,3174,244,3042,229,2723,204,2393,186,2130,175"/>
+<area shape="poly" id="edge25_Node000009_Node000022" title=" " alt="" coords="2130,169,2437,180,2832,197,3218,223,3378,238,3500,255,3531,262,3529,267,3499,260,3378,243,3218,228,2831,203,2436,185,2130,174"/>
+<area shape="rect" id="Node000012" href="$mock__messaging_8c.html" title="Mock messaging." alt="" coords="793,391,995,477"/>
+<area shape="poly" id="edge15_Node000011_Node000012" title=" " alt="" coords="897,358,897,391,891,391,891,358"/>
+<area shape="rect" id="Node000024" href="$lora__peer_8c.html" title="The LoRa peer implementation." alt="" coords="3775,258,3976,343"/>
+<area shape="poly" id="edge29_Node000023_Node000024" title=" " alt="" coords="3727,214,3800,255,3798,259,3725,219"/>
+<area shape="rect" id="Node000026" href="$mock__peer_8c.html" title="Mock peer implementation." alt="" coords="4000,258,4201,343"/>
+<area shape="poly" id="edge32_Node000025_Node000026" title=" " alt="" coords="3953,214,4026,255,4023,259,3950,219"/>
+<area shape="poly" id="edge34_Node000027_Node000011" title=" " alt="" coords="897,225,897,257,891,257,891,225"/>
+<area shape="rect" id="Node000028" href="$mock__queue_8c.html" title="Mock queue and worker implementation." alt="" coords="568,258,769,343"/>
+<area shape="poly" id="edge35_Node000027_Node000028" title=" " alt="" coords="811,219,742,259,740,255,808,215"/>
+<area shape="poly" id="edge43_Node000029_Node000021" title=" " alt="" coords="3375,224,3381,257,3376,258,3369,225"/>
+<area shape="poly" id="edge44_Node000029_Node000022" title=" " alt="" coords="3462,214,3561,262,3559,267,3459,219"/>
+</map>

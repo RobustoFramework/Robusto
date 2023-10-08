@@ -1,0 +1,30 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/robusto_network_init.c" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/robusto_network_init.c">
+<area shape="rect" id="Node000001" title="Robusto networking initialization." alt="" coords="198,5,400,91"/>
+<area shape="rect" id="Node000002" href="$robusto__network__init_8h.html" title="The Robusto networking initialization." alt="" coords="5,139,158,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,94,122,135,119,130,207,89"/>
+<area shape="rect" id="Node000003" href="$robusto__init_8h.html" title="Initialization functionality." alt="" coords="181,139,281,165"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="273,93,249,128,245,125,269,90"/>
+<area shape="rect" id="Node000005" href="$robusto__logging_8h.html" title="Logging functionality." alt="" coords="305,139,429,165"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="329,90,353,125,349,128,325,93"/>
+<area shape="rect" id="Node000009" href="$robusto__system_8h.html" title="Robusto generic system functions." alt="" coords="467,139,592,165"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="396,89,490,130,488,135,394,94"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="182,213,261,238"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="232,165,228,198,222,198,227,165"/>
+<area shape="rect" id="Node000006" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="335,213,420,238"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="371,164,376,198,371,198,366,165"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="437,286,502,312"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="354,167,340,182,327,200,321,219,325,237,339,249,364,261,424,283,422,288,362,266,337,254,321,240,315,219,322,198,336,179,351,163"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="321,286,413,312"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="378,239,373,272,368,271,373,238"/>
+<area shape="poly" id="edge9_Node000009_Node000006" title=" " alt="" coords="505,168,418,208,415,204,503,163"/>
+<area shape="poly" id="edge11_Node000009_Node000008" title=" " alt="" coords="519,167,501,188,485,214,477,243,473,271,468,271,471,242,480,212,497,185,515,163"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="687,213,756,238"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="563,163,676,205,674,210,561,168"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="495,213,564,238"/>
+<area shape="poly" id="edge12_Node000009_Node000011" title=" " alt="" coords="532,165,532,198,527,198,527,165"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="588,213,663,238"/>
+<area shape="poly" id="edge13_Node000009_Node000012" title=" " alt="" coords="547,163,600,202,596,206,544,167"/>
+<area shape="rect" id="Node000013" href="$robusto__retval_8h.html" title="Return values functionality." alt="" coords="780,213,895,238"/>
+<area shape="poly" id="edge14_Node000009_Node000013" title=" " alt="" coords="583,163,772,206,770,211,581,168"/>
+<area shape="poly" id="edge15_Node000013_Node000008" title=" " alt="" coords="781,241,517,291,516,286,779,235"/>
+</map>

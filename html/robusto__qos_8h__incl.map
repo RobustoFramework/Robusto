@@ -1,0 +1,54 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_qos.h" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/include/robusto_qos.h">
+<area shape="rect" id="Node000001" title="Robusto Quality&#45;of&#45;service functionality." alt="" coords="627,5,877,76"/>
+<area shape="rect" id="Node000002" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="877,419,963,444"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="877,41,970,54,1016,66,1060,82,1097,104,1128,132,1148,167,1155,209,1155,286,1150,315,1137,341,1117,362,1092,380,1034,407,978,423,976,418,1033,402,1089,376,1113,358,1132,338,1145,313,1149,285,1149,209,1142,169,1123,135,1094,108,1057,87,1015,71,969,59,877,47"/>
+<area shape="rect" id="Node000004" href="$robusto__media__def_8h.html" title="The definition of the media types." alt="" coords="681,198,823,223"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="755,77,755,183,749,183,749,77"/>
+<area shape="rect" id="Node000013" href="$robusto__peer__def_8h_source.html" title=" " alt="" coords="223,124,356,150"/>
+<area shape="poly" id="edge24_Node000001_Node000013" title=" " alt="" coords="627,70,364,123,363,118,626,65"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="874,492,966,518"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="923,445,923,477,917,477,917,445"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="788,221,828,239,873,265,916,300,934,321,949,344,954,360,952,377,940,407,935,405,947,376,948,361,944,346,930,324,912,304,870,269,825,244,786,226"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="563,492,627,518"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="782,222,855,258,897,283,936,312,968,343,989,376,994,394,994,411,988,429,977,446,953,463,918,477,827,495,727,504,642,506,642,501,726,498,826,489,917,472,951,459,973,442,983,427,988,410,989,394,984,378,964,346,933,316,894,287,852,263,779,226"/>
+<area shape="rect" id="Node000006" href="$robusto__retval_8h.html" title="Return values functionality." alt="" coords="632,419,747,444"/>
+<area shape="poly" id="edge6_Node000004_Node000006" title=" " alt="" coords="751,224,699,405,694,404,746,223"/>
+<area shape="rect" id="Node000007" href="$robusto__queue_8h.html" title="A template queue and the base worker. TODO: This should probably be reworked somehow." alt="" coords="529,271,647,297"/>
+<area shape="poly" id="edge8_Node000004_Node000007" title=" " alt="" coords="725,226,630,267,628,263,723,221"/>
+<area shape="poly" id="edge7_Node000006_Node000005" title=" " alt="" coords="675,447,624,485,621,481,672,443"/>
+<area shape="poly" id="edge9_Node000007_Node000002" title=" " alt="" coords="647,285,723,289,806,299,879,317,907,329,926,343,934,358,936,374,932,405,927,404,931,374,929,359,922,347,904,333,878,322,805,305,722,295,647,290"/>
+<area shape="poly" id="edge10_Node000007_Node000005" title=" " alt="" coords="564,300,520,325,474,360,457,380,446,401,443,422,452,443,471,463,495,479,522,489,549,496,547,501,521,494,493,483,468,468,447,446,438,422,441,399,452,377,470,356,517,321,561,295"/>
+<area shape="poly" id="edge17_Node000007_Node000006" title=" " alt="" coords="619,295,651,315,678,344,690,374,693,403,688,404,685,375,674,346,647,319,616,300"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="307,419,381,444"/>
+<area shape="poly" id="edge11_Node000007_Node000008" title=" " alt="" coords="530,297,467,316,436,329,407,347,378,376,358,407,354,405,374,373,404,343,433,325,466,311,528,292"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="243,345,336,371"/>
+<area shape="poly" id="edge12_Node000007_Node000009" title=" " alt="" coords="538,300,350,345,349,340,536,295"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="461,419,558,444"/>
+<area shape="poly" id="edge13_Node000007_Node000010" title=" " alt="" coords="558,300,527,319,513,331,502,346,498,360,497,375,502,404,497,405,491,375,492,359,498,344,509,328,523,314,555,295"/>
+<area shape="rect" id="Node000011" href="$robusto__logging_8h.html" title="Logging functionality." alt="" coords="789,345,912,371"/>
+<area shape="poly" id="edge14_Node000007_Node000011" title=" " alt="" coords="633,295,793,338,792,343,632,300"/>
+<area shape="rect" id="Node000012" href="$robusto__concurrency_8h.html" title="Functionality for generic handling of concurrency; tasks/threads and their synchronization." alt="" coords="512,345,664,371"/>
+<area shape="poly" id="edge18_Node000007_Node000012" title=" " alt="" coords="591,297,591,330,585,330,585,297"/>
+<area shape="poly" id="edge15_Node000011_Node000002" title=" " alt="" coords="864,369,900,406,896,410,860,373"/>
+<area shape="poly" id="edge16_Node000011_Node000005" title=" " alt="" coords="842,373,808,409,760,447,700,476,642,495,640,490,698,471,757,442,805,405,839,369"/>
+<area shape="poly" id="edge19_Node000012_Node000002" title=" " alt="" coords="645,369,863,415,862,421,644,374"/>
+<area shape="poly" id="edge20_Node000012_Node000005" title=" " alt="" coords="591,371,596,477,591,477,586,371"/>
+<area shape="poly" id="edge22_Node000012_Node000006" title=" " alt="" coords="607,369,662,408,659,412,604,373"/>
+<area shape="poly" id="edge21_Node000012_Node000008" title=" " alt="" coords="547,374,396,418,395,413,546,369"/>
+<area shape="poly" id="edge23_Node000012_Node000010" title=" " alt="" coords="576,373,535,411,531,407,573,369"/>
+<area shape="poly" id="edge25_Node000013_Node000002" title=" " alt="" coords="356,137,473,143,612,153,743,170,796,182,836,195,887,222,922,252,948,291,969,344,971,362,966,380,946,409,942,406,961,378,966,362,964,346,943,293,918,256,884,227,834,200,795,187,742,176,611,159,472,148,356,143"/>
+<area shape="poly" id="edge36_Node000013_Node000004" title=" " alt="" coords="357,146,667,193,666,199,356,151"/>
+<area shape="poly" id="edge27_Node000013_Node000005" title=" " alt="" coords="223,146,154,158,118,169,84,183,54,201,30,223,14,250,8,283,8,359,9,386,14,407,26,425,45,442,85,461,140,476,208,486,282,494,431,501,548,502,548,507,430,506,281,499,207,492,139,481,83,466,43,447,22,428,10,409,4,387,3,359,3,283,9,248,25,220,50,197,81,178,116,164,153,153,222,141"/>
+<area shape="poly" id="edge28_Node000013_Node000008" title=" " alt="" coords="283,152,258,191,231,247,222,278,218,310,221,340,233,369,245,384,260,397,294,414,292,419,257,401,241,388,228,372,216,342,213,310,217,277,226,245,253,188,278,149"/>
+<area shape="poly" id="edge26_Node000013_Node000009" title=" " alt="" coords="292,150,292,330,287,330,287,150"/>
+<area shape="rect" id="Node000014" href="$robusto__system_8h.html" title="Robusto generic system functions." alt="" coords="43,345,168,371"/>
+<area shape="poly" id="edge29_Node000013_Node000014" title=" " alt="" coords="260,153,223,172,189,200,163,232,143,267,116,332,111,330,138,265,159,229,185,196,221,167,258,148"/>
+<area shape="poly" id="edge30_Node000014_Node000002" title=" " alt="" coords="169,362,231,368,863,423,862,428,230,373,168,368"/>
+<area shape="poly" id="edge32_Node000014_Node000005" title=" " alt="" coords="132,369,218,409,296,442,363,461,432,476,548,495,547,500,431,481,362,466,294,447,216,414,129,374"/>
+<area shape="poly" id="edge35_Node000014_Node000006" title=" " alt="" coords="169,364,618,419,617,424,168,369"/>
+<area shape="poly" id="edge34_Node000014_Node000008" title=" " alt="" coords="147,369,294,412,292,418,145,374"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="149,419,217,444"/>
+<area shape="poly" id="edge31_Node000014_Node000015" title=" " alt="" coords="120,369,161,406,157,410,117,373"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="57,419,125,444"/>
+<area shape="poly" id="edge33_Node000014_Node000016" title=" " alt="" coords="106,371,99,405,93,403,100,370"/>
+</map>

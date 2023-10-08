@@ -1,0 +1,38 @@
+
+# Arduino Library Development file
+.development
+
+# Atom
+*.tags
+*.tags1
+
+# VS Code
+.vscode
+*.code-wor
+
+# Jetbrain IDEs
+.idea
+
+# PlatformIO
+.pio
+
+# cmake
+build
+
+# ESP-IDF dependencies
+managed_components
+dependencies.lock
+# Our secrets
+secret
+
+# Coverage output
+cov
+
+__pycache__
+
+#Configs
+/.config.*
+/Kconfig.*
+/sdkconfig*
+
+latex

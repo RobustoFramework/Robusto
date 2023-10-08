@@ -1,0 +1,9 @@
+<map id="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/media/i2c/i2c_messaging_arduino.cpp" name="/Users/nicklasborjesson/Documents/PlatformIO/Projects/Robusto/components/robusto&#45;network/src/media/i2c/i2c_messaging_arduino.cpp">
+<area shape="rect" id="Node000001" title="Arduino I2C implementation." alt="" coords="5,5,213,91"/>
+<area shape="rect" id="Node000002" href="$i2c__messaging_8h.html" title="I2C messaging implementation." alt="" coords="49,139,169,165"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,91,112,124,106,124,106,91"/>
+<area shape="rect" id="Node000003" href="$robconfig_8h.html" title="This includes the Robusto config generated configuration files." alt="" coords="66,213,152,238"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="112,165,112,198,106,198,106,165"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="63,286,155,312"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="112,239,112,271,106,271,106,239"/>
+</map>
