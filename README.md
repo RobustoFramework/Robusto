@@ -1,8 +1,8 @@
 # The Robusto framework
 
 ## Getting started
-That's not here, but [here](https://github.com/nicklasb/RobArch/edit/main/README.md).  ;-)<br />
-Here is where you learn about Robusto itself.
+That's not here, but [here](https://robustoframework.github.io/Robusto/index.html).  ;-)<br />
+This is where you learn about Robusto itself.
 
 ## Vision
 *A world where no tech builder has to choose between security, redundancy, maintainability and low cost.*
