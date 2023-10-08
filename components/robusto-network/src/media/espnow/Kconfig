@@ -1,0 +1,90 @@
+menu "ESP-NOW-configuration"
+	depends on ROBUSTO_SUPPORTS_ESP_NOW
+	choice ESPNOW_WIFI_MODE
+		prompt "WiFi mode"
+		default ESPNOW_WIFI_MODE_STATION
+		help
+			WiFi mode(station or softap).
+
+		config ESPNOW_WIFI_MODE_STATION
+			bool "Station"
+		config ESPNOW_WIFI_MODE_STATION_SOFTAP
+			bool "Softap"
+	endchoice
+
+	config ESPNOW_PMK
+		string "ESPNOW primary master key"
+		default "pmk1234567890123"
+		help
+			ESPNOW primary master for the example to use. The length of ESPNOW primary master must be 16 bytes.
+
+	config ESPNOW_LMK
+		string "ESPNOW local master key"
+		default "lmk1234567890123"
+		help
+			ESPNOW local master for the example to use. The length of ESPNOW local master must be 16 bytes.
+
+	config ESPNOW_CHANNEL
+		int "Channel"
+		default 1
+		range 0 14
+		help
+			The channel on which sending and receiving ESPNOW data.
+
+	config ESPNOW_SEND_COUNT
+		int "Send count"
+		default 100
+		range 1 65535
+		help
+			Total count of unicast ESPNOW data to be sent.
+
+	config ESPNOW_SEND_DELAY
+		int "Send delay"
+		default 1000
+		range 0 65535
+		help
+			Delay between sending two ESPNOW data, unit: ms.
+
+	config ESPNOW_SEND_LEN
+		int "Send len"
+		range 10 250
+		default 10
+		help
+			Length of ESPNOW data to be sent, unit: byte.
+
+	config ESPNOW_ENABLE_LONG_RANGE
+		bool "Enable Long Range"
+		default "n"
+		help
+			When enabling long range, the PHY rate of ESP32 will be 512Kbps or 256Kbps
+
+	menu "Testing"
+		config ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR
+			bool "This device begins and ends a test loop"
+			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING  
+			help
+				When testing the communication of several devices, a test loop is often constructed to test both sending and receiving of the same communication.
+
+				The loop starts with all devices except from the initiator starts listening. 
+				The first call is done by the initiator, that sends to the next and then starts listening. 
+				The next, in turn sends to the next. 
+				The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
+
+
+		config ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR
+			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT
+            hex "The MAC-address of the ESP-NOW-enabled peer to test, a 6-byte hex value."
+			default 0xFFFFFFFFFFFF
+			range 0x000000000000 0xFFFFFFFFFFFF
+			help
+				When doing physical testing of ESP-NOW peers, this is the address this peer will call upon when testing.
+				Write it as a large number, for example 0x01AB11BB12BC (6*8 bits)
+
+        config ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH
+            int "Kill switch GPIO - Makes ESP_NOW stop working when low"
+            default -1
+            help
+                Used for testing scoring.
+
+	endmenu                                             
+endmenu

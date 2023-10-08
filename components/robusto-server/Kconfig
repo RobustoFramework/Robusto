@@ -1,0 +1,49 @@
+menu "Repeater"
+	config ROBUSTO_MAX_RECURRENCES
+		int "Allocate memory for this many recurrence structs"
+		default 10
+		help
+			Recurrances are registered in an array that is pre-sized. 
+			To save memory or accomodate more recurrences, this value can be changed.
+	config ROBUSTO_REPEATER_DELAY_MS
+		int "The base sample delay for repeating in milliseconds"
+		default 100
+		help
+			This setting controls how often the base repeater system repeat.
+			A recurrence may execute at multiples of this frequency by providing 
+			the number of recurrences to skip.	
+
+endmenu
+menu "Memory"
+	config ROBUSTO_MONITOR_MEMORY
+		bool "Do memory monitoring"
+		default true
+		help
+			Enables or disables memory monitoring
+	config ROBUSTO_MONITOR_MEMORY_SKIP_COUNT
+		depends on ROBUSTO_MONITOR_MEMORY
+		int "How often do we check the memory (skip count * ROBUSTO_REPEATER_DELAY_MS)"
+		default 50
+		help
+			Memory will be measured every base sample if this is zero.
+			Default is 50 (default base sample delay * 50 ~ 5 seconds) 
+    config ROBUSTO_MONITOR_DANGER_USAGE
+        depends on ROBUSTO_MONITOR_MEMORY
+        int "Danger level usage"
+        default 120000
+        help
+            Sets the level when memory usage gets dangerously high. 
+            TODO: This should be reported, then trigger a reboot. Or perhaps trying to lower the runlevel first.
+    config ROBUSTO_MONITOR_WARNING_USAGE
+        depends on ROBUSTO_MONITOR_MEMORY
+        int "Warning level usage"
+        default 80000
+        help
+            Sets the level when Robusto starts warning about unusually high memory usage.
+            Note that these levels may be in the gigabytes on native platforms.
+            Here's 32 gigabytes for your copy & paste convenience: 32000000000.
+            TODO: Reaching the warning level should be reported, of course.
+            
+        
+            
+endmenu	

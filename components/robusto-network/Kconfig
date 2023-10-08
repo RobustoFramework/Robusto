@@ -1,0 +1,188 @@
+menu "Networking"
+	config ROBUSTO_SUPPORTS_BLE
+		bool "Load Bluetooth Low Energy (BLE) libraries"
+		help
+			Set this option to tell Robusto to load the Bluetooth library
+			https://en.wikipedia.org/wiki/Bluetooth_Low_Energy
+
+	orsource "src/media/ble/Kconfig"
+
+	config ROBUSTO_SUPPORTS_ESP_NOW
+		bool "Load ESP-Now libraries"
+		help
+			Set this option to tell Robusto to load the ESP-Now library
+			https://www.espressif.com/en/products/software/esp-now/overview
+
+	orsource "src/media/espnow/Kconfig"
+
+	config ROBUSTO_SUPPORTS_LORA
+		bool "Load LoRa libraries"
+		help
+			Set this option to tell Robusto to load the LoRa library
+			https://en.wikipedia.org/wiki/LoRa
+	
+	orsource "src/media/lora/Kconfig"             
+	
+	config ROBUSTO_SUPPORTS_I2C
+		bool "Load I2C libraries"
+		help
+			Set this option to tell Robusto to load the I2C wired library
+			https://en.wikipedia.org/wiki/I%C2%B2C
+		
+	orsource "src/media/i2c/Kconfig" 
+
+	config ROBUSTO_SUPPORTS_UMTS
+		bool "Load GSM/UMTS libraries"
+		help
+			Set this option to tell Robusto to load the esp-modem GSM library
+
+	orsource "src/media/gsm/Kconfig"
+
+	config ROBUSTO_PEER_NAME_LENGTH
+		int "Peer name length"
+		default 16
+		help
+			The length of the Robusto peer name. 
+
+	config ROBUSTO_PEER_NAME
+		string "The name of the peer"
+		default "UNNAMEDPEER"
+		help
+			The name of the peer 
+	config ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT
+		int "Heartbeat frequency (in skipped repeater ticks)"
+		default 50
+		help
+			This is how often each peer and media will be sent heartbeats.
+    config ROBUSTO_PEER_HEARTBEAT_PROBLEM_SKIP_COUNT
+        int "Heartbeat frequency when there are problems (in skipped repeater ticks)"
+        default 10
+        help
+            This is how often each peer and media will be sent heartbeats when a peer has problems.
+	config ROB_RECEIPT_TIMEOUT_MS
+		int "How many milliseconds will Robusto wait for a receipt?"
+		default 100
+		help
+			When working synchronously an not broadcasting, Robusto will wait for a short while until it gets a receipt from the receiver, saying that the CRC matched. 
+			This indicates that the message was transmitted properly, and can then be reported back to the sending app, if needed.
+			Usually, this is a quite the short time, as the receipt is just a few bytes and the receiver is supposed to do this immidiately, 
+			but networking congestion or other things man cause the receiver to have to wait a little.
+	   
+	menu "XPowersLib Configuration"
+		depends on  IDF_TARGET_ESP32
+		
+		choice PMU_Type
+			prompt "XPowers chip type"
+			default XPOWERS_CHIP_AXP2102 if IDF_TARGET_ESP32
+			default XPOWERS_CHIP_AXP192
+			help
+				Defines the default peripheral for xpowers example
+	
+			config XPOWERS_CHIP_AXP2102
+				bool "Xpowers AXP2101"
+			config XPOWERS_CHIP_AXP192
+				bool "Xpowers AXP192"
+		endchoice
+	
+		config I2C_MASTER_PORT_NUM
+			int "PMU I2C Port Number"
+			default 1
+			help
+				Port number for I2C Master device.
+	
+		config I2C_MASTER_FREQUENCY
+			int "Master Frequency"
+			default 100000
+			help
+				I2C Speed of Master device.
+	
+		config PMU_I2C_SCL
+			int "PMU SCL GPIO Num"
+			default 22
+			help
+				GPIO number for I2C PMU clock line.
+	
+		config PMU_I2C_SDA
+			int "PMU SDA GPIO Num"
+			default 21
+			help
+				GPIO number for I2C PMU data line.
+	
+		config PMU_INTERRUPT_PIN
+			int "PMU Interrupt Pin"
+			default 35
+			help
+				PMU interrupt pin.
+	
+	
+	endmenu 
+	menu "Testing & simulation"
+        config ROBUSTO_NETWORK_MOCK_TESTING
+            bool "Add a mock media type and run mock tests"
+            help
+                This causes the library to add a mock media type. These mocks mimics generic behaviours, 
+                making it possible to test non-media specific messaging code in an at least slightly realistic manner.
+                This is most useful when running the tests on a PC. Because of its speed, this makes tests run much faster.
+                
+        config ROBUSTO_NETWORK_INTEGRATION_TESTING
+            bool "Show integration testing settings"
+            help
+                This shows settings for running tests where Robusto peer actually calls each other and tests.
+        config ROBUSTO_NETWORK_QOS_TESTING
+            bool "Run in QoS testing mode"
+            help
+                This causes the library to run in QoS testing mode. 
+                It makes various settings that simulates disturbances available.
+                The mode is used to test Robustos ability to handle problematic situations, 
+                like glitching cables, radio interference or jamming (the bad kind).
+                This breaks unit- and integration testing as it changes the behaviour of the system, and thus cannot be combined. 
+        if ROBUSTO_NETWORK_INTEGRATION_TESTING && ROBUSTO_NETWORK_QOS_TESTING
+            comment "WARNING!! You should not have both integration testing and QoS testing enabled at the same time. WARNING!!"
+        endif
+		menu "QoS testing"
+			depends on ROBUSTO_NETWORK_QOS_TESTING
+			config ROBUSTO_NETWORK_QOS_INITIATOR 
+				bool "This module will initiate QOS testing"
+				help
+					If set, this module will be the one initiating QoS testing. 
+					
+					If now set, it will wait until being contacted, and. 
+					It will use the test settings under each available media (for example mac address or i2c address).
+					
+					
+
+		endmenu
+        choice ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA
+            bool "The media to start testing with"
+            help
+                Which media should we start testing with?
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_I2C
+                bool "I2C"
+                depends on ROBUSTO_SUPPORTS_I2C
+                help
+                    Start testing with I2C.
+                    
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_ESP_NOW
+                bool "ESP-NOW"
+                depends on ROBUSTO_SUPPORTS_ESP_NOW
+                help
+                    Start testing with ESP-NOW.
+            
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_LORA
+                bool "LORA"
+                depends on ROBUSTO_SUPPORTS_LORA
+                help
+                    Start testing with LoRa.
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_BLE
+                bool "BLE"
+                depends on ROBUSTO_SUPPORTS_BLE
+                help
+                    Start testing with BLE.
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_UMTS
+                bool "UMTS"
+                depends on ROBUSTO_SUPPORTS_UMTS
+                help
+                    Start testing with UMTS.
+        endchoice
+    endmenu
+endmenu

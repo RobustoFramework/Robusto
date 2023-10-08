@@ -1,0 +1,12 @@
+menu "Publisher Subscriber"
+	config ROBUSTO_PUBSUB_SERVER
+		bool "Enable the Robusto Pub-Sub server"
+		default false
+		help
+			Enable the Robusto Publisher-Subscriber server service.
+    config ROBUSTO_PUBSUB_CLIENT
+        bool "Enable the Robusto Pub-Sub client"
+        default false
+        help
+            Enable the Robusto Publisher-Subscriber client service.
+endmenu	

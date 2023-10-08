@@ -1,0 +1,2 @@
+orsource "components/**/Kconfig.projbuild"
+orsource ".pio/libdeps/STM32F03C8/**/Kconfig.projbuild"

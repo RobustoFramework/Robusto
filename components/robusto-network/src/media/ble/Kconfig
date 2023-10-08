@@ -1,0 +1,5 @@
+menu "BLE-configuration"
+    depends on ROBUSTO_SUPPORTS_BLE
+
+    
+endmenu

@@ -1,0 +1,83 @@
+/**
+ * @file i2c_messaging.c
+ * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @brief I2C messaging implementation
+ * @version 0.1
+ * @date 2023-02-19
+ *
+ * @copyright
+ * Copyright (c) 2022, Nicklas Börjesson <nicklasb at gmail dot com>
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "i2c_messaging.h"
+#if defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#include <robusto_logging.h>
+#include <robusto_time.h>
+#include <robusto_peer.h>
+#include <robusto_system.h>
+#include <robusto_message.h>
+#include <robusto_qos.h>
+#include "i2c_peer.h"
+
+#include <inttypes.h>
+
+
+#if !(defined(ESP_PLATFORM) && defined(ARDUINO))
+#include "stddef.h"
+#endif
+
+
+/* The log prefix for all logging */
+char *i2c_messaging_log_prefix;
+
+#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
+void i2c_do_on_poll_cb(queue_context_t *q_context)
+{
+
+    uint8_t *rcv_data = NULL;
+    robusto_peer_t *peer = NULL;
+    uint8_t prefix_bytes = NULL;
+    i2c_read_data(&rcv_data, &peer, &prefix_bytes);
+
+
+}
+
+void i2c_do_on_work_cb(media_queue_item_t *queue_item)
+{
+    ROB_LOGD(i2c_messaging_log_prefix, ">> In i2c work callback.");
+    send_work_item(queue_item, &(queue_item->peer->i2c_info), robusto_mt_i2c, &i2c_send_message, &i2c_do_on_poll_cb, i2c_get_queue_context());
+}
+
+
+#endif
+
+
+void i2c_messaging_init(char *_log_prefix)
+{
+    i2c_messaging_log_prefix = _log_prefix;
+    i2c_compat_messaging_init(i2c_messaging_log_prefix);
+}
+
+#endif
+
+

@@ -1,0 +1,74 @@
+# Kconfig file for Robusto v0.1.0
+
+
+menu "Robusto Configuration"
+
+    menu "Base system configuration"
+        config ROB_SYNCHRONOUS_MODE
+            bool "Run in synchronous mode"
+            default false
+            help
+                As some MCU:s have very limited resources, not only with regards to memory and computing power, but also lacks proper timers
+                and other features that are required for proper concurrency, Robusto has a synchronous mode. 
+                In this mode, no queues or other concurrent functionality is available, and no RTOS is required, enabling Robusto
+                to run on more limites MCUs. 
+                Monitoring and other services will not work in synchronous mode. 
+                NOTE #1: Synchronous mode is actually useful in some other cases, typically for testing functionality that doesn't depend on concurrency.
+                NOTE #2: For much more restricted MCU:s like the Arduino UNO or even the ATtiny45, which have only 256 bytes of program memory,
+                please use the specialized Robusto network libraries that specifically for that purpose.
+                
+        choice ROB_LOG_DEFAULT_LEVEL
+            prompt "Default log level"
+            default ROB_LOG_LEVEL_INFO
+            help
+                Select the maximum log level, nothing below this will be sent to output.
+            config ROB_LOG_LEVEL_NONE
+                bool "NONE"
+                help
+                    No log output will be written.
+                    I will also change the logging to use empty dummy implementations for logging in general, minimizing memory usage. 
+            config ROB_LOG_LEVEL_ERROR
+                bool "ERROR"
+                help
+                    Only write critical errors, that the system can not recover from.
+            config ROB_LOG_LEVEL_WARN
+                bool "WARN"
+                help
+                    Report warnings, that something has gone wrong but has been handled, or might get worse.
+            config ROB_LOG_LEVEL_INFO
+                bool "INFO"
+                help
+                    Write information messages which describe normal flow of events. 
+            config ROB_LOG_LEVEL_DEBUG
+                bool "DEBUG"
+                help
+                    Write debugging information, useful when troubleshooting and debugging
+            config ROB_LOG_LEVEL_VERBOSE
+                bool "VERBOSE"
+                help
+                    Even more detailed debugging information, often with memory dumps and large amounts of information. 
+        endchoice                                        
+
+        config ROB_LOG_MAXIMUM_LEVEL
+            int
+            default 0 if ROB_LOG_LEVEL_NONE
+            default 1 if ROB_LOG_LEVEL_ERROR
+            default 2 if ROB_LOG_LEVEL_WARN
+            default 3 if ROB_LOG_LEVEL_INFO
+            default 4 if ROB_LOG_LEVEL_DEBUG
+            default 5 if ROB_LOG_LEVEL_VERBOSE
+
+        config ROB_BLINK_GPIO
+            int "GPIO of a blink LED"
+            default -1
+            help
+                If > -1, the GPIO of a LED that can be used as an indicator.
+
+            
+    endmenu                    
+    orsource "../robusto-network/Kconfig"
+    orsource "../robusto-server/Kconfig"
+    orsource "../robusto-ui/Kconfig"
+    orsource "../robusto-misc/Kconfig"
+endmenu
+

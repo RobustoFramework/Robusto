@@ -1,0 +1,39 @@
+
+menu "Robusto Examples"
+    config ROBUSTO_EXAMPLE_HELLO_SERVER
+        bool "Server with hello service"
+        default false
+        help
+            A normal server setup with an example hello service registered. 
+            Code is located under examples/hello.
+
+    config ROBUSTO_EXAMPLE_HELLO_CLIENT
+        bool "The hello client"
+        default false
+
+        help
+            This is the client of the server, it means that it is will contact the server.
+            To configure the way to connect, look at the networking testing settings.
+
+    config ROBUSTO_EXAMPLE_BUTTONS
+        bool "This will make enable two GPIOs as buttons"
+        default false
+        help
+            This will enable two GPIOs as buttons, and will output information to serial out when
+            a button is pushed. If the OLED example is enabled, it will be updated as well.
+    config ROBUSTO_EXAMPLE_BUTTONS_GPIO_A
+        int "The GPIO of button A"
+        depends on ROBUSTO_EXAMPLE_BUTTONS
+        default -1
+    config ROBUSTO_EXAMPLE_BUTTONS_GPIO_B
+        int "The GPIO of button B"
+        depends on ROBUSTO_EXAMPLE_BUTTONS
+        default -1
+        
+    config ROBUSTO_EXAMPLE_HELLO_UI
+        bool "Run the hello ui"
+        
+        
+endmenu
+
+        

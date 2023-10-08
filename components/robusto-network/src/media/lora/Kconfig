@@ -1,0 +1,239 @@
+menu "Lora Config"
+	depends on ROBUSTO_SUPPORTS_LORA
+
+	choice LORA_CHIP
+		prompt "LoRa chip"
+		default LORA_SX127X
+		help 
+			Select LoRa chip to use
+		config LORA_SX127X
+			bool "Semtech SX127x"
+			help
+				Semtech SX127x (without TCXO): https://github.com/nopnop2002/esp-idf-sx127x	
+		config LORA_SX126X				
+			bool "Semtech SX126x"
+			help
+				Semtech SX126x (with TCXO): https://github.com/nopnop2002/esp-idf-sx126x
+	endchoice
+
+
+	choice LORA_FREQUENCY
+		prompt "Frequency to use"
+		default LORA_FREQUENCY_433MHZ
+		help
+			Carrier frequency in MHz. Allowed values range from 137.0 MHz to 1020.0 MHz, below are some common ones.
+			Select "other" if you want to tweak this if you notice a lot of traffic or interference on the common ones.
+			Note: Each area has its own rules with regards to what frequencies are allowed, you might break the law if you are not careful.
+			See https://www.thethingsnetwork.org/docs/lorawan/frequencies-by-country/ for more information.
+		config LORA_FREQUENCY_169MHZ
+			bool "169MHz"
+			help
+				Frequency is 169MHz.
+		config LORA_FREQUENCY_433MHZ
+			bool "433MHz"
+			help
+				Frequency is 433MHz.
+		config LORA_FREQUENCY_470MHZ
+			bool "470MHz"
+			help
+				Frequency is 470MHz.
+		config LORA_FREQUENCY_866MHZ
+			bool "866MHz"
+			help
+				Frequency is 866MHz.
+		config LORA_FREQUENCY_915MHZ
+			bool "915MHz"
+			help
+				Frequency is 915MHz.
+		config LORA_FREQUENCY_OTHER
+			bool "Other"
+			help
+				Other Frequency.
+	endchoice
+
+	config LORA_OTHER_FREQUENCY
+		depends on LORA_FREQUENCY_OTHER
+		int "Frequency to use[MHz]"
+		range 1 999
+		default 433
+		help
+			Frequency to use[MHz].
+
+	config LORA_ADVANCED
+		bool "Enable Advanced settings"
+		default false
+		help
+			Enable Advanced settings.
+
+	config LORA_CODING_RATE
+		depends on LORA_ADVANCED
+		int "Error coding rate."
+		range 5 8
+		default 5
+		help
+			LoRa link coding rate denominator. Allowed values range from 5 to 8."
+
+	config LORA_BANDWIDTH
+		depends on LORA_ADVANCED
+		int "Signal Bandwidth in hz"
+		range 10400 500000
+		default 125000
+		help
+			LoRa link bandwidth in kHz. Allowed values are 10400, 15600, 20800, 31250, 41700, 62500, 125000, 250000 and 500000 kHz.
+
+	config LORA_SF_RATE
+		depends on LORA_ADVANCED
+		int "Spreading Factor"
+		range 5 12
+		default 7
+		help
+			Spreading Factor.
+	config LORA_POWER
+		depends on LORA_ADVANCED
+		int "Output power"
+		range -9 22 if LORA_SX126X
+		range 2 20 if LORA_SX127X
+		default 7
+		help
+			Transmission output power in dBm. Allowed values range from 2 to 17 and 20 dBm.
+		
+	config LORA_GPIO_RANGE_MAX
+		int
+		default 33 if IDF_TARGET_ESP32
+		default 46 if IDF_TARGET_ESP32S2
+		default 19 if IDF_TARGET_ESP32C3
+		default 48 if IDF_TARGET_ESP32S3
+
+	config LORA_MISO_GPIO
+		int "MISO GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 19 if IDF_TARGET_ESP32
+		default 37 if IDF_TARGET_ESP32S2
+		default 37 if IDF_TARGET_ESP32S3
+		default  4 if IDF_TARGET_ESP32C3
+		help
+			Pin Number to be used as the MISO SPI signal.
+	config LORA_MOSI_GPIO
+		int "MOSI GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 23 if IDF_TARGET_ESP32
+		default 35 if IDF_TARGET_ESP32S2
+		default 35 if IDF_TARGET_ESP32S3
+		default  6 if IDF_TARGET_ESP32C3
+		help
+			Pin Number to be used as the MOSI SPI signal.
+	config LORA_SCK_GPIO
+		int "SCK GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 18 if IDF_TARGET_ESP32
+		default 36 if IDF_TARGET_ESP32S2
+		default 36 if IDF_TARGET_ESP32S3
+		default  5 if IDF_TARGET_ESP32C3
+		help
+			Pin Number to be used as the SCK SPI signal.
+
+
+	config LORA_CS_GPIO
+		int "NSS/CS GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 18 if IDF_TARGET_ESP32
+		default 34 if IDF_TARGET_ESP32S2
+		default 34 if IDF_TARGET_ESP32S3
+		default 7  if IDF_TARGET_ESP32C3
+		help
+			Pin Number where the NCS pin of the LoRa module is connected to on the MCU.
+
+	config LORA_RST_GPIO
+		int "RST GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 23 if IDF_TARGET_ESP32 && LORA_SX126X
+		default 14 if IDF_TARGET_ESP32 && LORA_SX127X
+		default 38 if IDF_TARGET_ESP32S2
+		default 38 if IDF_TARGET_ESP32S3
+		default 8  if IDF_TARGET_ESP32C3
+		help
+			Pin Number where the NRST pin of the LoRa module is connected to on the MCU.
+
+	config LORA_BUSY_GPIO
+		depends on LORA_SX126X
+		int "BUSY GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 32 if IDF_TARGET_ESP32
+		default 39 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+		default  3 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C2
+		help
+			Pin Number to be used as the BUSY signal on the Semtech SX126X.
+
+	config LORA_DIO_GPIO
+		int "DIO GPIO"
+		range 0 LORA_GPIO_RANGE_MAX
+		default 33 if IDF_TARGET_ESP32 && LORA_SX126X
+		default 26 if IDF_TARGET_ESP32 && LORA_SX127X
+		default 39 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+		default  3 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C2
+		help
+			Pin number of the pin used for the DIO. 
+			When this pin is set to HIGH, it triggers the interrupt that calls functions 
+			that notify the framework that there is data to read or that data has been sent.
+						
+	choice LORA_SPI_HOST
+		prompt "SPI peripheral that controls this bus"
+		default LORA_SPI2_HOST
+		help
+			Select SPI peripheral that controls this bus.
+		config LORA_SPI1_HOST
+			bool "SPI1_HOST"
+			help
+				Use SPI1_HOST. This is also called HSPI_HOST.¨
+				
+		config LORA_SPI2_HOST
+			bool "SPI2_HOST"
+			help
+				Use SPI2_HOST. This is also called HSPI_HOST.¨
+		
+		config LORA_SPI3_HOST
+			depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+			bool "SPI3_HOST"
+			help
+				USE SPI3_HOST. This is also called VSPI_HOST
+			
+	endchoice
+	
+	menu "Debugging"
+	
+		config RADIOLIB_DEBUG
+			bool "Enable RadioLib debugging"
+			help
+			  	Robusto uses the RadioLib library for radio communication. 
+			  	This setting enables debugging mode. 
+	endmenu
+		
+    menu "Testing"
+		
+		config ROB_NETWORK_TEST_LORA_LOOP_INITIATOR
+			bool "This device begins and ends a LoRa test loop"
+			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING
+			help
+				When testing the communication of several devices, a test loop is often constructed to test both sending and receiving of the same communication.
+
+				The loop starts with all devices except from the initiator starts listening. 
+				The first call is done by the initiator, that sends to the next and then starts listening. 
+				The next, in turn sends to the next. 
+				The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
+
+		config ROB_NETWORK_TEST_LORA_CALL_ADDR
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT
+
+            hex "The MAC-address of the LoRa-enabled peer to test, a 6-byte hex value."
+			default 0xFFFFFFFFFFFF
+			range 0x000000000000 0xFFFFFFFFFFFF
+			help
+				When doing physical testing of LoRa peers, this is the address this peer will call upon when testing.
+				Write it as a large number, for example 0x01AB11BB12BC (6*8 bits).
+        config ROB_NETWORK_TEST_LORA_KILL_SWITCH
+            int "Kill switch GPIO - Makes ESP_NOW stop working when low"
+            default -1
+            help
+                Used for testing scoring.
+	endmenu
+endmenu 
