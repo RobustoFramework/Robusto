@@ -99,7 +99,7 @@ void setup() {
     #endif
     #endif
     #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
-    ROB_LOGI(example_log_prefix, "Start hello conductor client");
+    ROB_LOGI(example_log_prefix, "Start example conductor client");
     init_conductor_client(example_log_prefix);
     conductor_client_call_server();
     #endif

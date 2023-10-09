@@ -64,7 +64,7 @@ menu "I2C Configuration"
         help
             Number of times the library tries to re-send through I2C before it considers it a failure.
     config SDP_SIM_I2C_BAD_CRC
-        int "| SIM | The number of times I2C will get a bad CRC32 on all requests"
+        int "| SIM | The number of times I2C will get a bad CRC32 on all requests"
         default 0
         depends on SDP_SIM   
         range 0 256
