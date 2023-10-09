@@ -85,7 +85,7 @@ menu "I2C Configuration"
                 The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
 
         config ROB_NETWORK_TEST_I2C_CALL_ADDR
-            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT || ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
             int "The I2C address to test"
             default -1
             help

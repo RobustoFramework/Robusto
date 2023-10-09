@@ -31,6 +31,7 @@
 
 #include "robusto_init.h"
 #include "robusto_system.h"
+#include "robusto_sleep.h"
 #include "robusto_logging.h"
 #include <sys/queue.h>
 
@@ -123,6 +124,7 @@ void init_robusto(){
     // TODO: Rethink initialization, consider runlevels and similar tools to be able to initialize libraries in stages.
     robusto_log_prefix = CONFIG_ROBUSTO_PEER_NAME;
     robusto_system_init(robusto_log_prefix);
+    robusto_sleep_init(robusto_log_prefix);
     robusto_init_compatibility();
 
     init_services(robusto_log_prefix);

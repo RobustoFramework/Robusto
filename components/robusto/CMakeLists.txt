@@ -4,6 +4,7 @@ FILE(GLOB rob_sources
 
 "base/src/init/*.c" 
 "base/src/logging/*.c" 
+"base/src/sleep/*.c" 
 "base/src/time/*.c" 
 "base/src/system/*.*" 
 

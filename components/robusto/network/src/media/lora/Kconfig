@@ -222,7 +222,7 @@ menu "Lora Config"
 				The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
 
 		config ROB_NETWORK_TEST_LORA_CALL_ADDR
-            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT || ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
 
             hex "The MAC-address of the LoRa-enabled peer to test, a 6-byte hex value."
 			default 0xFFFFFFFFFFFF

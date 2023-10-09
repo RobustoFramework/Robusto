@@ -8,7 +8,6 @@
 #include <robusto_message.h>
 #include <robusto_queue.h>
 #include <string.h>
-#include <esp_sleep.h>
 
 static robusto_peer_t *r_peer;
 const uint16_t serviceid = 1959;

@@ -61,4 +61,10 @@ menu "Base system configuration"
         help
             If > -1, the GPIO of a LED that can be used as an indicator.
 
+    config ROBUSTO_SLEEP_TIME_MS
+        int "Number of milliseconds to sleep"
+        default 30000
+        help
+            When robusto sleep is called, 
+
 endmenu                    

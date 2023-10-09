@@ -61,6 +61,9 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI
 #include "../ui/hello_ui.h"
 #endif
+#ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
+#include "../conductor/conductor_client.h"
+#endif
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #define NUM_RECORDS 100
@@ -95,7 +98,11 @@ void setup() {
     init_hello_client(example_log_prefix);
     #endif
     #endif
-
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
+    ROB_LOGI(example_log_prefix, "Start hello conductor client");
+    init_conductor_client(example_log_prefix);
+    conductor_client_call_server();
+    #endif
 
 }
 
