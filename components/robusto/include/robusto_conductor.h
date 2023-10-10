@@ -3,7 +3,6 @@
  * @file robusto_conductor.h
  * @author Nicklas Börjesson (nicklasb@gmail.com)
  * @brief Robusto conductor definitions
- * @todo Re-implement old orchestrator in Robusto (before winter)
  * @version 0.1
  * @date 2023-02-19
  *
@@ -32,27 +31,28 @@
  */
 
 #include <robusto_time.h>
+#include <inttypes.h>
 
 /* How long will we be running if no one extends our session */
-#define ROBUSTO_AWAKE_TIME_uS 40 * SECOND
+#define ROBUSTO_AWAKE_TIME_MS 40 * SECOND
 /* The most amount of time the peer gives itself until it goes to sleep */
-#define ROBUSTO_AWAKE_TIMEBOX_uS ROBUSTO_AWAKE_TIME_uS * 2
+#define ROBUSTO_AWAKE_TIMEBOX_MS ROBUSTO_AWAKE_TIME_MS * 2
 
 /* How long will each cycle be*/
-#define ROBUSTO_SLEEP_TIME_uS HOUR - ROBUSTO_AWAKE_TIME_uS
+#define ROBUSTO_SLEEP_TIME_MS HOUR - ROBUSTO_AWAKE_TIME_MS
 
-#if ROBUSTO_AWAKE_TIMEBOX_uS - ROBUSTO_SLEEP_TIME_uS > ROBUSTO_SLEEP_TIME_uS
-#error "ROBUSTO_AWAKE_TIMEBOX - ROBUSTO_SLEEP_TIME_uS  cannot be longer than the ROBUSTO_SLEEP_TIME_uS"
+#if ROBUSTO_AWAKE_TIMEBOX_MS - ROBUSTO_SLEEP_TIME_MS > ROBUSTO_SLEEP_TIME_MS
+#error "ROBUSTO_AWAKE_TIMEBOX - ROBUSTO_SLEEP_TIME_MS  cannot be longer than the ROBUSTO_SLEEP_TIME_MS"
 #endif
 /* Will we wait a little extra to avoid flooding? */
-#define ROBUSTO_AWAKE_MARGIN_uS 2000000
+#define ROBUSTO_AWAKE_MARGIN_MS 2000000
 
 /* How long should we sleep until next retry (in us) */
-#define ROBUSTO_ORCHESTRATION_RETRY_WAIT_uS 30000000
+#define ROBUSTO_ORCHESTRATION_RETRY_WAIT_MS 30000000
 
 
 /* Callbacks that are called before sleeping, return true to stop going to sleep. */
-typedef bool(before_sleep)();
+typedef bool (before_sleep)(void);
 
 
 /* Optional callback that happen before the system is going to sleep */
@@ -71,6 +71,6 @@ void sleep_until_peer_available(sdp_peer *peer, uint32_t margin_us);
 
 //  Availability When/Next messaging
 
-int sdp_orchestration_send_when_message(sdp_peer *peer);
-int sdp_orchestration_send_next_message(work_queue_item_t *queue_item);
-void sdp_orchestration_parse_next_message(work_queue_item_t *queue_item);
+int robusto_conductor_send_when_message(sdp_peer *peer);
+int robusto_conductor_send_next_message(work_queue_item_t *queue_item);
+void robusto_conductor_parse_next_message(work_queue_item_t *queue_item);

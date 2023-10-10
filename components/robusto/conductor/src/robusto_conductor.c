@@ -1,7 +1,7 @@
 /**
- * @file robusto_orchestration.c
+ * @file robusto_conductor.c
  * @author Nicklas Borjesson (nicklasb@gmail.com)
- * @brief Orchestration refers to process-level operations, like scheduling and timing sleep and timeboxing wake time
+ * @brief Conducting refers to process-level operations, like scheduling and timing sleep and timeboxing wake time
  * @version 0.1
  * @date 2022-11-20
  * 
@@ -10,11 +10,7 @@
  */
 
 #include "robusto_conductor.h"
-#ifdef ESP_PLATFORM
-#include <freertos/FreeRTOS.h>
-#include <freertos/timers.h>
-#include <esp_timer.h>
-#endif
+
 #include <robusto_sleep.h>
 
 #include <robusto_messaging.h>
@@ -34,7 +30,7 @@ static uint32_t requested_time = 0;
 
 RTC_DATA_ATTR int availibility_retry_count;
 
-// TODO: esp_timer_get_time returns an int64_t, apparently for making it easier to calculate time differences?
+// TODO: esp_timer_get_time returns an int32_t, apparently for making it easier to calculate time differences?
 // If so, should we do the same to avoid casting problems?
 
 /**
@@ -47,19 +43,19 @@ void update_next_availability_window()
     /* Next time  = Last time we fell asleep + how long we slept + how long we should've been up + how long we will sleep */
     if (get_last_sleep_time() == 0)
     {
-        next_time = SDP_AWAKE_TIME_uS + SDP_SLEEP_TIME_uS;
+        next_time = ROBUSTO_AWAKE_TIME_MS + ROBUSTO_SLEEP_TIME_MS;
     }
     else
     {
-        next_time = get_last_sleep_time() + SDP_SLEEP_TIME_uS + SDP_AWAKE_TIME_uS + SDP_SLEEP_TIME_uS;
+        next_time = get_last_sleep_time() + ROBUSTO_SLEEP_TIME_MS + ROBUSTO_AWAKE_TIME_MS + ROBUSTO_SLEEP_TIME_MS;
     }
-    ESP_LOGI(conductor_log_prefix, "Next time we are available is at %"PRIu64".", next_time);
+    ROB_LOGI(conductor_log_prefix, "Next time we are available is at %"PRIu32".", next_time);
 }
 
-void sdp_orchestration_parse_next_message(work_queue_item_t *queue_item)
+void robusto_conductor_parse_next_message(work_queue_item_t *queue_item)
 {
     queue_item->peer->next_availability = get_time_since_start() + atoll(queue_item->parts[1]);
-    ESP_LOGI(conductor_log_prefix, "Peer %s is available at %"PRIu64".", queue_item->peer->name, queue_item->peer->next_availability);
+    ROB_LOGI(conductor_log_prefix, "Peer %s is available at %"PRIu32".", queue_item->peer->name, queue_item->peer->next_availability);
 }
 
 /**
@@ -70,27 +66,27 @@ void sdp_orchestration_parse_next_message(work_queue_item_t *queue_item)
  * @param peer The peer to send the message to
  * @return int
  */
-int sdp_orchestration_send_next_message(work_queue_item_t *queue_item)
+int robusto_conductor_send_next_message(work_queue_item_t *queue_item)
 {
 
     int retval;
 
     uint8_t *next_msg = NULL;
 
-    ESP_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %"PRIu64, get_time_since_start());
-    /* TODO: Handle the 64bit loop-around after 79 days ? */
+    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %"PRIu32, get_time_since_start());
+    
     uint32_t delta_next = next_time - get_time_since_start();
-    ESP_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu64, delta_next);
+    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
     char * c_delta_next;
-    asprintf(&c_delta_next, "%"PRIu64, delta_next);
+    asprintf(&c_delta_next, "%"PRIu32, delta_next);
 
-    int next_length = add_to_message(&next_msg, "NEXT|%s|%i", c_delta_next, SDP_AWAKE_TIME_uS);
+    int next_length = add_to_message(&next_msg, "NEXT|%s|%i", c_delta_next, ROBUSTO_AWAKE_TIME_MS);
 
     if (next_length > 0)
     {
-        retval = sdp_reply(*queue_item, ORCHESTRATION, next_msg, next_length);
+        retval = robusto_reply(*queue_item, ORCHESTRATION, next_msg, next_length);
     }
     else
     {
@@ -106,18 +102,18 @@ int sdp_orchestration_send_next_message(work_queue_item_t *queue_item)
  *
  * @return int A handle to the created conversation
  */
-int sdp_orchestration_send_when_message(sdp_peer *peer)
+int robusto_conductor_send_when_message(robusto_peer *peer)
 {
     char when_msg[5] = "WHEN\0";
     return start_conversation(peer, ORCHESTRATION, "Orchestration", &when_msg, 5);
 }
 
-void sleep_until_peer_available(sdp_peer *peer, uint32_t margin_us)
+void sleep_until_peer_available(robusto_peer *peer, uint32_t margin_us)
 {
     if (peer->next_availability > 0)
     {
         uint32_t sleep_length = peer->next_availability - get_time_since_start() + margin_us;
-        ESP_LOGI(conductor_log_prefix, "Going to sleep for %"PRIu64" microseconds.", sleep_length);
+        ROB_LOGI(conductor_log_prefix, "Going to sleep for %"PRIu32" microseconds.", sleep_length);
         goto_sleep_for_microseconds(sleep_length);
     }
 }
@@ -133,16 +129,16 @@ bool ask_for_time(uint32_t ask) {
     // Only request for more time if it is more than being available and already requested
     if ((wait_time_left < ask) && (requested_time < ask - wait_time_left)) {
         /* Only allow for requests that fit into the awake timebox */
-        if (esp_timer_get_time() + wait_time_left + ask < SDP_AWAKE_TIMEBOX_uS) {
+        if (esp_timer_get_time() + wait_time_left + ask < SDP_AWAKE_TIMEBOX_MS) {
             requested_time = ask - wait_time_left;
-            ESP_LOGI(conductor_log_prefix, "Orchestrator granted an extra %"PRIu64" ms of awakeness.", ask/1000);
+            ROB_LOGI(conductor_log_prefix, "Orchestrator granted an extra %"PRIu32" ms of awakeness.", ask/1000);
             return true;
         } else {
-            ESP_LOGE(conductor_log_prefix, "Orchestrator denied %"PRIu64" ms of awakeness because it would violate the timebox.", ask/1000);
+            ROB_LOGE(conductor_log_prefix, "Orchestrator denied %"PRIu32" ms of awakeness because it would violate the timebox.", ask/1000);
             return false;      
         }
     } 
-    ESP_LOGD(conductor_log_prefix, "Orchestrator got an unnessary request for %"PRIu64" ms of awakeness.", ask/1000);
+    ROB_LOGD(conductor_log_prefix, "Orchestrator got an unnessary request for %"PRIu32" ms of awakeness.", ask/1000);
     return true;
 
 }
@@ -150,20 +146,20 @@ bool ask_for_time(uint32_t ask) {
 void take_control()
 {
     /* Wait for the awake period*/
-    wait_time = SDP_AWAKE_TIME_uS;
-    int64_t wait_ms;
+    wait_time = ROBUSTO_AWAKE_TIME_MS;
+    int32_t wait_ms;
     while (1) {
         
         wait_ms = wait_time / 1000;
-        ESP_LOGI(conductor_log_prefix, "Orchestrator awaiting sleep for %"PRIu64" ms.", wait_ms);
+        ROB_LOGI(conductor_log_prefix, "Orchestrator awaiting sleep for %"PRIu32" ms.", wait_ms);
         wait_for_sleep_started = esp_timer_get_time();
-        vTaskDelay(wait_ms / portTICK_PERIOD_MS);
+        r_delay(wait_ms);
         if (requested_time > 0) {
             wait_time = requested_time;
-            ESP_LOGI(conductor_log_prefix, "Orchestrator extending the awake phase.");
+            ROB_LOGI(conductor_log_prefix, "Orchestrator extending the awake phase.");
             requested_time = 0;
         } else {
-            ESP_LOGI(conductor_log_prefix, "------------Orchestrator done waiting, going to sleep! -----------");
+            ROB_LOGI(conductor_log_prefix, "------------Orchestrator done waiting, going to sleep! -----------");
             break;
         }
 
@@ -171,34 +167,34 @@ void take_control()
     // TODO: Add this on other side as well
     if (on_before_sleep_cb)
     {
-        ESP_LOGI(conductor_log_prefix, "----------------- Calling before sleep callback ------------------");
+        ROB_LOGI(conductor_log_prefix, "----------------- Calling before sleep callback ------------------");
         if (!on_before_sleep_cb())
         {
-            ESP_LOGW(conductor_log_prefix, "----------Stopped from going to sleep by callback!! -----------------");
+            ROB_LOGW(conductor_log_prefix, "----------Stopped from going to sleep by callback!! -----------------");
             return;
         }
     }
-    goto_sleep_for_microseconds(SDP_SLEEP_TIME_uS - (esp_timer_get_time() - SDP_AWAKE_TIME_uS));
+    goto_sleep_for_microseconds(ROBUSTO_SLEEP_TIME_MS - (esp_timer_get_time() - ROBUSTO_AWAKE_TIME_MS));
 }
 /**
  * @brief Check with the peer when its available next, and goes to sleep until then.
  * 
  * @param peer The peer that one wants to follow
  */
-void give_control(sdp_peer *peer)
+void give_control(robusto_peer *peer)
 {
 
     if (peer != NULL)
     {
         peer->next_availability = 0;
-        // Ask for orchestration
-        ESP_LOGI(conductor_log_prefix, "Asking for orchestration..");
+        // Ask for conducting
+        ROB_LOGI(conductor_log_prefix, "Asking for conducting..");
         int retries = 0;
         // Waiting a while for a response.
         while (retries < 10)
         {
-            sdp_orchestration_send_when_message(peer);
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+            robusto_conductor_send_when_message(peer);
+            r_delay(5000);
             
             if (peer->next_availability > 0)
             {
@@ -209,18 +205,18 @@ void give_control(sdp_peer *peer)
         }
         if (retries == 10)
         {
-            ESP_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i microseconds..",
-                     peer->name, availibility_retry_count++, SDP_ORCHESTRATION_RETRY_WAIT_uS);
+            ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i microseconds..",
+                     peer->name, availibility_retry_count++, robusto_conductor_RETRY_WAIT_MS);
             
-            goto_sleep_for_microseconds(SDP_ORCHESTRATION_RETRY_WAIT_uS);
+            goto_sleep_for_microseconds(robusto_conductor_RETRY_WAIT_MS);
         }
         else
         {
             availibility_retry_count = 0;
-            ESP_LOGI(conductor_log_prefix, "Waiting for sleep..");
-            /* TODO: Add a sdp task concept instead and wait for a task count to reach zero (within ) */
-            vTaskDelay(5000 / portTICK_PERIOD_MS);
-            sleep_until_peer_available(peer, SDP_AWAKE_MARGIN_uS);
+            ROB_LOGI(conductor_log_prefix, "Waiting for sleep..");
+            /* TODO: Add a robusto task concept instead and wait for a task count to reach zero (within ) */
+            r_delay(5000);
+            sleep_until_peer_available(peer, SDP_AWAKE_MARGIN_MS);
         }
     }
 }

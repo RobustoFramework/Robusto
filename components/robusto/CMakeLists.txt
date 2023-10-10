@@ -8,6 +8,8 @@ FILE(GLOB rob_sources
 "base/src/time/*.c" 
 "base/src/system/*.*" 
 
+"conductor/src/c.*" 
+
 "network/src/*.c"
 "network/src/message/*.c" 
 "network/src/incoming/*.*" 
