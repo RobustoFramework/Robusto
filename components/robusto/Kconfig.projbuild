@@ -4,6 +4,7 @@ menu "Robusto Configuration"
     orsource "network/Kconfig"
     orsource "server/Kconfig"
     orsource "ui/Kconfig"
+    orsource "conductor/Kconfig"
     orsource "misc/Kconfig"
 endmenu
 

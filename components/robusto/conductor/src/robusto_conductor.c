@@ -11,12 +11,12 @@
 
 #include "robusto_conductor.h"
 
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+
 #include <robusto_sleep.h>
 
 #include <robusto_messaging.h>
 #include <inttypes.h>
-
-
 
 static char *conductor_log_prefix;
 static before_sleep *on_before_sleep_cb;
@@ -29,9 +29,6 @@ static uint32_t wait_time = 0;
 static uint32_t requested_time = 0;
 
 RTC_DATA_ATTR int availibility_retry_count;
-
-// TODO: esp_timer_get_time returns an int32_t, apparently for making it easier to calculate time differences?
-// If so, should we do the same to avoid casting problems?
 
 /**
  * @brief Save the current time into RTC memory
@@ -124,12 +121,12 @@ void sleep_until_peer_available(robusto_peer *peer, uint32_t margin_us)
  */
 bool ask_for_time(uint32_t ask) {
     // How long will we wait?  = The time (since boot) we started waiting + how long we are waiting -  time since (boot)
-    uint32_t wait_time_left = + wait_for_sleep_started + wait_time - esp_timer_get_time() ;
+    uint32_t wait_time_left = + wait_for_sleep_started + wait_time - r_millis() ;
     
     // Only request for more time if it is more than being available and already requested
     if ((wait_time_left < ask) && (requested_time < ask - wait_time_left)) {
         /* Only allow for requests that fit into the awake timebox */
-        if (esp_timer_get_time() + wait_time_left + ask < SDP_AWAKE_TIMEBOX_MS) {
+        if (r_millis() + wait_time_left + ask < ROBUSTO_AWAKE_TIMEBOX_MS) {
             requested_time = ask - wait_time_left;
             ROB_LOGI(conductor_log_prefix, "Orchestrator granted an extra %"PRIu32" ms of awakeness.", ask/1000);
             return true;
@@ -150,9 +147,9 @@ void take_control()
     int32_t wait_ms;
     while (1) {
         
-        wait_ms = wait_time / 1000;
+        wait_ms = wait_time;
         ROB_LOGI(conductor_log_prefix, "Orchestrator awaiting sleep for %"PRIu32" ms.", wait_ms);
-        wait_for_sleep_started = esp_timer_get_time();
+        wait_for_sleep_started = r_millis();
         r_delay(wait_ms);
         if (requested_time > 0) {
             wait_time = requested_time;
@@ -174,7 +171,7 @@ void take_control()
             return;
         }
     }
-    goto_sleep_for_microseconds(ROBUSTO_SLEEP_TIME_MS - (esp_timer_get_time() - ROBUSTO_AWAKE_TIME_MS));
+    goto_sleep_for_microseconds(ROBUSTO_SLEEP_TIME_MS - (r_millis() - ROBUSTO_AWAKE_TIME_MS));
 }
 /**
  * @brief Check with the peer when its available next, and goes to sleep until then.
@@ -229,3 +226,4 @@ void robusto_conductor_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
     update_next_availability_window();
 }
 
+#endif

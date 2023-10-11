@@ -1,0 +1,29 @@
+# Kconfig file for Robusto v0.1.0
+
+menu "Conductor configuration"
+    config ROBUSTO_CONDUCTOR_SERVER
+        bool "Enable the conductor server"
+        help
+            The conductor enables the network to save energy by timing the sleeping of peers.
+
+        config ROBUSTO_AWAKE_TIME_MS
+            int "How long will we be running if no one extends our session" 
+            default 40000
+            depends on ROBUSTO_CONDUCTOR_SERVER
+
+        config ROBUSTO_AWAKE_MARGIN_MS
+            int "Will we wait a little extra to avoid flooding?" 
+            default 2000 
+            depends on ROBUSTO_CONDUCTOR_SERVER
+
+        config ROBUSTO_ORCHESTRATION_RETRY_WAIT_MS
+            int "Will we wait a little extra to avoid flooding?" 
+            default 30000
+            depends on ROBUSTO_CONDUCTOR_SERVER
+                                    
+        config ROBUSTO_SLEEP_TIME_MS
+            int "How long will each cycle be"
+            default 3600000
+            depends on ROBUSTO_CONDUCTOR_SERVER
+
+endmenu                    
