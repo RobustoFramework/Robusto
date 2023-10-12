@@ -11,19 +11,48 @@ menu "Conductor configuration"
             default 40000
             depends on ROBUSTO_CONDUCTOR_SERVER
 
-        config ROBUSTO_AWAKE_MARGIN_MS
-            int "Will we wait a little extra to avoid flooding?" 
-            default 2000 
-            depends on ROBUSTO_CONDUCTOR_SERVER
 
-        config ROBUSTO_ORCHESTRATION_RETRY_WAIT_MS
-            int "Will we wait a little extra to avoid flooding?" 
-            default 30000
-            depends on ROBUSTO_CONDUCTOR_SERVER
-                                    
+
         config ROBUSTO_SLEEP_TIME_MS
             int "How long will each cycle be"
             default 3600000
             depends on ROBUSTO_CONDUCTOR_SERVER
+    config ROBUSTO_CONDUCTOR_CLIENT
+        bool "Enable the conductor client"
+        help
+            The client contacts the conductor to get to know when it is next available
 
+        config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS
+            depends on ROBUSTO_CONDUCTOR_CLIENT
+            hex "The MAC-address of the conductor, a 6-byte hex value."
+            default 0xFFFFFFFFFFFF
+            range 0x000000000000 0xFFFFFFFFFFFF
+            help
+                This is the MAC-address of the conductor
+                Write it as a large number, for example 0x01AB11BB12BC (6*8 bits)
+
+        config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS
+            depends on ROBUSTO_CONDUCTOR_CLIENT
+            int "The I2C-address of the conductor"
+            default 0
+            range 0 255
+            help
+                This is the I2C address of the conductor.
+
+        config ROBUSTO_CONDUCTOR_RETRY_WAIT_MS
+            depends on ROBUSTO_CONDUCTOR_CLIENT
+            int "Retry delay"
+            default 30000
+            help
+                How long to wait before we try to reconnect to the conductor if 
+                we fail connecting. 
+  
+        config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS
+            depends on ROBUSTO_CONDUCTOR_CLIENT
+            int "Wait with waking" 
+            default 2000 
+            depends on ROBUSTO_CONDUCTOR_CLIENT
+            help
+                Wait a little extra to wake up to get into the queue when 
+                having many clients.
 endmenu                    

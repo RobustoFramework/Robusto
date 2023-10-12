@@ -34,9 +34,10 @@
 #include <inttypes.h>
 
 /* The most amount of time the peer gives itself until it goes to sleep */
-#define ROBUSTO_AWAKE_TIMEBOX_MS ROBUSTO_AWAKE_TIME_MS * 2
+#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_AWAKE_TIME_MS * 2
 
-
+#define ROBUSTO_CONDUCTOR_CLIENT_ID 1
+#define ROBUSTO_CONDUCTOR_SERVER_ID 2
 
 #if ROBUSTO_AWAKE_TIMEBOX_MS - ROBUSTO_SLEEP_TIME_MS > ROBUSTO_SLEEP_TIME_MS
 #error "ROBUSTO_AWAKE_TIMEBOX - ROBUSTO_SLEEP_TIME_MS  cannot be longer than the ROBUSTO_SLEEP_TIME_MS"
@@ -63,5 +64,6 @@ void sleep_until_peer_available(sdp_peer *peer, uint32_t margin_us);
 //  Availability When/Next messaging
 
 int robusto_conductor_send_when_message(sdp_peer *peer);
+
 int robusto_conductor_send_next_message(work_queue_item_t *queue_item);
 void robusto_conductor_parse_next_message(work_queue_item_t *queue_item);

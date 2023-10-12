@@ -1,5 +1,5 @@
 /**
- * @file robusto_conductor.c
+ * @file robusto_conductor_server.c
  * @author Nicklas Borjesson (nicklasb@gmail.com)
  * @brief Conducting refers to process-level operations, like scheduling and timing sleep and timeboxing wake time
  * @version 0.1
@@ -15,7 +15,7 @@
 
 #include <robusto_sleep.h>
 
-#include <robusto_messaging.h>
+#include <robusto_message.h>
 #include <inttypes.h>
 
 static char *conductor_log_prefix;
@@ -40,30 +40,23 @@ void update_next_availability_window()
     /* Next time  = Last time we fell asleep + how long we slept + how long we should've been up + how long we will sleep */
     if (get_last_sleep_time() == 0)
     {
-        next_time = ROBUSTO_AWAKE_TIME_MS + ROBUSTO_SLEEP_TIME_MS;
+        next_time = CONFIG_ROBUSTO_AWAKE_TIME_MS + CONFIG_ROBUSTO_SLEEP_TIME_MS;
     }
     else
     {
-        next_time = get_last_sleep_time() + ROBUSTO_SLEEP_TIME_MS + ROBUSTO_AWAKE_TIME_MS + ROBUSTO_SLEEP_TIME_MS;
+        next_time = get_last_sleep_time() + CONFIG_ROBUSTO_SLEEP_TIME_MS + CONFIG_ROBUSTO_AWAKE_TIME_MS + CONFIG_ROBUSTO_SLEEP_TIME_MS;
     }
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %"PRIu32".", next_time);
 }
 
-void robusto_conductor_parse_next_message(work_queue_item_t *queue_item)
-{
-    queue_item->peer->next_availability = get_time_since_start() + atoll(queue_item->parts[1]);
-    ROB_LOGI(conductor_log_prefix, "Peer %s is available at %"PRIu32".", queue_item->peer->name, queue_item->peer->next_availability);
-}
-
 /**
- * @brief Sends a "NEXT"-message to a peer informing on microseconds to next availability window
+ * @brief Sends a message with time in milliseconds tp next availability window
  * Please note the limited precision of the chrystals.
- * TODO: If having several clients, perhaps a slight delay would be good?
  *
  * @param peer The peer to send the message to
  * @return int
  */
-int robusto_conductor_send_next_message(work_queue_item_t *queue_item)
+int robusto_conductor_send_next_message(robusto_peer_t *peer)
 {
 
     int retval;
@@ -76,8 +69,11 @@ int robusto_conductor_send_next_message(work_queue_item_t *queue_item)
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
-    char * c_delta_next;
-    asprintf(&c_delta_next, "%"PRIu32, delta_next);
+    char * c_delta_next[5];
+    c_delta_next[0] = ROBUSTO_CONDUCTOR_CLIENT_ID; 
+    memcpy(c_delta_next, delta_next, sizeof(uint32_t));
+
+    send_message_binary(peer)
 
     int next_length = add_to_message(&next_msg, "NEXT|%s|%i", c_delta_next, ROBUSTO_AWAKE_TIME_MS);
 
@@ -92,27 +88,6 @@ int robusto_conductor_send_next_message(work_queue_item_t *queue_item)
     }
     free(next_msg);
     return retval;
-}
-
-/**
- * @brief Send a "When"-message that asks the peer to describe themselves
- *
- * @return int A handle to the created conversation
- */
-int robusto_conductor_send_when_message(robusto_peer *peer)
-{
-    char when_msg[5] = "WHEN\0";
-    return start_conversation(peer, ORCHESTRATION, "Orchestration", &when_msg, 5);
-}
-
-void sleep_until_peer_available(robusto_peer *peer, uint32_t margin_us)
-{
-    if (peer->next_availability > 0)
-    {
-        uint32_t sleep_length = peer->next_availability - get_time_since_start() + margin_us;
-        ROB_LOGI(conductor_log_prefix, "Going to sleep for %"PRIu32" microseconds.", sleep_length);
-        goto_sleep_for_microseconds(sleep_length);
-    }
 }
 
 /**
@@ -143,7 +118,7 @@ bool ask_for_time(uint32_t ask) {
 void take_control()
 {
     /* Wait for the awake period*/
-    wait_time = ROBUSTO_AWAKE_TIME_MS;
+    wait_time = CONFIG_ROBUSTO_AWAKE_TIME_MS;
     int32_t wait_ms;
     while (1) {
         
@@ -171,54 +146,10 @@ void take_control()
             return;
         }
     }
-    goto_sleep_for_microseconds(ROBUSTO_SLEEP_TIME_MS - (r_millis() - ROBUSTO_AWAKE_TIME_MS));
-}
-/**
- * @brief Check with the peer when its available next, and goes to sleep until then.
- * 
- * @param peer The peer that one wants to follow
- */
-void give_control(robusto_peer *peer)
-{
-
-    if (peer != NULL)
-    {
-        peer->next_availability = 0;
-        // Ask for conducting
-        ROB_LOGI(conductor_log_prefix, "Asking for conducting..");
-        int retries = 0;
-        // Waiting a while for a response.
-        while (retries < 10)
-        {
-            robusto_conductor_send_when_message(peer);
-            r_delay(5000);
-            
-            if (peer->next_availability > 0)
-            {
-                break;
-            }
-
-            retries++;
-        }
-        if (retries == 10)
-        {
-            ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i microseconds..",
-                     peer->name, availibility_retry_count++, robusto_conductor_RETRY_WAIT_MS);
-            
-            goto_sleep_for_microseconds(robusto_conductor_RETRY_WAIT_MS);
-        }
-        else
-        {
-            availibility_retry_count = 0;
-            ROB_LOGI(conductor_log_prefix, "Waiting for sleep..");
-            /* TODO: Add a robusto task concept instead and wait for a task count to reach zero (within ) */
-            r_delay(5000);
-            sleep_until_peer_available(peer, SDP_AWAKE_MARGIN_MS);
-        }
-    }
+    goto_sleep_for_microseconds(CONFIG_ROBUSTO_SLEEP_TIME_MS - (r_millis() - CONFIG_ROBUSTO_AWAKE_TIME_MS));
 }
 
-void robusto_conductor_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
+void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
 {
     conductor_log_prefix = _log_prefix;
     on_before_sleep_cb = _on_before_sleep_cb;
