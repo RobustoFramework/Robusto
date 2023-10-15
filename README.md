@@ -9,11 +9,13 @@ For more information, the [Robusto web site](https://robustoframework.github.io/
 
 ## What is Robusto?
 Robusto is a framework for development of cheap and robust networks, applications and services on microcontrollers.<br /> 
-Features include peer management, redundant communication, services, runlevels, pub sub, monitoring, configuration management and other things associated with "big" computer systems. Without their memory footprint and power consumption.
+Features include peer management, synchronized sleep pattern, redundant communication, services, runlevels, pub sub, monitoring, configuration management and other things associated with "big" computer systems. Without their memory footprint and power consumption.
 
 By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
 * **Make available some of the feel and functionality of servers**<br/>
 By bringing forth some of the most important, but perhaps not too performance-hungry, [bells and whistles](https://github.com/RobustoFramework/pub_test/blob/main/components/robusto-misc/include/robusto_pubsub.h) of "real" server development, developing using Robusto feels a bit more like developing your average off-the-shelf server.
+* **Create very energy efficient networks**<br/>
+The ability to coordinate the sleeping patterns of peers make networks able to run with extremely low average current draws (< 1 mA) and on low voltages. 
 * **Work longer when networks degrade**<br/>
 Even if wires start glitching or wireless networks are saturated or interfered with, systems can be kept functioning by changing techniques and even lowering speeds(WIP). 
 * **Help applications to gracefully degrade their functionality**<br/>
@@ -41,8 +43,7 @@ Instead, it is about reliably connecting sensors, actuators, controls, microcont
 
 # Work in progress (WIP)
 
-* **Very energy efficient networks**<br/>
-The ability to coordinate the sleeping patterns of peers combination with ULP processors makes these networks able to run with extremely low average current draws (< 1 mA) and on low voltages (implemented in prototype, needs to be re-implemented). 
+
 * **Tell users about problems**<br/>
 This will help them take the proper corrective action before problems escalate.[^3] 
 * **Provide almost unbreakable wireless information security**<br/>
