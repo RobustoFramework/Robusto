@@ -133,7 +133,8 @@ This library assumes this and may fail using other lengths for this setting.
         uint32_t next_availability;
 #endif
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-        /* This client will likely go to sleep (matters for QoS) */
+        /* This client will likely go to sleep (matters for QoS).
+        This will be set on reboot for all remembered peers. */
         bool sleeper;
 #endif
 /* Media-specific statistics, used by transmission optimizer */
