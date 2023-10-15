@@ -48,7 +48,7 @@ void on_incoming_conductor_server(robusto_message_t *message)
 {
 
     if (message->binary_data[0] == ROBUSTO_CONDUCTOR_MSG_WHEN) {
-        robusto_conductor_server_send_then_message(peer_stat_reset);
+        robusto_conductor_server_send_then_message(message->peer);
     } else {
         ROB_LOGI(conductor_log_prefix, "Peer %s asked server something we didn't understand:", message->peer->name);
         rob_log_bit_mesh(ROB_LOG_INFO, conductor_log_prefix, message->binary_data, message->binary_data_length);
@@ -83,7 +83,8 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
 {
     int retval;
 
-    uint8_t *next_msg = NULL;
+    // The peer is obviously a client that will go to sleep, stop checking on it.
+    peer->sleeper = true;
 
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %"PRIu32, robusto_get_time_since_start());
     
@@ -91,13 +92,13 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
-    char c_delta_next[5];
+    uint8_t * c_delta_next = robusto_malloc(5);
     c_delta_next[0] = ROBUSTO_CONDUCTOR_MSG_THEN;
-    memcpy(&c_delta_next + 1, &delta_next, sizeof(uint32_t));
+    memcpy(c_delta_next + 1, &delta_next, sizeof(uint32_t));
 
     // TODO: do we need to await response here? Won't the client re-ask?
-    return retval = send_message_binary(peer, ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID, 0, &c_delta_next, 5, NULL);
-    
+    return retval = send_message_binary(peer, ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID, 0, c_delta_next, 5, NULL);
+    robusto_free(c_delta_next);
 }
 
 
@@ -131,7 +132,7 @@ void robusto_conductor_server_take_control()
     while (1) {
         
         wait_ms = wait_time;
-        ROB_LOGI(conductor_log_prefix, "Orchestrator awaiting sleep for %"PRIu32" ms.", wait_ms);
+        ROB_LOGI(conductor_log_prefix, "Hi there! awaiting sleep for %"PRIu32" ms.", wait_ms);
         wait_for_sleep_started = r_millis();
         r_delay(wait_ms);
         if (requested_time > 0) {
@@ -161,6 +162,7 @@ void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sl
 {
     conductor_log_prefix = _log_prefix;
     on_before_sleep_cb = _on_before_sleep_cb;
+    
     // Set the next available time.
     robusto_conductor_server_calc_next_time();
     robusto_register_network_service(&conductor_server_service);

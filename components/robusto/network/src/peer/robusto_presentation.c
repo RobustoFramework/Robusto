@@ -152,13 +152,14 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         {
             ROB_LOGE(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
         }
-    } else  if (message->binary_data[0] == NET_HIR) {
+    } else if (message->binary_data[0] == NET_HIR) {
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");
     }
     else
     {
+        // TODO: Sometimes we are getting 133 as request type for some reason, this needs to be checked
         ROB_LOGE(presentation_log_prefix, "<< ..invalid request type for handle_presentation %hu, this should not happen and is an internal error! Message:", message->binary_data[0]);
-        rob_log_bit_mesh(ROB_LOG_ERROR, presentation_log_prefix, message->binary_data, message->binary_data_length);
+        rob_log_bit_mesh(ROB_LOG_ERROR, presentation_log_prefix, message->raw_data, message->raw_data_length);
         return ROB_FAIL;
     }
     return ROB_OK;

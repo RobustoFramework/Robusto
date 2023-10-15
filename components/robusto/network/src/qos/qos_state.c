@@ -122,6 +122,13 @@ rob_ret_val_t peer_level_check(robusto_peer_t *peer) {
 
 rob_ret_val_t check_peer(robusto_peer_t *peer)
 {
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+        /* This client will likely go to sleep (matters for QoS) */
+        if (peer->sleeper) {
+            ROB_LOGI(qos_state_log_prefix, "Skipping check of to sleeper peer %s.", peer->name);
+            return ROB_OK;
+        }
+    #endif
 
     robusto_media_t *info;
     uint64_t last_heartbeat_time;

@@ -132,6 +132,10 @@ This library assumes this and may fail using other lengths for this setting.
         /* Next availability (measured in microseconds from first boot)*/
         uint32_t next_availability;
 #endif
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+        /* This client will likely go to sleep (matters for QoS) */
+        bool sleeper;
+#endif
 /* Media-specific statistics, used by transmission optimizer */
 #if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t ble_info;

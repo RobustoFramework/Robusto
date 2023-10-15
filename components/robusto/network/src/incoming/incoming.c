@@ -106,8 +106,8 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
         }
         else
         {
-            ROB_LOGW(incoming_log_prefix, "No incoming callback defined for this message from %s, media_type %hu", queue_item->message->peer->name, queue_item->message->media_type );    
-            rob_log_bit_mesh(ROB_LOG_WARN, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
+            ROB_LOGE(incoming_log_prefix, "No incoming callback defined for this message from %s, media_type %hu", queue_item->message->peer->name, queue_item->message->media_type );    
+            rob_log_bit_mesh(ROB_LOG_ERROR, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
         }
     }
     if (queue_item->message->media_type != robusto_mt_espnow) {

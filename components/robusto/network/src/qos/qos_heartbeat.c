@@ -131,6 +131,14 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
 
 void peer_heartbeat(robusto_peer_t *peer)
 {
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    /* This client will likely go to sleep (matters for QoS) */
+    if (peer->sleeper) {
+        ROB_LOGI(heartbeat_log_prefix, "Skipping heartbeats to sleeper peer %s.", peer->name);
+        return;
+    }
+#endif
+
     uint64_t last_heartbeat = 0;
     uint64_t curr_time = r_millis();
     if (curr_time - HEARTBEAT_IDLE_MARGIN_MS > 0) {
