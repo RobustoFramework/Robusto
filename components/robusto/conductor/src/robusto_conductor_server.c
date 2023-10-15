@@ -15,7 +15,8 @@
 
 #include <robusto_sleep.h>
 
-#include <robusto_message.h>
+#include <robusto_network_service.h>
+#include <string.h>
 #include <inttypes.h>
 
 static char *conductor_log_prefix;
@@ -28,23 +29,45 @@ static uint32_t wait_time = 0;
 /* Latest requested time so far */
 static uint32_t requested_time = 0;
 
-RTC_DATA_ATTR int availibility_retry_count;
+static void on_incoming_conductor_server(robusto_message_t *message);
+static void on_shutting_down_conductor_server(robusto_message_t *message);
 
-/**
- * @brief Save the current time into RTC memory
- *
- */
-void update_next_availability_window()
+static network_service_t conductor_server_service = {
+    .service_name = "Conductor server service",
+    .incoming_callback = &on_incoming_conductor_server,
+    .service_id = ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID,
+    .shutdown_callback = &on_shutting_down_conductor_server,
+};
+
+void on_shutting_down_conductor_server(robusto_message_t *message)
 {
-    // Note that this value will roll over at certain points (49.7 days?)
+    ROB_LOGI(conductor_log_prefix, "Conductor server is shutting down");
+}
+
+void on_incoming_conductor_server(robusto_message_t *message)
+{
+
+    if (message->binary_data[0] == ROBUSTO_CONDUCTOR_MSG_WHEN) {
+        robusto_conductor_server_send_then_message(peer_stat_reset);
+    } else {
+        ROB_LOGI(conductor_log_prefix, "Peer %s asked server something we didn't understand:", message->peer->name);
+        rob_log_bit_mesh(ROB_LOG_INFO, conductor_log_prefix, message->binary_data, message->binary_data_length);
+    }
+    
+    
+}
+
+
+void robusto_conductor_server_calc_next_time()
+{
     /* Next time  = Last time we fell asleep + how long we slept + how long we should've been up + how long we will sleep */
-    if (get_last_sleep_time() == 0)
+    if (robusto_get_last_sleep_time() == 0)
     {
         next_time = CONFIG_ROBUSTO_AWAKE_TIME_MS + CONFIG_ROBUSTO_SLEEP_TIME_MS;
     }
     else
     {
-        next_time = get_last_sleep_time() + CONFIG_ROBUSTO_SLEEP_TIME_MS + CONFIG_ROBUSTO_AWAKE_TIME_MS + CONFIG_ROBUSTO_SLEEP_TIME_MS;
+        next_time = robusto_get_last_sleep_time() + CONFIG_ROBUSTO_SLEEP_TIME_MS + CONFIG_ROBUSTO_AWAKE_TIME_MS + CONFIG_ROBUSTO_SLEEP_TIME_MS;
     }
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %"PRIu32".", next_time);
 }
@@ -56,45 +79,29 @@ void update_next_availability_window()
  * @param peer The peer to send the message to
  * @return int
  */
-int robusto_conductor_send_next_message(robusto_peer_t *peer)
+int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
 {
-
     int retval;
 
     uint8_t *next_msg = NULL;
 
-    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %"PRIu32, get_time_since_start());
+    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %"PRIu32, robusto_get_time_since_start());
     
-    uint32_t delta_next = next_time - get_time_since_start();
+    uint32_t delta_next = next_time - robusto_get_time_since_start();
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
     char * c_delta_next[5];
-    c_delta_next[0] = ROBUSTO_CONDUCTOR_CLIENT_ID; 
+    c_delta_next[0] = ROBUSTO_CONDUCTOR_MSG_THEN;
     memcpy(c_delta_next, delta_next, sizeof(uint32_t));
 
-    send_message_binary(peer)
-
-    int next_length = add_to_message(&next_msg, "NEXT|%s|%i", c_delta_next, ROBUSTO_AWAKE_TIME_MS);
-
-    if (next_length > 0)
-    {
-        retval = robusto_reply(*queue_item, ORCHESTRATION, next_msg, next_length);
-    }
-    else
-    {
-        // Returning the negative of the return value as that denotes an error.
-        retval = -next_length;
-    }
-    free(next_msg);
-    return retval;
+    // TODO: do we need to await response here? Won't the client re-ask?
+    return retval = send_message_binary(peer, ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID, 0, &c_delta_next, 5, NULL);
+    
 }
 
-/**
- * @brief Ask to wait with sleep for a specific amount of time from now 
- * @param ask Returns false if request is denied
- */
-bool ask_for_time(uint32_t ask) {
+
+bool robusto_conductor_server_ask_for_time(uint32_t ask) {
     // How long will we wait?  = The time (since boot) we started waiting + how long we are waiting -  time since (boot)
     uint32_t wait_time_left = + wait_for_sleep_started + wait_time - r_millis() ;
     
@@ -115,7 +122,8 @@ bool ask_for_time(uint32_t ask) {
 
 }
 
-void take_control()
+
+void robusto_conductor_server_take_control()
 {
     /* Wait for the awake period*/
     wait_time = CONFIG_ROBUSTO_AWAKE_TIME_MS;
@@ -146,7 +154,7 @@ void take_control()
             return;
         }
     }
-    goto_sleep_for_microseconds(CONFIG_ROBUSTO_SLEEP_TIME_MS - (r_millis() - CONFIG_ROBUSTO_AWAKE_TIME_MS));
+    robusto_goto_sleep(CONFIG_ROBUSTO_SLEEP_TIME_MS - (r_millis() - CONFIG_ROBUSTO_AWAKE_TIME_MS));
 }
 
 void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
@@ -154,7 +162,8 @@ void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sl
     conductor_log_prefix = _log_prefix;
     on_before_sleep_cb = _on_before_sleep_cb;
     // Set the next available time.
-    update_next_availability_window();
+    robusto_conductor_server_calc_next_time();
+    robusto_register_network_service(&conductor_server_service);
 }
 
 #endif

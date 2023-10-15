@@ -29,41 +29,82 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
+#pragma once
+
 #include <robconfig.h>
 #include <robusto_time.h>
+#include <robusto_peer_def.h>
 #include <inttypes.h>
 
 /* The most amount of time the peer gives itself until it goes to sleep */
 #define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_AWAKE_TIME_MS * 2
-
-#define ROBUSTO_CONDUCTOR_CLIENT_ID 1
-#define ROBUSTO_CONDUCTOR_SERVER_ID 2
-
-#if ROBUSTO_AWAKE_TIMEBOX_MS - ROBUSTO_SLEEP_TIME_MS > ROBUSTO_SLEEP_TIME_MS
-#error "ROBUSTO_AWAKE_TIMEBOX - ROBUSTO_SLEEP_TIME_MS  cannot be longer than the ROBUSTO_SLEEP_TIME_MS"
-#endif
-
-/* Callbacks that are called before sleeping, return true to stop going to sleep. */
-typedef bool (before_sleep)(void);
+// TODO: Work through all Robusto Client ids
+#define ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID 1980U
+#define ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID 1981U
 
 
-/* Optional callback that happen before the system is going to sleep */
-void set_before_sleep(before_sleep * on_before_sleep_cb);
+#define ROBUSTO_CONDUCTOR_MSG_WHEN 1U
+#define ROBUSTO_CONDUCTOR_MSG_THEN 2U
+#define ROBUSTO_CONDUCTOR_MSG_MORE 3U
 
-void update_next_availability_window();
 
-bool ask_for_time(uint32_t ask);
+/* Callbacks that are called before sleeping, return true to prohibit sleep. */
+typedef bool(before_sleep)(void);
 
-void take_control();
-void give_control(sdp_peer * peer); 
+/* Server functionality*/
 
-void robusto_conductor_init(char * _log_prefix, before_sleep _on_before_sleep_cb); 
+/**
+ * @brief Save the current time into RTC memory
+ */
+void robusto_conductor_server_calc_next_time();
 
-void sleep_until_peer_available(sdp_peer *peer, uint32_t margin_us);
+/**
+ * @brief Ask to wait with sleep for a specific amount of time from now
+ * @param ask Returns false if request is denied
+ */
+bool robusto_conductor_server_ask_for_time(uint32_t ask);
 
-//  Availability When/Next messaging
+/**
+ * @brief The conductor takes control and unless asked for more time, falls asleep
+ * until next availability window
+ */
+void robusto_conductor_server_take_control();
 
-int robusto_conductor_send_when_message(sdp_peer *peer);
+/**
+ * @brief Send information about the next window to a client peer
+ *
+ * @param message
+ * @return int
+ */
+int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
 
-int robusto_conductor_send_next_message(work_queue_item_t *queue_item);
-void robusto_conductor_parse_next_message(work_queue_item_t *queue_item);
+/**
+ * @brief Initialize the conductor server
+ * @param _log_prefix The log prefix
+ * @param _on_before_sleep_cb A callback that will be called before the system goes to sleep
+ */
+void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb);
+
+/* Client functionality*/
+
+/**
+ * @brief Initialize the conductor client
+ *
+ * @param _log_prefix
+ */
+void robusto_conductor_client_init(char *_log_prefix);
+
+
+/**
+ * @brief Check with the peer when its available next, and goes to sleep until then.
+ * @param peer The peer that one wants to follow
+ */
+void robusto_conductor_client_give_control(robusto_peer_t *peer);
+
+/**
+ * @brief Send a "When"-message that asks the peer to describe themselves
+ *
+ * @return int A handle to the created conversation
+ */
+int robusto_conductor_client_send_when_message(robusto_peer_t *peer);

@@ -166,7 +166,9 @@ void log_peer_info(char *_log_prefix, robusto_peer_t *peer)
     ROB_LOGI(_log_prefix, "Relation id incoming:  %"PRIu32"", peer->relation_id_incoming);
     ROB_LOGI(_log_prefix, "Relation id outgoing:  %"PRIu32"", peer->relation_id_outgoing);
     ROB_LOGI(_log_prefix, "Protocol version:      %i", peer->protocol_version);
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
     ROB_LOGI(_log_prefix, "Next availability:     %lli", peer->next_availability);
+    #endif
     ROB_LOGI(_log_prefix, "Handle:                %i", peer->peer_handle);
 }
 

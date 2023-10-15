@@ -64,6 +64,9 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
 #include "../conductor/conductor_client.h"
 #endif
+#ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER 
+#include "../conductor/conductor_server.h"   
+#endif
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #define NUM_RECORDS 100
@@ -79,7 +82,14 @@ void setup() {
     #endif
     register_network_service();
     register_server_service();
+
+    // TODO: Create a pubsub example
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_PUBSUB_SERVER 
     register_misc_service();
+
+    #endif
+
+
     init_robusto();
 
     r_delay(100);   
@@ -102,6 +112,12 @@ void setup() {
     ROB_LOGI(example_log_prefix, "Start example conductor client");
     init_conductor_client(example_log_prefix);
     conductor_client_call_server();
+    #endif
+
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER 
+    ROB_LOGI(example_log_prefix, "Start example conductor server");
+    init_conductor_server(example_log_prefix);
+    run_conductor_server();
     #endif
 
 }

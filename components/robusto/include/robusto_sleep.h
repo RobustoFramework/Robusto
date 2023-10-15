@@ -6,7 +6,7 @@
 
 
 
-void robusto_goto_sleep(uint32_t microsecs);
+void robusto_goto_sleep(uint32_t millisecs);
 
 uint32_t robusto_get_last_sleep_time();
 uint32_t robusto_get_time_since_start();

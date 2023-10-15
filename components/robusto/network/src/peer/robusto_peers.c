@@ -218,7 +218,9 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
 
     memset(peer, 0, sizeof(robusto_peer_t));
     peer->peer_handle = _peer_handle_incrementor_++;
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
     peer->next_availability = 0;
+    #endif
     peer->relation_id_incoming = 0;
     peer->relation_id_outgoing = 0;
     peer->state = PEER_UNKNOWN;

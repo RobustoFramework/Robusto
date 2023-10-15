@@ -4,9 +4,9 @@
  * @brief Conducting refers to process-level operations, like scheduling and timing sleep and timeboxing wake time
  * @version 0.1
  * @date 2022-11-20
- * 
+ *
  * @copyright Copyright Nicklas Borjesson(c) 2022
- * 
+ *
  */
 
 #include "robusto_conductor.h"
@@ -16,32 +16,47 @@
 #include <robusto_sleep.h>
 
 #include <robusto_message.h>
+#include <robusto_network_service.h>
 #include <inttypes.h>
 
 static char *conductor_log_prefix;
-static before_sleep *on_before_sleep_cb;
 
 RTC_DATA_ATTR int availibility_retry_count;
 
-void robusto_conductor_parse_next_message(robusto_message_t *message)
+static void on_incoming_conductor_client(robusto_message_t *message);
+static void on_shutting_down_conductor_client(robusto_message_t *message);
+
+static network_service_t conductor_client_service =
+    .service_name = "Conductor client service",
+    .incoming_callback = &on_incoming_conductor_client,
+    .service_id = ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID,
+    .shutdown_callback = &on_shutting_down_conductor_client,
+};
+
+void on_shutting_down_conductor_client(robusto_message_t *message)
+{
+    ROB_LOGI(conductor_log_prefix, "Conductor client is shutting down");
+}
+
+void on_incoming_conductor_client(robusto_message_t *message)
 {
     message->peer->next_availability = get_time_since_start() + atoll(message->binary_data[1]);
-    ROB_LOGI(conductor_log_prefix, "Peer %s is available at %"PRIu32".", queue_item->peer->name, queue_item->peer->next_availability);
+    ROB_LOGI(conductor_log_prefix, "Peer %s is available at %" PRIu32 ".", message->peer->name, message->peer->next_availability);
 }
 
-
-/**
- * @brief Send a "When"-message that asks the peer to describe themselves
- *
- * @return int A handle to the created conversation
- */
-int robusto_conductor_send_when_message(robusto_peer_t *peer)
+int robusto_conductor_client_send_when_message(robusto_peer_t *peer)
 {
     char when_msg[5] = "WHEN\0";
-    return start_conversation(peer, ORCHESTRATION, "Orchestration", &when_msg, 5);
+    return start_conversation(peer, ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID, "Orchestration", &when_msg, 5);
 }
 
-void sleep_until_peer_available(robusto_peer_t *peer, uint32_t margin_us)
+/**
+ * @brief Sleep until the next available window
+ *
+ * @param peer The conductor peer
+ * @return int
+ */
+void robusto_conductor_client_sleep_until_available(robusto_peer_t *peer, uint32_t margin_us)
 {
     if (peer->next_availability > 0)
     {
@@ -51,12 +66,8 @@ void sleep_until_peer_available(robusto_peer_t *peer, uint32_t margin_us)
     }
 }
 
-/**
- * @brief Check with the peer when its available next, and goes to sleep until then.
- * 
- * @param peer The peer that one wants to follow
- */
-void give_control(robusto_peer_t *peer)
+
+void robusto_conductor_client_give_control(robusto_peer_t *peer)
 {
 
     if (peer != NULL)
@@ -70,7 +81,7 @@ void give_control(robusto_peer_t *peer)
         {
             robusto_conductor_send_when_message(peer);
             r_delay(5000);
-            
+
             if (peer->next_availability > 0)
             {
                 break;
@@ -82,7 +93,7 @@ void give_control(robusto_peer_t *peer)
         {
             ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i microseconds..",
                      peer->name, availibility_retry_count++, CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS);
-            
+
             goto_sleep_for_microseconds(CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS);
         }
         else
@@ -91,17 +102,16 @@ void give_control(robusto_peer_t *peer)
             ROB_LOGI(conductor_log_prefix, "Waiting for sleep..");
             /* TODO: Add a robusto task concept instead and wait for a task count to reach zero (within ) */
             r_delay(5000);
-            sleep_until_peer_available(peer, CONFIG_ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS);
+            robusto_conductor_client_sleep_until_available(peer, CONFIG_ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS);
         }
     }
 }
 
-void robusto_conductor_client_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
+void robusto_conductor_client_init(char *_log_prefix)
 {
     conductor_log_prefix = _log_prefix;
-    on_before_sleep_cb = _on_before_sleep_cb;
     // Set the next available time.
-    update_next_availability_window();
+    robusto_register_network_service(&conductor_client_service);
 }
 
 #endif

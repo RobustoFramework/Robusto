@@ -35,7 +35,5 @@
 #include <robconfig.h>
 #include <robusto_message.h>
 
-
-void init_conductor_client(char * _log_prefix);
-
-void conductor_client_call_server();
+void run_conductor_server();
+void init_conductor_server(char * _log_prefix);
