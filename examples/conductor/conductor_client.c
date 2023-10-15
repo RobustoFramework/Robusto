@@ -50,7 +50,7 @@ void conductor_client_call_server()
 void init_conductor_client(char *_log_prefix)
 {
     conductor_server_log_prefix = _log_prefix;
-
+    robusto_conductor_client_init(_log_prefix);
     char *dest = "The server";
     conductor_peer = NULL;
 // Add peer and presentat ourselvers

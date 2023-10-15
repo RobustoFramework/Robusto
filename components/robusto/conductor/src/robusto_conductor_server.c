@@ -91,9 +91,9 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %"PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
-    char * c_delta_next[5];
+    char c_delta_next[5];
     c_delta_next[0] = ROBUSTO_CONDUCTOR_MSG_THEN;
-    memcpy(c_delta_next, delta_next, sizeof(uint32_t));
+    memcpy(&c_delta_next + 1, &delta_next, sizeof(uint32_t));
 
     // TODO: do we need to await response here? Won't the client re-ask?
     return retval = send_message_binary(peer, ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID, 0, &c_delta_next, 5, NULL);

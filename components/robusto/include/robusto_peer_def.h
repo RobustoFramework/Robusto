@@ -130,7 +130,7 @@ This library assumes this and may fail using other lengths for this setting.
         uint8_t min_protocol_version;
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
         /* Next availability (measured in microseconds from first boot)*/
-        uint64_t next_availability;
+        uint32_t next_availability;
 #endif
 /* Media-specific statistics, used by transmission optimizer */
 #if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
