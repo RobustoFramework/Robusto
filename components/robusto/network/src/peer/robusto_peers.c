@@ -106,6 +106,25 @@ robusto_peers_find_peer_by_handle(int16_t peer_handle)
 }
 
 robusto_peer_t *
+robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t * check_peer)
+{
+    robusto_peer_t *peer;
+
+    SLIST_FOREACH(peer, &robusto_peers, next)
+    {
+
+        if ((peer != check_peer) &&
+           (memcmp(peer->base_mac_address, check_peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN) == 0))
+        {
+            ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address, duplicate found: %s", peer->name);
+            rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+            return peer;
+        }
+    }
+    return NULL;
+}
+
+robusto_peer_t *
 robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address)
 {
     robusto_peer_t *peer;

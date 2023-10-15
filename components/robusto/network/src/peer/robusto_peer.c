@@ -180,7 +180,7 @@ void recover_relations() {
 
     int rel_idx = 0;
     robusto_peer_t * new_peer = NULL;
-    while (rel_idx <= relation_count)
+    while (rel_idx < relation_count)
     {
         new_peer = robusto_add_init_new_peer(NULL, relations[rel_idx].mac_address, relations[rel_idx].supported_media_types);
         #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
@@ -196,16 +196,11 @@ void recover_relations() {
     }
 }
 
-/**
- * @brief Find the relation id through the mac address.
- * (without having to loop all peers)
- * @param relation_id The relation id to investigate
- * @return uint8_t*
- */
+
 rob_mac_address *relation_id_incoming_to_mac_address(uint32_t relation_id)
 {
     int rel_idx = 0;
-    while (rel_idx <= relation_count)
+    while (rel_idx < relation_count)
     {
         if (relations[rel_idx].relation_id_incoming == relation_id)
         {

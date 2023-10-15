@@ -100,8 +100,8 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         memcpy(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN);
     }
     // Check if there is already an existing peer, if so, populate that instead.
-    robusto_peer_t * existing_peer = robusto_peers_find_peer_by_base_mac_address(message->peer->base_mac_address);
-    if (existing_peer && (existing_peer->peer_handle != message->peer->peer_handle)) {
+    robusto_peer_t * existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
+    if (existing_peer) {
         ROB_LOGW(presentation_log_prefix, "We already had a peer (%s) with the same base_mac_address, removing the new one", existing_peer->name);
         robusto_peers_delete_peer(message->peer->peer_handle);
         message->peer = existing_peer;
