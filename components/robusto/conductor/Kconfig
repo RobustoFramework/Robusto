@@ -6,17 +6,19 @@ menu "Conductor configuration"
         help
             The conductor enables the network to save energy by timing the sleeping of peers.
 
-        config ROBUSTO_AWAKE_TIME_MS
-            int "How long will we be running if no one extends our session" 
+        config ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS
+            int "How long will we be awake if no one extends our session" 
             default 40000
             depends on ROBUSTO_CONDUCTOR_SERVER
 
 
-
-        config ROBUSTO_SLEEP_TIME_MS
-            int "How long will each cycle be"
+        config ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS
+            int "How long will is the sleep cycle?"
             default 3600000
             depends on ROBUSTO_CONDUCTOR_SERVER
+            help
+              Note that this is the time between wake ups, which must be a constant cycle
+              It is not when it falls a sleep and how long, that depends on if it had to stay awake extra for some reason.
     config ROBUSTO_CONDUCTOR_CLIENT
         bool "Enable the conductor client"
         help

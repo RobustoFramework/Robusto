@@ -38,7 +38,12 @@
 #include <inttypes.h>
 
 /* The most amount of time the peer gives itself until it goes to sleep */
-#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_AWAKE_TIME_MS * 2
+#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS * 2
+
+#if CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS < ROBUSTO_AWAKE_TIMEBOX_MS
+#error "You cannot set the conductor cycle time to less than twice the awake time"
+#endif
+
 // TODO: Work through all Robusto Client ids
 #define ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID 1980U
 #define ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID 1981U
@@ -49,15 +54,12 @@
 #define ROBUSTO_CONDUCTOR_MSG_MORE 3U
 
 
+
 /* Callbacks that are called before sleeping, return true to prohibit sleep. */
 typedef bool(before_sleep)(void);
 
 /* Server functionality*/
 
-/**
- * @brief Save the current time into RTC memory
- */
-void robusto_conductor_server_calc_next_time();
 
 /**
  * @brief Ask to wait with sleep for a specific amount of time from now
@@ -108,3 +110,4 @@ void robusto_conductor_client_give_control(robusto_peer_t *peer);
  * @return int A handle to the created conversation
  */
 int robusto_conductor_client_send_when_message(robusto_peer_t *peer);
+

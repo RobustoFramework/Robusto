@@ -45,21 +45,11 @@ menu "Robusto Examples"
         default false
         help
             This is the conductor server, it will:
-            1. Wait for a client to connect
-            2. Tell it to sleep for a the time defined in ROBUSTO_EXAMPLE_CONDUCTOR_SERVER_SLEEP
+            1. Wait for a client to connect for at least ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS, at most twice that
+            2. Tell it to sleep for a the time defined in ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS
             3. Go to sleep for the same time
             4. Repeat
-                
-    config ROBUSTO_EXAMPLE_CONDUCTOR_SERVER_CYCLE_MS
-
-        int "How long the conductor wants to sleep"
-        depends on ROBUSTO_EXAMPLE_CONDUCTOR_SERVER
-        default 30000
-    config ROBUSTO_EXAMPLE_CONDUCTOR_SERVER_WAKE_MS
-
-        int "How long the conductor wants to be awake"
-        depends on ROBUSTO_EXAMPLE_CONDUCTOR_SERVER
-        default 30000                  
+         
 endmenu
 
         

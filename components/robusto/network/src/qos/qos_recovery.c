@@ -123,7 +123,11 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 void start_qos_recovery() {
     // We should not have any relations now if the boot was intentional
     if (get_relation_count() > 0) {
+        #if defined(CONFIG_ROBUSTO_CONDUCTOR_SERVER) || defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT)
+        ROB_LOGI(recovery_log_prefix, "Restarting a conductor server/client, assuming from deep sleep, re-adding relation as peers.");
+        #else
         ROB_LOGW(recovery_log_prefix, "Obviously, we are recovering from some situation, re-adding relations as peers.");
+        #endif
         recover_relations();
     } else {
         ROB_LOGI(recovery_log_prefix, "Nothing to recover"); 

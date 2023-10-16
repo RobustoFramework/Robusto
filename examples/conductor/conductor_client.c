@@ -5,18 +5,19 @@
 #include <robusto_message.h>
 #include <robusto_conductor.h>
 
-static robusto_peer_t *conductor_peer;
+static robusto_peer_t *conductor_peer = NULL;
 
 static char *conductor_server_log_prefix;
 
 void conductor_client_call_server()
 {
 
-    if (conductor_peer->state == PEER_UNKNOWN)
+    while ((conductor_peer == NULL) && (conductor_peer->state == PEER_UNKNOWN) && (r_millis() < CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS))
     {
-        ROB_LOGE(conductor_server_log_prefix, "Peer still unknown, not calling it, presentation may have failed");
+        ROB_LOGW(conductor_server_log_prefix, "Peer still unknown, waiting");
+        r_delay(500);
     }
-    else
+    if (r_millis() < CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS)
     {
 
         queue_state *q_state = NULL;
@@ -42,9 +43,8 @@ void conductor_client_call_server()
         }
         q_state = robusto_free_queue_state(q_state);
     }
-    ROB_LOGW(conductor_server_log_prefix, "GOING until next time");
+    ROB_LOGW(conductor_server_log_prefix, "Going to sleep until next time");
     robusto_conductor_client_give_control(conductor_peer);
-
 }
 
 void init_conductor_client(char *_log_prefix)
@@ -52,7 +52,12 @@ void init_conductor_client(char *_log_prefix)
     conductor_server_log_prefix = _log_prefix;
     robusto_conductor_client_init(_log_prefix);
     char *dest = "The server";
-    conductor_peer = NULL;
+    conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
+    if (conductor_peer != NULL)
+    {
+        ROB_LOGW(conductor_server_log_prefix, "Conductor peer already existed.");
+        return;
+    }
 // Add peer and presentat ourselvers
 #ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_I2C
     r_peer = add_peer_by_i2c_address(dest, CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);

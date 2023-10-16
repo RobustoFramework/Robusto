@@ -43,7 +43,7 @@ void on_incoming_conductor_client(robusto_message_t *message)
     if (message->binary_data[0] == ROBUSTO_CONDUCTOR_MSG_THEN)
     {
         uint32_t time_until_available = *(uint32_t *)(message->binary_data + 1);
-        message->peer->next_availability = robusto_get_time_since_start() + time_until_available;
+        message->peer->next_availability = r_millis() + time_until_available;
         ROB_LOGI(conductor_log_prefix, "Peer %s sent us %" PRIu32 " and is available at %" PRIu32 ".", message->peer->name, time_until_available, message->peer->next_availability);
     } else {
         ROB_LOGE(conductor_log_prefix, "Condustor %s server sent something we didn't understand:", message->peer->name);
@@ -68,7 +68,7 @@ void robusto_conductor_client_sleep_until_available(robusto_peer_t *peer, uint32
 {
     if (peer->next_availability > 0)
     {
-        uint32_t sleep_length = peer->next_availability - robusto_get_time_since_start() + margin_us;
+        uint32_t sleep_length = peer->next_availability - r_millis() + margin_us;
         ROB_LOGI(conductor_log_prefix, "Going to sleep for %" PRIu32 " microseconds.", sleep_length);
         robusto_goto_sleep(sleep_length);
     }

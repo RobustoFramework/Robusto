@@ -410,7 +410,9 @@ void robusto_peer_init(char *_log_prefix)
         ROB_LOGI(peer_log_prefix, "Seems to be a clean boot, no relations from before, %lu", has_relations_indicator);
         relation_count = 0;
     } else {
+        #if !(defined(CONFIG_ROBUSTO_CONDUCTOR_SERVER) || defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT))
         ROB_LOGE(peer_log_prefix, "We have relations at init, that means that we rebooted unwillingly.");
+        #endif
     }
     
     #ifdef ESP_PLATFORM
