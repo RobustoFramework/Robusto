@@ -10,6 +10,8 @@ menu "Conductor configuration"
             int "How long will we be awake if no one extends our session" 
             default 40000
             depends on ROBUSTO_CONDUCTOR_SERVER
+            help 
+                Note that ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS (default 4000) is subtracted from this value. 
 
 
         config ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS
@@ -17,8 +19,17 @@ menu "Conductor configuration"
             default 3600000
             depends on ROBUSTO_CONDUCTOR_SERVER
             help
-              Note that this is the time between wake ups, which must be a constant cycle
+              Note that this is the time between wake ups, which must be a constant cycle.
               It is not when it falls a sleep and how long, that depends on if it had to stay awake extra for some reason.
+
+        config ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS
+            int "Extra time the conductor might need"
+            default 4000
+            depends on ROBUSTO_CONDUCTOR_SERVER
+            help
+                A MCU will need both a short time to shut down (turning stuff off), and booting up. 
+                This margin will be cause the MCU to enter sleep mode earlier to have time to 
+                
     config ROBUSTO_CONDUCTOR_CLIENT
         bool "Enable the conductor client"
         help

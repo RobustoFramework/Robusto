@@ -89,6 +89,7 @@ uint32_t robusto_get_time_since_start()
  */
 void robusto_conductor_server_calc_next_time()
 {
+    // TODO: This needs some tweaking to take in account: Short delay in reboot (~800 ms) and something else that causes some miscalculation
     /* Next time  = Time now + Cycle time - how long we've been awake */
     next_time = robusto_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - r_millis();
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %" PRIu32 ".", next_time);
@@ -110,7 +111,7 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
 
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_get_time_since_start());
 
-    uint32_t delta_next = next_time - robusto_get_time_since_start();
+    uint32_t delta_next = next_time - robusto_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS;
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %" PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
