@@ -31,13 +31,6 @@ menu "Networking"
 		
 	orsource "src/media/i2c/Kconfig" 
 
-	config ROBUSTO_SUPPORTS_UMTS
-		bool "Load GSM/UMTS libraries"
-		help
-			Set this option to tell Robusto to load the esp-modem GSM library
-
-	orsource "src/media/gsm/Kconfig"
-
 	config ROBUSTO_PEER_NAME_LENGTH
 		int "Peer name length"
 		default 16

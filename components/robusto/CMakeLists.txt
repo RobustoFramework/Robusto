@@ -28,6 +28,7 @@ FILE(GLOB rob_sources
 
 "misc/src/*.c"
 "misc/src/pubsub/*.c"
+"misc/src/umts/*.*"
 
 "server/src/*.c"
 "server/src/queue/*.c" 
@@ -50,5 +51,6 @@ idf_component_register(
         esp_wifi esp_adc 
         # Screen
         ssd1306
-        
+        # UMTS (note the esp_modem dependency)
+        mqtt
 )
