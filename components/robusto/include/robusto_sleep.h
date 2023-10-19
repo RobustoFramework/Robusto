@@ -14,7 +14,7 @@ void robusto_goto_sleep(uint32_t millisecs);
  */
 uint32_t get_last_sleep_duration();
 
-
+uint32_t robusto_get_total_time_awake();
 bool robusto_is_first_boot();
 int robusto_get_sleep_count();
 

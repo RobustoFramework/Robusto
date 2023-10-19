@@ -27,6 +27,9 @@ static RTC_DATA_ATTR int sleep_count;
 /* The time we waited */
 static RTC_DATA_ATTR uint32_t last_sleep_duration;
 
+/* Tracking the time we've been awake */
+static RTC_DATA_ATTR uint32_t wake_time;
+
 /* Is it the first boot, have we not slept? */
 static bool b_first_boot;
 
@@ -56,7 +59,8 @@ void robusto_goto_sleep(uint32_t millisecs)
 
     ROB_LOGI(sleep_log_prefix, "---------------------------------------- S L E E P ----------------------------------------");
     ROB_LOGI(sleep_log_prefix, "At %li and going to sleep for %lu milliseconds", r_millis(), millisecs);
-
+    /* Now we know how long we were awake this time */
+    wake_time+= r_millis();
     sleep_count++;
 
 
@@ -108,6 +112,7 @@ bool robusto_sleep_init(char *_log_prefix)
 
         sleep_count = 0;
         last_sleep_duration = 0;
+        wake_time = 0;
         // TODO: Implement a callback before sleep ?
         // robusto_reset_rtc();
         b_first_boot = true;
@@ -132,4 +137,7 @@ bool robusto_sleep_init(char *_log_prefix)
 int robusto_get_sleep_count()
 {
     return sleep_count;
+}
+uint32_t get_total_time_awake() {
+    return wake_time + r_millis();
 }

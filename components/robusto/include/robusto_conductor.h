@@ -88,6 +88,14 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
  */
 void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb);
 
+/**
+ * @brief Time since the conductor started conducting
+ * 
+ * @return uint32_t Time in milliseconds
+ */
+
+uint32_t robusto_conductor_server_get_time_since_start();
+
 /* Client functionality*/
 
 /**

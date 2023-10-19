@@ -70,7 +70,7 @@ void on_incoming_conductor_server(robusto_message_t *message)
  *
  * @return int The number of milliseconds 
  */
-uint32_t robusto_get_time_since_start()
+uint32_t robusto_conductor_server_get_time_since_start()
 {
     if (last_sleep_time > 0)
     {
@@ -91,7 +91,7 @@ void robusto_conductor_server_calc_next_time()
 {
     // TODO: This needs some tweaking to take in account: Short delay in reboot (~800 ms) and something else that causes some miscalculation
     /* Next time  = Time now + Cycle time - how long we've been awake */
-    next_time = robusto_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - r_millis();
+    next_time = robusto_conductor_server_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - r_millis();
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %" PRIu32 ".", next_time);
 }
 
@@ -109,9 +109,9 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
     // The peer is obviously a client that will go to sleep, stop checking on it.
     peer->sleeper = true;
 
-    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_get_time_since_start());
+    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_conductor_server_get_time_since_start());
 
-    uint32_t delta_next = next_time - robusto_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS;
+    uint32_t delta_next = next_time - robusto_conductor_server_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS;
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %" PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
@@ -188,7 +188,7 @@ void robusto_conductor_server_take_control()
         }
     }
     /* Set the sleep time just before going to sleep. */
-    last_sleep_time = robusto_get_time_since_start();
+    last_sleep_time = robusto_conductor_server_get_time_since_start();
     /* remember how long we were awake */
     // Todo: We could probably remove last_wake_time
     last_wake_time = r_millis();

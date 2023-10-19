@@ -128,13 +128,15 @@ int umts_ip_enable_data_mode() {
         else if ((uxBits & GSM_CONNECT_BIT) != 0)
         {
             ROB_LOGI(umts_ip_log_prefix, "Got an IP connection, great!");
-            ask_for_time(5000000);
+            robusto_conductor_server_ask_for_time(5000);
             return ESP_OK;
         }
         else
         {
             ROB_LOGI(umts_ip_log_prefix, "Timed out. Continuing waiting for IP.");
-            ask_for_time(5000000);
+            #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+            robusto_conductor_server_ask_for_time(5000);
+            #endif
         }
     } while (1);
  

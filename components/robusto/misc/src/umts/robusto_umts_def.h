@@ -2,7 +2,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-#include <esp_modem.h>
+#include <esp_modem_api.h>
 
 extern esp_modem_dce_t *umts_dce;
 extern EventGroupHandle_t umts_event_group;

@@ -76,7 +76,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_BEFORE_CONNECT:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_BEFORE_CONNECT");
-        ask_for_time(6000000); 
+        robusto_conductor_client_give_control(6000); 
         break;   
     default:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT other event id: %i", event->event_id);
@@ -133,7 +133,9 @@ int gsm_mqtt_init(char * _log_prefix) {
     ROB_LOGI(umts_mqtt_log_prefix, " + Register callbacks");
     esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL); 
     umts_abort_if_shutting_down();
-    ask_for_time(5000000); 
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    robusto_conductor_server_ask_for_time(5000);
+    #endif
     ROB_LOGI(umts_mqtt_log_prefix, " + Start the client");
     esp_mqtt_client_start(mqtt_client);
     umts_abort_if_shutting_down();

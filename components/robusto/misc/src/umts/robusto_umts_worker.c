@@ -10,41 +10,41 @@
 
 
 #include "robusto_umts_worker.h"
-#include <robusto_queue.h>
+
 
 #include <sys/queue.h>
+#include <robusto_system.h>
 
 #include <robusto_logging.h>
 #include <string.h>
 
 // The queue context
-queue_context umts_queue_context;
+queue_context_t umts_queue_context;
 
 char *umts_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
-STAILQ_HEAD(umts_work_q, work_queue_item) umts_work_q;
+STAILQ_HEAD(umts_work_q, umts_queue_item) umts_work_q;
 
-struct work_queue_item_t *umts_first_queueitem() {
+struct umts_queue_item_t *umts_first_queueitem() {
     return STAILQ_FIRST(&umts_work_q); 
 }
 
 void umts_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&umts_work_q, items); 
 }
-void umts_insert_tail(work_queue_item_t *new_item) {
+void umts_insert_tail(umts_queue_item_t *new_item) {
     STAILQ_INSERT_TAIL(&umts_work_q, new_item, items);
 }
 
-esp_err_t umts_safe_add_work_queue(work_queue_item_t *new_item) {   
+rob_ret_val_t umts_safe_add_work_queue(umts_queue_item_t *new_item) {   
     return safe_add_work_queue(&umts_queue_context, new_item);
 }
-void umts_cleanup_queue_task(work_queue_item_t *queue_item) {
+void umts_cleanup_queue_task(umts_queue_item_t *queue_item) {
     if (queue_item != NULL)
     {
-        free(queue_item->parts);
-        free(queue_item->raw_data);
-        free(queue_item);
+        robusto_free(queue_item->message);
+        robusto_free(queue_item);
     }
     cleanup_queue_task(&umts_queue_context);
 }
@@ -58,7 +58,7 @@ void umts_shutdown_worker() {
     umts_queue_context.shutdown = true;
 }
 
-esp_err_t umts_init_worker(work_callback work_cb, char *_log_prefix)
+rob_ret_val_t umts_init_worker(work_callback work_cb, char *_log_prefix)
 {
     umts_worker_log_prefix = _log_prefix;
     // Initialize the work queue

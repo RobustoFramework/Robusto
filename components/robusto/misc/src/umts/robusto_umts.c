@@ -1,28 +1,26 @@
-#include <sdkconfig.h>
 // TODO: The naming of things in the KConfig still have the names of the examples, this needs to change
 
 #include "robusto_umts.h"
 
 #ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
 
-#include "gsm.h"
+#include "robusto_umts.h"
 #include "robusto_umts_def.h"
 
 #include <string.h>
 
 #include "robusto_logging.h"
-#include "../sdp_helpers.h"
 
 #include "robusto_umts_task.h"
 #include "robusto_umts_mqtt.h"
 
-
+#include "robusto_conductor.h"
 
 #include "robusto_umts_worker.h"
 
 #include <esp_timer.h>
 
-#include "../sleep/sleep.h"
+#include "robusto_sleep.h"
 
 
 char *umts_log_prefix;
@@ -60,34 +58,34 @@ bool umts_shutdown()
     return true;
 }
 
-void umts_do_on_work_cb(work_queue_item_t *work_item) {
+void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 
     // TODO: Consider what actually is the point here, should GSM=MQTT?
 
     ROB_LOGI(umts_log_prefix, "In GSM work callback.");
 
-    if ((strcmp(work_item->parts[1], "-1.00") != 0) && (strcmp(work_item->parts[1], "-2.00") != 0)) {
-        publish("/topic/lurifax/peripheral_humidity", work_item->parts[1],  strlen(work_item->parts[1]));
-        publish("/topic/lurifax/peripheral_temperature", work_item->parts[2],  strlen(work_item->parts[2]));
+    if ((strcmp(queue_item->message->strings[1], "-1.00") != 0) && (strcmp(queue_item->message->strings[1], "-2.00") != 0)) {
+        publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
+        publish("/topic/lurifax/peripheral_temperature", queue_item->message->strings[2],  strlen(queue_item->message->strings[2]));
     }
-    publish("/topic/lurifax/peripheral_since_wake", work_item->parts[3],  strlen(work_item->parts[3]));
-    publish("/topic/lurifax/peripheral_since_boot", work_item->parts[4],  strlen(work_item->parts[4]));
-    publish("/topic/lurifax/peripheral_free_mem", work_item->parts[5],  strlen(work_item->parts[5]));
-    publish("/topic/lurifax/peripheral_total_wake_time", work_item->parts[6],  strlen(work_item->parts[6]));
-    publish("/topic/lurifax/peripheral_voltage", work_item->parts[7],  strlen(work_item->parts[7]));
-    publish("/topic/lurifax/peripheral_state_of_charge", work_item->parts[8],  strlen(work_item->parts[8]));
-    publish("/topic/lurifax/peripheral_battery_current", work_item->parts[9],  strlen(work_item->parts[9]));
-    publish("/topic/lurifax/peripheral_mid_point_voltage", work_item->parts[10],  strlen(work_item->parts[10]));
+    publish("/topic/lurifax/peripheral_since_wake", queue_item->message->strings[3],  strlen(queue_item->message->strings[3]));
+    publish("/topic/lurifax/peripheral_since_boot", queue_item->message->strings[4],  strlen(queue_item->message->strings[4]));
+    publish("/topic/lurifax/peripheral_free_mem", queue_item->message->strings[5],  strlen(queue_item->message->strings[5]));
+    publish("/topic/lurifax/peripheral_total_wake_time", queue_item->message->strings[6],  strlen(queue_item->message->strings[6]));
+    publish("/topic/lurifax/peripheral_voltage", queue_item->message->strings[7],  strlen(queue_item->message->strings[7]));
+    publish("/topic/lurifax/peripheral_state_of_charge", queue_item->message->strings[8],  strlen(queue_item->message->strings[8]));
+    publish("/topic/lurifax/peripheral_battery_current", queue_item->message->strings[9],  strlen(queue_item->message->strings[9]));
+    publish("/topic/lurifax/peripheral_mid_point_voltage", queue_item->message->strings[10],  strlen(queue_item->message->strings[10]));
 
 
     char * curr_time;
-    asprintf(&curr_time, "%.2f", (double)esp_timer_get_time()/(double)(1000000));
+    asprintf(&curr_time, "%.2f", (double)r_millis()/(double)1000);
 
     char * since_start;
-    asprintf(&since_start, "%.2f", (double)get_time_since_start()/(double)(1000000));
+    asprintf(&since_start, "%.2f", (double)robusto_conductor_server_get_time_since_start()/(double)(1000));
 
     char * total_wake_time;
-    asprintf(&total_wake_time, "%.2f", (double)get_total_time_awake()/(double)(1000000));
+    asprintf(&total_wake_time, "%.2f", (double)robusto_get_total_time_awake()/(double)(1000));
 
     char * free_mem;
     asprintf(&free_mem, "%i", heap_caps_get_free_size(MALLOC_CAP_EXEC));
@@ -117,7 +115,7 @@ void umts_do_on_work_cb(work_queue_item_t *work_item) {
 */
     successful_data = true;
 
-    umts_cleanup_queue_task(work_item);
+    umts_cleanup_queue_task(queue_item);
 
 }   
 
