@@ -8,7 +8,7 @@
 #include "robusto_logging.h"
 
 #include <esp_modem_api.h>
-
+#include "esp_modem_dce_config.h"
 #include <driver/gpio.h>
 
 #include "robusto_conductor.h"
@@ -238,9 +238,8 @@ void robusto_umts_start(char *_log_prefix)
     operator_name = malloc(40);
 
     // We need to init the PPP netif as that is a parameter to the modem setup
-    umts_ip_init(umts_task_log_prefix);
+    esp_modem_dce_config_t dce_config = umts_ip_init(umts_task_log_prefix);
 
-    esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN);
 
     ROB_LOGI(umts_task_log_prefix, "Powering on modem.");
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
@@ -263,32 +262,32 @@ void robusto_umts_start(char *_log_prefix)
     ROB_LOGI(umts_task_log_prefix, "+ Waiting 2 seconds.");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     /* Configure the DTE */
-#if defined(CONFIG_EXAMPLE_SERIAL_CONFIG_UART)
+#if defined(CONFIG_ROBUSTO_UMTS_SERIAL_CONFIG_UART)
     esp_modem_dte_config_t dte_config = ESP_MODEM_DTE_DEFAULT_CONFIG();
     /* setup UART specific configuration based on kconfig options */
     dte_config.uart_config.baud_rate = 115200;
-    dte_config.uart_config.tx_io_num = CONFIG_EXAMPLE_MODEM_UART_TX_PIN;
-    dte_config.uart_config.rx_io_num = CONFIG_EXAMPLE_MODEM_UART_RX_PIN;
-    dte_config.uart_config.rts_io_num = -1; // CONFIG_EXAMPLE_MODEM_UART_RTS_PIN;
-    dte_config.uart_config.cts_io_num = -1; // CONFIG_EXAMPLE_MODEM_UART_CTS_PIN;
+    dte_config.uart_config.tx_io_num = CONFIG_ROBUSTO_UMTS_MODEM_UART_TX_PIN;
+    dte_config.uart_config.rx_io_num = CONFIG_ROBUSTO_UMTS_MODEM_UART_RX_PIN;
+    dte_config.uart_config.rts_io_num = -1; // CONFIG_ROBUSTO_UMTS_MODEM_UART_RTS_PIN;
+    dte_config.uart_config.cts_io_num = -1; // CONFIG_ROBUSTO_UMTS_MODEM_UART_CTS_PIN;
 
-    dte_config.uart_config.rx_buffer_size = CONFIG_EXAMPLE_MODEM_UART_RX_BUFFER_SIZE;
-    dte_config.uart_config.tx_buffer_size = CONFIG_EXAMPLE_MODEM_UART_TX_BUFFER_SIZE;
-    dte_config.uart_config.event_queue_size = CONFIG_EXAMPLE_MODEM_UART_EVENT_QUEUE_SIZE;
-    dte_config.task_stack_size = CONFIG_EXAMPLE_MODEM_UART_EVENT_TASK_STACK_SIZE;
-    dte_config.task_priority = CONFIG_EXAMPLE_MODEM_UART_EVENT_TASK_PRIORITY;
-    dte_config.dte_buffer_size = CONFIG_EXAMPLE_MODEM_UART_RX_BUFFER_SIZE;
+    dte_config.uart_config.rx_buffer_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_RX_BUFFER_SIZE;
+    dte_config.uart_config.tx_buffer_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_TX_BUFFER_SIZE;
+    dte_config.uart_config.event_queue_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_EVENT_QUEUE_SIZE;
+    dte_config.task_stack_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_EVENT_TASK_STACK_SIZE;
+    dte_config.task_priority = CONFIG_ROBUSTO_UMTS_MODEM_UART_EVENT_TASK_PRIORITY;
+    dte_config.dte_buffer_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_RX_BUFFER_SIZE;
 
-#if CONFIG_EXAMPLE_MODEM_DEVICE_BG96 == 1
+#if CONFIG_ROBUSTO_UMTS_MODEM_DEVICE_BG96 == 1
     ROB_LOGI(umts_task_log_prefix, "Initializing esp_modem for the BG96 module...");
     umts_dce = esp_modem_new_dev(ESP_MODEM_DCE_BG96, &dte_config, &dce_config, umts_ip_esp_netif);
-#elif CONFIG_EXAMPLE_MODEM_DEVICE_SIM800 == 1
+#elif CONFIG_ROBUSTO_UMTS_MODEM_DEVICE_SIM800 == 1
     ROB_LOGI(umts_task_log_prefix, "Initializing esp_modem for the SIM800 module...");
     umts_dce = esp_modem_new_dev(ESP_MODEM_DCE_SIM800, &dte_config, &dce_config, umts_ip_esp_netif);
-#elif CONFIG_EXAMPLE_MODEM_DEVICE_SIM7600 == 1
+#elif CONFIG_ROBUSTO_UMTS_MODEM_DEVICE_SIM7600 == 1
     ROB_LOGI(umts_task_log_prefix, "Initializing esp_modem for the SIM7600 module...");
     umts_dce = esp_modem_new_dev(ESP_MODEM_DCE_SIM7600, &dte_config, &dce_config, umts_ip_esp_netif);
-#elif CONFIG_EXAMPLE_MODEM_DEVICE_SIM7000 == 1
+#elif CONFIG_ROBUSTO_UMTS_MODEM_DEVICE_SIM7000 == 1
 
     ROB_LOGI(umts_task_log_prefix, "Initializing esp_modem for the SIM7000 module..umts_ip_esp_netif assigned %p", umts_ip_esp_netif);
     umts_dce = esp_modem_new_dev(ESP_MODEM_DCE_SIM7000, &dte_config, &dce_config, umts_ip_esp_netif);
@@ -334,10 +333,10 @@ void robusto_umts_start(char *_log_prefix)
         {
             ROB_LOGI(umts_task_log_prefix, "Sync   returned:  %s", res);
         }
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        r_delay(500);
     }
     umts_abort_if_shutting_down();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
 
     /* We are now much more likely to be able to connect, ask for 7.5 more seconds for the next phase */
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
@@ -404,12 +403,12 @@ void robusto_umts_start(char *_log_prefix)
     }*/
 
     /* Run the modem demo app */
-#if CONFIG_EXAMPLE_NEED_SIM_PIN == 1
+#if CONFIG_ROBUSTO_UMTS_NEED_SIM_PIN == 1
     // check if PIN needed
     bool pin_ok = false;
     if (esp_modem_read_pin(umts_dce, &pin_ok) == ESP_OK && pin_ok == false)
     {
-        if (esp_modem_set_pin(umts_dce, CONFIG_EXAMPLE_SIM_PIN) == ESP_OK)
+        if (esp_modem_set_pin(umts_dce, CONFIG_ROBUSTO_UMTS_SIM_PIN) == ESP_OK)
         {
             r_delay(1000);
         }

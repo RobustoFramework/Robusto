@@ -9,6 +9,7 @@
 #include "esp_modem_api.h"
 
 
+
 #include "robusto_umts_mqtt.h"
 #include "robusto_logging.h"
 
@@ -150,27 +151,40 @@ int umts_ip_enable_data_mode() {
  
 }
 
-void umts_ip_init(char *_log_prefix)
+esp_modem_dce_config_t umts_ip_init(char *_log_prefix)
 {
     
     umts_ip_log_prefix = _log_prefix;
     ROB_LOGI(umts_ip_log_prefix, "* Initiating umts_ip");
 
+    /* Init and register system/core components */
     // Initialize the underlying TCP/IP stack  
     ESP_ERROR_CHECK(esp_netif_init());
 
-    // Keeping this here to inform that the event loop is created in sdp_init, not here
-    //    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
+    esp_event_loop_create_default();
     ROB_LOGI(umts_ip_log_prefix, " + Register IP event handlers.");
+
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, &on_ppp_changed, NULL));
-    // Note that Component config > LWIP > Enable PPP support must be set.
-    esp_netif_config_t netif_ppp_config = ESP_NETIF_DEFAULT_PPP(); 
+
+
+    /* Configure the PPP netif */ // TODO: Move this back to umts_task. Get Modem working without ppp for now
+    esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN);
+   // Note that Component config > LWIP > Enable PPP support must be set.
+    esp_netif_config_t netif_ppp_config = ESP_NETIF_DEFAULT_PPP();
     ROB_LOGI(umts_ip_log_prefix, " + Create netif object");
+    
+    //netif_ppp_config.base->if_key = "TEST";
+    //netif_ppp_config.driver = (void*)"test";
     umts_ip_esp_netif = esp_netif_new(&netif_ppp_config);
+    
     assert(umts_ip_esp_netif); 
     ROB_LOGI(umts_ip_log_prefix, "* umts_ip_esp_netif assigned %p", umts_ip_esp_netif);
+
+    // Keeping this here to inform that the event loop is created in sdp_init, not here
+    // TODO: This is called here to be sure, possibly it should be called in some initialization instead. Or does it matter?
+    esp_event_loop_create_default();
+    return dce_config;
 
 }
 #endif

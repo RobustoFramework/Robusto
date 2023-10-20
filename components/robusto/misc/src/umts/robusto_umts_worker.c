@@ -71,6 +71,7 @@ rob_ret_val_t umts_init_worker(work_callback work_cb, char *_log_prefix)
     umts_queue_context.max_task_count = 1;
     // This queue cannot start processing items until GSM is initialized
     umts_queue_context.blocked = true;
+    umts_queue_context.watchdog_timeout = 20;
 
     init_work_queue(&umts_queue_context, _log_prefix, "GSM Queue");
 
