@@ -52,5 +52,5 @@ idf_component_register(
         # Screen
         ssd1306
         # UMTS (note the esp_modem dependency)
-        mqtt
+        mqtt esp_netif esp_modem
 )

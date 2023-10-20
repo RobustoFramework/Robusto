@@ -4,6 +4,7 @@
 #include "freertos/event_groups.h"
 #include "esp_netif.h"
 #include "esp_netif_ppp.h"
+#include "esp_netif_defaults.h"
 #include "mqtt_client.h"
 #include "esp_modem_api.h"
 
@@ -164,6 +165,7 @@ void umts_ip_init(char *_log_prefix)
     ROB_LOGI(umts_ip_log_prefix, " + Register IP event handlers.");
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, &on_ppp_changed, NULL));
+    // Note that Component config > LWIP > Enable PPP support must be set.
     esp_netif_config_t netif_ppp_config = ESP_NETIF_DEFAULT_PPP(); 
     ROB_LOGI(umts_ip_log_prefix, " + Create netif object");
     umts_ip_esp_netif = esp_netif_new(&netif_ppp_config);
