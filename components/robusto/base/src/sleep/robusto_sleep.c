@@ -138,6 +138,6 @@ int robusto_get_sleep_count()
 {
     return sleep_count;
 }
-uint32_t get_total_time_awake() {
+uint32_t robusto_get_total_time_awake() {
     return wake_time + r_millis();
 }

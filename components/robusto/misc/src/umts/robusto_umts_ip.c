@@ -1,10 +1,16 @@
 #include "robusto_umts_ip.h"
-
-#include "robusto_logging.h"
+#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+#include "esp_netif.h"
 #include "esp_netif_ppp.h"
-#include "robusto_umts_mqtt.h"
+#include "mqtt_client.h"
+#include "esp_modem_api.h"
 
-#include "esp_event.h"
+
+#include "robusto_umts_mqtt.h"
+#include "robusto_logging.h"
+
 #include "robusto_umts_worker.h"
 #include "inttypes.h"
 
@@ -79,8 +85,7 @@ void umts_ip_cleanup() {
     if (umts_ip_esp_netif) {
         umts_mqtt_cleanup();
         ROB_LOGI(umts_ip_log_prefix, "Cleaning up GSM IP");
-
-        
+      
 
         ROB_LOGI(umts_ip_log_prefix, "- Unregistering IP/Netif events.");
         esp_event_handler_unregister(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event);
@@ -128,7 +133,9 @@ int umts_ip_enable_data_mode() {
         else if ((uxBits & GSM_CONNECT_BIT) != 0)
         {
             ROB_LOGI(umts_ip_log_prefix, "Got an IP connection, great!");
+            #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
             robusto_conductor_server_ask_for_time(5000);
+            #endif
             return ESP_OK;
         }
         else
@@ -164,3 +171,4 @@ void umts_ip_init(char *_log_prefix)
     ROB_LOGI(umts_ip_log_prefix, "* umts_ip_esp_netif assigned %p", umts_ip_esp_netif);
 
 }
+#endif

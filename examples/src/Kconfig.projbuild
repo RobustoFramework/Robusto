@@ -49,7 +49,17 @@ menu "Robusto Examples"
             2. Tell it to sleep for a the time defined in ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS
             3. Go to sleep for the same time
             4. Repeat
-         
+
+    config ROBUSTO_EXAMPLE_SMS
+        bool "The SMS example"
+        config ROBUSTO_EXAMPLE_SMS_NUMBER
+            string "The phone number to send the SMS"
+            depends on ROBUSTO_EXAMPLE_SMS
+        config ROBUSTO_EXAMPLE_SMS_MESSAGE
+            string "The message to send"
+            depends on ROBUSTO_EXAMPLE_SMS
+    
+        
 endmenu
 
         

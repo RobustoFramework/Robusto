@@ -1,6 +1,7 @@
 #pragma once
-
+#include <robconfig.h>
 #include "stdbool.h"
+
 #include "esp_netif.h"
 
 extern esp_netif_t *umts_ip_esp_netif;

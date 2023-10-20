@@ -67,6 +67,9 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER 
 #include "../conductor/conductor_server.h"   
 #endif
+#ifdef CONFIG_ROBUSTO_EXAMPLE_SMS
+#include "../sms/sms.h"   
+#endif
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #define NUM_RECORDS 100
@@ -119,7 +122,11 @@ void setup() {
     init_conductor_server(example_log_prefix);
     run_conductor_server();
     #endif
-
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_SMS
+    ROB_LOGI(example_log_prefix, "Start SMS examples");
+    init_sms_example(example_log_prefix);
+    start_sms_example();
+    #endif
 }
 
 void log_test()
@@ -166,7 +173,7 @@ void app_main()
     #else
     while (1)
     {
-        vTaskDelay(100);
+        r_millis(100);
     };
     #endif
     // while(1) {r_delay(100);};

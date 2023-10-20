@@ -4,7 +4,6 @@
 
 #ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
 
-#include "robusto_umts.h"
 #include "robusto_umts_def.h"
 
 #include <string.h>
@@ -20,7 +19,7 @@
 
 #include <esp_timer.h>
 
-#include "robusto_sleep.h"
+#include <robusto_sleep.h>
 
 
 char *umts_log_prefix;
@@ -39,7 +38,6 @@ bool umts_shutdown()
         connection_failures++;
     }
     ROB_LOGI(umts_log_prefix, "----- Turning off all GSM/UMTS stuff -----");
-
 
     umts_cleanup();
     
@@ -82,8 +80,11 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
     asprintf(&curr_time, "%.2f", (double)r_millis()/(double)1000);
 
     char * since_start;
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     asprintf(&since_start, "%.2f", (double)robusto_conductor_server_get_time_since_start()/(double)(1000));
-
+    #else
+    asprintf(&since_start, "N/A");
+    #endif
     char * total_wake_time;
     asprintf(&total_wake_time, "%.2f", (double)robusto_get_total_time_awake()/(double)(1000));
 
@@ -124,7 +125,7 @@ void umts_reset_rtc() {
     connection_successes = 0;
 }
 
-void umts_init(char *_log_prefix)
+void robusto_umts_init(char *_log_prefix)
 {
     umts_log_prefix = _log_prefix;
     ROB_LOGI(umts_log_prefix, "Initiating GSM modem..");
@@ -136,7 +137,7 @@ void umts_init(char *_log_prefix)
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
-    int rc = xTaskCreatePinnedToCore((TaskFunction_t)umts_start, "GSM main task", /*8192*/ 16384, 
+    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "GSM main task", /*8192*/ 16384, 
         (void *)umts_log_prefix, 5, &umts_modem_setup_task, 0);
     if (rc != pdPASS)
     {

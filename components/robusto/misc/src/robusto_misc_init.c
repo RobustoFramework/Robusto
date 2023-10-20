@@ -50,7 +50,9 @@ void robusto_misc_start() {
 }
 
 void register_misc_service() {
+    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
     register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
+    #endif
 }
 
 void robusto_misc_init(char * _log_prefix) {

@@ -12,7 +12,7 @@
 
 
 #include "robusto_umts_mqtt.h"
-
+#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
 #include "mqtt_client.h"
 
 #include "robusto_sleep.h"
@@ -54,7 +54,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+        #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
         robusto_conductor_server_ask_for_time(5000000); 
+        #endif
         //msg_id = esp_mqtt_client_publish(client, "/topic/esp-pppos", "esp32-pppos", 0, 0, 0);
         //ROB_LOGI(umts_mqtt_log_prefix, "sent publish successful, msg_id=%d", msg_id);
         break;
@@ -76,7 +78,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_BEFORE_CONNECT:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_BEFORE_CONNECT");
+        #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
         robusto_conductor_client_give_control(6000); 
+        #endif
         break;   
     default:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT other event id: %i", event->event_id);
@@ -84,7 +88,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-void gsm_mqtt_cleanup() {
+void umts_mqtt_cleanup() {
     if (mqtt_client) {
 
         ROB_LOGI(umts_mqtt_log_prefix, "* MQTT shutting down.");
@@ -109,7 +113,7 @@ int publish(char * topic, char * payload, int payload_len) {
 
 
 
-int gsm_mqtt_init(char * _log_prefix) {
+int umts_mqtt_init(char * _log_prefix) {
     
     umts_mqtt_log_prefix = _log_prefix;
 
@@ -159,3 +163,4 @@ int gsm_mqtt_init(char * _log_prefix) {
     #endif
     return ESP_OK;
 }
+#endif

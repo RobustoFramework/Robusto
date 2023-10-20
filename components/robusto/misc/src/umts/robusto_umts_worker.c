@@ -10,7 +10,7 @@
 
 
 #include "robusto_umts_worker.h"
-
+#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
 
 #include <sys/queue.h>
 #include <robusto_system.h>
@@ -77,3 +77,4 @@ rob_ret_val_t umts_init_worker(work_callback work_cb, char *_log_prefix)
     return ESP_OK;
 
 }
+#endif

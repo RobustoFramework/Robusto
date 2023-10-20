@@ -1,5 +1,4 @@
-#ifndef _SLEEP_H_
-#define _SLEEP_H_
+#pragma once
 
 #include "inttypes.h"
 #include "stdbool.h"
@@ -19,5 +18,3 @@ bool robusto_is_first_boot();
 int robusto_get_sleep_count();
 
 bool robusto_sleep_init(char * _log_prefix); 
-
-#endif

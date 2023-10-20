@@ -1,10 +1,13 @@
 #include "robusto_umts_task.h"
-
+#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#include <robusto_umts.h>
 #include "robusto_umts_def.h"
 #include "robusto_umts_mqtt.h"
 #include "robusto_umts_ip.h"
 #include "robusto_umts_worker.h"
 #include "robusto_logging.h"
+
+#include <esp_modem_api.h>
 
 #include <driver/gpio.h>
 
@@ -127,7 +130,7 @@ void umts_cleanup()
         */
         /*
         ROB_LOGI(umts_task_log_prefix, "* Sending SMS report after MQTT");
-        err = esp_modem_send_sms(umts_dce, "0733600343", "Going to sleep, all successful.");
+        err = esp_modem_send_sms(umts_dce, "", "Going to sleep, all successful.");
         if (err != ESP_OK)
         {
             ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); failed with error:  %i", err);
@@ -189,6 +192,24 @@ void umts_cleanup()
     cut_modem_power();
 }
 
+rob_ret_val_t robusto_umts_send_sms(const char * number, const char * message_string) {
+    if (!umts_dce) {
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); modem not initiated.");
+        return ROB_FAIL;
+    }
+    ROB_LOGI(umts_task_log_prefix, "Sending SMS to %s, message: \"%s\"", number, message_string);
+    esp_err_t err = esp_modem_send_sms(umts_dce, "", message_string);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); failed with error:  %i", err);
+        return ROB_FAIL;
+    } else {
+
+        return ROB_OK;
+    }
+
+}
+
 void umts_abort_if_shutting_down()
 {
     if ((umts_event_group == NULL) || (xEventGroupGetBits(umts_event_group) & GSM_SHUTTING_DOWN_BIT))
@@ -207,7 +228,7 @@ void handle_umts_states(int state)
     }
 }
 
-void umts_start(char *_log_prefix)
+void robusto_umts_start(char *_log_prefix)
 {
 
     umts_modem_setup_task = NULL;
@@ -456,3 +477,4 @@ signal_quality:
     // End init task
     vTaskDelete(NULL);
 }
+#endif
