@@ -34,22 +34,22 @@ void cut_modem_power()
     ROB_LOGI(umts_task_log_prefix, "- Setting pulldown mode. (float might be over 0.4 v)");
     gpio_set_pull_mode(GPIO_NUM_4, GPIO_PULLDOWN_ONLY);
     ROB_LOGI(umts_task_log_prefix, "- Setting pin 4 to high.");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
     gpio_set_level(GPIO_NUM_4, 1);
     ROB_LOGI(umts_task_log_prefix, "- Setting pin 4 to low, wait 1000 ms.");
     gpio_set_level(GPIO_NUM_4, 0);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
     ROB_LOGI(umts_task_log_prefix, "- Setting pin 4 to high again (shutdown may take up to 6.2 s).");
     gpio_set_level(GPIO_NUM_4, 1);
-    vTaskDelay(6200 / portTICK_PERIOD_MS);
+    r_delay(6200);
 
     ROB_LOGI(umts_task_log_prefix, "* Waiting...");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
     /*
         ROB_LOGI(umts_task_log_prefix, "* Setting pin 4 to low again.");
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        r_delay(1000/portTICK_PERIOD_MS);
         gpio_set_level(GPIO_NUM_4, 0);
-        vTaskDelay(1000/portTICK_PERIOD_MS);
+        r_delay(1000/portTICK_PERIOD_MS);
         */
     ROB_LOGI(umts_task_log_prefix, "* Power cut.");
 
@@ -83,7 +83,7 @@ void umts_cleanup()
     ROB_LOGI(umts_task_log_prefix, " - Informing everyone that the GSM task it is shutting down.");
     xEventGroupSetBits(umts_event_group, GSM_SHUTTING_DOWN_BIT);
     // Wait for the event to propagate
-    vTaskDelay(400 / portTICK_PERIOD_MS);
+    r_delay(400);
 
     if (umts_event_group)
     {
@@ -96,7 +96,7 @@ void umts_cleanup()
 
     umts_ip_cleanup();
 
-    vTaskDelay(1200 / portTICK_PERIOD_MS);
+    r_delay(1200);
     // Making sure umts_modem_setup_task is null and use a temporary variable instead.
     // This to avoid a race condition, as umts_before_sleep_cb may be called simultaneously
 
@@ -136,7 +136,7 @@ void umts_cleanup()
             ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); failed with error:  %i", err);
         } else {
 
-            vTaskDelay(4000/portTICK_PERIOD_MS);
+            r_delay(4000/portTICK_PERIOD_MS);
         }
         */
         /*
@@ -188,7 +188,7 @@ void umts_cleanup()
         */
     }
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
     cut_modem_power();
 }
 
@@ -228,6 +228,10 @@ void handle_umts_states(int state)
     }
 }
 
+bool robusto_umts_base_up() {
+    return umts_dce != NULL;
+}
+
 void robusto_umts_start(char *_log_prefix)
 {
 
@@ -236,9 +240,12 @@ void robusto_umts_start(char *_log_prefix)
 
     umts_task_log_prefix = _log_prefix;
     operator_name = malloc(40);
-
+    
+    /* Configure the PPP netif */ // TODO: Move this back to umts_task. Get Modem working without ppp for now
+    esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN);
+    
     // We need to init the PPP netif as that is a parameter to the modem setup
-    esp_modem_dce_config_t dce_config = umts_ip_init(umts_task_log_prefix);
+    umts_ip_init(umts_task_log_prefix);
 
 
     ROB_LOGI(umts_task_log_prefix, "Powering on modem.");
@@ -250,17 +257,17 @@ void robusto_umts_start(char *_log_prefix)
     ROB_LOGI(umts_task_log_prefix, " + Setting PWRKEY low");
     gpio_set_level(GPIO_NUM_4, 0);
     ROB_LOGI(umts_task_log_prefix, " + Waiting 1 second.");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    r_delay(1000);
     ROB_LOGI(umts_task_log_prefix, "+ Setting PWRKEY high");
     gpio_set_level(GPIO_NUM_4, 1);
     ROB_LOGI(umts_task_log_prefix, " + Setting DTR to high.");
     gpio_set_direction(GPIO_NUM_25, GPIO_MODE_OUTPUT);
     gpio_set_level(GPIO_NUM_25, 1);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    r_delay(2000);
     ROB_LOGI(umts_task_log_prefix, " + Setting DTR to low.");
     gpio_set_level(GPIO_NUM_25, 0);
     ROB_LOGI(umts_task_log_prefix, "+ Waiting 2 seconds.");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    r_delay(2000);
     /* Configure the DTE */
 #if defined(CONFIG_ROBUSTO_UMTS_SERIAL_CONFIG_UART)
     esp_modem_dte_config_t dte_config = ESP_MODEM_DTE_DEFAULT_CONFIG();
@@ -331,7 +338,7 @@ void robusto_umts_start(char *_log_prefix)
         }
         else
         {
-            ROB_LOGI(umts_task_log_prefix, "Sync   returned:  %s", res);
+            ROB_LOGI(umts_task_log_prefix, "Sync returned:  %s", res);
         }
         r_delay(500);
     }
@@ -353,7 +360,7 @@ void robusto_umts_start(char *_log_prefix)
     else
     {
         ROB_LOGI(umts_task_log_prefix, "CNMP=38 returned:  %s", res);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        r_delay(1000);
     }
     umts_abort_if_shutting_down();
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
@@ -370,7 +377,7 @@ void robusto_umts_start(char *_log_prefix)
     else
     {
         ROB_LOGI(umts_task_log_prefix, "AT+CMNB=1 returned:  %s", res);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        r_delay(1000);
     }
     umts_abort_if_shutting_down();
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
@@ -387,7 +394,7 @@ void robusto_umts_start(char *_log_prefix)
     else
     {
         ROB_LOGE(umts_task_log_prefix, "CREG? returned:  %s", res);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        r_delay(1000);
     }
     */
     /*ROB_LOGE(umts_task_log_prefix, "Modem synced. resetting");
@@ -399,7 +406,7 @@ void robusto_umts_start(char *_log_prefix)
     }
     else
     {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        r_delay(1000);
     }*/
 
     /* Run the modem demo app */
@@ -433,16 +440,16 @@ signal_quality:
     }
     if (rssi == 99)
     {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        r_delay(1000);
         retries++;
         if (retries > 6)
         {
-            ROB_LOGE(umts_task_log_prefix, "esp_modem_get_signal_quality returned 99 for rssi after 3 retries.");
+            ROB_LOGE(umts_task_log_prefix, "esp_modem_get_signal_quality returned 99 (Not known/connected) for rssi after 3 retries.");
             ROB_LOGE(umts_task_log_prefix, "It seems we don't have a proper connection, quitting (TODO: troubleshoot).");
         }
         else
         {
-            ROB_LOGI(umts_task_log_prefix, " esp_modem_get_signal_quality returned 99 for rssi, trying again");
+            ROB_LOGI(umts_task_log_prefix, " esp_modem_get_signal_quality returned 99 (Not known/connected) for rssi, trying again");
             goto signal_quality;
         }
     }

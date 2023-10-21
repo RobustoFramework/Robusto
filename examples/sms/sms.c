@@ -14,14 +14,19 @@ char * sms_log_prefix;
 void start_sms_example(char * _log_prefix)
 {
 
-    ROB_LOGI(sms_log_prefix, "Before sending SMS");
+    
+    while (!robusto_umts_base_up()) {
+        ROB_LOGI(sms_log_prefix, "Waiting for device to get going");
+        r_delay(1000);
+    }
+    ROB_LOGI(sms_log_prefix, "Trying to send an SMS.");
     robusto_umts_send_sms(CONFIG_ROBUSTO_EXAMPLE_SMS_NUMBER, CONFIG_ROBUSTO_EXAMPLE_SMS_MESSAGE);
 }
 
 void init_sms_example(char * _log_prefix) {
     sms_log_prefix = _log_prefix;
     robusto_umts_init(_log_prefix);
-    robusto_umts_start(_log_prefix);
+
 }
 
 
