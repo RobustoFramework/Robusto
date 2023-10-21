@@ -19,8 +19,10 @@ void start_sms_example(char * _log_prefix)
         ROB_LOGI(sms_log_prefix, "Waiting for device to get going");
         r_delay(1000);
     }
+    r_delay(30000);
     ROB_LOGI(sms_log_prefix, "Trying to send an SMS.");
-    robusto_umts_send_sms(CONFIG_ROBUSTO_EXAMPLE_SMS_NUMBER, CONFIG_ROBUSTO_EXAMPLE_SMS_MESSAGE);
+
+    //robusto_umts_send_sms(CONFIG_ROBUSTO_EXAMPLE_SMS_NUMBER, CONFIG_ROBUSTO_EXAMPLE_SMS_MESSAGE);
 }
 
 void init_sms_example(char * _log_prefix) {

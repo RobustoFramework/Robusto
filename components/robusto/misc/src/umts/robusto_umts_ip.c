@@ -106,8 +106,24 @@ void umts_ip_cleanup() {
 
 }
 
-int umts_ip_enable_data_mode() {
+int umts_ip_enable_command_mode() {
+    char result[64]; 
+    // Setting data mode.
+    // TODO: HAn
+    ROB_LOGI(umts_ip_log_prefix, "AT++++.%p ", umts_dce);
+    esp_err_t err = esp_modem_at(umts_dce, "AT++++", &result, 10000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT++++ failed with %i", err);
+        return 0;
+    }
+    ROB_LOGI(umts_ip_log_prefix, "Command mode set");
+    return 1;
+}
 
+
+int umts_ip_enable_data_mode() {
+    char result[64]; 
     // Setting data mode.
     ROB_LOGI(umts_ip_log_prefix, "esp_modem_set_data_mode(umts_dce).%p ", umts_dce);
     esp_err_t err = esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_DATA);
@@ -117,7 +133,70 @@ int umts_ip_enable_data_mode() {
         umts_ip_cleanup();
         return ESP_FAIL;
     }
-    ROB_LOGI(umts_ip_log_prefix, "Data mode set");
+    #if 0
+    
+    
+    // Attach to the GPRS service
+    ROB_LOGI(umts_ip_log_prefix, "AT+CGATT=1 - %p ", umts_dce);
+    esp_err_t err = esp_modem_at(umts_dce, "AT+CGATT=1", &result, 75000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT+CGATT=1 failed with %i", err);
+        umts_ip_cleanup();
+        return false;
+    } else {
+        ROB_LOGI(umts_ip_log_prefix, "Attach result: %s", result);
+    }
+    // Then set APN
+    ROB_LOGI(umts_ip_log_prefix, "AT+CGDCONT=1,\"IPV4V6\",\"" CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN "\" - %p ", umts_dce);
+    err = esp_modem_at(umts_dce, "AT+CGDCONT=1,\"IPV4V6\",\"" CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN "\"", &result, 20000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT+CGDCONT=1,\"PPIPV4V6P\",\"internet.telenor.se\" failed with %i", err);
+        umts_ip_cleanup();
+        return false;
+    }
+
+    // Check PDP state
+    ROB_LOGI(umts_ip_log_prefix, "AT+CGACT? - %p ", umts_dce);
+    err = esp_modem_at(umts_dce, "AT+CGACT?", &result, 150000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT+CGACT? failed with %i", err);
+        umts_ip_cleanup();
+        return false;
+    } else {
+        ROB_LOGI(umts_ip_log_prefix, "PDP State: %s", result);
+    }
+    
+    // Activate PDP context
+    ROB_LOGI(umts_ip_log_prefix, "AT+CGACT=1,1 - %p ", umts_dce);
+    err = esp_modem_at(umts_dce, "AT+CGACT=1,1", &result, 150000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT+CGACT=1,1 failed with %i", err);
+        umts_ip_cleanup();
+        return false;
+    } else {
+        ROB_LOGI(umts_ip_log_prefix, "PDP Context activation result: %s", result);
+    }
+
+    // Activate PDP context
+    ROB_LOGI(umts_ip_log_prefix, "AT+CGPADDR=1 %p ", umts_dce);
+    err = esp_modem_at(umts_dce, "AT+CGPADDR=1", &result, 150000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_ip_log_prefix, "AT+CGPADDR failed with %i", err);
+        umts_ip_cleanup();
+        return false;
+    } else {
+        ROB_LOGI(umts_ip_log_prefix, "PDP address result: %s", result);
+    } 
+    ROB_LOGI(umts_ip_log_prefix, "Data mode set, result %s", result);
+    #endif   
+
+
+    
     /* Wait for IP address */
     ROB_LOGI(umts_ip_log_prefix, "Waiting for IP address");
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
@@ -131,7 +210,7 @@ int umts_ip_enable_data_mode() {
         if ((uxBits & GSM_SHUTTING_DOWN_BIT) != 0)
         {
             ROB_LOGW(umts_ip_log_prefix, "Getting that we are shutting down, pausing indefinitely.");
-            return GSM_SHUTTING_DOWN_BIT;
+            return -GSM_SHUTTING_DOWN_BIT;
         }
         else if ((uxBits & GSM_CONNECT_BIT) != 0)
         {
@@ -139,7 +218,7 @@ int umts_ip_enable_data_mode() {
             #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
             robusto_conductor_server_ask_for_time(5000);
             #endif
-            return ESP_OK;
+            return 1;
         }
         else
         {
@@ -162,11 +241,9 @@ void umts_ip_init(char *_log_prefix)
     // Initialize the underlying TCP/IP stack  
     ESP_ERROR_CHECK(esp_netif_init());
 
-    // Keeping this here to inform that the event loop is created in sdp_init, not here
-    // TODO: This is called here to be sure, possibly it should be called in some initialization instead. Or does it matter?
-    esp_event_loop_create_default();
-    ROB_LOGI(umts_ip_log_prefix, " + Register IP event handlers.");
 
+    
+    ROB_LOGI(umts_ip_log_prefix, " + Register IP and PPP event handlers.");
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &on_ip_event, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(NETIF_PPP_STATUS, ESP_EVENT_ANY_ID, &on_ppp_changed, NULL));
 
@@ -176,10 +253,9 @@ void umts_ip_init(char *_log_prefix)
            // Note that Component config > LWIP > Enable PPP support must be set.
         esp_netif_config_t netif_ppp_config = ESP_NETIF_DEFAULT_PPP();
         umts_ip_esp_netif = esp_netif_new(&netif_ppp_config);
-    }
-    
-    
-    assert(umts_ip_esp_netif); 
+        assert(umts_ip_esp_netif);
+    }    
+     
     ROB_LOGI(umts_ip_log_prefix, "* umts_ip_esp_netif assigned %p", umts_ip_esp_netif);
 
 

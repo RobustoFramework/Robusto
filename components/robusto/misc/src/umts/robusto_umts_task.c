@@ -12,16 +12,17 @@
 #include <driver/gpio.h>
 
 #include "robusto_conductor.h"
+#include <string.h>
 
 TaskHandle_t umts_modem_setup_task;
 esp_modem_dce_t *umts_dce = NULL;
-char *operator_name = NULL; 
+char *operator_name = NULL;
 
 char *umts_task_log_prefix = NULL;
 int sync_attempts = 0;
 
-
-int get_sync_attempts() {
+int get_sync_attempts()
+{
     return sync_attempts;
 }
 
@@ -87,7 +88,7 @@ void umts_cleanup()
 
     if (umts_event_group)
     {
-    
+
         ROB_LOGI(umts_task_log_prefix, " - Delete the event group");
 
         vEventGroupDelete(umts_event_group);
@@ -192,24 +193,27 @@ void umts_cleanup()
     cut_modem_power();
 }
 
-rob_ret_val_t robusto_umts_send_sms(const char * number, const char * message_string) {
-    if (!umts_dce) {
-        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); modem not initiated.");
+rob_ret_val_t robusto_umts_send_sms(const char *number, const char *message_string)
+{
+    if (!umts_dce || !umts_ip_enable_command_mode())
+    {
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); modem not initiated or command mode not established.");
         return ROB_FAIL;
     }
     ROB_LOGI(umts_task_log_prefix, "Sending SMS to %s, message: \"%s\"", number, message_string);
-    esp_err_t err = esp_modem_send_sms(umts_dce, "", message_string);
+    esp_err_t err = esp_modem_send_sms(umts_dce, number, message_string);
     if (err != ESP_OK)
     {
         ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); failed with error:  %i", err);
         return ROB_FAIL;
-    } else {
+    }
+    else
+    {
 
         return ROB_OK;
     }
-
 }
-
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 void umts_abort_if_shutting_down()
 {
     if ((umts_event_group == NULL) || (xEventGroupGetBits(umts_event_group) & GSM_SHUTTING_DOWN_BIT))
@@ -219,16 +223,20 @@ void umts_abort_if_shutting_down()
         vTaskDelete(NULL);
     }
 }
-
+#endif
 void handle_umts_states(int state)
 {
     if (state == -GSM_SHUTTING_DOWN_BIT)
     {
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
         umts_abort_if_shutting_down();
+#endif
     }
 }
 
-bool robusto_umts_base_up() {
+bool robusto_umts_base_up()
+{
     return umts_dce != NULL;
 }
 
@@ -239,14 +247,13 @@ void robusto_umts_start(char *_log_prefix)
     sync_attempts = 0;
 
     umts_task_log_prefix = _log_prefix;
-    operator_name = malloc(40);
-    
+    operator_name = malloc(64);
+
     /* Configure the PPP netif */ // TODO: Move this back to umts_task. Get Modem working without ppp for now
     esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN);
-    
+
     // We need to init the PPP netif as that is a parameter to the modem setup
     umts_ip_init(umts_task_log_prefix);
-
 
     ROB_LOGI(umts_task_log_prefix, "Powering on modem.");
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
@@ -306,10 +313,10 @@ void robusto_umts_start(char *_log_prefix)
 #endif
 
 #endif
-    /*For some reason the initial startup may take long */
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+/*For some reason the initial startup may take long */
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(5000);
-    #endif
+#endif
 
     char res[100];
     esp_err_t err = ESP_FAIL;
@@ -330,29 +337,29 @@ void robusto_umts_start(char *_log_prefix)
             {
                 ROB_LOGE(umts_task_log_prefix, "Sync attempt %i failed with error:  %i", sync_attempts, err);
             }
+
+// We want to try until we either connect or hit the timebox limit
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
             umts_abort_if_shutting_down();
-            // We want to try until we either connect or hit the timebox limit
-            #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
             robusto_conductor_server_ask_for_time(5000);
-            #endif
+#endif
+            r_delay(500);
         }
         else
         {
             ROB_LOGI(umts_task_log_prefix, "Sync returned:  %s", res);
         }
-        r_delay(500);
     }
+
+/* We are now much more likely to be able to connect, ask for 7.5 more seconds for the next phase */
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     umts_abort_if_shutting_down();
-    r_delay(1000);
-
-    /* We are now much more likely to be able to connect, ask for 7.5 more seconds for the next phase */
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(5000);
-    #endif
+#endif
 
-    ROB_LOGI(umts_task_log_prefix, "* Preferred mode selection; LTE only");
+    ROB_LOGI(umts_task_log_prefix, "* Preferred mode selection; Automatic");
 
-    err = esp_modem_at(umts_dce, "AT+CNMP=38", res, 15000);
+    err = esp_modem_at(umts_dce, "AT+CNMP=38", &res, 15000);
     if (err != ESP_OK)
     {
         ROB_LOGW(umts_task_log_prefix, "esp_modem_at CNMP=38 failed with error:  %i", err);
@@ -360,43 +367,30 @@ void robusto_umts_start(char *_log_prefix)
     else
     {
         ROB_LOGI(umts_task_log_prefix, "CNMP=38 returned:  %s", res);
-        r_delay(1000);
     }
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     umts_abort_if_shutting_down();
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(15500);
-    #endif
+#endif
 
     ROB_LOGI(umts_task_log_prefix, "* Preferred selection between CAT-M and NB-IoT");
-
-    err = esp_modem_at(umts_dce, "AT+CMNB=1", res, 15000);
+    err = esp_modem_at(umts_dce, "AT+CMNB=1", &res, 15000);
     if (err != ESP_OK)
     {
         ROB_LOGW(umts_task_log_prefix, "esp_modem_at CMNB=1 failed with error:  %i", err);
+        // TODO: This is probably fatal
     }
     else
     {
         ROB_LOGI(umts_task_log_prefix, "AT+CMNB=1 returned:  %s", res);
         r_delay(1000);
     }
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     umts_abort_if_shutting_down();
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(500);
-    #endif
-    /*
-    ROB_LOGE(umts_task_log_prefix, "Checking registration.");
-    char res[100];
-    err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);
-    if (err != ESP_OK)
-    {
-        ROB_LOGE(umts_task_log_prefix, "esp_modem_at CREG failed with error:  %i", err);
-    }
-    else
-    {
-        ROB_LOGE(umts_task_log_prefix, "CREG? returned:  %s", res);
-        r_delay(1000);
-    }
-    */
+#endif
+
     /*ROB_LOGE(umts_task_log_prefix, "Modem synced. resetting");
     char res[100];
     err = esp_modem_at(umts_dce, "AT+ATZ", &res, 1000);
@@ -442,10 +436,11 @@ signal_quality:
     {
         r_delay(1000);
         retries++;
-        if (retries > 6)
+        if (retries > 15)
         {
-            ROB_LOGE(umts_task_log_prefix, "esp_modem_get_signal_quality returned 99 (Not known/connected) for rssi after 3 retries.");
+            ROB_LOGE(umts_task_log_prefix, "esp_modem_get_signal_quality returned 99 (Not known/connected) for rssi after 15 retries.");
             ROB_LOGE(umts_task_log_prefix, "It seems we don't have a proper connection, quitting (TODO: troubleshoot).");
+            goto finish;
         }
         else
         {
@@ -454,11 +449,66 @@ signal_quality:
         }
     }
     ROB_LOGI(umts_task_log_prefix, "* Signal quality: rssi=%d, ber=%d", rssi, ber);
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-    robusto_conductor_server_ask_for_time(500);
-    #endif
+
+    ROB_LOGE(umts_task_log_prefix, "Checking registration.");
+    // char res[100];
+    bool registered = false;
+    err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);
+    if (err != ESP_OK)
+    {
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_at CREG failed with error:  %i", err);
+    }
+    else
+    {
+        ROB_LOGI(umts_task_log_prefix, "CREG? returned:  %s", res);
+        if (strcmp(res, "+CREG: 0,2") == 0)
+        {
+            registered = false;
+        }
+        else
+        {
+            registered = true;
+        }
+    }
+
+    if (!registered)
+    {
+        ROB_LOGW(umts_task_log_prefix, "We are not registered, start registering using AT+COPS=0 (auto select operator).");
+        err = esp_modem_at(umts_dce, "AT+COPS=0", &res, 120000);
+        if (err != ESP_OK)
+        {
+            ROB_LOGE(umts_task_log_prefix, "esp_modem_at AT+COPS=0 failed with error:  %i", err);
+        }
+        else
+        {
+            ROB_LOGI(umts_task_log_prefix, "AT+COPS=0 returned:  %s", res);
+            r_delay(6000);
+        }
+    }
+    
+    while (!registered)
+    {
+        err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);
+        if (err != ESP_OK)
+        {
+            ROB_LOGE(umts_task_log_prefix, "esp_modem_at CREG failed with error:  %i", err);
+        }
+        else
+        {
+            ROB_LOGI(umts_task_log_prefix, "CREG? returned:  %s", res);
+            if (strcmp(res, "+CREG: 0,2") == 0)
+            {
+                registered = false;
+                r_delay(6000);
+            }
+            else
+            {
+                registered = true;
+            }
+        }
+    }
+    
     int act = 0;
-    umts_abort_if_shutting_down();
     err = esp_modem_get_operator_name(umts_dce, operator_name, &act);
     if (err != ESP_OK)
     {
@@ -468,18 +518,26 @@ signal_quality:
     {
         ROB_LOGI(umts_task_log_prefix, " + Operator name : %s, act: %i", operator_name, act);
     }
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    robusto_conductor_server_ask_for_time(500);
+    umts_abort_if_shutting_down();
+#endif
+    r_delay(3000);
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(10000);
-    #endif
-    // Connect to the GSM network
+#endif
+    // Change to data mode
     handle_umts_states(umts_ip_enable_data_mode());
 
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(500);
-    #endif
+#endif
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
 
+finish:
     // End init task
     vTaskDelete(NULL);
 }

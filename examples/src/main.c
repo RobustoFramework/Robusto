@@ -173,7 +173,7 @@ void app_main()
     #else
     while (1)
     {
-        r_millis(100);
+        r_delay(100);
     };
     #endif
     // while(1) {r_delay(100);};

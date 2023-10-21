@@ -136,20 +136,23 @@ int umts_mqtt_init(char * _log_prefix) {
     mqtt_client = esp_mqtt_client_init(&mqtt_config);
     ROB_LOGI(umts_mqtt_log_prefix, " + Register callbacks");
     esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL); 
-    umts_abort_if_shutting_down();
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    umts_abort_if_shutting_down();
     robusto_conductor_server_ask_for_time(5000);
     #endif
     ROB_LOGI(umts_mqtt_log_prefix, " + Start the client");
     esp_mqtt_client_start(mqtt_client);
+
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     umts_abort_if_shutting_down();
+    #endif
     ROB_LOGI(umts_mqtt_log_prefix, " + Subscribe to the the client from the %s topic.", TOPIC);
     esp_mqtt_client_subscribe(mqtt_client, TOPIC, 1);
     ROB_LOGI(umts_mqtt_log_prefix, "* MQTT Running.");
     //TODO:Move the following to a task
     #if 0
     ROB_LOGI(umts_mqtt_log_prefix, "Waiting for MQTT data");
-    EventBits_t uxBits = xEventGroupWaitBits(gsm_event_group, GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+    EventBits_t uxBits = xEventGroupWaitBits(umts_event_group, GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
     if ((uxBits & GSM_SHUTTING_DOWN_BIT) != 0)
     {
         ROB_LOGE(umts_mqtt_log_prefix, "Getting that we are shutting down, pausing indefinitely.");

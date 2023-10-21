@@ -18,7 +18,7 @@
 #include "robusto_umts_worker.h"
 
 #include <esp_timer.h>
-
+#include <esp_event.h>
 #include <robusto_sleep.h>
 
 
@@ -128,22 +128,28 @@ void umts_reset_rtc() {
 void robusto_umts_init(char *_log_prefix)
 {
     umts_log_prefix = _log_prefix;
-    ROB_LOGI(umts_log_prefix, "Initiating GSM modem..");
+    ROB_LOGI(umts_log_prefix, "Initiating UMTS modem..");
 
-    umts_init_worker(&umts_do_on_work_cb, umts_log_prefix);
+    // Keeping this here to inform that the event loop is created in sdp_init, not here
+    // TODO: This is called here to be sure, possibly it should be called in some initialization instead. Or does it matter?
+    esp_event_loop_create_default();
+
 
     /* Create the event group, this is used for all event handling, initiate in main thread */
     umts_event_group = xEventGroupCreate();
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
+    umts_init_worker(&umts_do_on_work_cb, umts_log_prefix);
+
+
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
-    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "GSM main task", /*8192*/ 16384, 
+    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ 16384, 
         (void *)umts_log_prefix, 5, &umts_modem_setup_task, 0);
     if (rc != pdPASS)
     {
-        ROB_LOGE(umts_log_prefix, "Failed creating GSM task, returned: %i (see projdefs.h)", rc);
+        ROB_LOGE(umts_log_prefix, "Failed creating UMTS task, returned: %i (see projdefs.h)", rc);
     }
-    ROB_LOGI(umts_log_prefix, "* GSM main task registered.");
+    ROB_LOGI(umts_log_prefix, "* UMTS main task registered.");
 }
 
 #endif
