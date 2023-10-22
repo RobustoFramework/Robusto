@@ -49,10 +49,11 @@ menu "UMTS/GSM Configuration"
     endchoice
 
     config ROBUSTO_UMTS_MODEM_PPP_APN
-        string "Set MODEM APN"
-        default "internet"
+        string "Set MODEM APN (required!)"
+        default "THIS CANNOT BE EMPTY"
         help
             Set APN (Access Point Name), a logical name to choose data network
+            Note that this has to have a valid value for most purposes.
 
     config ROBUSTO_UMTS_MODEM_PPP_AUTH_USERNAME
         string "Set username for authentication"

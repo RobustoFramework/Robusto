@@ -106,19 +106,17 @@ void umts_ip_cleanup() {
 
 }
 
-int umts_ip_enable_command_mode() {
-    char result[64]; 
-    // Setting data mode.
-    // TODO: HAn
-    ROB_LOGI(umts_ip_log_prefix, "AT++++.%p ", umts_dce);
-    esp_err_t err = esp_modem_at(umts_dce, "AT++++", &result, 10000);
+bool umts_ip_enable_command_mode() {
+    
+    // Setting command mode.    
+    esp_err_t err = esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_COMMAND);
     if (err != ESP_OK)
     {
-        ROB_LOGE(umts_ip_log_prefix, "AT++++ failed with %i", err);
-        return 0;
+        ROB_LOGE(umts_ip_log_prefix, "esp_modem_set_mode failed with %i", err);
+        return false;
     }
     ROB_LOGI(umts_ip_log_prefix, "Command mode set");
-    return 1;
+    return true;
 }
 
 

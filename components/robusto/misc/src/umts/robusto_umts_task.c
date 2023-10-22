@@ -195,9 +195,25 @@ void umts_cleanup()
 
 rob_ret_val_t robusto_umts_send_sms(const char *number, const char *message_string)
 {
-    if (!umts_dce || !umts_ip_enable_command_mode())
+    // TODO: Use the working queue for the UMTS stuff to move between data mode
+    if (!umts_dce)
     {
-        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); modem not initiated or command mode not established.");
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); modem not initiated.");
+        return ROB_FAIL;
+    }
+
+    if (esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_COMMAND) != ESP_OK)
+    {
+        ROB_LOGE(umts_task_log_prefix, "Setting command mode failed");
+        return ROB_FAIL;
+    }
+    if (esp_modem_sms_txt_mode(umts_dce, true) != ESP_OK)
+    {
+        ROB_LOGE(umts_task_log_prefix, "Setting text mode failed");
+        return ROB_FAIL;
+    }
+    if (esp_modem_sms_character_set(umts_dce) != ESP_OK) {
+        ROB_LOGE(umts_task_log_prefix, "Setting GSM character set failed");
         return ROB_FAIL;
     }
     ROB_LOGI(umts_task_log_prefix, "Sending SMS to %s, message: \"%s\"", number, message_string);
@@ -205,11 +221,14 @@ rob_ret_val_t robusto_umts_send_sms(const char *number, const char *message_stri
     if (err != ESP_OK)
     {
         ROB_LOGE(umts_task_log_prefix, "esp_modem_send_sms(); failed with error:  %i", err);
+        
+        esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_DATA);
+    
         return ROB_FAIL;
     }
     else
     {
-
+        esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_DATA);
         return ROB_OK;
     }
 }
@@ -249,7 +268,7 @@ void robusto_umts_start(char *_log_prefix)
     umts_task_log_prefix = _log_prefix;
     operator_name = malloc(64);
 
-    /* Configure the PPP netif */ // TODO: Move this back to umts_task. Get Modem working without ppp for now
+    /* Configure the PPP netif */ 
     esp_modem_dce_config_t dce_config = ESP_MODEM_DCE_DEFAULT_CONFIG(CONFIG_ROBUSTO_UMTS_MODEM_PPP_APN);
 
     // We need to init the PPP netif as that is a parameter to the modem setup
