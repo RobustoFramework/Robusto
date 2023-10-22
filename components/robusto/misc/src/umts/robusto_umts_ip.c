@@ -1,5 +1,5 @@
 #include "robusto_umts_ip.h"
-#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
@@ -14,7 +14,7 @@
 #include "robusto_umts_mqtt.h"
 #include "robusto_logging.h"
 
-#include "robusto_umts_worker.h"
+#include "robusto_umts_queue.h"
 #include "inttypes.h"
 
 #include "robusto_umts_def.h"
@@ -121,7 +121,7 @@ bool umts_ip_enable_command_mode() {
 
 
 int umts_ip_enable_data_mode() {
-    char result[64]; 
+
     // Setting data mode.
     ROB_LOGI(umts_ip_log_prefix, "esp_modem_set_data_mode(umts_dce).%p ", umts_dce);
     esp_err_t err = esp_modem_set_mode(umts_dce, ESP_MODEM_MODE_DATA);
@@ -133,7 +133,7 @@ int umts_ip_enable_data_mode() {
     }
     #if 0
     
-    
+        char result[64]; 
     // Attach to the GPRS service
     ROB_LOGI(umts_ip_log_prefix, "AT+CGATT=1 - %p ", umts_dce);
     esp_err_t err = esp_modem_at(umts_dce, "AT+CGATT=1", &result, 75000);

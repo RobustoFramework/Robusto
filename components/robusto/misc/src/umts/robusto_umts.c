@@ -2,7 +2,7 @@
 
 #include "robusto_umts.h"
 
-#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
 
 #include "robusto_umts_def.h"
 
@@ -15,7 +15,7 @@
 
 #include "robusto_conductor.h"
 
-#include "robusto_umts_worker.h"
+#include "robusto_umts_queue.h"
 
 #include <esp_timer.h>
 #include <esp_event.h>
@@ -58,9 +58,11 @@ bool umts_shutdown()
 
 void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 
+    if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
+
     // TODO: Consider what actually is the point here, should GSM=MQTT?
 
-    ROB_LOGI(umts_log_prefix, "In GSM work callback.");
+    ROB_LOGI(umts_log_prefix, "In UMTS work callback.");
 
     if ((strcmp(queue_item->message->strings[1], "-1.00") != 0) && (strcmp(queue_item->message->strings[1], "-2.00") != 0)) {
         publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
@@ -139,7 +141,7 @@ void robusto_umts_init(char *_log_prefix)
     umts_event_group = xEventGroupCreate();
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
-    umts_init_worker(&umts_do_on_work_cb, umts_log_prefix);
+    umts_init_queue(&umts_do_on_work_cb, umts_log_prefix);
 
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
@@ -149,6 +151,8 @@ void robusto_umts_init(char *_log_prefix)
     {
         ROB_LOGE(umts_log_prefix, "Failed creating UMTS task, returned: %i (see projdefs.h)", rc);
     }
+
+
     ROB_LOGI(umts_log_prefix, "* UMTS main task registered.");
 }
 

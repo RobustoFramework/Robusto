@@ -12,7 +12,7 @@
 
 
 #include "robusto_umts_mqtt.h"
-#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include "mqtt_client.h"
 
 #include "robusto_sleep.h"
@@ -20,7 +20,7 @@
 #include "robusto_logging.h"
 #include "robusto_umts_def.h"
 #include "robusto_umts_task.h"
-#include "robusto_umts_worker.h"
+#include "robusto_umts_queue.h"
 
 
 

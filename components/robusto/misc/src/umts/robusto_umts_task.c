@@ -1,10 +1,11 @@
 #include "robusto_umts_task.h"
-#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include <robusto_umts.h>
 #include "robusto_umts_def.h"
 #include "robusto_umts_mqtt.h"
+#include "robusto_umts_queue.h"
 #include "robusto_umts_ip.h"
-#include "robusto_umts_worker.h"
+#include "robusto_umts_queue.h"
 #include "robusto_logging.h"
 
 #include <esp_modem_api.h>
@@ -20,6 +21,7 @@ char *operator_name = NULL;
 
 char *umts_task_log_prefix = NULL;
 int sync_attempts = 0;
+bool mqtt_up = false;
 
 int get_sync_attempts()
 {
@@ -79,7 +81,7 @@ void umts_cleanup()
             ROB_LOGE(umts_task_log_prefix, "Disconnecting the modem ATH failed with %d", err);
         }
     }
-    umts_shutdown_worker();
+    umts_shutdown_queue();
 
     ROB_LOGI(umts_task_log_prefix, " - Informing everyone that the GSM task it is shutting down.");
     xEventGroupSetBits(umts_event_group, GSM_SHUTTING_DOWN_BIT);
@@ -193,7 +195,7 @@ void umts_cleanup()
     cut_modem_power();
 }
 
-rob_ret_val_t robusto_umts_send_sms(const char *number, const char *message_string)
+rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string)
 {
     // TODO: Use the working queue for the UMTS stuff to move between data mode
     if (!umts_dce)
@@ -254,10 +256,16 @@ void handle_umts_states(int state)
     }
 }
 
-bool robusto_umts_base_up()
+bool robusto_umts_sms_up()
 {
     return umts_dce != NULL;
 }
+
+bool robusto_umts_mqtt_up()
+{
+    return mqtt_up;
+}
+
 
 void robusto_umts_start(char *_log_prefix)
 {
@@ -555,7 +563,9 @@ signal_quality:
 #endif
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
-
+    umts_set_queue_blocked(false);
+    mqtt_up = true;
+    
 finish:
     // End init task
     vTaskDelete(NULL);

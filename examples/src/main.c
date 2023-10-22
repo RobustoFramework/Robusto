@@ -67,8 +67,8 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER 
 #include "../conductor/conductor_server.h"   
 #endif
-#ifdef CONFIG_ROBUSTO_EXAMPLE_SMS
-#include "../sms/sms.h"   
+#if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT)
+#include "../umts/umts.h"   
 #endif
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
@@ -122,10 +122,10 @@ void setup() {
     init_conductor_server(example_log_prefix);
     run_conductor_server();
     #endif
-    #ifdef CONFIG_ROBUSTO_EXAMPLE_SMS
-    ROB_LOGI(example_log_prefix, "Start SMS examples");
-    init_sms_example(example_log_prefix);
-    start_sms_example();
+    #ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS
+    ROB_LOGI(example_log_prefix, "Start UMTS example");
+    init_umts_example(example_log_prefix);
+    start_umts_example();
     #endif
 }
 

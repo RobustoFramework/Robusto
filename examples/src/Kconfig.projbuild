@@ -50,15 +50,32 @@ menu "Robusto Examples"
             3. Go to sleep for the same time
             4. Repeat
 
-    config ROBUSTO_EXAMPLE_SMS
+    config ROBUSTO_UMTS_EXAMPLE_SMS
         bool "The SMS example"
-        config ROBUSTO_EXAMPLE_SMS_NUMBER
-            string "The phone number to send the SMS"
-            depends on ROBUSTO_EXAMPLE_SMS
-        config ROBUSTO_EXAMPLE_SMS_MESSAGE
+        help This sends an SMS to the recipient specified below.
+            Note that the UMTS server has to be enabled and configured.
+
+        config ROBUSTO_UMTS_EXAMPLE_SMS_NUMBER
+            string "The recipient phone number"
+            depends on ROBUSTO_UMTS_EXAMPLE_SMS
+
+        config ROBUSTO_UMTS_EXAMPLE_SMS_MESSAGE
             string "The message to send"
-            depends on ROBUSTO_EXAMPLE_SMS
-    
+            depends on ROBUSTO_UMTS_EXAMPLE_SMS
+
+    config ROBUSTO_UMTS_EXAMPLE_MQTT
+        bool "The MQTT example"
+        help This sends an MQTT message the specified MQTT server
+            The server is set in the MQTT server settings, and also the main path.
+
+        config ROBUSTO_UMTS_EXAMPLE_MQTT_PATH
+            string "The path to send the message to"
+            depends on ROBUSTO_UMTS_EXAMPLE_MQTT
+
+        config ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE
+            string "The message to send"
+            depends on ROBUSTO_UMTS_EXAMPLE_MQTT
+                
         
 endmenu
 

@@ -1,16 +1,15 @@
 /**
- * @file umts_worker.c
+ * @file umts_queue.c
  * @author Nicklas Borjesson 
- * @brief The GSM worker maintain and monitor the GSM work queue and uses callbacks to notify the user code
- * This code uses sdp_work_queue to automatically handle queues, semaphores and tasks
+ * @brief The UMTS queue maintain and monitor the UTMS work queue and uses callbacks to notify the user code
  * 
  * @copyright Copyright (c) 2022
  * 
  */
 
 
-#include "robusto_umts_worker.h"
-#ifdef CONFIG_ROBUSTO_UMTS_LOAD_UMTS
+#include "robusto_umts_queue.h"
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
 
 #include <sys/queue.h>
 #include <robusto_system.h>
@@ -21,7 +20,7 @@
 // The queue context
 queue_context_t umts_queue_context;
 
-char *umts_worker_log_prefix;
+char *umts_queue_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(umts_work_q, umts_queue_item) umts_work_q;
@@ -29,6 +28,7 @@ STAILQ_HEAD(umts_work_q, umts_queue_item) umts_work_q;
 struct umts_queue_item_t *umts_first_queueitem() {
     return STAILQ_FIRST(&umts_work_q); 
 }
+
 
 void umts_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&umts_work_q, items); 
@@ -53,14 +53,14 @@ void umts_set_queue_blocked(bool blocked) {
     set_queue_blocked(&umts_queue_context,blocked);
 }
 
-void umts_shutdown_worker() {
-    ROB_LOGI(umts_worker_log_prefix, "Telling gsm worker to shut down.");
+void umts_shutdown_queue() {
+    ROB_LOGI(umts_queue_log_prefix, "Telling UMTS queue to shut down.");
     umts_queue_context.shutdown = true;
 }
 
-rob_ret_val_t umts_init_worker(work_callback work_cb, char *_log_prefix)
+rob_ret_val_t umts_init_queue(work_callback work_cb, char *_log_prefix)
 {
-    umts_worker_log_prefix = _log_prefix;
+    umts_queue_log_prefix = _log_prefix;
     // Initialize the work queue
     STAILQ_INIT(&umts_work_q);
 
@@ -73,7 +73,7 @@ rob_ret_val_t umts_init_worker(work_callback work_cb, char *_log_prefix)
     umts_queue_context.blocked = true;
     umts_queue_context.watchdog_timeout = 20;
 
-    init_work_queue(&umts_queue_context, _log_prefix, "GSM Queue");
+    init_work_queue(&umts_queue_context, _log_prefix, "UMTS Queue");
 
     return ESP_OK;
 
