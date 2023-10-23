@@ -21,11 +21,20 @@ char *operator_name = NULL;
 
 char *umts_task_log_prefix = NULL;
 int sync_attempts = 0;
-bool mqtt_up = false;
+
+bool started = false;
 
 int get_sync_attempts()
 {
     return sync_attempts;
+}
+
+void robusto_umts_set_started(bool state) {
+    started = state;
+}
+
+bool robusto_umts_get_started() {
+    return started;
 }
 
 void cut_modem_power()
@@ -258,18 +267,15 @@ void handle_umts_states(int state)
 
 bool robusto_umts_sms_up()
 {
-    return umts_dce != NULL;
+    return (umts_dce != NULL) && started;
 }
 
-bool robusto_umts_mqtt_up()
-{
-    return mqtt_up;
-}
+
 
 
 void robusto_umts_start(char *_log_prefix)
 {
-
+    started = false;
     umts_modem_setup_task = NULL;
     sync_attempts = 0;
 
@@ -550,6 +556,8 @@ signal_quality:
     robusto_conductor_server_ask_for_time(500);
     umts_abort_if_shutting_down();
 #endif
+#ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT
+
     r_delay(3000);
 
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
@@ -563,10 +571,15 @@ signal_quality:
 #endif
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
+
+#else
     umts_set_queue_blocked(false);
-    mqtt_up = true;
+    started = true;
+#endif /* CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT */
     
+
 finish:
+    
     // End init task
     vTaskDelete(NULL);
 }

@@ -11,7 +11,6 @@
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
 rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data);
 
-
 bool robusto_umts_sms_up();
 bool robusto_umts_mqtt_up();
 

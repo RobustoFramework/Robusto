@@ -33,6 +33,7 @@ char *umts_mqtt_log_prefix = "mqtt log prefix not set";
 esp_mqtt_client_handle_t mqtt_client = NULL;
 
 RTC_DATA_ATTR int mqtt_count;
+bool mqtt_up = false;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -47,10 +48,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         msg_id = esp_mqtt_client_subscribe(client, "/topic/lurifax_test", 0);
         // All is initiated, we can now start handling the queue
         umts_set_queue_blocked(false);
+        mqtt_up = true;
+        robusto_umts_set_started(true);
         //ROB_LOGI(umts_mqtt_log_prefix, "sent subscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
-        ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_DISCONNECTED");
+        ROB_LOGW(umts_mqtt_log_prefix, "MQTT_EVENT_DISCONNECTED");
+        mqtt_up = false;
         break;
     case MQTT_EVENT_SUBSCRIBED:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -86,6 +90,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT other event id: %i", event->event_id);
         break;
     }
+}
+
+
+bool robusto_umts_mqtt_up()
+{
+    return mqtt_up && robusto_umts_get_started();
 }
 
 void umts_mqtt_cleanup() {
