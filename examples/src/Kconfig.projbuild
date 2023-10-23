@@ -68,8 +68,8 @@ menu "Robusto Examples"
         help This sends an MQTT message the specified MQTT server
             The server is set in the MQTT server settings, and also the main path.
 
-        config ROBUSTO_UMTS_EXAMPLE_MQTT_PATH
-            string "The path to send the message to"
+        config ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC
+            string "The MQTT topic to send the message to"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
 
         config ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE

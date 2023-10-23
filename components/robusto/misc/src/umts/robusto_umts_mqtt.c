@@ -105,7 +105,7 @@ void umts_mqtt_cleanup() {
 
 }
 
-int publish(char * topic, char * payload, int payload_len) {
+int umts_mqtt_publish(char * topic, char * payload, int payload_len) {
     int msg_id = esp_mqtt_client_publish(mqtt_client, topic, payload, payload_len, 0, 1);
     ROB_LOGI(umts_mqtt_log_prefix, "Data published.");
     return msg_id;

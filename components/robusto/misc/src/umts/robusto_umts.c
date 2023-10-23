@@ -56,6 +56,19 @@ bool umts_shutdown()
     return true;
 }
 
+rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data) {
+    ROB_LOGI(umts_log_prefix, "Publishing %s to topic %s", data, topic);
+    int res = umts_mqtt_publish(topic, data,  strlen(data));
+    if (res == -1) {
+        ROB_LOGI(umts_log_prefix, "Publishing failed.");    
+        return ROB_FAIL;
+    } else {
+        ROB_LOGI(umts_log_prefix, "Publishing done, msg id %i.", res);
+        return ROB_OK;
+    }
+    
+}
+
 void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 
     if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
@@ -65,17 +78,17 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
     ROB_LOGI(umts_log_prefix, "In UMTS work callback.");
 
     if ((strcmp(queue_item->message->strings[1], "-1.00") != 0) && (strcmp(queue_item->message->strings[1], "-2.00") != 0)) {
-        publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
-        publish("/topic/lurifax/peripheral_temperature", queue_item->message->strings[2],  strlen(queue_item->message->strings[2]));
+        umts_mqtt_publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
+        umts_mqtt_publish("/topic/lurifax/peripheral_temperature", queue_item->message->strings[2],  strlen(queue_item->message->strings[2]));
     }
-    publish("/topic/lurifax/peripheral_since_wake", queue_item->message->strings[3],  strlen(queue_item->message->strings[3]));
-    publish("/topic/lurifax/peripheral_since_boot", queue_item->message->strings[4],  strlen(queue_item->message->strings[4]));
-    publish("/topic/lurifax/peripheral_free_mem", queue_item->message->strings[5],  strlen(queue_item->message->strings[5]));
-    publish("/topic/lurifax/peripheral_total_wake_time", queue_item->message->strings[6],  strlen(queue_item->message->strings[6]));
-    publish("/topic/lurifax/peripheral_voltage", queue_item->message->strings[7],  strlen(queue_item->message->strings[7]));
-    publish("/topic/lurifax/peripheral_state_of_charge", queue_item->message->strings[8],  strlen(queue_item->message->strings[8]));
-    publish("/topic/lurifax/peripheral_battery_current", queue_item->message->strings[9],  strlen(queue_item->message->strings[9]));
-    publish("/topic/lurifax/peripheral_mid_point_voltage", queue_item->message->strings[10],  strlen(queue_item->message->strings[10]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_since_wake", queue_item->message->strings[3],  strlen(queue_item->message->strings[3]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_since_boot", queue_item->message->strings[4],  strlen(queue_item->message->strings[4]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_free_mem", queue_item->message->strings[5],  strlen(queue_item->message->strings[5]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_total_wake_time", queue_item->message->strings[6],  strlen(queue_item->message->strings[6]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_voltage", queue_item->message->strings[7],  strlen(queue_item->message->strings[7]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_state_of_charge", queue_item->message->strings[8],  strlen(queue_item->message->strings[8]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_battery_current", queue_item->message->strings[9],  strlen(queue_item->message->strings[9]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_mid_point_voltage", queue_item->message->strings[10],  strlen(queue_item->message->strings[10]));
 
 
     char * curr_time;
@@ -99,22 +112,22 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
     char * c_connection_failues;
     asprintf(&c_connection_failues, "%i", connection_failures);
 
-    publish("/topic/lurifax/controller_since_wake", curr_time,  strlen(curr_time));
-    publish("/topic/lurifax/controller_since_boot", since_start,  strlen(since_start));
-    publish("/topic/lurifax/controller_total_wake_time", total_wake_time,  strlen(total_wake_time));    
-    publish("/topic/lurifax/controller_free_mem", free_mem,  strlen(free_mem));    
-    publish("/topic/lurifax/controller_sync_attempts", sync_att,  strlen(sync_att));   
-    publish("/topic/lurifax/controller_connection_failures", c_connection_failues,  strlen(c_connection_failues)); 
+    umts_mqtt_publish("/topic/lurifax/controller_since_wake", curr_time,  strlen(curr_time));
+    umts_mqtt_publish("/topic/lurifax/controller_since_boot", since_start,  strlen(since_start));
+    umts_mqtt_publish("/topic/lurifax/controller_total_wake_time", total_wake_time,  strlen(total_wake_time));    
+    umts_mqtt_publish("/topic/lurifax/controller_free_mem", free_mem,  strlen(free_mem));    
+    umts_mqtt_publish("/topic/lurifax/controller_sync_attempts", sync_att,  strlen(sync_att));   
+    umts_mqtt_publish("/topic/lurifax/controller_connection_failures", c_connection_failues,  strlen(c_connection_failues)); 
     
     // Lets deem this a success.
     connection_successes++;
     char * c_connection_successes;
     asprintf(&c_connection_successes, "%i", connection_successes);
-    publish("/topic/lurifax/controller_connection_successes", c_connection_successes,  strlen(c_connection_successes)); 
+    umts_mqtt_publish("/topic/lurifax/controller_connection_successes", c_connection_successes,  strlen(c_connection_successes)); 
 /*TODO: Fix this? 
     char * c_battery_voltage;
     asprintf(&c_battery_voltage, "%.2f", sdp_read_battery());
-    publish("/topic/lurifax/controller_battery_voltage", c_battery_voltage,  strlen(c_battery_voltage)); 
+    umts_mqtt_publish("/topic/lurifax/controller_battery_voltage", c_battery_voltage,  strlen(c_battery_voltage)); 
 */
     successful_data = true;
 
