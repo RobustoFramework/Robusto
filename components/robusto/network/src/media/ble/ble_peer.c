@@ -6,7 +6,7 @@
  * Inspired by the Espressif examples
  * @todo Restructure this into a more understandable solution, perhaps a separate header for peer and gatt stuff.
  */
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include "sdkconfig.h"
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE

@@ -77,7 +77,7 @@ void runUnityTests(void *pvParameters)
     init_robusto();
     robusto_network_init("Robusto");
 
-#if defined(ESP_PLATFORM)
+#if defined(USE_ESPIDF)
     robusto_watchdog_set_timeout(200);
 
 #endif
@@ -201,7 +201,7 @@ void runUnityTests(void *pvParameters)
 #endif
     UNITY_END();
 
-#if defined(ARDUINO) || defined(ESP_PLATFORM)
+#if defined(USE_ARDUINO) || defined(USE_ESPIDF)
     vTaskDelete(NULL);
 #endif
 }

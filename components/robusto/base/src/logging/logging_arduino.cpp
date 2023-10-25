@@ -28,7 +28,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <robusto_logging.h>
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE  
 #include <Arduino.h>

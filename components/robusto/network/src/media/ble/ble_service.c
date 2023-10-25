@@ -2,7 +2,7 @@
  * BLE service handling
  * Loosely based on the ESP-IDF-demo
  */
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include "ble_spp.h"
 #include <host/ble_hs.h>
 

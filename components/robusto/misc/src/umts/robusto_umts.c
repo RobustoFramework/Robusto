@@ -20,6 +20,7 @@
 #include <esp_timer.h>
 #include <esp_event.h>
 #include <robusto_sleep.h>
+#include <robusto_network_service.h>
 
 
 char *umts_log_prefix;
@@ -32,7 +33,31 @@ RTC_DATA_ATTR uint connection_successes;
 
 EventGroupHandle_t umts_event_group = NULL;
 
-bool umts_shutdown()
+void on_incoming(robusto_message_t *message);
+void shutdown_utms_network_service(void);
+
+
+char * hello_log_prefix;
+
+char _service_name[13] = "UMTS";
+
+network_service_t umts_network_service = {
+    service_id : ROBUSTO_MQTT_SERVICE_ID,
+    service_name : &_service_name,
+    incoming_callback : &on_incoming,
+    shutdown_callback: &shutdown_utms_network_service
+};
+
+void shutdown_hello_service(void) {
+}
+
+
+void shutdown_utms_network_service(void) {
+
+    ROB_LOGW(hello_log_prefix, "UMTS network service shutdown.");
+}
+
+bool shutdown_umts_network_service()
 {
     if (!successful_data) {
         connection_failures++;
@@ -68,27 +93,26 @@ rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data) {
     }
     
 }
+void on_incoming(robusto_message_t *message) {
 
-void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
-
-    if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
+    //if (message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
 
     // TODO: Consider what actually is the point here, should GSM=MQTT?
 
     ROB_LOGI(umts_log_prefix, "In UMTS work callback.");
 
-    if ((strcmp(queue_item->message->strings[1], "-1.00") != 0) && (strcmp(queue_item->message->strings[1], "-2.00") != 0)) {
-        umts_mqtt_publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
-        umts_mqtt_publish("/topic/lurifax/peripheral_temperature", queue_item->message->strings[2],  strlen(queue_item->message->strings[2]));
+    if ((strcmp(message->strings[1], "-1.00") != 0) && (strcmp(message->strings[1], "-2.00") != 0)) {
+        umts_mqtt_publish("/topic/lurifax/peripheral_humidity", message->strings[1],  strlen(message->strings[1]));
+        umts_mqtt_publish("/topic/lurifax/peripheral_temperature", message->strings[2],  strlen(message->strings[2]));
     }
-    umts_mqtt_publish("/topic/lurifax/peripheral_since_wake", queue_item->message->strings[3],  strlen(queue_item->message->strings[3]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_since_boot", queue_item->message->strings[4],  strlen(queue_item->message->strings[4]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_free_mem", queue_item->message->strings[5],  strlen(queue_item->message->strings[5]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_total_wake_time", queue_item->message->strings[6],  strlen(queue_item->message->strings[6]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_voltage", queue_item->message->strings[7],  strlen(queue_item->message->strings[7]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_state_of_charge", queue_item->message->strings[8],  strlen(queue_item->message->strings[8]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_battery_current", queue_item->message->strings[9],  strlen(queue_item->message->strings[9]));
-    umts_mqtt_publish("/topic/lurifax/peripheral_mid_point_voltage", queue_item->message->strings[10],  strlen(queue_item->message->strings[10]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_since_wake", message->strings[3],  strlen(message->strings[3]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_since_boot", message->strings[4],  strlen(message->strings[4]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_free_mem", message->strings[5],  strlen(message->strings[5]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_total_wake_time", message->strings[6],  strlen(message->strings[6]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_voltage", message->strings[7],  strlen(message->strings[7]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_state_of_charge", message->strings[8],  strlen(message->strings[8]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_battery_current", message->strings[9],  strlen(message->strings[9]));
+    umts_mqtt_publish("/topic/lurifax/peripheral_mid_point_voltage", message->strings[10],  strlen(message->strings[10]));
 
 
     char * curr_time;
@@ -131,7 +155,6 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 */
     successful_data = true;
 
-    umts_cleanup_queue_task(queue_item);
 
 }   
 
@@ -149,13 +172,12 @@ void robusto_umts_init(char *_log_prefix)
     // TODO: This is called here to be sure, possibly it should be called in some initialization instead. Or does it matter?
     esp_event_loop_create_default();
 
-
     /* Create the event group, this is used for all event handling, initiate in main thread */
     umts_event_group = xEventGroupCreate();
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
-    umts_init_queue(&umts_do_on_work_cb, umts_log_prefix);
-
+    //umts_init_queue(&umts_do_on_work_cb, umts_log_prefix);
+    robusto_register_network_service(&umts_network_service);
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
     int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ 16384, 

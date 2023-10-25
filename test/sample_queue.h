@@ -4,7 +4,7 @@
 #include <robusto_retval.h>
 #include <robusto_queue.h>
 
-#ifndef ARDUINO
+#ifndef USE_ARDUINO
 #include "sys/queue.h"
 #endif
 

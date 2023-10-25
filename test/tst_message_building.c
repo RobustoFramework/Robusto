@@ -1,6 +1,6 @@
 #include "tst_message_building.h"
 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>

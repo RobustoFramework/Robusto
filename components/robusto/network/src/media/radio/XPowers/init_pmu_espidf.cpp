@@ -1,4 +1,4 @@
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
 #include "init_pmu.hpp"
 #include <stdio.h>

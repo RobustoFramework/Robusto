@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 
 
 #include "robusto_init.h"

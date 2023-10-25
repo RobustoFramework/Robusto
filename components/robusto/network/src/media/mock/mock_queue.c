@@ -32,7 +32,7 @@
 #include "mock_queue.h"
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include "compat/arduino_sys_queue.h"
 #else
 #include <sys/queue.h>

@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
 #include "robusto_init.h"
 

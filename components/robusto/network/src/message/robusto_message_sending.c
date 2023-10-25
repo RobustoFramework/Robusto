@@ -33,7 +33,7 @@
 #include <robusto_message.h>
 #include <robusto_time.h>
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 #include <network/src/media/i2c/i2c_messaging.h>
 #endif

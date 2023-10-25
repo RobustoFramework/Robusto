@@ -2,7 +2,7 @@
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 
 #include <unity.h>
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #endif
 #include "tst_defs.h"
@@ -13,7 +13,7 @@
 #include <robusto_message.h>
 #include <robusto_logging.h>
 #include <robusto_system.h>
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     #include <network/src/media/mock/mock_messaging.h>
 #else
     #include "../components/robusto/network/src/media/mock/mock_messaging.h"
@@ -40,7 +40,7 @@ void init_defs_mock() {
 
 #if 0
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
 extern "C" char* sbrk(int incr);
@@ -52,7 +52,7 @@ int freeMemory() {
   char top;
 #ifdef __arm__
   return &top - reinterpret_cast<char*>(sbrk(0));
-#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+#elif defined(CORE_TEENSY) || (USE_ARDUINO > 103 && USE_ARDUINO != 151)
   return &top - __brkval;
 #else  // __arm__
   return __brkval ? &top - __brkval : &top - __malloc_heap_start;

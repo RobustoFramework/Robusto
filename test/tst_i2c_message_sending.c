@@ -1,7 +1,7 @@
 #include "tst_i2c_message_sending.h"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 #include <unity.h>
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #endif
 #include "tst_defs.h"

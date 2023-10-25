@@ -11,7 +11,7 @@
 void tst_millis(void)
 {
     // TODO: Start with a start time, and measure approximately r_millis() = (starttime + 1000) +/- 100 ms.
-    #if defined(ESP_PLATFORM) || defined(ARDUINO)
+    #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
     r_delay(1010);
     TEST_ASSERT_TRUE((r_millis() > 100));
     #else

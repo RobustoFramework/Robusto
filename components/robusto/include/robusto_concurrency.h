@@ -43,11 +43,11 @@ extern "C"
 #include <stdbool.h>
 #include <robusto_retval.h>
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #endif
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <Arduino_freeRTOS.h>
 #include <task.h>
@@ -56,7 +56,7 @@ extern "C"
 
 
 // Tasks'n threads (FreeRTOS tasks are equated with POSIX threads here)
-#if defined(ESP_PLATFORM) || defined(ARDUINO)
+#if defined(USE_ESPIDF) || defined(USE_ARDUINO)
     typedef TaskHandle_t rob_task_handle_t;
     typedef void *mutex_ref_t;
 #else

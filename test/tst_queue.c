@@ -2,7 +2,7 @@
 #include "tst_concurrency.h"
 
 #include <unity.h>
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <time.h>
 #include <stdio.h>
 #endif

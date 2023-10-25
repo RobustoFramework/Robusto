@@ -34,7 +34,7 @@
 
 #include <robusto_logging.h>
 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 #include "stdlib.h"
 #include "stdio.h"
 #include <sys/cdefs.h>
@@ -51,7 +51,7 @@
 #endif
 
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_heap_caps.h>
@@ -67,7 +67,7 @@
 #if defined(ARDUINO_ARCH_MBED)
 #include "compat_mbed.hpp"
 
-#elif defined(ARDUINO)
+#elif defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif
 
@@ -76,7 +76,7 @@ char *system_log_prefix = "Unset";
 
 void *robusto_malloc(size_t size)
 {
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     //return (uint8_t *)malloc(size);
     return heap_caps_malloc(size, MALLOC_CAP_8BIT);
 #else
@@ -86,7 +86,7 @@ void *robusto_malloc(size_t size)
 
 void *robusto_realloc(void **ptr, size_t size)
 {
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     return heap_caps_realloc(ptr, size, MALLOC_CAP_8BIT);
 #else
     return realloc(ptr, size);
@@ -122,7 +122,7 @@ uint32_t robusto_crc32(uint32_t crc, const uint8_t *buf, size_t len)
 */
 rob_ret_val_t robusto_gpio_set_direction(uint8_t gpio_num, bool is_output) {
     // ROB_LOGI(system_log_prefix, "robusto_gpio_set_direction, gpio_num: %i, is_output: %s.", gpio_num, is_output ? "true":"false" );
-#if defined(ESP_PLATFORM)
+#if defined(USE_ESPIDF)
     if (gpio_set_direction(gpio_num, is_output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT) != ESP_OK) {
         
         ROB_LOGE(system_log_prefix, "Failed robusto_gpio_set_direction, gpio_num: %i, direction: %s.", gpio_num, is_output ? "output":"input" );
@@ -130,7 +130,7 @@ rob_ret_val_t robusto_gpio_set_direction(uint8_t gpio_num, bool is_output) {
     ROB_LOGE(system_log_prefix, "Robusto_gpio_set_direction, gpio_num: %i, direction: %s.", gpio_num, is_output ? "output":"input" );
 #elif defined(ARDUINO_ARCH_MBED)
     set_gpio_dir(gpio_num, is_output);
-#elif defined(ARDUINO)
+#elif defined(USE_ARDUINO)
     pinMode(gpio_num,is_output ? OUTPUT: INPUT);
 #else
     printf("I (%lu) Robusto: GPIO %i, direction set to %s\n", r_micros(), gpio_num, is_output ? "output":"input");
@@ -139,15 +139,15 @@ rob_ret_val_t robusto_gpio_set_direction(uint8_t gpio_num, bool is_output) {
 }
 
 // TODO: Implement this for the rest of the platforms
-#if defined(ESP_PLATFORM)
+#if defined(USE_ESPIDF)
 void robusto_gpio_set_pullup(int gpio_num, bool pullup) {
     
     #ifdef ARDUINO_ARCH_STM32
     // TODO: Add pullup handling for all Arduino cases
     set_gpio_mode(gpio_num, mode);
-    #elif defined(ARDUINO)
+    #elif defined(USE_ARDUINO)
     pinMode(gpio_num, mode);
-    #elif defined(ESP_PLATFORM)
+    #elif defined(USE_ESPIDF)
     esp_err_t retval;
     if (pullup) {
         retval = gpio_set_pull_mode(gpio_num, GPIO_PULLUP_ONLY);
@@ -170,13 +170,13 @@ rob_ret_val_t robusto_gpio_set_level(uint8_t gpio_num, uint8_t value)
     // ROB_LOGI(system_log_prefix, "robusto_gpio_set_level, gpio_num: %i, value: %u.", gpio_num, value);
     //robusto_gpio_set_direction(gpio_num, true);
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_set_level(gpio_num, value));
 #elif defined(ARDUINO_ARCH_MBED)
     set_gpio(gpio_num, value);
 #elif defined(ARDUINO_ARCH_STM32)
     HAL_GPIO_WritePin(GPIOB, gpio_num, value);
-#elif defined(ARDUINO)
+#elif defined(USE_ARDUINO)
     digitalWrite(gpio_num, value);
 #else
     printf("I (%lu) Robusto: GPIO %i, set to %hu\n", r_micros(), gpio_num, value);
@@ -187,13 +187,13 @@ rob_ret_val_t robusto_gpio_set_level(uint8_t gpio_num, uint8_t value)
 bool robusto_gpio_get_level(uint8_t gpio_num)
 {
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     return gpio_get_level(gpio_num) == 1 ? true: false;
 #elif defined(ARDUINO_ARCH_MBED)
     return get_gpio(gpio_num);
 #elif defined(ARDUINO_ARCH_STM32)
     return HAL_GPIO_ReadPin(GPIOB, gpio_num);
-#elif defined(ARDUINO)
+#elif defined(USE_ARDUINO)
     return digitalRead(gpio_num);
 #elif defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING)
     return 1;
@@ -239,9 +239,9 @@ uint8_t *kconfig_mac_to_6_bytes(uint64_t mac_kconfig) {
 }
 
 uint64_t get_free_mem(void) {
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     return heap_caps_get_free_size(MALLOC_CAP_8BIT);
-#elif defined(ARDUINO)
+#elif defined(USE_ARDUINO)
 #error "Needs to add memory usage support here"
 #elif defined(__APPLE__) 
     return getAppleFreeMemory();
@@ -261,7 +261,7 @@ void robusto_system_init(char *_log_prefix)
     #if CONFIG_ROB_BLINK_GPIO > -1
     robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 0);
     #endif
-    #ifdef ESP_PLATFORM
+    #ifdef USE_ESPIDF
    /* Initialize NVS — it is used to store PHY calibration data and is used by wifi and others */
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)

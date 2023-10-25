@@ -31,7 +31,7 @@
  */
 #include "robusto_incoming.h"
 #include <robusto_message.h>
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include "compat/arduino_sys_queue.h"
 #else
 #include <sys/queue.h>

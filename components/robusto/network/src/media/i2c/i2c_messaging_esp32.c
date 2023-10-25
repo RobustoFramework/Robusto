@@ -30,7 +30,7 @@
  */
 
 #include "i2c_messaging.h"
-#if defined(ESP_PLATFORM) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#if defined(USE_ESPIDF) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
 
 #include <freertos/FreeRTOS.h>
 #include <driver/i2c.h>

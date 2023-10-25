@@ -31,7 +31,7 @@
  */
 
 #include "pulse.h"
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include "driver/timer.h"
 // TODO: This is deprecated, should probably use the newer one
 #include "driver/gpio.h"

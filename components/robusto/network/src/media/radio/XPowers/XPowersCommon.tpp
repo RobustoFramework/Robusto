@@ -31,7 +31,7 @@
 
 #pragma once
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
 #include <Wire.h>
 #endif
 
@@ -51,7 +51,7 @@
 #define XPOWERS_ATTR_NOT_IMPLEMENTED    __attribute__((error("Not implemented")))
 #define IS_BIT_SET(val,mask)            (((val)&(mask)) == (mask))
 
-#if !defined(ARDUINO)
+#if !defined(USE_ARDUINO)
 #define log_e(...)
 #define log_i(...)
 #define log_d(...)
@@ -79,7 +79,7 @@ class XPowersCommon
 
 public:
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     bool begin(TwoWire &w, uint8_t addr, int sda, int scl)
     {
         if (__has_init)return thisChip().initImpl();
@@ -110,7 +110,7 @@ public:
             }
             return val;
         }
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__wire) {
             __wire->beginTransmission(__addr);
             __wire->write(reg);
@@ -129,7 +129,7 @@ public:
         if (thisWriteRegCallback) {
             return thisWriteRegCallback(__addr, reg, &val, 1);
         }
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__wire) {
             __wire->beginTransmission(__addr);
             __wire->write(reg);
@@ -145,7 +145,7 @@ public:
         if (thisReadRegCallback) {
             return thisReadRegCallback(__addr, reg, buf, lenght);
         }
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__wire) {
             __wire->beginTransmission(__addr);
             __wire->write(reg);
@@ -164,7 +164,7 @@ public:
         if (thisWriteRegCallback) {
             return thisWriteRegCallback(__addr, reg, buf, lenght);
         }
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__wire) {
             __wire->beginTransmission(__addr);
             __wire->write(reg);
@@ -242,18 +242,18 @@ protected:
 
     bool begin()
     {
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__has_init) return thisChip().initImpl();
         __has_init = true;
         log_i("SDA:%d SCL:%d", __sda, __scl);
         __wire->begin(__sda, __scl);
-#endif  /*ARDUINO*/
+#endif  /*USE_ARDUINO*/
         return thisChip().initImpl();
     }
 
     void end()
     {
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         if (__wire) {
 #if defined(ESP_IDF_VERSION)
 #if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(4,4,0)
@@ -261,7 +261,7 @@ protected:
 #endif  /*ESP_IDF_VERSION*/
 #endif  /*ESP_IDF_VERSION*/
         }
-#endif /*ARDUINO*/
+#endif /*USE_ARDUINO*/
     }
 
 
@@ -277,7 +277,7 @@ protected:
 
 protected:
     bool        __has_init              = false;
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     TwoWire     *__wire                 = NULL;
 #endif
     int         __sda                   = -1;

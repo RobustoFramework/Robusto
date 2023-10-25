@@ -5,7 +5,7 @@
  * Inspired by the Espressif examples
  * @todo Restructure this into a more understandable solution, perhaps a separate header for ble_peer and gatt stuff.
  */
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

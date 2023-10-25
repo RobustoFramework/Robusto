@@ -31,7 +31,7 @@
 
 #include "i2c_messaging.h"
 
-#if defined(ARDUINO) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#if defined(USE_ARDUINO) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
 // #include <Arduino.h>
 // #define USE_WIRE
 #ifdef USE_WIRE

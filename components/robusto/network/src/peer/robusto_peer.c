@@ -43,7 +43,7 @@
 #include <robusto_qos.h>
 #include <inttypes.h>
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <esp_mac.h>
 #endif
@@ -84,7 +84,7 @@ struct robusto_peer robusto_host = {};
  *
  */
 // TODO: Needs persistent storage for the other platforms aswell (do we want to make a macro?)
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 RTC_NOINIT_ATTR struct relation relations[ROBUSTO_MAX_PEERS];
 RTC_NOINIT_ATTR uint8_t relation_count;
 RTC_NOINIT_ATTR uint32_t has_relations_indicator;
@@ -415,7 +415,7 @@ void robusto_peer_init(char *_log_prefix)
         #endif
     }
     
-    #ifdef ESP_PLATFORM
+    #ifdef USE_ESPIDF
         esp_read_mac(&(robusto_host.base_mac_address), ESP_MAC_WIFI_STA);
         rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, &robusto_host.base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     #endif

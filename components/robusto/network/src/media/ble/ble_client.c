@@ -2,7 +2,7 @@
 /***********************
  * This is general client level handling
  ***********************/
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
 #include <host/util/util.h>
 #include <host/ble_gap.h>

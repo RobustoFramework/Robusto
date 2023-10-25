@@ -105,13 +105,13 @@ void runUnityTests(void *pvParameters)
 
     init_robusto();
 
-#if !(defined(ESP_PLATFORM) && defined(ARDUIONO))
+#if !(defined(USE_ESPIDF) && defined(ARDUIONO))
     ROB_LOGI("NATIVE", "Waiting a short while to let things start.");
     // TODO: Something is obviously not waiting properly for something
     r_delay(1000);
 #endif
 
-#if defined(ESP_PLATFORM)
+#if defined(USE_ESPIDF)
     robusto_watchdog_set_timeout(200);
 #endif
 
@@ -389,7 +389,7 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_qos);
 
     robusto_yield();
-#if defined(ESP_PLATFORM) || defined(ARDUINO) || defined(ARDUINO_ARCH_STM32)
+#if defined(USE_ESPIDF) || defined(USE_ARDUINO) || defined(ARDUINO_ARCH_STM32)
 
 #if defined(CONFIG_ROBUSTO_NETWORK_QOS_INITIATOR)
     RUN_TEST(tst_qos_message_send_presentation, "TEST_QOS_TARGET");
@@ -411,7 +411,7 @@ void runUnityTests(void *pvParameters)
 #endif
     UNITY_END();
 
-#if defined(ARDUINO) || defined(ESP_PLATFORM)
+#if defined(USE_ARDUINO) || defined(USE_ESPIDF)
     vTaskDelete(NULL);
 #endif
 }

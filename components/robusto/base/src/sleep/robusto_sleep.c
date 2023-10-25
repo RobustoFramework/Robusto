@@ -8,11 +8,12 @@
  *
  */
 
-#include "robusto_sleep.h"
+#include <robusto_sleep.h>
 // TODO: Ifdef depending om some setting?
 
 #include "robusto_retval.h"
-#ifdef ESP_PLATFORM
+
+#ifdef USE_ESPIDF
 #include "esp_sleep.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
@@ -38,7 +39,7 @@ static char *sleep_log_prefix;
 rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
 {
     last_sleep_duration = millisecs;
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
     if (esp_sleep_enable_timer_wakeup(millisecs * 1000) == ESP_OK)
     {
@@ -99,7 +100,7 @@ bool robusto_sleep_init(char *_log_prefix)
     // TODO: Do I need a wake stub like: https://github.com/espressif/esp-idf/blob/master/docs/en/api-guides/deep-sleep-stub.rst
     sleep_log_prefix = _log_prefix;
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
 
     switch (wakeup_cause)

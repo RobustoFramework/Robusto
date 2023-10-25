@@ -38,7 +38,7 @@ extern "C"
 {
 #endif
 
-#ifndef ARDUINO
+#ifndef USE_ARDUINO
 #include "sys/queue.h"
 #else
 #include <compat/arduino_sys_queue.h>

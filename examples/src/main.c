@@ -31,11 +31,11 @@
  */
 #include <robconfig.h>
 
-#if defined(ESP_PLATFORM)
+#if defined(USE_ESPIDF)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #endif
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
 #include <Arduino.h>
 #include <Arduino_FreeRTOS.h>
 #include <task.h>
@@ -137,7 +137,7 @@ void log_test()
     ROB_LOGI("Test_Tag", "After delay %i", 1002);
 }
 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 
 /**
  * For native dev-platform or for some embedded frameworks
@@ -150,7 +150,7 @@ int main(void)
 
 #endif
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
 /**
  * For ESP-IDF framework
@@ -182,7 +182,7 @@ void app_main()
 
 #endif
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 
 /**
  * For the Arduino platform, here everything must manually run in a task if we are running freeRTOS.

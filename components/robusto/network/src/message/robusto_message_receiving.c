@@ -34,7 +34,7 @@
 #include <robusto_retval.h>
 #include <inttypes.h>
 #include <string.h>
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <network/src/media/i2c/i2c_messaging.h>
 #include <network/src/media/espnow/espnow_messaging.h>
 #include <network/src/media/lora/lora_messaging.hpp>

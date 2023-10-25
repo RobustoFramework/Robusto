@@ -94,7 +94,7 @@ void r_init_logging();
 #else
 #define ROB_LOG_FORMAT(letter, format) #letter " (%lu) %s: " format "\n"
 #endif
-#if defined(ARDUINO) || defined(ESP_PLATFORM) || defined(STM32)|| defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_MBED)
+#if defined(USE_ARDUINO) || defined(USE_ESPIDF) || defined(STM32)|| defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_MBED)
 #define ROB_LOG_TIME_SRC r_millis()
 #else
 // PC:s are so much faster to execute and print that milliseconds cannot be used to reliably discern order of execution.

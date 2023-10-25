@@ -28,9 +28,9 @@
  *
  */
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
 #include <Arduino.h>
-#endif /*ARDUINO*/
+#endif /*USE_ARDUINO*/
 
 #include "XPowersCommon.tpp"
 #include "REG/AXP2101Constants.h"
@@ -204,7 +204,7 @@ class XPowersAXP2101 :
 public:
 
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     XPowersAXP2101(TwoWire &w, int sda = SDA, int scl = SCL, uint8_t addr = AXP2101_SLAVE_ADDRESS)
     {
         __wire = &w;
@@ -217,7 +217,7 @@ public:
 
     XPowersAXP2101()
     {
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         __wire = &Wire;
         __sda = SDA;
         __scl = SCL;
@@ -231,7 +231,7 @@ public:
         deinit();
     }
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     bool init(TwoWire &w, int sda = SDA, int scl = SCL, uint8_t addr = AXP2101_SLAVE_ADDRESS)
     {
         __wire = &w;
@@ -2552,7 +2552,7 @@ public:
     /*
     *  @brief  Debug interrupt setting register
     * */
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
     void printIntRegister(Stream *stream)
     {
         for (int i = 0; i < XPOWERS_AXP2101_INTSTS_CNT; i++) {

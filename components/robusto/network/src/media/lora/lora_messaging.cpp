@@ -32,7 +32,7 @@
 #include "lora_messaging.hpp"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_intr_alloc.h>
@@ -103,7 +103,7 @@ int lora_unknown_counter = 0;
 int lora_unknown_failures = 0;
 int lora_crc_failures = 0;
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 IRAM_ATTR
 #endif
 
@@ -130,7 +130,7 @@ void setRXFlag(void)
     RXTrigs = RXTrigs + 1;
 }
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 IRAM_ATTR
 #endif
 void setTXFlag(void)
@@ -601,7 +601,7 @@ finish:
 int init_radiolib()
 {
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 
     spi_bus_config_t spibus_cfg = {
         .mosi_io_num = CONFIG_LORA_MOSI_GPIO,
@@ -718,7 +718,7 @@ if (crcret != RADIOLIB_ERR_NONE) {
     ROB_LOGI(lora_messaging_log_prefix, "LoRa disabling CRC failed %i.", crcret);
 }
 */
-#if defined(ESP_PLATFORM) && defined(CONFIG_LORA_SX127X)
+#if defined(USE_ESPIDF) && defined(CONFIG_LORA_SX127X)
     gpio_install_isr_service(0);
     ROB_LOGI(lora_messaging_log_prefix, "gpio_install_isr_service done");
 #endif

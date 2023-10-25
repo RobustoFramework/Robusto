@@ -27,11 +27,11 @@
  * @date      2023-03-28
  *
  */
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
 #include <Arduino.h>
 #else
 #include <math.h>
-#endif /*ARDUINO*/
+#endif /*USE_ARDUINO*/
 #include "XPowersCommon.tpp"
 #include "REG/AXP202Constants.h"
 #include "XPowersLibInterface.hpp"
@@ -134,7 +134,7 @@ class XPowersAXP202 :
 
 public:
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     XPowersAXP202(TwoWire &w, int sda = SDA, int scl = SCL, uint8_t addr = AXP202_SLAVE_ADDRESS)
     {
         __wire = &w;
@@ -146,7 +146,7 @@ public:
 
     XPowersAXP202()
     {
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
         __wire = &Wire;
         __sda = SDA;
         __scl = SCL;
@@ -160,7 +160,7 @@ public:
         deinit();
     }
 
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
     bool init(TwoWire &w, int sda = SDA, int scl = SCL, uint8_t addr = AXP202_SLAVE_ADDRESS)
     {
         __wire = &w;

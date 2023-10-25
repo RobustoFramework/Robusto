@@ -60,6 +60,8 @@ typedef struct network_service
     shutdown_cb * shutdown_callback;
 } network_service_t;
 
+// TODO: Should we allow several serviceids? It is kind of usable in a way. Then you can use the message in its whole. Or mabe use the binary part for that?
+
 /**
  * @brief Register a service 
  * 

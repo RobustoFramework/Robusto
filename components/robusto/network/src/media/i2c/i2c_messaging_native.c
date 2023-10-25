@@ -30,7 +30,7 @@
  */
 
 #include "i2c_messaging.h"
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 
 #include <robusto_peer.h>
 #include <robusto_logging.h>

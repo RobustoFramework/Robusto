@@ -27,7 +27,7 @@
  * @date      2022-08-28
  *
  */
-#if defined(ARDUINO)
+#if defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif
 

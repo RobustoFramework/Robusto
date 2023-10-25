@@ -30,7 +30,7 @@
  */
 #include <robusto_concurrency.h>
 #ifndef CONFIG_ROB_SYNCHRONOUS_MODE
-#if !(defined(ESP_PLATFORM) || defined(ARDUINO))
+#if !(defined(USE_ESPIDF) || defined(USE_ARDUINO))
 
 #include <robusto_time.h>
 #include <robusto_retval.h>

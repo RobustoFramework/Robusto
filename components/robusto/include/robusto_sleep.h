@@ -1,5 +1,7 @@
 #pragma once
 
+#include <robconfig.h>
+
 #include "inttypes.h"
 #include "stdbool.h"
 

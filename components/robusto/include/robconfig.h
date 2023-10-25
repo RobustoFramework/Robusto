@@ -29,7 +29,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+
+
+#if defined(USE_ARDUINO) && !defined(ARDUINO_ARCH_ESP32)
+#define USE_ARDUINO 
+#endif
 #ifdef ESP_PLATFORM
+#define USE_ESPIDF 
+#endif
+
+#ifdef USE_ESPIDF
 #include <sdkconfig.h>
 #else
 #include "robconfig_.h"

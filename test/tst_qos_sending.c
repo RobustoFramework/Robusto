@@ -2,7 +2,7 @@
 
 #ifdef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
 #include <unity.h>
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #endif
 

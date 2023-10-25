@@ -42,7 +42,7 @@
 #include <inttypes.h>
 
 
-#if !(defined(ESP_PLATFORM) && defined(ARDUINO))
+#if !(defined(USE_ESPIDF) && defined(USE_ARDUINO))
 #include "stddef.h"
 #endif
 

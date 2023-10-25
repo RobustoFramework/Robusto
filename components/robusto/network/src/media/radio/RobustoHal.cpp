@@ -49,7 +49,7 @@
 #define FALLING 0x3
 #define RISING  0x4
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 RobustoHal::RobustoHal(spi_host_device_t spi_host, spi_device_interface_config_t *spi_conf, char *log_prefix): 
   RadioLibHal(0, 1, LOW, HIGH, RISING, FALLING), spi_host(spi_host), spi_conf(spi_conf), log_prefix(log_prefix), initInterface(true) {}
 #endif
@@ -184,7 +184,7 @@ void inline RobustoHal::tone(uint32_t pin, unsigned int frequency, unsigned long
     pwmPin->period(1.0 / frequency);
     pwmPin->write(0.5);
   
-  #elif defined(ARDUINO) 
+  #elif defined(USE_ARDUINO) 
     ::tone(pin, frequency, duration);
   
   #endif
@@ -214,7 +214,7 @@ void inline RobustoHal::noTone(uint32_t pin) {
     // better tone for mbed OS boards
     (void)pin;
     pwmPin->suspend();
-  #elif defined(ARDUINO)
+  #elif defined(USE_ARDUINO)
     ::noTone(pin);
   #endif
 }

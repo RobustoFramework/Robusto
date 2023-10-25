@@ -35,7 +35,7 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include <TypeDef.h>
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <driver/spi_master.h>
 #endif
 
@@ -67,7 +67,7 @@ class RobustoHal : public RadioLibHal {
       \param spi SPI interface to be used, can also use software SPI implementations.
       \param spiSettings SPI interface settings.
     */
-    #ifdef ESP_PLATFORM
+    #ifdef USE_ESPIDF
     RobustoHal(spi_host_device_t host, spi_device_interface_config_t *spi_conf, char * log_prefix);
     #endif
     // implementations of pure virtual RadioLibHal methods
@@ -98,7 +98,7 @@ class RobustoHal : public RadioLibHal {
 #if !defined(RADIOLIB_GODMODE)
   private:
 #endif
-    #ifdef ESP_PLATFORM
+    #ifdef USE_ESPIDF
     
     spi_host_device_t spi_host;
     spi_device_interface_config_t *spi_conf;

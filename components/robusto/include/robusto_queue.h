@@ -45,23 +45,22 @@ extern "C"
 
 //#include "robusto_media.h"
 
-#if ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
 #include <compat/arduino_sys_queue.h>
 
-
-#elif ESP_PLATFORM
+#elif defined(USE_ESPIDF)
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #endif
 
-#ifndef ARDUINO
+#ifndef USE_ARDUINO
 #include "sys/queue.h"
 #endif
 
-#if !(defined(ESP_PLATFORM) || defined(ARDUINO))
+#if !(defined(USE_ESPIDF) || defined(USE_ARDUINO))
 
 #include <semaphore.h>
 #endif

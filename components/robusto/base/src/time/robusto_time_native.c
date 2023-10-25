@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 
 #include <robusto_time.h>
 #include <time.h>

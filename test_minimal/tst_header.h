@@ -4,13 +4,13 @@
 #define UNIT_TESTING 1
 
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <Arduino_FreeRTOS.h>
 
 #endif
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #endif
@@ -25,7 +25,7 @@ REDIRECT_STDOUT_TO(Serial);
 /** 
  * For native dev-platform or for some embedded frameworks \
  */ 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM)) 
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF)) 
 #define TEST_ENTRY_POINT(run_func) \
 int main(void) { \
     run_func(NULL); \
@@ -37,7 +37,7 @@ int main(void) { \
 /**  
  * For Arduino framework \
  */ 
-#if defined(ARDUINO) && !(defined(CONFIG_ROB_SYNCHRONOUS_MODE))
+#if defined(USE_ARDUINO) && !(defined(CONFIG_ROB_SYNCHRONOUS_MODE))
 #define TEST_ENTRY_POINT(run_func) \
 void setup() { \
     xTaskCreate((TaskFunction_t) &run_func, "Test task",384, NULL, 1, NULL); \
@@ -54,7 +54,7 @@ void loop() {} \
  * For ESP-IDF framework 
  */ 
 
-#ifdef ESP_PLATFORM 
+#ifdef USE_ESPIDF 
 #define TEST_ENTRY_POINT(run_func) \
     void app_main() { \
         vTaskDelay(1000/portTICK_PERIOD_MS); \

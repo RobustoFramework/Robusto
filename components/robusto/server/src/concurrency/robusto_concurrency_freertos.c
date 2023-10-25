@@ -31,15 +31,15 @@
 #include <robusto_concurrency.h>
 
 #ifndef CONFIG_ROB_SYNCHRONOUS_MODE
-#if defined(ESP_PLATFORM) || defined(ARDUINO)
+#if defined(USE_ESPIDF) || defined(USE_ARDUINO)
 
-#ifdef ARDUINO
+#ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <Arduino_FreeRTOS.h>
 #include <task.h>
 #include <semphr.h>
 #include <avr/wdt.h>
-#elif ESP_PLATFORM
+#elif defined(USE_ESPIDF)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
@@ -50,7 +50,7 @@
 // TODO: This interface has to be finalized, the handle for example, and affinity
 rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char task_name[30], rob_task_handle_t **handle, int affinity) 
 {
-    #ifdef ARDUINO // Arduino seems to only support one core
+    #ifdef USE_ARDUINO // Arduino seems to only support one core
     int rc = xTaskCreate(task_function, task_name, 8192, parameter, 8, handle);
     #else
     int rc = xTaskCreatePinnedToCore(task_function, task_name, 8192, parameter, 8, handle, 0);
@@ -99,11 +99,11 @@ rob_ret_val_t robusto_mutex_give(mutex_ref_t mutex) {
  * @param watchdog_timeout Timeout in seconds
  */
 void robusto_watchdog_set_timeout(int watchdog_timeout) {
-    #ifdef ARDUINO
+    #ifdef USE_ARDUINO
     //wdt_disable(); //enable(watchdog_timeout);
     #endif
 
-    #ifdef ESP_PLATFORM
+    #ifdef USE_ESPIDF
     // Adjust the ESP task watchdog, connections can take a long time sometimes.
     const esp_task_wdt_config_t watchdog_config = {
         .timeout_ms = (watchdog_timeout*1000) + 10,
@@ -118,7 +118,7 @@ void robusto_watchdog_set_timeout(int watchdog_timeout) {
 
 void robusto_yield(void) {
     // TODO: This should be used instead of r_delay in approximately a million places. Plz fix.
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
     vTaskDelay(1);
 #elif defined(ARDUINO_ARCH_STM32)    
     HAL_Delay(1);

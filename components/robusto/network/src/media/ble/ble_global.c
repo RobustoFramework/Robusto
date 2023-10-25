@@ -1,5 +1,5 @@
 
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #include <host/ble_hs.h>
 #include "ble_spp.h"
 

@@ -36,7 +36,7 @@
 #include <robusto_retval.h>
 #include <robusto_media_def.h>
 #include <robusto_peer.h>
-#ifndef ARDUINO
+#ifndef USE_ARDUINO
 #include "sys/queue.h"
 #endif
 

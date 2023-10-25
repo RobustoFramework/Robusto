@@ -3,7 +3,7 @@
 // TODO: Add copyrights on all these files
 #include <unity.h>
 
-#if !(defined(ARDUINO) || defined(ESP_PLATFORM))
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 #include <time.h>
 #include <stdio.h>
 #endif

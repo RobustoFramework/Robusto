@@ -38,7 +38,7 @@ extern "C"
 {
 #endif
 
-#ifndef ARDUINO
+#ifndef USE_ARDUINO
 #include "sys/queue.h"
 #else
 #include <compat/arduino_sys_queue.h>
@@ -78,7 +78,7 @@ typedef enum e_peer_state
 } e_peer_state;
 
 /* MAC-addresses should always be 6-byte values on ESP32. TODO: Probably at all times? */
-#ifdef ESP_PLATFORM
+#ifdef USE_ESPIDF
 #if (ESP_NOW_ETH_ALEN && ESP_NOW_ETH_ALEN != 6) || ROBUSTO_MAC_ADDR_LEN != 6
 #error ESP_NOW_ETH_ALEN or ROBUSTO_MAC_ADDR_LEN has been set to something else than six bytes. \
 MAC-addresses are 6-byte values regardless of technology. \
