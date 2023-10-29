@@ -194,25 +194,6 @@ int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, 
     return robusto_make_multi_message(message_type, service_id, conversation_id, NULL, 0, binary_data, binary_length, dest_message);
 }
 
-/**
- * @brief A simple way to, using format strings, build a message.
- * However; as the result will have to be null-terminated, and we cannot put nulls in that string.
- * Instead, the pipe-symbol "|" is used to indicate the null-terminated sections.
- * Only one format is allowed per section: "%i Mhz|%s" is allowed. "%i Mhz, %i watts|%s" is not.
- * Integers can be passed as is.
- * IMPORTANT: 1. Do not send floating point values, format them ahead and send them as null-terminated strings.
- * This is because of how variadic functions promotes and handles these data types.
- * TODO: This function probably peaks at too much memory use to be able to work on 2k boards like the Arduino UNO,
- * it should probably not be available there.
- *
- * @param message A pointer to a pointer to the message structure, memory will be allocated to it.
- * @param format A format string where "|" indicates where null-separation is wanted and creates a section.
- * @param arg A list of arguments supplying data for the format.
- * @return int Length of message
- *
- * @note An evolution would be to identify the number of format strings in each "|"-section to enable full support of format.
- * Unclear when that woud be needed, though, perhaps if compiling error texts.
- */
 int build_strings_data(uint8_t **message, const char *format, ...)
 {
 

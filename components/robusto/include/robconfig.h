@@ -31,7 +31,7 @@
 
 
 
-#if defined(USE_ARDUINO) && !defined(ARDUINO_ARCH_ESP32)
+#if defined(ARDUINO) && !defined(ARDUINO_ARCH_ESP32)
 #define USE_ARDUINO 
 #endif
 #ifdef ESP_PLATFORM
