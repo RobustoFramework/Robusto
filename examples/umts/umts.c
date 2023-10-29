@@ -5,6 +5,10 @@
 #include <robusto_umts.h>
 #include <robusto_logging.h>
 
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+#include <robusto_conductor.h>
+#endif
+
 char * sms_log_prefix;
 
 #if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) && (!defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS_NUMBER) || !defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS_MESSAGE))
@@ -35,7 +39,10 @@ void start_umts_example(char * _log_prefix)
     r_delay(30000);
     ROB_LOGI(sms_log_prefix, "Trying to send an MQTT message.");
     robusto_umts_mqtt_publish(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC, CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE);
-    
+
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    robusto_conductor_server_take_control();
+    #endif  
     #endif
 }
 

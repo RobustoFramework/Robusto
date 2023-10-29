@@ -152,7 +152,12 @@ bool robusto_conductor_server_ask_for_time(uint32_t ask)
 void robusto_conductor_server_take_control()
 {
     /* Wait for the awake period*/
-    wait_time = CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS - r_millis();
+    if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS > r_millis()) {
+        wait_time = CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS - r_millis();
+    } else {
+        wait_time = 0;
+    }
+    
     int32_t wait_ms;
     while (1)
     {
