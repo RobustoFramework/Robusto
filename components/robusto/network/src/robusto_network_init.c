@@ -31,6 +31,7 @@
  */
 
 #include <robusto_network_init.h>
+#include <robusto_init_internal.h>
 #include <robusto_init.h>
 #include <robusto_logging.h>
 #include <robusto_system.h>
@@ -62,4 +63,7 @@ void robusto_network_init(char *_log_prefix)
     robusto_incoming_init(_log_prefix);
     robusto_media_init(_log_prefix);
     robusto_qos_init(_log_prefix);
+
+    // Register services
+    register_network_service();
 }

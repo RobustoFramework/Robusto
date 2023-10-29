@@ -9,7 +9,8 @@
  *
  */
 
-#include "robusto_conductor.h"
+#include <robusto_conductor.h>
+#include <robusto_init_internal.h>
 
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
 

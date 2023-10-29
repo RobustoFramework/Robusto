@@ -29,7 +29,6 @@ void init_conductor_server(char *_log_prefix)
 {
     conductor_server_log_prefix = _log_prefix;
     robusto_register_handler(&on_incoming_conductor_server_example);
-    robusto_conductor_server_init(_log_prefix, NULL);
 }
 
 #endif

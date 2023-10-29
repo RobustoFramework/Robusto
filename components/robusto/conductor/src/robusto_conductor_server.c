@@ -12,7 +12,7 @@
 #include "robusto_conductor.h"
 
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-
+#include <robusto_init_internal.h>
 #include <robusto_sleep.h>
 
 #include <robusto_network_service.h>
@@ -195,10 +195,14 @@ void robusto_conductor_server_take_control()
     robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - last_wake_time);
 }
 
-void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb)
+void robusto_conductor_server_set_before_sleep(before_sleep _on_before_sleep_cb) {
+    on_before_sleep_cb = _on_before_sleep_cb;
+}
+
+void robusto_conductor_server_init(char *_log_prefix)
 {
     conductor_log_prefix = _log_prefix;
-    on_before_sleep_cb = _on_before_sleep_cb;
+    
     // No sleep time has happened if we don't return from sleep mode.
     if (robusto_is_first_boot())
     {

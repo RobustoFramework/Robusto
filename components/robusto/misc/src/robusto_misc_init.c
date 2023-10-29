@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <robusto_misc_init.h>
-#include <robusto_init.h>
+#include <robusto_init_internal.h>
 #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
 #include <robusto_pubsub_server.h>
 #endif
@@ -56,7 +56,7 @@ void register_misc_service() {
 }
 
 void robusto_misc_init(char * _log_prefix) {
-    
+    register_misc_service();
     #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
     robusto_pubsub_server_init(_log_prefix);
     #endif

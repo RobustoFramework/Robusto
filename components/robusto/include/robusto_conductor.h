@@ -81,12 +81,6 @@ void robusto_conductor_server_take_control();
  */
 int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
 
-/**
- * @brief Initialize the conductor server
- * @param _log_prefix The log prefix
- * @param _on_before_sleep_cb A callback that will be called before the system goes to sleep
- */
-void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sleep_cb);
 
 /**
  * @brief Time since the conductor started conducting
@@ -97,13 +91,6 @@ void robusto_conductor_server_init(char *_log_prefix, before_sleep _on_before_sl
 uint32_t robusto_conductor_server_get_time_since_start();
 
 /* Client functionality*/
-
-/**
- * @brief Initialize the conductor client
- *
- * @param _log_prefix
- */
-void robusto_conductor_client_init(char *_log_prefix);
 
 
 /**
@@ -118,4 +105,9 @@ void robusto_conductor_client_give_control(robusto_peer_t *peer);
  * @return int A handle to the created conversation
  */
 int robusto_conductor_client_send_when_message(robusto_peer_t *peer);
-
+/**
+ * @brief Register a callback that is called before sleep
+ * 
+ * @param _on_before_sleep_cb The callback
+ */
+void robusto_conductor_server_set_before_sleep(before_sleep *_on_before_sleep_cb);

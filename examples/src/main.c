@@ -83,14 +83,7 @@ void setup() {
     #ifdef CONFIG_HEAP_TRACING_STANDALONE
         ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
     #endif
-    register_network_service();
-    register_server_service();
 
-    // TODO: Create a pubsub example
-    #ifdef CONFIG_ROBUSTO_EXAMPLE_PUBSUB_SERVER 
-    register_misc_service();
-
-    #endif
 
 
     init_robusto();

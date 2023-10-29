@@ -82,9 +82,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_BEFORE_CONNECT:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_BEFORE_CONNECT");
-        #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-        robusto_conductor_client_give_control(6000); 
-        #endif
         break;   
     default:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT other event id: %i", event->event_id);

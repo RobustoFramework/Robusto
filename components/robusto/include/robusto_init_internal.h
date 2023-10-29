@@ -1,13 +1,12 @@
 /**
- * @file robusto_concurrency_init.c
+ * @file robusto_init_internal.h
  * @author Nicklas Börjesson (nicklasb@gmail.com)
- * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
- * @note This is for the most normal cases, for more advanced variants, look into using the platform specific variants
+ * @brief Internal header for all initialization.
  * @version 0.1
  * @date 2023-02-19
  *
  * @copyright
- * Copyright (c) 2023, Nicklas Börjesson <nicklasb at gmail dot com>
+ * Copyright (c) 2022, Nicklas Börjesson <nicklasb at gmail dot com>
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -29,29 +28,46 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include <robusto_server_init.h>
-#include <robusto_init.h>
-#include <robusto_init_internal.h>
 
+#pragma once
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+#include <robconfig.h>
 
-void robusto_server_stop() {
-   
-}
+//void robusto_init_compatibility();
 
-void robusto_server_start() {
-    robusto_repeater_start();
+/**
+ * @brief Initialize the networking-related functionality
+ * @param _log_prefix The log prefix
+ */
+void robusto_network_init(char *_log_prefix);
+/**
+ * @brief Initialize the server-related functionality
+ * @param _log_prefix The log prefix
+ */
+void robusto_server_init(char * _log_prefix);
 
-}
+/**
+ * @brief Initialize the conductor client
+ * @param _log_prefix The log prefix
+ */
+void robusto_conductor_client_init(char *_log_prefix);
 
-void register_server_service() {
-    register_service(robusto_server_init, robusto_server_start, robusto_server_stop, 2, "Server service");    
-}
+/**
+ * @brief Initialize the conductor server
+ * @param _log_prefix The log prefix
+ */
+void robusto_conductor_server_init(char *_log_prefix);
 
-void robusto_server_init(char * _log_prefix) {
-    robusto_repeater_init(_log_prefix);    
-    #ifdef CONFIG_ROBUSTO_MONITOR_MEMORY
-    robusto_memory_monitor_init(_log_prefix);
-    #endif
-    register_server_service();    
-}
+/**
+ * @brief Initialize the miscellaneous
+ * @param _log_prefix The log prefix
+ */
+void robusto_misc_init(char * _log_prefix);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

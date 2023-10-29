@@ -50,7 +50,7 @@ void conductor_client_call_server()
 void init_conductor_client(char *_log_prefix)
 {
     conductor_server_log_prefix = _log_prefix;
-    robusto_conductor_client_init(_log_prefix);
+
     char *dest = "The server";
     conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
     if (conductor_peer != NULL)
