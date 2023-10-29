@@ -38,12 +38,15 @@ static char *sleep_log_prefix;
 
 rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
 {
-    last_sleep_duration = millisecs;
+    
 #ifdef USE_ESPIDF
 
     if (esp_sleep_enable_timer_wakeup(millisecs * 1000) == ESP_OK)
     {
+        last_sleep_duration = millisecs;
         esp_deep_sleep_start();
+
+        return ROB_OK;
     }
     else
     {
