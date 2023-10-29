@@ -30,6 +30,7 @@
 
 
 #pragma once
+#include <robconfig.h>
 
 #if defined(USE_ARDUINO)
 #include <Wire.h>

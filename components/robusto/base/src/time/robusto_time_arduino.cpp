@@ -29,10 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-
-#ifdef USE_ARDUINO
 #include <robusto_time.h>
+#ifdef USE_ARDUINO
 #include "Arduino.h"
 #include <robconfig.h>
 #ifndef CONFIG_ROB_SYNCHRONOUS_MODE

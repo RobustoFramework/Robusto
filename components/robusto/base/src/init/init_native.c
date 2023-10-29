@@ -29,9 +29,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
+
 
 #include "robusto_init.h"
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
+
 #include "robusto_time.h"
 #include "robusto_logging.h"
 void robusto_init_compatibility() {

@@ -29,9 +29,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <robusto_time.h>
 #ifdef USE_ESPIDF
 
-#include <robusto_time.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_timer.h>

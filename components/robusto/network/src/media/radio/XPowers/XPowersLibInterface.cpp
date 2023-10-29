@@ -27,12 +27,12 @@
  * @date      2022-08-28
  *
  */
+
+
+#include "XPowersLibInterface.hpp"
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif
-
-#include "XPowersLibInterface.hpp"
-
 
 bool XPowersLibInterface::isChannelAvailable(uint8_t channel)
 {

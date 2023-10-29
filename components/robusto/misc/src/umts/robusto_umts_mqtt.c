@@ -47,7 +47,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, "/topic/lurifax_test", 0);
         // All is initiated, we can now start handling the queue
-        umts_set_queue_blocked(false);
+        // umts_set_queue_blocked(false);
         mqtt_up = true;
         robusto_umts_set_started(true);
         //ROB_LOGI(umts_mqtt_log_prefix, "sent subscribe successful, msg_id=%d", msg_id);

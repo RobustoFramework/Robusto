@@ -1,6 +1,5 @@
-#ifdef USE_ESPIDF
-
 #include "init_pmu.hpp"
+#ifdef USE_ESPIDF
 #include <stdio.h>
 #include <cstring>
 #include "freertos/FreeRTOS.h"

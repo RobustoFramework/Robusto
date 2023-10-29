@@ -33,13 +33,13 @@
  */
 
 #pragma once
-
+#include <robconfig.h>
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#include <robconfig.h>
+
 #define ROB_LOG_LOCAL_LEVEL CONFIG_ROB_LOG_MAXIMUM_LEVEL
 
 

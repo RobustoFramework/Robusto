@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "robusto_system.h"
+#include <robusto_system.h>
 
 int robusto_asprintf(char **str, const char *fmt, ...)
 {

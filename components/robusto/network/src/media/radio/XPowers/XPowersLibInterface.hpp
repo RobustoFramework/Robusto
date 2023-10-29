@@ -28,7 +28,7 @@
  *
  */
 #pragma once
-
+#include <robconfig.h>
 #include <stdint.h>
 #include "XPowersParams.hpp"
 

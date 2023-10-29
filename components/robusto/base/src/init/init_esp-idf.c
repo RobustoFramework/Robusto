@@ -29,9 +29,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef USE_ESPIDF
+
 
 #include "robusto_init.h"
+#ifdef USE_ESPIDF
 
 void robusto_init_compatibility() {
     // Add ESP-IDF initalization here when needed.

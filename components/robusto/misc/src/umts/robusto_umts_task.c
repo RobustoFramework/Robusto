@@ -573,6 +573,7 @@ signal_quality:
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
 
 #else
+// TODO: Fix all the queue stuff
     umts_set_queue_blocked(false);
     started = true;
 #endif /* CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT */

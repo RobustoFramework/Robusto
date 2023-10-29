@@ -35,7 +35,7 @@
 extern "C"
 {
 #endif
-
+#include <robconfig.h>
 #include <inttypes.h>
 
 typedef void(init_callback_t)(char * log_prefix);

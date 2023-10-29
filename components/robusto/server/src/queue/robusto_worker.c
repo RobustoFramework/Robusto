@@ -199,8 +199,9 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
 
     /* Create semaphores to ensure thread safety (queue and tasks) */
     q_context->__x_queue_mutex = robusto_mutex_init();
+    assert(q_context->__x_queue_mutex);
     q_context->__x_task_state_mutex = robusto_mutex_init();
-
+    assert(q_context->__x_task_state_mutex);
     // Reset task count (unsafely as this must be the only initiator)
     q_context->task_count = 0;
 

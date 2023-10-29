@@ -2,7 +2,7 @@
 /***********************
  * This is general server level handling
  ***********************/
-
+#include <robconfig.h>
 #ifdef USE_ESPIDF
 
 #include <host/util/util.h>

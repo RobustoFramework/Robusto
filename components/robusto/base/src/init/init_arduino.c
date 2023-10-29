@@ -29,10 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef USE_ARDUINO
-
-
 #include "robusto_init.h"
+#ifdef USE_ARDUINO
 #include "robusto_logging.h"
 
 void robusto_init_compatibility() {

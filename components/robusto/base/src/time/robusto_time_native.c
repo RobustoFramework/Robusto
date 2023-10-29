@@ -29,9 +29,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
+
 
 #include <robusto_time.h>
+
+#if (!defined(USE_ARDUINO)) && (!defined(USE_ESPIDF))
 #include <time.h>
 #include <stdint.h>
 #include <unistd.h>

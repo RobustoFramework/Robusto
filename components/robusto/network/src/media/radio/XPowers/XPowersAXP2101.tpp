@@ -28,11 +28,12 @@
  *
  */
 
+
+#include "XPowersCommon.tpp"
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif /*USE_ARDUINO*/
 
-#include "XPowersCommon.tpp"
 #include "REG/AXP2101Constants.h"
 #include "XPowersLibInterface.hpp"
 

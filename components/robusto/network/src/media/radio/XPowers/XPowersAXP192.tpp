@@ -27,12 +27,13 @@
  * @date      2022-05-07
  *
  */
+
+#include "XPowersCommon.tpp"
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #else
 #include <math.h>
 #endif /*USE_ARDUINO*/
-#include "XPowersCommon.tpp"
 #include "REG/AXP192Constants.h"
 #include "XPowersLibInterface.hpp"
 

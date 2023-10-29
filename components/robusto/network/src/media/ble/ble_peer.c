@@ -6,9 +6,8 @@
  * Inspired by the Espressif examples
  * @todo Restructure this into a more understandable solution, perhaps a separate header for peer and gatt stuff.
  */
-#ifdef USE_ESPIDF
-#include "sdkconfig.h"
-#endif
+#include <robconfig.h>
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 
 #include <assert.h>

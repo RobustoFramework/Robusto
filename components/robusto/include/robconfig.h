@@ -29,14 +29,26 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+/* 
+    This section selects between the Robusto use cases.
+    The selection creates explicit defines so that Robusto can act more predictably.
+*/
 
 #if defined(ARDUINO) && !defined(ARDUINO_ARCH_ESP32)
+/* Use the arduino framework. If we are not running the arduino-esp32, in which case we shouldn't. */
 #define USE_ARDUINO 
-#endif
-#ifdef ESP_PLATFORM
+#elif defined(ESP_PLATFORM)
+/* Use the ESP-IDF platform */
 #define USE_ESPIDF 
+#elif defined(STM32)|| defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_MBED)
+/* TODO: The STM32 platform is not properly defined, do that. It doesn't use USE_STM32, either, do that. */
+#define USE_STM32 
+#else
+/* If it is not an MCU, it is native*/
+#define USE_NATIVE
 #endif
+
+// TODO: We need to get a proper fix of the environments to make proper choices; ESP-IDF, Arduino and STM32. And perhaps others.
 
 #ifdef USE_ESPIDF
 #include <sdkconfig.h>
