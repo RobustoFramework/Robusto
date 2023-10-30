@@ -64,8 +64,11 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
 #include "../conductor/conductor_client.h"
 #endif
-#ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER 
+#ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_SERVER
 #include "../conductor/conductor_server.h"   
+#endif
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+#include <robusto_conductor.h> 
 #endif
 #if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT)
 #include "../umts/umts.h"   
@@ -120,6 +123,9 @@ void setup() {
     init_umts_example(example_log_prefix);
     start_umts_example();
     #endif
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
+    robusto_conductor_server_take_control();
+    #endif  
 }
 
 void log_test()

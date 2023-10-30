@@ -40,9 +40,7 @@ void start_umts_example(char * _log_prefix)
     ROB_LOGI(sms_log_prefix, "Trying to send an MQTT message.");
     robusto_umts_mqtt_publish(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC, CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE);
 
-    #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-    robusto_conductor_server_take_control();
-    #endif  
+
     #endif
 }
 

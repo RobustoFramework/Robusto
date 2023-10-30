@@ -299,8 +299,10 @@ void init_supported_media_types(robusto_peer_t *peer)
  */
 robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, e_media_type media_type)
 {
-
-    robusto_peer_t *peer = NULL;
+    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_address);
+    if (peer) {
+        return peer;
+    }
     robusto_peers_peer_add(peer_name, &peer);
     if (peer != NULL)
     {
@@ -337,7 +339,9 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
 robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, e_media_type media_type)
 {
     robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_type);
-    robusto_send_presentation(peer, media_type, false);
+    if (peer->state < PEER_KNOWN_INSECURE) {
+        robusto_send_presentation(peer, media_type, false);
+    }
 
     return peer;
 }
