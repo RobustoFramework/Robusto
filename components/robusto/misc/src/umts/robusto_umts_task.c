@@ -483,7 +483,7 @@ signal_quality:
     }
     ROB_LOGI(umts_task_log_prefix, "* Signal quality: rssi=%d, ber=%d", rssi, ber);
 
-    ROB_LOGE(umts_task_log_prefix, "Checking registration.");
+    ROB_LOGI(umts_task_log_prefix, "Checking registration.");
     // char res[100];
     bool registered = false;
     err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);

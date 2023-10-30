@@ -88,7 +88,11 @@ void cleanup_queue_task(queue_context_t *q_context)
 {
     ROB_LOGI(robusto_worker_log_prefix, "Cleaning up tasks.");
     alter_task_count(q_context, -1);
-    robusto_delete_current_task();
+    if (q_context->multitasking) {
+        // If we do this when it is not multitasking, we kill the entire queue worker task.
+        robusto_delete_current_task();
+    }
+    
 }
 
 void log_queue_context(queue_context_t *q_context) {
