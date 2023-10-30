@@ -55,7 +55,8 @@ typedef struct incoming_queue_item
 {
     /* Message*/
     robusto_message_t *message;
-
+    /* The service frees the message itself */
+    bool service_frees_message;
     /* Queue reference */
     STAILQ_ENTRY(incoming_queue_item)
     items;

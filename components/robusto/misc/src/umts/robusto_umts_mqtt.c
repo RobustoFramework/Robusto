@@ -47,12 +47,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, "/topic/lurifax_test", 0);
         // All is initiated, we can now start handling the queue
-        // umts_set_queue_blocked(false);
+        umts_set_queue_blocked(false);
         mqtt_up = true;
         robusto_umts_set_started(true);
         //ROB_LOGI(umts_mqtt_log_prefix, "sent subscribe successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_DISCONNECTED:
+        umts_set_queue_blocked(true);
         ROB_LOGW(umts_mqtt_log_prefix, "MQTT_EVENT_DISCONNECTED");
         mqtt_up = false;
         break;
@@ -114,7 +115,15 @@ void umts_mqtt_cleanup() {
 
 int umts_mqtt_publish(char * topic, char * payload, int payload_len) {
     int msg_id = esp_mqtt_client_publish(mqtt_client, topic, payload, payload_len, 0, 1);
-    ROB_LOGI(umts_mqtt_log_prefix, "Data published.");
+    if (msg_id == -1) {
+        ROB_LOGE(umts_mqtt_log_prefix, "Failed to publish data (msg id -1).");    
+    } else
+    if (msg_id == -2) {
+        ROB_LOGE(umts_mqtt_log_prefix, "Failed to publish data, outbox full. (msg id -1).");    
+    } else {
+        ROB_LOGI(umts_mqtt_log_prefix, "Data published. Msg id %i.", msg_id);    
+    }
+
     return msg_id;
 }
 

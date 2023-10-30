@@ -69,8 +69,10 @@ rob_ret_val_t robusto_handle_service(incoming_queue_item_t *queue_item) {
             ROB_LOGI(incoming_service_log_prefix, "Found a matching service"); 
             // Call the service
             services[curr_srv]->incoming_callback(queue_item->message);
+            queue_item->service_frees_message = services[curr_srv]->service_frees_message;
             return ROB_OK;
         }
+        curr_srv++;
     }
     ROB_LOGE(incoming_service_log_prefix, "Invalid service id (%"PRIu16")", service_id);
     return ROB_ERR_INVALID_SERVICE_ID;    

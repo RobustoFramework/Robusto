@@ -50,12 +50,10 @@ char *heartbeat_log_prefix;
 void heartbeat_cb();
 void heartbeat_shutdown_cb();
 
-static char heartbeats_name[19] = "Heartbeats\x00";
-
 // TODO: Add unit tests for this code.
 
 recurrence_t heartbeat = {
-    recurrence_name : &heartbeats_name,
+    recurrence_name : "Heartbeats",
     skip_count : CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT,
     skips_left : 0,
     recurrence_callback : &heartbeat_cb,

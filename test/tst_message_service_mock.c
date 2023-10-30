@@ -13,12 +13,9 @@ void on_shutdown(void);
 static bool async_receive_flag = false;
 static robusto_message_t *reply_msg = NULL;
 
-
-char _service_name[13] = "Mock service";
-
 network_service_t mock_service = {
     service_id : 1959,
-    service_name : &_service_name,
+    service_name : "Mock service",
     incoming_callback : &on_incoming,
     shutdown_callback: &on_shutdown
 };

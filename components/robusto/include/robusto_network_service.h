@@ -56,6 +56,8 @@ typedef struct network_service
     char * service_name;
     // The callback for incoming message
     service_cb * incoming_callback;
+    // The service takes responsibility for freeing memory
+    bool service_frees_message;
     // The callback for shutting down the service
     shutdown_cb * shutdown_callback;
 } network_service_t;

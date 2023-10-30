@@ -20,11 +20,11 @@ void shutdown_hello_network_service(void);
 
 char * hello_log_prefix;
 
-char _service_name[13] = "Hello";
+
 
 network_service_t hello_service = {
     service_id : serviceid,
-    service_name : &_service_name,
+    service_name : "Hello",
     incoming_callback : &on_incoming,
     shutdown_callback: &shutdown_hello_network_service
 };

@@ -86,7 +86,7 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
 {
 
     ROB_LOGD(incoming_log_prefix, "In incoming_do_on_incoming_cb");
-
+    queue_item->service_frees_message = false;
     if (queue_item->message->context.message_type == MSG_NETWORK)
     {
         ROB_LOGD(incoming_log_prefix, "Is network request");
@@ -118,13 +118,18 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
         }
         
         rob_log_bit_mesh(ROB_LOG_INFO, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
-        robusto_free(queue_item->message->raw_data);
+        if (!queue_item->service_frees_message) {
+            robusto_free(queue_item->message->raw_data);
+        }
+        
     }
-    if (queue_item->message->string_count > 0) {
+    if ((!queue_item->service_frees_message) && (queue_item->message->string_count > 0)) {
         robusto_free(queue_item->message->strings);
     }
+    if (!queue_item->service_frees_message) {
+        robusto_free(queue_item->message);
+    }
     
-    robusto_free(queue_item->message);
     robusto_free(queue_item);
 }
 void incoming_do_on_poll_cb(queue_context_t *q_context)
