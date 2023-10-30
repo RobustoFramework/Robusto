@@ -70,7 +70,7 @@ void robusto_conductor_client_sleep_until_available(robusto_peer_t *peer, uint32
     if (peer->next_availability > 0)
     {
         uint32_t sleep_length = peer->next_availability - r_millis() + margin_us;
-        ROB_LOGI(conductor_log_prefix, "Going to sleep for %" PRIu32 " microseconds.", sleep_length);
+        ROB_LOGI(conductor_log_prefix, "Going to sleep for %" PRIu32 " milliseconds.", sleep_length);
         robusto_goto_sleep(sleep_length);
     }
 }
