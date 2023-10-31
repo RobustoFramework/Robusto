@@ -41,7 +41,7 @@ rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
     
 #ifdef USE_ESPIDF
 
-    if (esp_sleep_enable_timer_wakeup(millisecs * 1000) == ESP_OK)
+    if (esp_sleep_enable_timer_wakeup((uint64_t)millisecs * 1000) == ESP_OK)
     {
         last_sleep_duration = millisecs;
         esp_deep_sleep_start();
