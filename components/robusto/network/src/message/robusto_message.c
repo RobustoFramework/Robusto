@@ -36,10 +36,7 @@
 char *message_log_prefix;
 
 void robusto_message_free(robusto_message_t *message) {
-    if (message->media_type != robusto_mt_espnow) {
-        // ESP-NOW frees its data
-        robusto_free(message->raw_data);
-    }
+    robusto_free(message->raw_data);
     if (message->string_count > 0) {
         robusto_free(message->strings);
     }

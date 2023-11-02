@@ -275,6 +275,7 @@ bool robusto_umts_sms_up()
 
 void robusto_umts_start(char *_log_prefix)
 {
+
     started = false;
     umts_modem_setup_task = NULL;
     sync_attempts = 0;
@@ -324,6 +325,7 @@ void robusto_umts_start(char *_log_prefix)
     dte_config.task_stack_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_EVENT_TASK_STACK_SIZE;
     dte_config.task_priority = CONFIG_ROBUSTO_UMTS_MODEM_UART_EVENT_TASK_PRIORITY;
     dte_config.dte_buffer_size = CONFIG_ROBUSTO_UMTS_MODEM_UART_RX_BUFFER_SIZE;
+    
 
 #if CONFIG_ROBUSTO_UMTS_MODEM_DEVICE_BG96 == 1
     ROB_LOGI(umts_task_log_prefix, "Initializing esp_modem for the BG96 module...");
@@ -374,7 +376,7 @@ void robusto_umts_start(char *_log_prefix)
 // We want to try until we either connect or hit the timebox limit
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
             umts_abort_if_shutting_down();
-            robusto_conductor_server_ask_for_time(5000);
+            robusto_conductor_server_ask_for_time(100);
 #endif
             r_delay(500);
         }

@@ -110,24 +110,14 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
             rob_log_bit_mesh(ROB_LOG_ERROR, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
         }
     }
-    if (queue_item->message->media_type != robusto_mt_espnow) {
+    if (!queue_item->service_frees_message){
         if (strcmp(queue_item->message->peer->name, "") == 0) {
             ROB_LOGD(incoming_log_prefix, "Freeing message from null-named peer, type %hhu.", queue_item->message->media_type);    
         } else {
             ROB_LOGD(incoming_log_prefix, "Freeing message from %s, type %hhu", queue_item->message->peer->name, queue_item->message->media_type);
         }
-        
         rob_log_bit_mesh(ROB_LOG_INFO, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
-        if (!queue_item->service_frees_message) {
-            robusto_free(queue_item->message->raw_data);
-        }
-        
-    }
-    if ((!queue_item->service_frees_message) && (queue_item->message->string_count > 0)) {
-        robusto_free(queue_item->message->strings);
-    }
-    if (!queue_item->service_frees_message) {
-        robusto_free(queue_item->message);
+        robusto_message_free(queue_item->message);
     }
     
     robusto_free(queue_item);

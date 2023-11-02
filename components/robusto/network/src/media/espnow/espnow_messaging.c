@@ -175,8 +175,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         add_to_history(&peer->espnow_info, false, ROB_OK);
     }
     else
-    {
-        add_to_history(&peer->espnow_info, false, robusto_handle_incoming(data, len, peer, robusto_mt_espnow, 0));
+    {   
+        uint8_t *n_data = robusto_malloc(len);
+        memcpy(n_data, data, len);
+        add_to_history(&peer->espnow_info, false, robusto_handle_incoming(n_data, len, peer, robusto_mt_espnow, 0));
+        //robusto_free(data);
     }
 }
 

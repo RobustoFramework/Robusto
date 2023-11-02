@@ -121,7 +121,7 @@ int umts_mqtt_publish(char * topic, char * payload, int payload_len) {
     if (msg_id == -2) {
         ROB_LOGE(umts_mqtt_log_prefix, "Failed to publish data, outbox full. (msg id -1).");    
     } else {
-        ROB_LOGI(umts_mqtt_log_prefix, "Data published. Msg id %i.", msg_id);    
+        ROB_LOGI(umts_mqtt_log_prefix, "Publishing \"%s\" to %s. Msg id %i.", payload, topic, msg_id);    
     }
 
     return msg_id;

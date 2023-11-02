@@ -104,7 +104,8 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 
     // TODO: Consider what actually is the point here, should GSM=MQTT?
 
-    ROB_LOGI(umts_log_prefix, "In UMTS work callback.");
+    //ROB_LOGI(umts_log_prefix, "In UMTS work callback string %lu", (uint32_t)queue_item->message->raw_data);
+    //rob_log_bit_mesh(ROB_LOG_INFO, umts_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
 
     if ((strcmp(queue_item->message->strings[1], "-1.00") != 0) && (strcmp(queue_item->message->strings[1], "-2.00") != 0)) {
         umts_mqtt_publish("/topic/lurifax/peripheral_humidity", queue_item->message->strings[1],  strlen(queue_item->message->strings[1]));
@@ -186,7 +187,7 @@ void robusto_umts_init(char *_log_prefix)
     robusto_register_network_service(&umts_network_service);
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
-    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ 16384, 
+    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ /*16384*/ 32768, 
         (void *)umts_log_prefix, 5, &umts_modem_setup_task, 0);
     if (rc != pdPASS)
     {

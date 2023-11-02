@@ -43,7 +43,6 @@ rob_ret_val_t umts_safe_add_work_queue(umts_queue_item_t *new_item) {
 void umts_cleanup_queue_task(umts_queue_item_t *queue_item) {
     if (queue_item != NULL)
     {
-
         robusto_message_free(queue_item->message);
         robusto_free(queue_item);
     }
