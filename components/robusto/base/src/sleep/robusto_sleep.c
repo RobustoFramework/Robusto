@@ -41,7 +41,7 @@ rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
     
 #ifdef USE_ESPIDF
 
-    if (esp_sleep_enable_timer_wakeup((uint64_t)millisecs * 1000) == ESP_OK)
+    if (esp_sleep_enable_timer_wakeup((uint64_t)millisecs * (uint64_t)1000) == ESP_OK)
     {
         last_sleep_duration = millisecs;
         esp_deep_sleep_start();
@@ -125,7 +125,7 @@ bool robusto_sleep_init(char *_log_prefix)
 
     default:
         ROB_LOGI(sleep_log_prefix, "----------------------------------------- W A K E -----------------------------------------");
-        ROB_LOGI(sleep_log_prefix, "Returning from sleep mode.");
+        ROB_LOGI(sleep_log_prefix, "Returning from sleep mode. Wakeup cause: %u", wakeup_cause);
         b_first_boot = false;
         return true;
         break;
