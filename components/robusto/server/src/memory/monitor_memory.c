@@ -152,8 +152,13 @@ void monitor_memory_cb()
         level = ROB_LOG_WARN;
     }
     sample_count++;
+    #ifdef CONFIG_SPIRAM
+    ROB_LOG_LEVEL(level, memory_monitor_log_prefix, "Monitor reporting on available resources. Memory:\nCurrently: %llu, avg mem: %.0f bytes. \nDeltas - Avg vs 1st: %.0f, Last vs now: %lli. \nExtremes - Least: %llu, Most(before init): %llu. SPI ram: %llu. ",
+                  curr_mem_avail, avg_mem_avail, avg_mem_avail - first_average_memory_available, delta_mem_avail, least_memory_available, most_memory_available, get_free_mem_spi());
+    #else
     ROB_LOG_LEVEL(level, memory_monitor_log_prefix, "Monitor reporting on available resources. Memory:\nCurrently: %llu, avg mem: %.0f bytes. \nDeltas - Avg vs 1st: %.0f, Last vs now: %lli. \nExtremes - Least: %llu, Most(before init): %llu. ",
                   curr_mem_avail, avg_mem_avail, avg_mem_avail - first_average_memory_available, delta_mem_avail, least_memory_available, most_memory_available);
+    #endif
 }
 
 void monitor_memory_shutdown_cb()

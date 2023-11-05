@@ -240,7 +240,11 @@ uint8_t *kconfig_mac_to_6_bytes(uint64_t mac_kconfig) {
 
 uint64_t get_free_mem(void) {
 #ifdef USE_ESPIDF
-    return heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    #ifdef CONFIG_SPIRAM
+        return heap_caps_get_free_size(MALLOC_CAP_8BIT) - heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    #else
+        return heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    #endif
 #elif defined(USE_ARDUINO)
 #error "Needs to add memory usage support here"
 #elif defined(__APPLE__) 
@@ -249,6 +253,23 @@ uint64_t get_free_mem(void) {
     struct sysinfo info;
     sysinfo(&info);
     return info.freeram;
+#endif
+}
+
+
+uint64_t get_free_mem_spi(void) {
+#ifdef USE_ESPIDF
+    #ifdef CONFIG_SPIRAM
+        return heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    #else
+        return 0;
+    #endif
+#elif defined(USE_ARDUINO)
+#error "Needs to add SPI memory usage support here, if applicable"
+#elif defined(__APPLE__) 
+    return 0;
+#elif defined(__linux__)
+    return 0;
 #endif
 }
 

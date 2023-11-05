@@ -133,6 +133,8 @@ int robusto_asprintf (char **str, const char *fmt, ...);
 
 uint64_t get_free_mem(void);
 
+uint64_t get_free_mem_spi(void);
+
 rob_ret_val_t robusto_gpio_set_level(uint8_t gpio_num, uint8_t value);
 
 
