@@ -52,7 +52,8 @@ menu "Robusto Examples"
 
     config ROBUSTO_UMTS_EXAMPLE_SMS
         bool "The SMS example"
-        help This sends an SMS to the recipient specified below.
+        help 
+            This sends an SMS to the recipient specified below.
             Note that the UMTS server has to be enabled and configured.
 
         config ROBUSTO_UMTS_EXAMPLE_SMS_NUMBER
@@ -65,7 +66,8 @@ menu "Robusto Examples"
 
     config ROBUSTO_UMTS_EXAMPLE_MQTT
         bool "The MQTT example"
-        help This sends an MQTT message the specified MQTT server
+        help 
+            This sends an MQTT message the specified MQTT server
             The server is set in the MQTT server settings, and also the main path.
 
         config ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC
@@ -75,8 +77,15 @@ menu "Robusto Examples"
         config ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE
             string "The message to send"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
-                
-        
+
+    config ROBUSTO_CAMERA_EXAMPLE
+        bool "The Camera example"
+        help 
+            This takes a picture and sends it using Robusto.
+    
+    rsource "../camera/Kconfig"
+
+    
 endmenu
 
         
