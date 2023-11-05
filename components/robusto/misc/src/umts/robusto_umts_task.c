@@ -558,9 +558,7 @@ signal_quality:
     robusto_conductor_server_ask_for_time(500);
     umts_abort_if_shutting_down();
 #endif
-#ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT
 
-    r_delay(3000);
 
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(10000);
@@ -574,11 +572,7 @@ signal_quality:
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
 
-#else
-// TODO: Fix all the queue stuff
-    umts_set_queue_blocked(false);
-    started = true;
-#endif /* CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT */
+
     
 
 finish:

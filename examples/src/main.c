@@ -73,6 +73,10 @@
 #if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT)
 #include "../umts/umts.h"   
 #endif
+#ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
+#include "../camera/camera.h"
+#endif
+
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #define NUM_RECORDS 100
@@ -126,6 +130,12 @@ void setup() {
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_take_control();
     #endif  
+    
+    #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
+    ROB_LOGI(example_log_prefix, "Start Camera example");
+    init_camera_example(example_log_prefix);
+    start_camera_example();
+    #endif
 }
 
 void log_test()

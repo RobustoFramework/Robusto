@@ -1,78 +1,153 @@
 menu "Camera configuration"
     depends on ROBUSTO_CAMERA_EXAMPLE
+
+
+choice CAMERA_MODEL
+    prompt "Select the camera module you for easy settings"
+    help
+        This provides the proper defaults for some of the common camera modules. 
+        If you want your own settings, select "Custom".
+        Note #1 : That they are only OV2640 so far, even though the esp-camera library supports a multitude of sensors.
+        Note #2 : The config is based on the ESP32-cam webserver and the mapping between settings and actual model
+        are in the case of the M5STACK models a little bit unclear
+        
+
+    config CAMERA_MODEL_AI_THINKER
+        bool "The AI Thinker ESP32 cam"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the AI Thinker ESP32 camera module
+
+    config CAMERA_MODEL_ESP_EYE
+        bool "The Espressif ESP EYE"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the Espressif ESP EYE camera module
+
+    config CAMERA_MODEL_M5STACK_PSRAM
+        bool "The M5STACK PSRAM"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the M5STACK camera module with PSRAM.
+    
+    
+    config CAMERA_MODEL_M5STACK_V2_PSRAM
+        bool "The M5STACK V2 PSRAM"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the M5STACK V2 camera module with PSRAM.
+    
+    
+    config CAMERA_MODEL_M5STACK_WIDE
+        bool "The M5STACK Fisheye"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the M5STACK Fisheye camera module
+            
+    config CAMERA_MODEL_M5STACK_ESP32CAM
+        bool "The M5STACK ESP32 Camera Module"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the M5STACK ESP32 camera module
+
+
+    config CAMERA_MODEL_TTGO_T_JOURNAL
+        bool "The TTGO T-journal"
+        select OV2640_SUPPORT
+    help
+        Use defaults for the TTGO T-journal camera module
+    
+    config CAMERA_MODEL_CUSTOM
+        bool "I have another module"
+    help
+        Use this when you have another module, or have made your own custom solution. 
+        Note that you need to select image sensor below and provide your own pin settings.
+        See the camera_pins.h file for more information.
+
+    
+endchoice
+    config XCLK_FREQ_MHZ
+        int "Initial Camera module bus communications frequency"
+        default 8
+        help
+            Currently defaults to 8MHz
+            The post-initialisation (runtime) value can be set and edited by the user in the UI
+            For clone modules that have camera module and SPIFFS startup issues try setting
+            this very low (start at 2MHZ and increase):
+
     config OV7670_SUPPORT
         bool "Support OV7670 VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the OV7670.
             Disable this option to save memory.
 
     config OV7725_SUPPORT
         bool "Support OV7725 VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the OV7725.
             Disable this option to save memory.
 
     config NT99141_SUPPORT
         bool "Support NT99141 HD"
-        default y
+        default n
         help
             Enable this option if you want to use the NT99141.
             Disable this option to save memory.
 
     config OV2640_SUPPORT
         bool "Support OV2640 2MP"
-        default y
+        default n
         help
             Enable this option if you want to use the OV2640.
             Disable this option to save memory.
 
     config OV3660_SUPPORT
         bool "Support OV3660 3MP"
-        default y
+        default n
         help
             Enable this option if you want to use the OV3360.
             Disable this option to save memory.
 
     config OV5640_SUPPORT
         bool "Support OV5640 5MP"
-        default y
+        default n
         help
             Enable this option if you want to use the OV5640.
             Disable this option to save memory.
 
     config GC2145_SUPPORT
         bool "Support GC2145 2MP"
-        default y
+        default n
         help
             Enable this option if you want to use the GC2145.
             Disable this option to save memory.
 
     config GC032A_SUPPORT
         bool "Support GC032A VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the GC032A.
             Disable this option to save memory.
 
     config GC0308_SUPPORT
         bool "Support GC0308 VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the GC0308.
             Disable this option to save memory.
             
     config BF3005_SUPPORT
         bool "Support BF3005(BYD3005) VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the BF3005.
             Disable this option to save memory.
             
     config BF20A6_SUPPORT
         bool "Support BF20A6(BYD20A6) VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the BF20A6.
             Disable this option to save memory.
@@ -104,7 +179,7 @@ menu "Camera configuration"
 
     config SC030IOT_SUPPORT
         bool "Support SC030IOT VGA"
-        default y
+        default n
         help
             Enable this option if you want to use the SC030IOT.
             Disable this option to save memory.

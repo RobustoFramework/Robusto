@@ -1,0 +1,250 @@
+; PlatformIO Project Configuration File
+;
+;   Build options: build flags, source filter
+;   Upload options: custom upload port, speed and extra flags
+;   Library options: dependencies, extra library storages
+;   Advanced options: extra scripting
+;
+; Please visit documentation for the other options and examples
+; https://docs.platformio.org/page/projectconf.html
+
+[platformio]
+src_dir = examples/src
+test_dir = test
+
+[env]
+test_framework = unity
+;monitor_raw = yes
+lib_deps =
+  https://github.com/nicklasb/robusto-platformio.git
+
+build_type = debug
+
+[env:Native]
+; Linux/MacOs/Windows functionality.
+platform=native
+lib_extra_dirs = components, test, examples/src
+; If there is a way to make things work without turning of compatibility checks?
+lib_compat_mode = off
+build_flags =
+  --coverage
+
+debug_test = *
+extra_scripts = 
+  ${env.extra_scripts}
+  test/test-coverage.py
+
+[env:TTGO-LoRa32-v1]
+; Used with the The TTGO LORA32 SX1278 board
+
+platform = espressif32@6.4.0
+framework = espidf
+board = ttgo-lora32-v1
+
+monitor_port = /dev/cu.wchusbserial531C0101801
+upload_port = /dev/cu.wchusbserial531C0101801
+test_port = /dev/cu.wchusbserial531C0101801
+debug_test = *
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+;lib_extra_dirs = test
+; Private: MAC 58bf250541e0
+lib_deps = 
+  ${env.lib_deps}
+  adafruit/Adafruit SSD1306@^2.5.7
+  ;https://github.com/nicklasb/RadioLib.git
+  ;jgromes/RadioLib@^6.0.0
+; Better partioning
+board_build.partitions = min_spiffs.csv
+build_flags =
+  -D IDF_COMPONENT_MANAGER=0
+[env:TTGO-T-Beam_LoRa]
+; Used with the TTGO T-BEAM SX1262 TCXO board
+platform = espressif32@6.4.0
+framework = espidf
+board = ttgo-t-beam
+monitor_port = /dev/cu.wchusbserial54FC0473971
+upload_port = /dev/cu.wchusbserial54FC0473971
+test_port = /dev/cu.wchusbserial54FC0473971
+
+debug_test = *
+;monitor_port = /dev/cu.wchusbserial537E0890921
+;upload_port = /dev/cu.wchusbserial537E0890921
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+
+;lib_extra_dirs = test
+; Better partioning
+board_build.partitions = min_spiffs.csv
+; Private: MAC 08b61fc0d660
+lib_deps = 
+  ${env.lib_deps}
+  ;https://github.com/jgromes/RadioLib.git
+  ;jgromes/RadioLib@^6.0.0
+
+[env:TTGO-T-Beam_SIM7000G]
+; Used with the TTGO T-BEAM SIM-7000 board
+platform = espressif32@6.4.0
+framework = espidf
+board = ttgo-t-beam
+monitor_port = /dev/cu.wchusbserial54D80084791
+upload_port = /dev/cu.wchusbserial54D80084791
+test_port = /dev/cu.wchusbserial54D80084791
+
+debug_test = *
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+
+;lib_extra_dirs = test
+; Better partioning
+board_build.partitions = min_spiffs.csv
+; Private: MAC 08b61fc0d660
+lib_deps = 
+  ${env.lib_deps}
+  ;https://github.com/jgromes/RadioLib.git
+  ;jgromes/RadioLib@^6.0.0
+[env:Devkit_v4]
+; Used with the The ESP32 devkit board
+platform = espressif32@6.4.0
+framework = espidf
+board = az-delivery-devkit-v4
+
+monitor_port = /dev/cu.usbserial-0001
+upload_port = /dev/cu.usbserial-0001
+test_port = /dev/cu.usbserial-0001
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+
+;lib_extra_dirs = test
+; Better partioning
+board_build.partitions = min_spiffs.csv
+[env:ESP32cam]
+; Used with the The ESP32 cam board
+platform = espressif32@6.4.0
+framework = espidf
+board = esp32cam
+
+monitor_port = /dev/cu.usbserial-A10L64O1
+upload_port = /dev/cu.usbserial-A10L64O1
+test_port = /dev/cu.usbserial-A10L64O1
+
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+upload_protocol = esptool
+build_flags =
+   -I${libdeps_dir}/ESP32cam/esp32-camera
+;lib_extra_dirs = test
+
+; Better partioning
+board_build.partitions = min_spiffs.csv
+
+lib_deps =
+  ${env.lib_deps}
+  esp32-camera
+; --------------------------
+; The RaspberryPi Pico uses picotool for uploading.
+; Note: There is nothing that identifies the board, so having multiple
+; boards might be a problem. TODO: Check how to specify this.
+[env:RaspberryPi_Pico]
+#platform = raspberrypi
+platform = https://github.com/maxgerhardt/platform-raspberrypi.git
+board = pico
+framework = arduino
+lib_extra_dirs = test, components 
+test_framework= custom
+#test_framework= custom
+#board_build.core = earlephilhower
+upload_protocol = picotool
+;upload_port = /Volumes/RPI-RP2
+lib_deps = 
+  ${env.lib_deps}
+  Wire
+  ;https://github.com/nicklasb/RadioLib.git
+
+;board_build.hwids = [0x2E8A,0x000A]
+; monitor_port = /dev/cu.usbmodem1423301
+; upload_port = /dev/cu.usbmodem1423201
+; test_port = /dev/cu.usbmodem1423201
+;monitor_port = /dev/cu.wchusbserial1423201
+;upload_port = /dev/cu.wchusbserial1423201
+;test_port = /dev/cu.wchusbserial1423201
+
+
+; Do not re-enable these
+;lib_deps = feilipu/FreeRTOS
+;We will have to add build flags fo
+;build_flags =
+;  -DportUSE_WDTO=WDTO_15MS
+;/dev/cu.usbmodem4E8D368338001
+
+; -------------------------------------------
+; The STM32 boards are configured in two different ways:
+; STM32F03C8: 
+; The Bluepill uses HID-Flash and a special boot loader.
+; See : https://www.youtube.com/watch?v=Myon8H111PQ
+; STM32F407VE: 
+; The black F407 uses DFU, quite plainly. 
+; Note that in both cases, while the first two build flags describes how
+; to find and update the board, the rest defines how it presents
+; itself after being updated.
+
+[env:STM32F03C8]
+platform=ststm32
+lib_extra_dirs = components/robusto, test
+board = bluepill_f103c8
+framework = arduino
+upload_protocol = hid
+upload_port = /dev/cu.usbmodem4E8D368338001
+monitor_port = /dev/cu.usbmodem4E8D368338001
+test_framework= unity
+test_port = /dev/cu.usbmodem4E8D368338001
+lib_deps = 
+  ${env.lib_deps}
+  Wire
+  ;https://github.com/nicklasb/RadioLib.git
+build_flags =
+  -D USBD_VID=0x0483
+  -D USBD_PID=0x5740
+  -D PIO_FRAMEWORK_ARDUINO_ENABLE_CDC
+  -D USBCON
+  -D USB_MANUFACTURER="Unknown"
+  -D USB_PRODUCT="BLUEPILL_F103C8"
+  -D HAL_PCD_MODULE_ENABLED
+monitor_dtr = 1
+
+[env:STM32F407VE]
+platform = ststm32
+board = black_f407ve
+lib_extra_dirs = components, test
+framework = arduino
+upload_protocol = dfu
+monitor_port = /dev/cu.usbmodem3679397A34311
+monitor_speed = 115200
+test_framework=unity
+test_port = /dev/cu.usbmodem3679397A34311
+test_speed = 115200
+build_flags =
+  -D USBD_VID=0x0483
+  -D USBD_PID=0xdf11
+  -D PIO_FRAMEWORK_ARDUINO_ENABLE_CDC
+  -D USBCON
+  -D USB_MANUFACTURER="Unknown"
+  -D USB_PRODUCT="Black_STM32F4VE"
+  -D HAL_PCD_MODULE_ENABLED
+monitor_dtr = 1
+
+; [env:air105]
+; platform = https://github.com/racerxdl/platformio-air105
+; board = air105
+; lib_extra_dirs = components, test
+; framework = baremetal
+; build_flags= 
+;  -Idir $PROJECT_DIR/components/robusto-base/include/
+;  -Idir $PROJECT_DIR/test
+; lib_deps = 
+;   stm32duino/STM32duino FreeRTOS@^10.3.1
+; test_framework=unity
+; monitor_port = /dev/cu.usbserial-142320
+; upload_port = /dev/cu.usbserial-142320
+; test_port = /dev/cu.usbserial-142320
+; monitor_rts = 0 ; AIR105 board has inverted RTS
