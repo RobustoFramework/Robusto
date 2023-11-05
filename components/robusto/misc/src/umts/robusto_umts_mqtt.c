@@ -24,7 +24,8 @@
 
 
 
-#define BROKER_URL "mqtt://mqtt.eclipseprojects.io"
+//#define BROKER_URL "mqtt://mqtt.eclipseprojects.io"
+#define BROKER_URL "mqtt://test.mosquitto.org"
 
 #define TOPIC "/topic/lurifax"
 
