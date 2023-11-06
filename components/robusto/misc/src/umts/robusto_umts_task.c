@@ -2,17 +2,22 @@
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include <robusto_umts.h>
 #include "robusto_umts_def.h"
-#include "robusto_umts_mqtt.h"
-#include "robusto_umts_queue.h"
-#include "robusto_umts_ip.h"
-#include "robusto_umts_queue.h"
-#include "robusto_logging.h"
 
 #include <esp_modem_api.h>
 #include "esp_modem_dce_config.h"
 #include <driver/gpio.h>
 
+#include "robusto_umts_ip.h"
+#include "robusto_umts_http.h"
+#include "robusto_umts_mqtt.h"
+
+#include "robusto_umts_queue.h"
+#include "robusto_logging.h"
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR
 #include "robusto_conductor.h"
+#endif
+
 #include <string.h>
 
 TaskHandle_t umts_modem_setup_task;
@@ -572,7 +577,9 @@ signal_quality:
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
 
-
+    // Initialize HTTP
+    handle_umts_states(umts_http_init(umts_task_log_prefix));
+    
     
 
 finish:

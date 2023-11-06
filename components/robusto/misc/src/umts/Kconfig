@@ -162,6 +162,23 @@ config ROBUSTO_UMTS_SERVER
             depends on ROBUSTO_UMTS_NEED_SIM_PIN
             help
                 Pin to unlock the SIM
+        config ROBUSTO_UMTS_MQTT
+            bool "Include the UMTS MQTT client"
+            help
+                Set this option to tell Robusto to load the UMTS MQTT client library.
+        config ROBUSTO_UMTS_HTTP
+            bool "Include the UMTS HTTP client"
+            help
+                Set this option to tell Robusto to load the UMTS HTTP client library.
+        menu "HTTP"
+            depends on ROBUSTO_UMTS_HTTP
+            config ROBUSTO_UMTS_HTTP_BEARER_TOKEN
+                string "Oauth2 bearer token"
+                help
+                    Use this when logging in to services like Google and other Oauth2 services
+
+        endmenu
+        
 
     endmenu
     config ROBUSTO_UMTS_CLIENT

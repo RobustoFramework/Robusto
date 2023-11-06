@@ -24,6 +24,12 @@
 char *umts_ip_log_prefix;
 esp_netif_t *umts_ip_esp_netif = NULL;
 
+char * ip_addr_string = NULL;
+
+char * get_ip_address() {
+    return ip_addr_string;
+}
+
 static void on_ppp_changed(void *arg, esp_event_base_t event_base,
                            int32_t event_id, void *event_data)
 {
@@ -51,6 +57,7 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
 
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         esp_netif_t *netif = event->esp_netif;
+        asprintf(ip_addr_string,  IPSTR, IP2STR(&event->ip_info.ip));
 
         ROB_LOGI(umts_ip_log_prefix, "Modem Connect to PPP Server");
         ROB_LOGI(umts_ip_log_prefix, "~~~~~~~~~~~~~~");
@@ -69,6 +76,7 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
     else if (event_id == IP_EVENT_PPP_LOST_IP)
     {
         ROB_LOGW(umts_ip_log_prefix, "Modem Disconnect from PPP Server");
+        ip_addr_string = NULL;
     }
     else if (event_id == IP_EVENT_GOT_IP6)
     {

@@ -7,6 +7,8 @@
 
 extern esp_netif_t *umts_ip_esp_netif;
 
+char * get_ip_address();
+
 void umts_ip_init(char * _log_prefix);
 bool umts_ip_enable_command_mode();
 int umts_ip_enable_data_mode();

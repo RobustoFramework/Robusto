@@ -108,7 +108,11 @@ void start_camera_example(char * _log_prefix)
 
     setLamp(0);
     ROB_LOGI(camera_log_prefix, "Done camera stuff. Size: %i", fb->len);
+    #if defined(CONFIG_ROBUSTO_UMTS_HTTP) 
+    // Send the picture to a Google API
+    
 
+    #endif
 
 }
 
@@ -244,6 +248,11 @@ void init_camera_example(char * _log_prefix) {
         //s->set_colorbar(s, 0);        // 0 = disable , 1 = enable
     }
     // We now have camera with default init
+
+    #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE_URL 
+    // Send image to UMTS gateway
+    
+    #endif
 }
 
 
