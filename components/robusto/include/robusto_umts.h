@@ -10,9 +10,12 @@
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
 rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data);
+rob_ret_val_t robusto_umts_http_post(char *url, uint8_t *data, uint16_t data_len);
+
 
 bool robusto_umts_sms_up();
 bool robusto_umts_mqtt_up();
+bool robusto_umts_ip_up();
 
 void robusto_umts_start(char * _log_prefix);
 void robusto_umts_init(char * _log_prefix);

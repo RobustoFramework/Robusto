@@ -14,7 +14,7 @@
 #include "robusto_umts_queue.h"
 #include "robusto_logging.h"
 
-#ifdef CONFIG_ROBUSTO_CONDUCTOR
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 #include "robusto_conductor.h"
 #endif
 
@@ -293,7 +293,7 @@ void robusto_umts_start(char *_log_prefix)
 
     // We need to init the PPP netif as that is a parameter to the modem setup
     umts_ip_init(umts_task_log_prefix);
-
+    umts_http_init(umts_task_log_prefix);
     ROB_LOGI(umts_task_log_prefix, "Powering on modem.");
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
     ROB_LOGI(umts_task_log_prefix, " + Setting pulldown mode. (float might be over 0.4 v)");

@@ -78,6 +78,11 @@ menu "Robusto Examples"
             string "The message to send"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
 
+
+    config ROBUSTO_UMTS_EXAMPLE_HTTP
+        bool "The HTTP example"
+        help 
+            This posts a file to google drive
     config ROBUSTO_CAMERA_EXAMPLE
         bool "The Camera example"
         help 

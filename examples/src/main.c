@@ -70,7 +70,7 @@
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 #include <robusto_conductor.h> 
 #endif
-#if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT)
+#if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_HTTP)
 #include "../umts/umts.h"   
 #endif
 #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
@@ -122,7 +122,7 @@ void setup() {
     init_conductor_server(example_log_prefix);
     run_conductor_server();
     #endif
-    #if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT)
+    #if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_HTTP)
     ROB_LOGI(example_log_prefix, "Start UMTS example");
     init_umts_example(example_log_prefix);
     start_umts_example();
