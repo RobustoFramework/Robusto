@@ -172,10 +172,14 @@ config ROBUSTO_UMTS_SERVER
                 Set this option to tell Robusto to load the UMTS HTTP client library.
         menu "HTTP"
             depends on ROBUSTO_UMTS_HTTP
-            config ROBUSTO_UMTS_HTTP_BEARER_TOKEN
-                string "Oauth2 bearer token"
+            config ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID
+                string "Oauth2 client_id"
                 help
-                    Use this when logging in to services like Google and other Oauth2 services
+                    The Oauth2 client id. Supplied by for example the Google cloud API.
+            config ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET
+                string "Oauth2 client_secret"
+                help
+                    The Oauth2 client secret. Supplied by for example the Google cloud API.
 
         endmenu
         

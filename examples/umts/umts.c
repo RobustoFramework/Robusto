@@ -49,7 +49,8 @@ void start_umts_example(char * _log_prefix)
     char * http_file = "Hello file world!";
     r_delay(2000);
     ROB_LOGI(umts_log_prefix, "Call robusto_umts_http_post");
-    robusto_umts_http_post("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", (uint8_t *)http_file, 18);
+    robusto_umts_http_post("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", http_file, 18);
+    
     ROB_LOGI(umts_log_prefix, "After robusto_umts_http_post");
     r_delay(4000);
     #endif
