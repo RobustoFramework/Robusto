@@ -13,22 +13,21 @@
 #include <cJSON.h>
 
 char *umts_http_log_prefix;
-uint32_t countDataEventCalls = 0;
+
 uint32_t startTime = 0;
 
 #define HTTP_RECEIVE_BUFFER_SIZE 1024
 
 uint8_t *output_buffer; // Buffer to store HTTP response.
 uint32_t output_length;
-
-// Almost filling RTC here, together with the peer memory, this might be too much
-RTC_DATA_ATTR char refresh_token[47];
-char *device_code;
+uint32_t countDataEventCalls;
+// TODO: Here we need to persist this to flash memory instead.
+RTC_DATA_ATTR char refresh_token[104];
 char *access_token;
+char *device_code;
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
-
     switch (evt->event_id)
     {
     default:
@@ -41,18 +40,30 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         break;
     case HTTP_EVENT_HEADER_SENT:
         ROB_LOGI(umts_http_log_prefix, "HTTP_EVENT_HEADER_SENT");
+        countDataEventCalls = 0;
         break;
     case HTTP_EVENT_ON_HEADER:
         ROB_LOGI(umts_http_log_prefix, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
         break;
     case HTTP_EVENT_ON_DATA:
         ROB_LOGI(umts_http_log_prefix, "Data: %.*s", evt->data_len, (char *)evt->data);
+        
         // Copy the response into the buffer
         // TODO: Handle If it is a lot of data (and it this is not the first time we are called). Probably use SPIRAM here.
-        output_buffer = robusto_malloc(evt->data_len);
+        if (countDataEventCalls > 0) {
+            memcpy(output_buffer + output_length, evt->data, evt->data_len);
+            output_length = output_length + evt->data_len;
+            
+        } else {
+            robusto_free(output_buffer);
+            output_buffer = robusto_malloc(HTTP_RECEIVE_BUFFER_SIZE);
+            memcpy(output_buffer, evt->data, evt->data_len);
+            output_length = evt->data_len;
+        }
+        
 
-        memcpy(output_buffer, evt->data, evt->data_len);
-        output_length = evt->data_len;
+        
+        countDataEventCalls++;
         break;
 
     case HTTP_EVENT_ON_FINISH:
@@ -118,13 +129,13 @@ rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, 
     return ROB_OK;
 }
 
-rob_ret_val_t request_google_device_code(char *scope_urlencoded)
+rob_ret_val_t request_device_code(char *scope_urlencoded)
 {
     // Request device and user codes
 
     char *req_body;
     int req_body_len = asprintf(&req_body, "client_id=%s&scope=%s", CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, scope_urlencoded);
-    robusto_umts_http_post_form_urlencoded("https://oauth2.googleapis.com/device/code", req_body, req_body_len, NULL);
+    robusto_umts_http_post_form_urlencoded(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_DEVICE_CODE_URL, req_body, req_body_len, NULL);
     cJSON *req_json = cJSON_ParseWithLength((char *)output_buffer, output_length);
     cJSON *device_code_json = cJSON_GetObjectItemCaseSensitive(req_json, "device_code");
     if ((!cJSON_IsString(device_code_json)) || (device_code_json->valuestring == NULL))
@@ -157,49 +168,80 @@ rob_ret_val_t request_google_device_code(char *scope_urlencoded)
     return ROB_OK;
 }
 
-rob_ret_val_t *refresh_google_access_token()
+rob_ret_val_t refresh_access_token()
 {
-    // TODO: Implement this
-    return ROB_FAIL;
+    if (strcmp(refresh_token, "") == 0)
+    {
+        ROB_LOGE(umts_http_log_prefix, "Internal error: refresh_access_token without an refresh_token!");
+        return ROB_FAIL;
+    }
+    char *token_body;
+    int token_body_len = asprintf(&token_body, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token",
+                                    CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET, refresh_token);
+
+    ROB_LOGI(umts_http_log_prefix, "Refreshing an an access token.");
+    robusto_umts_http_post_form_urlencoded(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_ACCESS_TOKEN_URL, token_body, token_body_len, NULL);
+
+    cJSON *json = cJSON_ParseWithLength((char *)output_buffer, output_length);
+    cJSON *error = cJSON_GetObjectItemCaseSensitive(json, "error");
+    if (cJSON_IsString(error))
+    {
+        ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token, will retry: %s", error->valuestring);
+        cJSON_Delete(json);
+        return ROB_FAIL;
+    }
+
+    cJSON *access_token_json = cJSON_GetObjectItemCaseSensitive(json, "access_token");
+
+    if ((cJSON_IsString(access_token_json)) && (access_token_json->valuestring != NULL))
+    {
+        ROB_LOGI(umts_http_log_prefix, "New access token received: %s", access_token_json->valuestring);
+        robusto_free(access_token);
+        access_token = robusto_malloc(strlen(access_token_json->valuestring) + 1);
+        strcpy(access_token, access_token_json->valuestring);
+        cJSON_Delete(json);
+        return ROB_OK;
+    }
+    else
+    {
+        ROB_LOGE(umts_http_log_prefix, "Unhandled response refreshing access token. Response:\n%.*s", (int)output_length, output_buffer);
+        cJSON_Delete(json);
+        return ROB_FAIL;
+    }
+           
 }
 
-rob_ret_val_t *request_google_access_token()
+rob_ret_val_t request_access_token()
 {
     if (access_token)
     {
-        // Useful for following, remove later?
-        ROB_LOGI(umts_http_log_prefix, "We are asking for an access token even though we have one.");
+        // Strange in this context
+        ROB_LOGW(umts_http_log_prefix, "We are asking for an access token even though we have one, strange, but I let it pass.");
     }
-    bool just_reregistered = false;
     if (strcmp(refresh_token, "") == 0)
     {
         ROB_LOGI(umts_http_log_prefix, "No refresh token. We need start from the beginning.");
-        // TODO: Scope hardcoded to google drive, move into setting and urlencode
-        if (request_google_device_code("https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file") != ROB_OK)
+        // TODO: URL encode setting
+        if (request_device_code(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_SCOPES) != ROB_OK)
         {
             ROB_LOGI(umts_http_log_prefix, "Failed getting a device code");
-            return NULL;
+            return ROB_FAIL;
         }
-        else
-        {
-            r_delay(10000);
-            just_reregistered = true;
-        }
-    }
-
-    if (just_reregistered)
-    {
         if (!device_code) {
-            ROB_LOGE(umts_http_log_prefix, "NO DEVICE CODE SET? SHOULD NOT BE POSSIBLE");
+            ROB_LOGE(umts_http_log_prefix, "Internal failure, no device code set after successful registration.");
+            return ROB_FAIL;
         }
+        // Wait before polling
+        r_delay(10000);
+
         char *token_body;
         int token_body_len = asprintf(&token_body, "client_id=%s&client_secret=%s&device_code=%s&grant_type=urn%%3Aietf%%3Aparams%%3Aoauth%%3Agrant-type%%3Adevice_code",
                                       CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET, device_code);
-
+        int retries = 0;
         do
         {
             ROB_LOGI(umts_http_log_prefix, "Polling for an access token.");
-            robusto_umts_http_post_form_urlencoded("https://oauth2.googleapis.com/token", token_body, token_body_len, NULL);
+            robusto_umts_http_post_form_urlencoded(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_ACCESS_TOKEN_URL, token_body, token_body_len, NULL);
 
             cJSON *json = cJSON_ParseWithLength((char *)output_buffer, output_length);
             cJSON *error = cJSON_GetObjectItemCaseSensitive(json, "error");
@@ -209,7 +251,7 @@ rob_ret_val_t *request_google_access_token()
                 {
                     ROB_LOGI(umts_http_log_prefix, "Server reported authorization_pending. Waiting before retrying");
                     // Need to wait here to not hammer the server, avoiding a "slow down"-respone)
-                    // TODO: Send an SMS reminder?
+                    // TODO: Send an SMS reminder with a link?
                 }
                 else
                 {
@@ -218,12 +260,24 @@ rob_ret_val_t *request_google_access_token()
                 }
                 r_delay(10000);
                 cJSON_Delete(json);
+                retries++;
                 continue;
 
             }
 
+            cJSON *refresh_token_json = cJSON_GetObjectItemCaseSensitive(json, "refresh_token");
+            if ((cJSON_IsString(refresh_token_json)) && (refresh_token_json->valuestring != NULL))
+            {
+                ROB_LOGI(umts_http_log_prefix, "refresh token received: %s", refresh_token_json->valuestring);
+                strcpy(refresh_token, refresh_token_json->valuestring);
+            }
+            else
+            {
+                // Note that we can move on here really, if there is an access token for some reason.
+                ROB_LOGE(umts_http_log_prefix, "No refresh token supplied. Response:\n%.*s", (int)output_length, output_buffer);
+                return ROB_FAIL;
+            }
             cJSON *access_token_json = cJSON_GetObjectItemCaseSensitive(json, "access_token");
-
             if ((cJSON_IsString(access_token_json)) && (access_token_json->valuestring != NULL))
             {
                 ROB_LOGI(umts_http_log_prefix, "Access token received: %s", access_token_json->valuestring);
@@ -235,27 +289,33 @@ rob_ret_val_t *request_google_access_token()
             }
             else
             {
-                ROB_LOGE(umts_http_log_prefix, "Unhandled response requesting access token. Response:\n%.*s", (int)output_length, output_buffer);
+                ROB_LOGE(umts_http_log_prefix, "Unhandled response polling for an access token. Response:\n%.*s", (int)output_length, output_buffer);
                 cJSON_Delete(json);
-                return ROB_OK;
+                return ROB_FAIL;
             }
-            
-        } while (!access_token);
-        return ROB_OK;
+            ROB_LOGE(umts_http_log_prefix, "Undefined state in request_access_token");
+        } while (retries < 10); 
+
+        if (retries > 9) {
+            ROB_LOGE(umts_http_log_prefix, "We did not succeed in getting an access token after 10 retries.");
+            return ROB_FAIL;
+        } else {
+            return ROB_OK;
+        }
+        
     }
     else
     {
-        return refresh_google_access_token();
+        return refresh_access_token();
     }
 }
 
-// TODO: This is neither only google api (?) or just uploading to drive
 rob_ret_val_t robusto_umts_oauth_post(char *url, char *data, uint16_t data_len)
 {
     ROB_LOGI(umts_http_log_prefix, "In robusto_umts_oauth_post");
     if (!access_token)
     {
-        if (request_google_access_token() != ROB_OK) {
+        if (request_access_token() != ROB_OK) {
             ROB_LOGI(umts_http_log_prefix, "Failed acquiring access token.");
             return ROB_FAIL;
         }
@@ -273,7 +333,7 @@ int umts_http_init(char *_log_prefix)
     }
     else
     {
-        ROB_LOGI(umts_http_log_prefix, "Stored device code: \"%s\"", refresh_token);
+        ROB_LOGI(umts_http_log_prefix, "Stored refresh token: \"%s\"", refresh_token);
     }
     return 0;
 }

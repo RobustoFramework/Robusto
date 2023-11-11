@@ -1,13 +1,13 @@
-menu "UMTS"
+menu "UMTS gateway"
 config ROBUSTO_UMTS_SERVER
-        bool "Include the UMTS server"
+        bool "Include the UMTS gateway"
         help
-            Set this option to tell Robusto to load the UMTS server.
-            The UMTS server allows access to the cellular network and presents two services:
+            Set this option to tell Robusto to load the UMTS gateway.
+            The UMTS gateway allows access to the cellular network and presents two services:
             1. Sending MQTT messages to a predefined server
             2. Sending SMS messages to a specified recipient
 
-    menu "UMTS server configuration"
+    menu "UMTS gateway configuration"
         depends on ROBUSTO_UMTS_SERVER
         choice ROBUSTO_UMTS_MODEM_DEVICE
             depends on ROBUSTO_UMTS_SERIAL_CONFIG_UART
@@ -170,7 +170,7 @@ config ROBUSTO_UMTS_SERVER
             bool "Include the UMTS HTTP client"
             help
                 Set this option to tell Robusto to load the UMTS HTTP client library.
-        menu "HTTP"
+        menu "OAuth2"
             depends on ROBUSTO_UMTS_HTTP
             config ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID
                 string "Oauth2 client_id"
@@ -180,6 +180,32 @@ config ROBUSTO_UMTS_SERVER
                 string "Oauth2 client_secret"
                 help
                     The Oauth2 client secret. Supplied by for example the Google cloud API.
+            config ROBUSTO_UMTS_HTTP_OAUTH_DEVICE_CODE_URL
+                string "Oauth2 device code R"
+                default "https://oauth2.googleapis.com/device/code"
+                help
+                    The Oauth2 authentication url for limited-input devices.
+                    For example, it is "https://oauth2.googleapis.com/device/code" (default)
+                    ..or https://login.microsoftonline.com/common/oauth2/v2.0/devicecode for private Microsoft accounts.
+                    For AD accounts, "common" is replaced by the tenant. 
+            config ROBUSTO_UMTS_HTTP_OAUTH_ACCESS_TOKEN_URL
+                string "Oauth2 access token request URL"
+                default "https://oauth2.googleapis.com/token"
+                help
+                    The Oauth2 access token request URL for limited-input devices.
+                    For example, it is "https://oauth2.googleapis.com/device/code" (default)
+                    ..or https://login.microsoftonline.com/common/oauth2/v2.0/token for private Microsoft accounts.
+                    For AD accounts, "common" is replaced by the tenant. 
+        
+            config ROBUSTO_UMTS_HTTP_OAUTH_SCOPES
+                string "Oauth2 scopes"
+                default "https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.file"
+                help
+                    A space-separate and URL encoded*  list of scopes. Files.ReadWrite
+                    For example, it is "https://www.googleapis.com/auth/drive" (default)
+                    ..or "Files.ReadWrite" for OneDrive.
+
+                    * important, try https://www.urlencoder.org/
 
         endmenu
         

@@ -1,5 +1,5 @@
 #include "umts.h"
-#if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_HTTP) 
+#if defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT) || defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_GOOGLE_DRIVE) 
 
 
 #include <robusto_umts.h>
@@ -41,14 +41,17 @@ void start_umts_example(char * _log_prefix)
 
 
     #endif
-    #ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_HTTP
+    #ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_GOOGLE_DRIVE
+    #if !defined(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID) || !defined(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET) 
+        #error "For this example to work, you need to obtain and set the Client ID and client secret for your Google Account. See documentation."
+    #endif
     while (!robusto_umts_ip_up()) {
         ROB_LOGI(umts_log_prefix, "Waiting for device to get going so we can send an HTTP message");
         r_delay(1000);
     }
     char * http_file = "Hello file world!";
     r_delay(2000);
-    ROB_LOGI(umts_log_prefix, "Call robusto_umts_google_drive_upload");
+    ROB_LOGI(umts_log_prefix, "Call robusto_umts_oauth_post to upload something to google drive");
     robusto_umts_oauth_post("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", http_file, 18);
     
     ROB_LOGI(umts_log_prefix, "After robusto_umts_http_post");

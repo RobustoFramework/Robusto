@@ -54,7 +54,7 @@ menu "Robusto Examples"
         bool "The SMS example"
         help 
             This sends an SMS to the recipient specified below.
-            Note that the UMTS server has to be enabled and configured.
+            Note that the UMTS gateway has to be enabled and configured.
 
         config ROBUSTO_UMTS_EXAMPLE_SMS_NUMBER
             string "The recipient phone number"
@@ -79,8 +79,8 @@ menu "Robusto Examples"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
 
 
-    config ROBUSTO_UMTS_EXAMPLE_HTTP
-        bool "The HTTP example"
+    config ROBUSTO_UMTS_EXAMPLE_GOOGLE_DRIVE
+        bool "The OAuth2 and Google drive example"
         help 
             This posts a file to google drive
     config ROBUSTO_CAMERA_EXAMPLE
