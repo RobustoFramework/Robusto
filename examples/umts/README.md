@@ -1,6 +1,6 @@
 # The UMTS examples
-These examples require an UMTS module (and obviously a working sim card) to connect to mobile networks.
-Currently only tested on the LILYGO SIM7000G (ESP32).
+These examples require an UMTS/GSM cellular module (and obviously a working sim card) to connect to mobile networks.
+Currently this is only tested on the LILYGO SIM7000G (ESP32).
 
 Their settings are located in the "Robusto Examples" section in menuconfig, but note that there may be significant settings having to be done for the UMTS module under Robusto Settings > UMTS gateway.
 
@@ -8,7 +8,7 @@ Their settings are located in the "Robusto Examples" section in menuconfig, but 
 Sends an specifed SMS message to the given recipient.
 
 ## MQTT
-Publishes MQTT message on an MQTT server. 
+Publishes a specified MQTT test message to a specified topic on an MQTT server. 
 
 ## Oauth2 and Google drive
 This example goes through the flow for devices with limited input possibilities and uploads a small file to Google Drive. 
