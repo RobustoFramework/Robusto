@@ -140,6 +140,7 @@ void init_robusto()
     // Initialize base functionality
     robusto_log_prefix = CONFIG_ROBUSTO_PEER_NAME;
     robusto_system_init(robusto_log_prefix);
+    robusto_flash_init(robusto_log_prefix);
     robusto_sleep_init(robusto_log_prefix);
     robusto_init_compatibility();
     robusto_network_init(robusto_log_prefix);

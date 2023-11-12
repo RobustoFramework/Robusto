@@ -1,7 +1,7 @@
 /**
- * @file robusto_init_internal.h
+ * @file robusto_network_init.c
  * @author Nicklas Börjesson (nicklasb@gmail.com)
- * @brief Internal header for all initialization.
+ * @brief Robusto networking initialization
  * @version 0.1
  * @date 2023-02-19
  *
@@ -29,52 +29,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <robusto_init_internal.h>
+#include "../include/robusto_flash_init.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#include <robconfig.h>
 
-//void robusto_init_compatibility();
-
-/**
- * @brief Initialize the networking-related functionality
- * @param _log_prefix The log prefix
- */
-void robusto_network_init(char *_log_prefix);
-/**
- * @brief Initialize the server-related functionality
- * @param _log_prefix The log prefix
- */
-void robusto_server_init(char * _log_prefix);
-
-/**
- * @brief Initialize the conductor client
- * @param _log_prefix The log prefix
- */
-void robusto_conductor_client_init(char *_log_prefix);
-
-/**
- * @brief Initialize the conductor server
- * @param _log_prefix The log prefix
- */
-void robusto_conductor_server_init(char *_log_prefix);
-
-/**
- * @brief Initialize the miscellaneous
- * @param _log_prefix The log prefix
- */
-void robusto_misc_init(char * _log_prefix);
-
-/**
- * @brief Initialize the flash and mount any SPIFFs
- * @note This is done very early in the process as others may depend on this
- * 
- */
-void robusto_flash_init(char * _log_prefix);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+void robusto_flash_init(char * _log_prefix) {
+    robusto_spiffs_init(_log_prefix);
+}

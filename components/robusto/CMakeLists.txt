@@ -10,6 +10,10 @@ FILE(GLOB rob_sources
 
 "conductor/src/*.c" 
 
+"flash/*.*"
+"flash/include/*.h"
+"flash/src/*.*"
+
 "network/src/*.c"
 "network/src/message/*.c" 
 "network/src/incoming/*.*" 
@@ -53,6 +57,8 @@ idf_component_register(
         ssd1306
         # UMTS (note the esp_modem dependency)
         mqtt esp_netif esp_modem esp_http_client esp-tls json
+        # flash
+        spiffs
 
 
 )

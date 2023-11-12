@@ -1,5 +1,4 @@
-
-
+#include "../include/robusto_flash_init.h"
 #include <robusto_flash.h>
 #ifdef CONFIG_ROBUSTO_FLASH
 

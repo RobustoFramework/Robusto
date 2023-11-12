@@ -30,6 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* TODO: We *should* be able to not have all these init.h-files */
+
 #pragma once
 #include <robconfig.h>
 void register_misc_service();
