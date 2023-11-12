@@ -79,7 +79,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, uint16_t req_body_len, char *bearer, char *context_type)
+rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, uint16_t req_body_len, char *bearer, char *context_type, char *name, char* parent)
 {
     esp_http_client_config_t config = {
         .url = url,
@@ -99,7 +99,8 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
         ROB_LOGE(umts_http_log_prefix, "Client failed to initialize");
         return ROB_FAIL;
     }
-    if (!context_type) {
+    if (!context_type)
+    {
         context_type = "text/plain";
     }
     if (bearer)
@@ -108,30 +109,48 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
         asprintf(&bearer_header, "Bearer %s", bearer);
         esp_http_client_set_header(client, "Authorization", bearer_header);
         ROB_LOGI(umts_http_log_prefix, "Authorization header set to %s", bearer_header);
-    } else {
+    }
+    else
+    {
         ROB_LOGI(umts_http_log_prefix, "robusto_umts_http_post_form_multipart, no bearer");
+    }
+    if (!name) {
+         name = "unnamed_robusto.txt";
+    } 
+    char * parent_param;
+    if (!parent)  {
+        parent_param = "";
+    } else {
+        asprintf(&parent_param, "\r\n  \"parents\": [\"%s\"], ", parent);
     }
 
     esp_http_client_set_header(client, "Content-Type", "multipart/related; boundary=boundary_robusto");
-
+    // Create the parts of the post
+    
     char *post_data_fmt = "\r\n--boundary_robusto\r\n"
                           "Content-Type: application/json; charset=UTF-8\r\n\r\n"
-                          "{\r\n  \"name\": \"example.txt\",\r\n  \"mimeType\": \"%s\"\r\n}\r\n"
+                          "{%s\r\n  \"name\": \"%s\",\r\n  \"mimeType\": \"%s\"\r\n}\r\n"
                           "--boundary_robusto\r\n"
-                          "Content-Type: %s\r\n\r\n%s\r\n"
-                          "--boundary_robusto--";
+                          "Content-Type: %s\r\n\r\n";
+    char *post_beginning;
+    uint16_t post_beginning_length = asprintf(&post_beginning, post_data_fmt, parent_param, name, context_type, context_type);
 
-    size_t post_data_len = req_body_len + strlen(post_data_fmt) + 1;
+    char *post_ending = "\r\n--boundary_robusto--";
+    uint16_t port_ending_length = strlen(post_ending);
+    size_t post_data_len = post_beginning_length + req_body_len + port_ending_length + 1;
 
     // We proably need to use SPIRAM here
     char *post_data = robusto_malloc(post_data_len);
+
     if (post_data == NULL)
     {
         ROB_LOGE(umts_http_log_prefix, "Failed to allocate memory for post data");
         return ROB_FAIL;
     }
-
-    snprintf(post_data, post_data_len, post_data_fmt, req_body);
+    // Build the post data
+    memcpy(post_data, post_beginning, post_beginning_length);
+    memcpy(post_data + post_beginning_length, req_body, req_body_len);
+    memcpy(post_data + post_beginning_length + req_body_len, post_ending, port_ending_length);
 
     esp_http_client_set_post_field(client, post_data, post_data_len);
 
@@ -387,7 +406,7 @@ rob_ret_val_t request_access_token()
     }
 }
 
-rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type)
+rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type, char *name, char* parent)
 {
     ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart");
     if (!access_token)
@@ -399,7 +418,7 @@ rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint
         }
     }
 
-    return robusto_umts_http_post_form_multipart(url, data, data_len, access_token, context_type);
+    return robusto_umts_http_post_form_multipart(url, data, data_len, access_token, context_type, name, parent);
 }
 
 rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t data_len)

@@ -52,13 +52,13 @@ void start_umts_example(char * _log_prefix)
     char * http_file = "Hello file world!";
     r_delay(2000);
     ROB_LOGI(umts_log_prefix, "Call robusto_umts_oauth_post to upload something to google drive");
-    robusto_umts_oauth_post_form_multipart("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", http_file, 18, NULL);
+    robusto_umts_oauth_post_form_multipart("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", http_file, 18, NULL, "example_file.txt", "1zPS332KnK07KXAlrOJqC9CeNxNzivyys");
     
     ROB_LOGI(umts_log_prefix, "After robusto_umts_http_post");
     r_delay(4000);
     #endif
 
-}
+} 
 
 
 void init_umts_example(char * _log_prefix) {
