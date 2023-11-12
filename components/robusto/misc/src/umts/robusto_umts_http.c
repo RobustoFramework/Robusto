@@ -37,32 +37,32 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         break;
     case HTTP_EVENT_ON_CONNECTED:
         ROB_LOGI(umts_http_log_prefix, "HTTP_EVENT_ON_CONNECTED");
+        countDataEventCalls = 0;
         break;
     case HTTP_EVENT_HEADER_SENT:
         ROB_LOGI(umts_http_log_prefix, "HTTP_EVENT_HEADER_SENT");
-        countDataEventCalls = 0;
         break;
     case HTTP_EVENT_ON_HEADER:
         ROB_LOGI(umts_http_log_prefix, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
         break;
     case HTTP_EVENT_ON_DATA:
         ROB_LOGI(umts_http_log_prefix, "Data: %.*s", evt->data_len, (char *)evt->data);
-        
+
         // Copy the response into the buffer
         // TODO: Handle If it is a lot of data (and it this is not the first time we are called). Probably use SPIRAM here.
-        if (countDataEventCalls > 0) {
+        if (countDataEventCalls > 0)
+        {
             memcpy(output_buffer + output_length, evt->data, evt->data_len);
             output_length = output_length + evt->data_len;
-            
-        } else {
+        }
+        else
+        {
             robusto_free(output_buffer);
             output_buffer = robusto_malloc(HTTP_RECEIVE_BUFFER_SIZE);
             memcpy(output_buffer, evt->data, evt->data_len);
             output_length = evt->data_len;
         }
-        
 
-        
         countDataEventCalls++;
         break;
 
@@ -77,6 +77,82 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         break;
     }
     return ESP_OK;
+}
+
+rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, uint16_t req_body_len, char *bearer, char *context_type)
+{
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = 9000,
+        .event_handler = _http_event_handler,
+        .buffer_size = HTTP_RECEIVE_BUFFER_SIZE,
+        .transport_type = HTTP_TRANSPORT_OVER_SSL, // Use HTTPS
+        .skip_cert_common_name_check = true,
+        .use_global_ca_store = true,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client)
+    {
+        ROB_LOGE(umts_http_log_prefix, "Client failed to initialize");
+        return ROB_FAIL;
+    }
+    if (!context_type) {
+        context_type = "text/plain";
+    }
+    if (bearer)
+    {
+        char *bearer_header;
+        asprintf(&bearer_header, "Bearer %s", bearer);
+        esp_http_client_set_header(client, "Authorization", bearer_header);
+        ROB_LOGI(umts_http_log_prefix, "Authorization header set to %s", bearer_header);
+    } else {
+        ROB_LOGI(umts_http_log_prefix, "robusto_umts_http_post_form_multipart, no bearer");
+    }
+
+    esp_http_client_set_header(client, "Content-Type", "multipart/related; boundary=boundary_robusto");
+
+    char *post_data_fmt = "\r\n--boundary_robusto\r\n"
+                          "Content-Type: application/json; charset=UTF-8\r\n\r\n"
+                          "{\r\n  \"name\": \"example.txt\",\r\n  \"mimeType\": \"%s\"\r\n}\r\n"
+                          "--boundary_robusto\r\n"
+                          "Content-Type: %s\r\n\r\n%s\r\n"
+                          "--boundary_robusto--";
+
+    size_t post_data_len = req_body_len + strlen(post_data_fmt) + 1;
+
+    // We proably need to use SPIRAM here
+    char *post_data = robusto_malloc(post_data_len);
+    if (post_data == NULL)
+    {
+        ROB_LOGE(umts_http_log_prefix, "Failed to allocate memory for post data");
+        return ROB_FAIL;
+    }
+
+    snprintf(post_data, post_data_len, post_data_fmt, req_body);
+
+    esp_http_client_set_post_field(client, post_data, post_data_len);
+
+    startTime = r_millis();
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK)
+    {
+        ROB_LOGI(umts_http_log_prefix, "\nURL: %s\nHTTP POST result status = %d, content_length = %d\n",
+                 url,
+                 (int)esp_http_client_get_status_code(client),
+                 (int)esp_http_client_get_content_length(client));
+    }
+    else
+    {
+        ROB_LOGE(umts_http_log_prefix, "\nHTTP POST request failed: %s", esp_err_to_name(err));
+    }
+
+    esp_http_client_close(client);
+    // Free all stuff.
+    robusto_free(post_data);
+    return ROB_OK;
 }
 
 rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, uint16_t req_body_len, char *bearer)
@@ -123,6 +199,7 @@ rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, 
     {
         ROB_LOGE(umts_http_log_prefix, "\nHTTP POST request failed: %s", esp_err_to_name(err));
     }
+
     esp_http_client_close(client);
     // Free all stuff.
     // robusto_free(req_body);
@@ -177,7 +254,7 @@ rob_ret_val_t refresh_access_token()
     }
     char *token_body;
     int token_body_len = asprintf(&token_body, "client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token",
-                                    CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET, refresh_token);
+                                  CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_SECRET, refresh_token);
 
     ROB_LOGI(umts_http_log_prefix, "Refreshing an an access token.");
     robusto_umts_http_post_form_urlencoded(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_ACCESS_TOKEN_URL, token_body, token_body_len, NULL);
@@ -186,7 +263,7 @@ rob_ret_val_t refresh_access_token()
     cJSON *error = cJSON_GetObjectItemCaseSensitive(json, "error");
     if (cJSON_IsString(error))
     {
-        ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token, will retry: %s", error->valuestring);
+        ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token: %s", error->valuestring);
         cJSON_Delete(json);
         return ROB_FAIL;
     }
@@ -208,7 +285,6 @@ rob_ret_val_t refresh_access_token()
         cJSON_Delete(json);
         return ROB_FAIL;
     }
-           
 }
 
 rob_ret_val_t request_access_token()
@@ -227,7 +303,8 @@ rob_ret_val_t request_access_token()
             ROB_LOGI(umts_http_log_prefix, "Failed getting a device code");
             return ROB_FAIL;
         }
-        if (!device_code) {
+        if (!device_code)
+        {
             ROB_LOGE(umts_http_log_prefix, "Internal failure, no device code set after successful registration.");
             return ROB_FAIL;
         }
@@ -256,13 +333,11 @@ rob_ret_val_t request_access_token()
                 else
                 {
                     ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token, will retry: %s", error->valuestring);
-
                 }
                 r_delay(10000);
                 cJSON_Delete(json);
                 retries++;
                 continue;
-
             }
 
             cJSON *refresh_token_json = cJSON_GetObjectItemCaseSensitive(json, "refresh_token");
@@ -294,15 +369,17 @@ rob_ret_val_t request_access_token()
                 return ROB_FAIL;
             }
             ROB_LOGE(umts_http_log_prefix, "Undefined state in request_access_token");
-        } while (retries < 10); 
+        } while (retries < 10);
 
-        if (retries > 9) {
+        if (retries > 9)
+        {
             ROB_LOGE(umts_http_log_prefix, "We did not succeed in getting an access token after 10 retries.");
             return ROB_FAIL;
-        } else {
+        }
+        else
+        {
             return ROB_OK;
         }
-        
     }
     else
     {
@@ -310,17 +387,33 @@ rob_ret_val_t request_access_token()
     }
 }
 
-rob_ret_val_t robusto_umts_oauth_post(char *url, char *data, uint16_t data_len)
+rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type)
 {
-    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_oauth_post");
+    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart");
     if (!access_token)
     {
-        if (request_access_token() != ROB_OK) {
+        if (request_access_token() != ROB_OK)
+        {
             ROB_LOGI(umts_http_log_prefix, "Failed acquiring access token.");
             return ROB_FAIL;
         }
     }
-    
+
+    return robusto_umts_http_post_form_multipart(url, data, data_len, access_token, context_type);
+}
+
+rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t data_len)
+{
+    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_oauth_post_urlencode");
+    if (!access_token)
+    {
+        if (request_access_token() != ROB_OK)
+        {
+            ROB_LOGI(umts_http_log_prefix, "Failed acquiring access token.");
+            return ROB_FAIL;
+        }
+    }
+
     return robusto_umts_http_post_form_urlencoded(url, data, data_len, access_token);
 }
 

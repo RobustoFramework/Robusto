@@ -10,7 +10,8 @@
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
 rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data);
-rob_ret_val_t robusto_umts_oauth_post(char *url, char *data, uint16_t data_len);
+rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type);
+rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t data_len);
 
 
 bool robusto_umts_sms_up();
