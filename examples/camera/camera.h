@@ -1,6 +1,6 @@
 #include <robconfig.h>
 
-
+/* This is to make the camera library configurable */
 #define XCLK_FREQ_MHZ CONFIG_XCLK_FREQ_MHZ
 #define OV7670_SUPPORT CONFIG_OV7670_SUPPORT
 #define OV7725_SUPPORT CONFIG_OV7725_SUPPORT

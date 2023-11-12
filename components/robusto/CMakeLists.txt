@@ -54,4 +54,5 @@ idf_component_register(
         # UMTS (note the esp_modem dependency)
         mqtt esp_netif esp_modem esp_http_client esp-tls json
 
+
 )
