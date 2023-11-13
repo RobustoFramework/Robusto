@@ -46,9 +46,12 @@ FILE(GLOB rob_sources
 idf_component_register(
     SRCS ${rob_sources} 
     INCLUDE_DIRS . include 
+    
     REQUIRES 
         # Base
         driver esp_timer nvs_flash 
+        # Flash
+        spiffs
         # Networking dependecies
         RadioLib
         # ESP-NOW dependencies    
@@ -56,9 +59,8 @@ idf_component_register(
         # Screen
         ssd1306
         # UMTS (note the esp_modem dependency)
-        mqtt esp_netif esp_modem esp_http_client esp-tls json
-        # flash
-        spiffs
+        mqtt esp_netif esp_modem esp_http_client esp-tls json 
 
-
+        
+                                                                              
 )

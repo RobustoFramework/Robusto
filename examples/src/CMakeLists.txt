@@ -6,5 +6,5 @@ idf_component_register(
     SRCS ${app_sources} ${espcam_sources} ${espcam_sources_esp32}
 #    INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/.pio/libdeps/ESP32cam/esp32-camera/target/jpeg_include 
 #        ${CMAKE_SOURCE_DIR}/.pio/libdeps/ESP32cam/esp32-camera/target/private_include
-    REQUIRES robusto esp32-camera
+#    REQUIRES robusto esp32-camera
 )

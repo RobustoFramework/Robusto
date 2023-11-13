@@ -8,7 +8,9 @@
 #include <driver/gpio.h>
 
 #include "robusto_umts_ip.h"
+#ifdef CONFIG_ROBUSTO_UMTS_HTTP
 #include "robusto_umts_http.h"
+#endif
 #include "robusto_umts_mqtt.h"
 
 #include "robusto_umts_queue.h"
@@ -293,7 +295,9 @@ void robusto_umts_start(char *_log_prefix)
 
     // We need to init the PPP netif as that is a parameter to the modem setup
     umts_ip_init(umts_task_log_prefix);
+    #ifdef CONFIG_ROBUSTO_UMTS_HTTP
     umts_http_init(umts_task_log_prefix);
+    #endif
     ROB_LOGI(umts_task_log_prefix, "Powering on modem.");
     gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
     ROB_LOGI(umts_task_log_prefix, " + Setting pulldown mode. (float might be over 0.4 v)");
@@ -576,10 +580,7 @@ signal_quality:
 #endif
     // Initialize MQTT
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
-
-    // Initialize HTTP
-    handle_umts_states(umts_http_init(umts_task_log_prefix));
-    
+   
     
 
 finish:

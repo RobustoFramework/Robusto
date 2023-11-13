@@ -1,6 +1,7 @@
 #include "../include/robusto_flash_init.h"
+#ifdef CONFIG_ROBUSTO_FLASH_SPIFF
 #include <robusto_flash.h>
-#ifdef CONFIG_ROBUSTO_FLASH
+#include <esp_spiffs.h>
 
 char * spiffs_log_prefix;
 
@@ -74,7 +75,7 @@ void robusto_spiffs_init(char * _log_prefix)
             ESP_LOGI(TAG, "SPIFFS_check() successful");
         }
     }
-
+    #endif
 
 }
 

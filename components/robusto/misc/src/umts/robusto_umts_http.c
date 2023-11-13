@@ -1,5 +1,6 @@
-#include "robusto_umts_http.h"
 #include <robusto_umts.h>
+#ifdef CONFIG_ROBUSTO_UMTS_HTTP
+#include "robusto_umts_http.h"
 #include "robusto_umts_ip.h"
 #include <robusto_system.h>
 #include <robusto_logging.h>
@@ -449,3 +450,4 @@ int umts_http_init(char *_log_prefix)
     }
     return 0;
 }
+#endif

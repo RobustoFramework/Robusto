@@ -34,9 +34,7 @@
 #ifdef CONFIG_ROBUSTO_FLASH
 
 #include <robusto_retval.h>
-#ifdef CONFIG_ROBUSTO_FLASH_SPIFF
-#include <esp_spiffs.h>
-#endif
+
 
 //TODO: It seems like t
 #ifdef CONFIG_ROBUSTO_FLASH_SPIFF
