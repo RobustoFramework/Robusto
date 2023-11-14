@@ -34,7 +34,9 @@
 #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
 #include <robusto_pubsub_server.h>
 #endif
-
+#ifdef CONFIG_ROBUSTO_UMTS_SERVER
+#include <robusto_umts.h>
+#endif
 
 void robusto_misc_stop() {
    
@@ -60,7 +62,11 @@ void robusto_misc_init(char * _log_prefix) {
     #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
     robusto_pubsub_server_init(_log_prefix);
     #endif
-     #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
+    
+    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
 //    robusto_pubsub_client_init();
     #endif   
+    #ifdef CONFIG_ROBUSTO_UMTS_SERVER
+    robusto_umts_init(_log_prefix);
+    #endif
 }

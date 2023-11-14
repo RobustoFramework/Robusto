@@ -51,7 +51,7 @@ idf_component_register(
         # Base
         driver esp_timer nvs_flash 
         # Flash
-        spiffs
+        # spiffs
         # Networking dependecies
         RadioLib
         # ESP-NOW dependencies    
@@ -60,7 +60,5 @@ idf_component_register(
         ssd1306
         # UMTS (note the esp_modem dependency)
         mqtt esp_netif esp_modem esp_http_client esp-tls json 
-
-        
-                                                                              
+                                                                      
 )

@@ -63,7 +63,7 @@ void start_umts_example(char * _log_prefix)
 
 void init_umts_example(char * _log_prefix) {
     umts_log_prefix = _log_prefix;
-    robusto_umts_init(_log_prefix);
+    
 }
 
 
