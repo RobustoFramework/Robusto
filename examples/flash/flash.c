@@ -34,7 +34,7 @@ void start_flash_example(char *_log_prefix)
             read_result = robusto_spiff_read(TEST_FILE, &data);
         }
     }
-
+    
     if (read_result == ROB_FAIL)
     {
         ROB_LOGE(flash_log_prefix, "Failed reading from %s", TEST_FILE);

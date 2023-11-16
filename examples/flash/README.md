@@ -3,8 +3,9 @@ These examples uses the Robusto implementations to writes and read from differen
 
 ## Internal - SPIFFS example
 Shows writing and reading from internal flash using SPIFFS.
-Note that a file system need to be uploaded to the device.
-(In platformIO, make a spiffs-file and do "Upload Filesystem Image")
+Note that the min_spiff.csv in Robusto has multiple partitions and a designated spiffs-partition. 
+Note also that PlatformIO do not support multiple partitions when flashing the partition table.
+You will have to use idf.py partition-table-flash to reupload it.
 
 ## External - Flash example
 Not implemented

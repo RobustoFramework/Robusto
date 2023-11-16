@@ -3,18 +3,18 @@
 #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
 #include <esp_spiffs.h>
 #include <esp_vfs.h>
-#include <fcntl.h>
-
+#include <sys/stat.h>
+#include <errno.h>
 #include <robusto_logging.h>
 #include <robusto_system.h>
 #define CHUNK_SIZE 1024
 char *spiffs_log_prefix;
 
-unsigned long get_file_size(int f)
+unsigned long get_file_size(char * filename)
 {
-
+    ROB_LOGI(spiffs_log_prefix, "Getting file size of file %s.", filename);
     struct stat st;
-    int fstat_res = fstat(f, &st);
+    int fstat_res = stat(filename, &st);
     if (fstat_res == 0)
     {
         ROB_LOGI(spiffs_log_prefix, "File size of %li bytes\n", st.st_size);
@@ -30,17 +30,19 @@ unsigned long get_file_size(int f)
 rob_ret_val_t robusto_spiff_write(char *filename, char *data, uint16_t data_len)
 {
     // Use POSIX and C standard library functions to work with files.
-    // First create a file.
+    // Create a file
 
-    ROB_LOGI(spiffs_log_prefix, "Opening file %s for writing", filename);
-    int f = open(filename, S_IWRITE);
-    if (f == 0)
-    {
-        ROB_LOGE(spiffs_log_prefix, "Failed to open file for writing");
+    ROB_LOGI(spiffs_log_prefix, "Opening file %s for writing %i bytes", filename, data_len);
+
+    FILE* f = fopen(filename, "w");
+    if (f == NULL) {
+        ROB_LOGE(spiffs_log_prefix, "Failed to open file for writing, errno %i", errno);
+        fclose(f);
         return ROB_FAIL;
     }
-    write(f, data, data_len);
-    close(f);
+    fwrite(data, data_len, 1, f);
+    fclose(f);
+    ROB_LOGI(spiffs_log_prefix, "Wrote to file %s", filename);
     return ROB_OK;
 }
 
@@ -49,16 +51,18 @@ rob_ret_val_t robusto_spiff_read(char *filename, char **buffer)
     // Open renamed file for reading
     ROB_LOGI(spiffs_log_prefix, "Opening file %s for reading", filename);
 
-    int f = open(filename, S_IREAD);
-    if (!f)
+    FILE * f = fopen(filename, "r");
+    if (f == NULL)
     {
-        ROB_LOGE(spiffs_log_prefix, "Failed to open file for reading");
+        ROB_LOGE(spiffs_log_prefix, "Failed to open file for reading, errno %i", errno);
+        fclose(f);
         return ROB_FAIL;
     }
-    unsigned long filesize = get_file_size(f);
-    if (filesize == -1)
+    unsigned long filesize = get_file_size(filename);
+    if (filesize < 1)
     {
-        ROB_LOGE(spiffs_log_prefix, "Failed to get filesize");
+        ROB_LOGE(spiffs_log_prefix, "Failed to get filesize or zero-length file (which isn't handle well here, )");
+        fclose(f);
         return ROB_FAIL;
     }
     // Use SPIRam if it is a large file
@@ -70,12 +74,13 @@ rob_ret_val_t robusto_spiff_read(char *filename, char **buffer)
     {
         // TODO: Implement using SPIRam if availalbe.
         ROB_LOGI(spiffs_log_prefix, "File %s is too big, cannot read.", filename);
+        fclose(f);
         return ROB_FAIL;
     }
 
     int bytesRead = 0;
-    bytesRead = read(f, *buffer, filesize);
-    close(f);
+    bytesRead = fread(*buffer, filesize, 1, f);
+    fclose(f);
     return ROB_OK;
 }
 
@@ -84,13 +89,14 @@ void robusto_spiffs_init(char *_log_prefix)
 
     spiffs_log_prefix = _log_prefix;
 
-    ROB_LOGI(spiffs_log_prefix, "Mounting SPIFFS");
 
     esp_vfs_spiffs_conf_t conf = {
         .base_path = CONFIG_ROBUSTO_FLASH_SPIFFS_PATH,
         .partition_label = NULL,
         .max_files = 5,
-        .format_if_mount_failed = true};
+        .format_if_mount_failed = true
+    };
+    ROB_LOGI(spiffs_log_prefix, "Mounting the first SPIFFS partition at %s", conf.base_path);
 
     // Use settings defined above to initialize and mount SPIFFS filesystem.
     // Note: esp_vfs_spiffs_register is an all-in-one convenience function.
@@ -114,19 +120,20 @@ void robusto_spiffs_init(char *_log_prefix)
     }
 
 #ifdef CONFIG_EXAMPLE_SPIFFS_CHECK_ON_START
-    ESP_LOGI(TAG, "Performing SPIFFS_check().");
+    ROB_LOGI(spiffs_log_prefix, "Performing SPIFFS_check().");
     ret = esp_spiffs_check(conf.partition_label);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(spiffs_log_prefix, "SPIFFS_check() failed (%s)", esp_err_to_name(ret));
+        ROB_LOGE(spiffs_log_prefix, "SPIFFS_check() failed (%s)", esp_err_to_name(ret));
         return;
     }
     else
     {
-        ESP_LOGI(spiffs_log_prefix, "SPIFFS_check() successful");
+        ROB_LOGI(spiffs_log_prefix, "SPIFFS_check() successful");
     }
 #endif
-
+    //    ROB_LOGE(spiffs_log_prefix, "Formatting SPIFFS...");
+    //    esp_spiffs_format(conf.partition_label);
     // TODO: Perhaps this should be a setting. Is flash data very important
     size_t total = 0, used = 0;
     ret = esp_spiffs_info(conf.partition_label, &total, &used);
@@ -140,7 +147,7 @@ void robusto_spiffs_init(char *_log_prefix)
     {
         ROB_LOGI(spiffs_log_prefix, "Partition size: total: %d, used: %d", total, used);
     }
-
+    
     // Check consistency of reported partiton size info.
     if (used > total)
     {
