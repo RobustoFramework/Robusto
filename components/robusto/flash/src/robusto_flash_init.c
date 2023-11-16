@@ -34,7 +34,7 @@
 
 
 void robusto_flash_init(char * _log_prefix) {
-    #ifdef CONFIG_ROBUSTO_FLASH_SPIFF
+    #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
     robusto_spiffs_init(_log_prefix);
     #endif
 }

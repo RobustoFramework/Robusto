@@ -90,7 +90,11 @@ menu "Robusto Examples"
     
     rsource "../camera/Kconfig"
 
-    
+    config ROBUSTO_FLASH_EXAMPLE_SPIFFS
+        bool "The flash SPIFF example"
+        help 
+            Enables the flash SPIFF example
+       
 endmenu
 
         

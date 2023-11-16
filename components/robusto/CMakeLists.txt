@@ -51,7 +51,7 @@ idf_component_register(
         # Base
         driver esp_timer nvs_flash 
         # Flash
-        # spiffs
+        spiffs vfs
         # Networking dependecies
         RadioLib
         # ESP-NOW dependencies    

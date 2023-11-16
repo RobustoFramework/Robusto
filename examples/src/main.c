@@ -61,6 +61,9 @@
 #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI
 #include "../ui/hello_ui.h"
 #endif
+#if defined(CONFIG_ROBUSTO_FLASH_EXAMPLE_SPIFFS) 
+#include "../flash/flash.h"
+#endif 
 #ifdef CONFIG_ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
 #include "../conductor/conductor_client.h"
 #endif
@@ -100,6 +103,12 @@ void setup() {
     #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI
     ROB_LOGI(example_log_prefix, "Start hello UI");
     start_hello_ui(example_log_prefix);
+    #endif
+
+    #ifdef CONFIG_ROBUSTO_FLASH_EXAMPLE_SPIFFS 
+    ROB_LOGI(example_log_prefix, "Start flash example");
+    init_flash_example(example_log_prefix);
+    start_flash_example();
     #endif
 
     #if CONFIG_ROBUSTO_EXAMPLE_HELLO_SERVER

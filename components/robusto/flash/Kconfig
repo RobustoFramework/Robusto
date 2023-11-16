@@ -7,14 +7,14 @@ menu "Flash"
     menu "SPIFFS"
         depends on ROBUSTO_FLASH    
 
-        config ROBUSTO_FLASH_SPIFF
+        config ROBUSTO_FLASH_SPIFFS
             bool "Mount a SPIFF path" 
             help 
-                On boot, mount the specified SPIFF path in the VFS
+                On boot, mount the specified SPIFFS path in the VFS
 
-        config ROBUSTO_FLASH_SPIFF_PATH
-            depends on ROBUSTO_FLASH_SPIFF
-            string "The SPIFF path to mount" 
+        config ROBUSTO_FLASH_SPIFFS_PATH
+            depends on ROBUSTO_FLASH_SPIFFS
+            string "The SPIFFS path to mount" 
             default "/spiffs"
             help 
                 The path to mount in the VFS            
