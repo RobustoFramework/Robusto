@@ -2,8 +2,11 @@
 # The Robusto framework
 
 ## Getting started
-The easiest, and just to begin playing around, way i to clone this repository. <br />
-Then open it in PlatformIO as is and see if any of your MCU:s match the platform.ini and run the examples. <br />
+The easiest, way is to:
+1. Clone this repository, <br />
+2. Open it in PlatformIO<br />
+3. See if any of your MCU:s match the platform.ini ones (can also try using platform.ini.all)<br />
+4. Run the examples. <br />
 
 For more information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) holds everything togetether.
 

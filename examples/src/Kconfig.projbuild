@@ -73,10 +73,12 @@ menu "Robusto Examples"
         config ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC
             string "The MQTT topic to send the message to"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
+            default "/topic/robusto_example"
 
         config ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE
             string "The message to send"
             depends on ROBUSTO_UMTS_EXAMPLE_MQTT
+            default "Hello MQTT!"
 
 
     config ROBUSTO_UMTS_EXAMPLE_GOOGLE_DRIVE

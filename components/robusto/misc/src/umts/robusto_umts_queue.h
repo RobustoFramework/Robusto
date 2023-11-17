@@ -23,8 +23,10 @@
 
 typedef struct umts_queue_item
 {
-    /* The message */
-    robusto_message_t *message;
+    /* The MQTT topic */
+    char * topic;
+    /* The data */
+    char * data;
     /* The queue item state */  
     queue_state *state;
     /* Queue reference */
