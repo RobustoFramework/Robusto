@@ -12,7 +12,7 @@
 
 
 #include "robusto_umts_mqtt.h"
-#ifdef CONFIG_ROBUSTO_UMTS_SERVER
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 #include "mqtt_client.h"
 
 #include "robusto_sleep.h"
@@ -22,10 +22,6 @@
 #include "robusto_umts_task.h"
 #include "robusto_umts_queue.h"
 
-
-
-//#define BROKER_URL "mqtt://mqtt.eclipseprojects.io"
-#define BROKER_URL "mqtt://test.mosquitto.org"
 
 #define TOPIC "/topic/lurifax"
 
@@ -46,7 +42,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ROB_LOGI(umts_mqtt_log_prefix, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/lurifax_test", 0);
+        // TODO: Implement subscription handling
+        //msg_id = esp_mqtt_client_subscribe(client, "/topic/lurifax_test", 0);
         // All is initiated, we can now start handling the queue
         umts_set_queue_blocked(false);
         mqtt_up = true;
@@ -141,11 +138,11 @@ int umts_mqtt_init(char * _log_prefix) {
 /* Config MQTT */
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     esp_mqtt_client_config_t mqtt_config = {
-        .broker.address.uri = BROKER_URL,
+        .broker.address.uri = CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY_BROKER_URL,
     };
 #else
     esp_mqtt_client_config_t mqtt_config = {
-        .uri = BROKER_URL,
+        .uri = CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY_BROKER_URL,
 
     };
 #endif

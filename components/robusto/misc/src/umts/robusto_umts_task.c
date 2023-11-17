@@ -11,7 +11,9 @@
 #ifdef CONFIG_ROBUSTO_UMTS_HTTP
 #include "robusto_umts_http.h"
 #endif
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 #include "robusto_umts_mqtt.h"
+#endif
 
 #include "robusto_umts_queue.h"
 #include "robusto_logging.h"
@@ -579,8 +581,10 @@ signal_quality:
     robusto_conductor_server_ask_for_time(500);
 #endif
     // Initialize MQTT
+    
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
     handle_umts_states(umts_mqtt_init(umts_task_log_prefix));
-   
+#endif  
     
 
 finish:

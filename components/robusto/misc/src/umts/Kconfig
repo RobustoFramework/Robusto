@@ -162,10 +162,21 @@ config ROBUSTO_UMTS_SERVER
             depends on ROBUSTO_UMTS_NEED_SIM_PIN
             help
                 Pin to unlock the SIM
-        config ROBUSTO_UMTS_MQTT
-            bool "Include the UMTS MQTT client"
+
+        config ROBUSTO_UMTS_MQTT_GATEWAY
+            bool "Include the UMTS MQTT gateway"
             help
-                Set this option to tell Robusto to load the UMTS MQTT client library.
+                Set this option to tell Robusto to load the UMTS MQTT gateway
+        
+
+            config ROBUSTO_UMTS_MQTT_GATEWAY_BROKER_URL
+                depends on ROBUSTO_UMTS_MQTT_GATEWAY
+                default "mqtt://test.mosquitto.org"
+                string "The UMTS MQTT broker URL"
+                help
+                    This is the address of the MQTT broker       
+        
+
         config ROBUSTO_UMTS_HTTP
             bool "Include the UMTS HTTP client"
             help
