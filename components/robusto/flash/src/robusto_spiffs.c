@@ -84,6 +84,17 @@ rob_ret_val_t robusto_spiff_read(char *filename, char **buffer)
     return ROB_OK;
 }
 
+rob_ret_val_t robusto_spiff_remove(char *filename) {
+    // Open file for deletion
+    ROB_LOGI(spiffs_log_prefix, "Opening file %s for reading", filename);
+    if (remove(filename) != 0) {
+        ROB_LOGE(spiffs_log_prefix, "Failed to remove file, errno %i", errno);
+        return ROB_FAIL;
+    } else {
+        return ROB_OK;
+    }
+}
+
 void robusto_spiffs_init(char *_log_prefix)
 {
 

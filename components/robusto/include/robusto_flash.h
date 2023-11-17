@@ -40,7 +40,7 @@
 #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
 rob_ret_val_t robusto_spiff_write(char *filename, char *data, uint16_t data_len);
 rob_ret_val_t robusto_spiff_read(char *filename, char **buffer);
-
+rob_ret_val_t robusto_spiff_remove(char *filename);
 #endif
 
 

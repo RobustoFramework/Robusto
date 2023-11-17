@@ -13,6 +13,10 @@
 #include <robusto_sleep.h>
 #include <cJSON.h>
 
+#ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
+#include <robusto_flash.h>
+#endif
+
 char *umts_http_log_prefix;
 
 uint32_t startTime = 0;
@@ -23,7 +27,16 @@ uint8_t *output_buffer; // Buffer to store HTTP response.
 uint32_t output_length;
 uint32_t countDataEventCalls;
 // TODO: Here we need to persist this to flash memory instead.
+#ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
+char refresh_token[104];
+#define SPIFFS_OAUTH_PATH "/spiffs/robusto_oath_creds.txt"
+#else
 RTC_DATA_ATTR char refresh_token[104];
+#warn "We are using RTC memory for the 104-byte refresh token, if possible, enable and use SPIFFS flash instead."
+#endif
+
+
+
 char *access_token;
 char *device_code;
 
@@ -226,12 +239,12 @@ rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, 
     return ROB_OK;
 }
 
-rob_ret_val_t request_device_code(char *scope_urlencoded)
+rob_ret_val_t request_device_code()
 {
     // Request device and user codes
 
     char *req_body;
-    int req_body_len = asprintf(&req_body, "client_id=%s&scope=%s", CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, scope_urlencoded);
+    int req_body_len = asprintf(&req_body, "client_id=%s&scope=%s", CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_CLIENT_ID, CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_SCOPES);
     robusto_umts_http_post_form_urlencoded(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_DEVICE_CODE_URL, req_body, req_body_len, NULL);
     cJSON *req_json = cJSON_ParseWithLength((char *)output_buffer, output_length);
     cJSON *device_code_json = cJSON_GetObjectItemCaseSensitive(req_json, "device_code");
@@ -281,9 +294,28 @@ rob_ret_val_t refresh_access_token()
 
     cJSON *json = cJSON_ParseWithLength((char *)output_buffer, output_length);
     cJSON *error = cJSON_GetObjectItemCaseSensitive(json, "error");
+
+    
     if (cJSON_IsString(error))
     {
-        ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token: %s", error->valuestring);
+        if (strcmp(error->valuestring, "invalid_grant") == 0) {
+            ROB_LOGE(umts_http_log_prefix, "Our grant is invalid or has expired, resetting refresh- and access token and starting over.");
+            // We must probably send an SMS or something here.
+            strcpy(refresh_token, "");
+            #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
+            if (robusto_spiff_remove(SPIFFS_OAUTH_PATH) == ROB_OK) {
+                ROB_LOGI(umts_http_log_prefix, "Removed refresh token from flash.");
+                // TODO: Notify by SMS that the grant has expired and when a try to renew will happen.
+            } else {
+                ROB_LOGE(umts_http_log_prefix, "Failed removing refresh token from flash!");
+            }
+            
+            #endif
+            request_device_code();
+        } else {
+            ROB_LOGE(umts_http_log_prefix, "Unhandled error requesting access token: %s", error->valuestring);
+        }
+        
         cJSON_Delete(json);
         return ROB_FAIL;
     }
@@ -318,7 +350,7 @@ rob_ret_val_t request_access_token()
     {
         ROB_LOGI(umts_http_log_prefix, "No refresh token. We need start from the beginning.");
         // TODO: URL encode setting
-        if (request_device_code(CONFIG_ROBUSTO_UMTS_HTTP_OAUTH_SCOPES) != ROB_OK)
+        if (request_device_code() != ROB_OK)
         {
             ROB_LOGI(umts_http_log_prefix, "Failed getting a device code");
             return ROB_FAIL;
@@ -365,6 +397,13 @@ rob_ret_val_t request_access_token()
             {
                 ROB_LOGI(umts_http_log_prefix, "refresh token received: %s", refresh_token_json->valuestring);
                 strcpy(refresh_token, refresh_token_json->valuestring);
+                #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
+                if (robusto_spiff_write(SPIFFS_OAUTH_PATH, &refresh_token, sizeof(refresh_token)) == ROB_OK) {
+                    ROB_LOGI(umts_http_log_prefix, "Write device code to flash: \"%s\"", refresh_token);
+                } else {
+                    ROB_LOGE(umts_http_log_prefix, "Failed writing device code to flash: \"%s\"", refresh_token);
+                }
+                #endif
             }
             else
             {
@@ -440,14 +479,29 @@ rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t 
 int umts_http_init(char *_log_prefix)
 {
     umts_http_log_prefix = _log_prefix;
+
+#ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
+    char *buffer = NULL;
+    if (robusto_spiff_read(SPIFFS_OAUTH_PATH, &buffer) == ROB_OK) {
+        strcpy(refresh_token, buffer);
+        ROB_LOGI(umts_http_log_prefix, "Loaded refresh token from flash: \"%s\"", refresh_token);
+    } else {
+        strcpy(refresh_token, "");   
+    }
+
+#else
+
     if (robusto_is_first_boot())
     {
         strcpy(refresh_token, "");
     }
     else
     {
-        ROB_LOGI(umts_http_log_prefix, "Stored refresh token: \"%s\"", refresh_token);
+        ROB_LOGI(umts_http_log_prefix, "Refresh token stored in RTC: \"%s\"", refresh_token);
     }
+#endif
+
+
     return 0;
 }
 #endif
