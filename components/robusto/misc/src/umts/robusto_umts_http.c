@@ -32,7 +32,7 @@ char refresh_token[104];
 #define SPIFFS_OAUTH_PATH "/spiffs/robusto_oath_creds.txt"
 #else
 RTC_DATA_ATTR char refresh_token[104];
-#warn "We are using RTC memory for the 104-byte refresh token, if possible, enable and use SPIFFS flash instead."
+#warning "We are using RTC memory for the 104-byte refresh token, if possible, enable and use SPIFFS flash instead."
 #endif
 
 
