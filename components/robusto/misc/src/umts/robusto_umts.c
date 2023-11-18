@@ -85,7 +85,7 @@ rob_ret_val_t robusto_umts_mqtt_publish(char *topic, char *data)
     }
 }
 #endif
-void on_incoming(robusto_message_t *message)
+static void on_incoming(robusto_message_t *message)
 {
     if (message->string_count == 2)
     {
