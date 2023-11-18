@@ -99,8 +99,9 @@ void umts_mqtt_cleanup() {
 
         ROB_LOGI(umts_mqtt_log_prefix, "* MQTT shutting down.");
         ROB_LOGI(umts_mqtt_log_prefix, " - Success in %i of %i of sleep cycles.", mqtt_count, robusto_get_sleep_count());
-        ROB_LOGI(umts_mqtt_log_prefix, " - Unsubscribing the client from the %s topic.", TOPIC);
-        esp_mqtt_client_unsubscribe(mqtt_client, TOPIC);
+        // TODO: Subscription
+        //ROB_LOGI(umts_mqtt_log_prefix, " - Unsubscribing the client from the %s topic.", TOPIC);
+        //esp_mqtt_client_unsubscribe(mqtt_client, TOPIC);
         ROB_LOGI(umts_mqtt_log_prefix, " - Destroying the client.");
         esp_mqtt_client_destroy(mqtt_client);
         mqtt_client = NULL;
