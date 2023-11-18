@@ -23,7 +23,7 @@
 #include "robusto_umts_queue.h"
 
 
-#define TOPIC "/topic/lurifax"
+//#define TOPIC "/topic/robusto_subscription"
 
 char *umts_mqtt_log_prefix = "mqtt log prefix not set";
 
@@ -160,8 +160,9 @@ int umts_mqtt_init(char * _log_prefix) {
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     umts_abort_if_shutting_down();
     #endif
-    ROB_LOGI(umts_mqtt_log_prefix, " + Subscribe to the the client from the %s topic.", TOPIC);
-    esp_mqtt_client_subscribe(mqtt_client, TOPIC, 1);
+    // TODO: Enable subscription
+    //ROB_LOGI(umts_mqtt_log_prefix, " + Subscribe to the the client from the %s topic.", TOPIC);
+    //esp_mqtt_client_subscribe(mqtt_client, TOPIC, 1);
     ROB_LOGI(umts_mqtt_log_prefix, "* MQTT Running.");
     //TODO:Move the following to a task
     #if 0
