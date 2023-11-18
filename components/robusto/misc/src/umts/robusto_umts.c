@@ -104,6 +104,9 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item)
 // ROB_LOGI(umts_log_prefix, "In UMTS work callback string %lu", (uint32_t)queue_item->message->raw_data);
 // rob_log_bit_mesh(ROB_LOG_INFO, umts_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
 #endif
+    umts_cleanup_queue_task(queue_item);
+    successful_data = true;
+
 }
 
 void umts_reset_rtc()
