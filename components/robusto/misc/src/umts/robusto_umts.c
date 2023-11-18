@@ -24,9 +24,7 @@
 #include <robusto_sleep.h>
 #include <robusto_network_service.h>
 
-
 char *umts_log_prefix;
-
 
 bool successful_data = false;
 
@@ -35,98 +33,81 @@ RTC_DATA_ATTR uint connection_successes;
 
 EventGroupHandle_t umts_event_group = NULL;
 
-void on_incoming(robusto_message_t *message);
-void shutdown_utms_network_service(void);
-
-
-char * hello_log_prefix;
-#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
-network_service_t umts_network_service = {
-    service_id : ROBUSTO_MQTT_SERVICE_ID,
-    service_name : "UMTS",
-    service_frees_message: true,
-    incoming_callback : &on_incoming,
-    shutdown_callback: &shutdown_utms_network_service
-};
-#endif
-void shutdown_hello_service(void) {
-}
-
-
-void shutdown_utms_network_service(void) {
-
-    ROB_LOGW(hello_log_prefix, "UMTS network service shutdown.");
-}
-
 bool shutdown_umts_network_service()
 {
-    if (!successful_data) {
+    if (!successful_data)
+    {
         connection_failures++;
     }
     ROB_LOGI(umts_log_prefix, "----- Turning off all GSM/UMTS stuff -----");
 
     umts_cleanup();
-    
 
-  /*  ROB_LOGI(umts_log_prefix, "- Setting pin 12 (LED) to hight.");
-    gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
-    gpio_pullup_en(GPIO_NUM_12);
-    gpio_set_level(GPIO_NUM_12, 1);
-    vTaskDelay(200/portTICK_PERIOD_MS);
-     gpio_set_level(GPIO_NUM_12, 0);
-    vTaskDelay(200/portTICK_PERIOD_MS);
-     gpio_set_level(GPIO_NUM_12, 1);
-    vTaskDelay(200/portTICK_PERIOD_MS);
-     gpio_set_level(GPIO_NUM_12, 0);
-    vTaskDelay(200/portTICK_PERIOD_MS);*/
+    /*  ROB_LOGI(umts_log_prefix, "- Setting pin 12 (LED) to hight.");
+      gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
+      gpio_pullup_en(GPIO_NUM_12);
+      gpio_set_level(GPIO_NUM_12, 1);
+      vTaskDelay(200/portTICK_PERIOD_MS);
+       gpio_set_level(GPIO_NUM_12, 0);
+      vTaskDelay(200/portTICK_PERIOD_MS);
+       gpio_set_level(GPIO_NUM_12, 1);
+      vTaskDelay(200/portTICK_PERIOD_MS);
+       gpio_set_level(GPIO_NUM_12, 0);
+      vTaskDelay(200/portTICK_PERIOD_MS);*/
     return true;
 }
 #ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
-rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data) {
+rob_ret_val_t robusto_umts_mqtt_publish(char *topic, char *data)
+{
     ROB_LOGI(umts_log_prefix, "Publishing %s to topic %s", data, topic);
 
-    umts_queue_item_t * new_q = robusto_malloc(sizeof(umts_queue_item_t));
+    umts_queue_item_t *new_q = robusto_malloc(sizeof(umts_queue_item_t));
     new_q->topic = topic;
     new_q->data = data;
     rob_ret_val_t res = umts_safe_add_work_queue(new_q);
-    if (res == ROB_OK) {
-        ROB_LOGI(umts_log_prefix, "Added to MQTT work queue.");    
+    if (res == ROB_OK)
+    {
+        ROB_LOGI(umts_log_prefix, "Added to MQTT work queue.");
         return ROB_OK;
-    } else {
+    }
+    else
+    {
         ROB_LOGI(umts_log_prefix, "Fail adding it to the work queue, result code %i.", res);
         return ROB_FAIL;
     }
-
 }
 #endif
-void on_incoming(robusto_message_t *message) {
-    if (message->string_count == 2) {
-        umts_queue_item_t * new_q = robusto_malloc(sizeof(umts_queue_item_t));
+void on_incoming(robusto_message_t *message)
+{
+    if (message->string_count == 2)
+    {
+        umts_queue_item_t *new_q = robusto_malloc(sizeof(umts_queue_item_t));
         new_q->topic = message->strings[0];
         new_q->data = message->strings[1];
         umts_safe_add_work_queue(new_q);
-    } else {
+    }
+    else
+    {
         ROB_LOGE(umts_log_prefix, "UMTS on_incoming, invalid string count: %i", message->string_count);
     }
-    
 }
 
-void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
-    #ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
-    umts_mqtt_publish(queue_item->topic, queue_item->data,  strlen(queue_item->data));
+void umts_do_on_work_cb(umts_queue_item_t *queue_item)
+{
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
+    umts_mqtt_publish(queue_item->topic, queue_item->data, strlen(queue_item->data));
 
-    //if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
+// if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID)
 
-    // TODO: Consider what actually is the point here, should GSM=MQTT?
+// TODO: Consider what actually is the point here, should GSM=MQTT?
 
-    //ROB_LOGI(umts_log_prefix, "In UMTS work callback string %lu", (uint32_t)queue_item->message->raw_data);
-    //rob_log_bit_mesh(ROB_LOG_INFO, umts_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
-    #endif
+// ROB_LOGI(umts_log_prefix, "In UMTS work callback string %lu", (uint32_t)queue_item->message->raw_data);
+// rob_log_bit_mesh(ROB_LOG_INFO, umts_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
+#endif
+}
 
-
-}   
-
-void umts_reset_rtc() {
+void umts_reset_rtc()
+{
     connection_failures = 0;
     connection_successes = 0;
 }
@@ -145,16 +126,14 @@ void robusto_umts_init(char *_log_prefix)
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
     umts_init_queue(&umts_do_on_work_cb, umts_log_prefix);
-    robusto_register_network_service(&umts_network_service);
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
-    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ /*16384*/ 32768, 
-        (void *)umts_log_prefix, 5, &umts_modem_setup_task, 0);
+    int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ /*16384*/ 32768,
+                                     (void *)umts_log_prefix, 5, &umts_modem_setup_task, 0);
     if (rc != pdPASS)
     {
         ROB_LOGE(umts_log_prefix, "Failed creating UMTS task, returned: %i (see projdefs.h)", rc);
     }
-
 
     ROB_LOGI(umts_log_prefix, "* UMTS main task registered.");
 }

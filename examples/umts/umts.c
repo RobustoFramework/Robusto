@@ -29,7 +29,7 @@ void start_umts_example(char * _log_prefix)
     robusto_umts_sms_send(CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS_NUMBER, CONFIG_ROBUSTO_UMTS_EXAMPLE_SMS_MESSAGE);
     #endif
     #ifdef CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT
-    #if !defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC) || !defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE)
+    #if !defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC) || !defined(CONFIG_ROBUSTO_UMTS_EXAMPLE_MQTT_MESSAGE) || !defined(CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY)
         #error "Both an MQTT topic and message must be set"
     #endif
     while (!robusto_umts_mqtt_up()) {

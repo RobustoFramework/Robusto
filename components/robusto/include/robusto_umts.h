@@ -34,8 +34,6 @@
 #include <robusto_retval.h>
 #include <stdbool.h>
 
-#define ROBUSTO_MQTT_SERVICE_ID 1978U
-#define ROBUSTO_SMS_SERVICE_ID 1979U
 
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
