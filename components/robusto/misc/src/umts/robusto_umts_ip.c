@@ -6,12 +6,13 @@
 #include "esp_netif.h"
 #include "esp_netif_ppp.h"
 
-#include "mqtt_client.h"
 #include "esp_modem_api.h"
 
-
-
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 #include "robusto_umts_mqtt.h"
+#endif
+
+
 #include "robusto_logging.h"
 
 #include "robusto_umts_queue.h"
@@ -106,7 +107,9 @@ static void on_ip_event(void *arg, esp_event_base_t event_base,
 void umts_ip_cleanup() {
 
     if (umts_ip_esp_netif) {
+        #ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
         umts_mqtt_cleanup();
+        #endif
         ROB_LOGI(umts_ip_log_prefix, "Cleaning up GSM IP");
       
 

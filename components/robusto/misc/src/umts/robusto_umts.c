@@ -11,7 +11,9 @@
 #include "robusto_logging.h"
 
 #include "robusto_umts_task.h"
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 #include "robusto_umts_mqtt.h"
+#endif
 
 #include "robusto_conductor.h"
 
@@ -38,7 +40,7 @@ void shutdown_utms_network_service(void);
 
 
 char * hello_log_prefix;
-
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 network_service_t umts_network_service = {
     service_id : ROBUSTO_MQTT_SERVICE_ID,
     service_name : "UMTS",
@@ -46,7 +48,7 @@ network_service_t umts_network_service = {
     incoming_callback : &on_incoming,
     shutdown_callback: &shutdown_utms_network_service
 };
-
+#endif
 void shutdown_hello_service(void) {
 }
 
@@ -79,7 +81,7 @@ bool shutdown_umts_network_service()
     vTaskDelay(200/portTICK_PERIOD_MS);*/
     return true;
 }
-
+#ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data) {
     ROB_LOGI(umts_log_prefix, "Publishing %s to topic %s", data, topic);
 
@@ -96,6 +98,7 @@ rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data) {
     }
 
 }
+#endif
 void on_incoming(robusto_message_t *message) {
     if (message->string_count == 2) {
         umts_queue_item_t * new_q = robusto_malloc(sizeof(umts_queue_item_t));
@@ -109,6 +112,7 @@ void on_incoming(robusto_message_t *message) {
 }
 
 void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
+    #ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
     umts_mqtt_publish(queue_item->topic, queue_item->data,  strlen(queue_item->data));
 
     //if (queue_item->message->service_id == ROBUSTO_MQTT_SERVICE_ID) 
@@ -117,7 +121,7 @@ void umts_do_on_work_cb(umts_queue_item_t *queue_item) {
 
     //ROB_LOGI(umts_log_prefix, "In UMTS work callback string %lu", (uint32_t)queue_item->message->raw_data);
     //rob_log_bit_mesh(ROB_LOG_INFO, umts_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
-
+    #endif
 
 
 }   
