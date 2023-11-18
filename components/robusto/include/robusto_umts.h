@@ -41,6 +41,8 @@ rob_ret_val_t robusto_umts_mqtt_publish(char * topic, char *data);
 rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type, char *name, char* parent);
 rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t data_len);
 
+uint get_connection_failures();
+uint get_connection_successes();
 int get_sync_attempts();
 
 bool robusto_umts_sms_up();

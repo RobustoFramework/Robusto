@@ -33,6 +33,17 @@ RTC_DATA_ATTR uint connection_successes;
 
 EventGroupHandle_t umts_event_group = NULL;
 
+
+RTC_DATA_ATTR uint connection_failures;
+RTC_DATA_ATTR uint connection_successes;
+
+uint get_connection_failures(){
+    return connection_failures;
+}
+uint get_connection_successes(){
+    return connection_successes;
+}
+
 bool shutdown_umts_network_service()
 {
     if (!successful_data)
