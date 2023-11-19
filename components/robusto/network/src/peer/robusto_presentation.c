@@ -56,7 +56,8 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     }
     uint8_t *msg;
     int msg_len = robusto_make_presentation(peer, &msg, is_reply);
-
+    ROB_LOGD(presentation_log_prefix, "Presentation to send:");
+    rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     rob_ret_val_t ret_val_flag;
     robusto_media_t *info = get_media_info(peer, media_type);
