@@ -340,6 +340,7 @@ robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_addr
 {
     robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_type);
     if (peer->state < PEER_KNOWN_INSECURE) {
+        // TODO: This should be able to handle trying with several media types
         robusto_send_presentation(peer, media_type, false);
     }
 
