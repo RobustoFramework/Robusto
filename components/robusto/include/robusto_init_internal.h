@@ -40,14 +40,14 @@ extern "C"
 //void robusto_init_compatibility();
 
 /**
- * @brief Register the Network service
+ * @brief Register the Network related services
  */
 void register_network_service();
 /**
- * @brief Initialize the server-related functionality
+ * @brief Initialize the server-related services
  * @param _log_prefix The log prefix
  */
-void robusto_server_init(char * _log_prefix);
+void register_server_service();
 
 /**
  * @brief Initialize the conductor client

@@ -141,9 +141,10 @@ void init_robusto()
     robusto_flash_init(robusto_log_prefix);
     robusto_sleep_init(robusto_log_prefix);
     robusto_init_compatibility();
+    
+    /* Register services */
     register_network_service();
-
-    robusto_server_init(robusto_log_prefix);
+    register_server_service();
 
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
     robusto_conductor_client_init(robusto_log_prefix);
@@ -152,7 +153,7 @@ void init_robusto()
     robusto_conductor_server_init(robusto_log_prefix);
     #endif
 
-    register_misc_service();
+
 
 
     init_services(robusto_log_prefix);
@@ -162,5 +163,6 @@ void init_robusto()
         start_services(runlevel);
     }
 
+    register_misc_service();
     ROB_LOGI(robusto_log_prefix, "***************** Robusto running *****************");
 }
