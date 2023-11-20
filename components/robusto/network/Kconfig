@@ -49,7 +49,7 @@ menu "Networking"
 			This is how often each peer and media will be sent heartbeats.
     config ROBUSTO_PEER_HEARTBEAT_PROBLEM_SKIP_COUNT
         int "Heartbeat frequency when there are problems (in skipped repeater ticks)"
-        default 10
+        default 100
         help
             This is how often each peer and media will be sent heartbeats when a peer has problems.
 	config ROB_RECEIPT_TIMEOUT_MS

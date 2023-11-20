@@ -69,7 +69,7 @@ void robusto_misc_init(char * _log_prefix) {
 
 
 void register_misc_service() {
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
+    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_UMTS_SERVER) 
     register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
     #endif
 }
