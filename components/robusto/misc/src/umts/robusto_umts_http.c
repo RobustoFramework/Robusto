@@ -139,6 +139,8 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
     }
 
     esp_http_client_set_header(client, "Content-Type", "multipart/related; boundary=boundary_robusto");
+    esp_http_client_set_header(client, "Content-Length", "multipart/related; boundary=boundary_robusto");
+    
     // Create the parts of the post
     
     char *post_data_fmt = "\r\n--boundary_robusto\r\n"
@@ -152,7 +154,8 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
     char *post_ending = "\r\n--boundary_robusto--";
     uint16_t port_ending_length = strlen(post_ending);
     size_t post_data_len = post_beginning_length + req_body_len + port_ending_length + 1;
-
+    char * content_length;
+    asprintf(&content_length, "%u", post_data_len);
     // We proably need to use SPIRAM here
     char *post_data = robusto_malloc(post_data_len);
 
@@ -167,6 +170,8 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
     memcpy(post_data + post_beginning_length + req_body_len, post_ending, port_ending_length);
 
     esp_http_client_set_post_field(client, post_data, post_data_len);
+    // Setting this after
+    esp_http_client_set_header(client, "Content-Length", content_length);
 
     startTime = r_millis();
     esp_err_t err = esp_http_client_perform(client);
@@ -448,7 +453,7 @@ rob_ret_val_t request_access_token()
 
 rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type, char *name, char* parent)
 {
-    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart");
+    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart, %i bytes body", data_len);
     if (!access_token)
     {
         if (request_access_token() != ROB_OK)
