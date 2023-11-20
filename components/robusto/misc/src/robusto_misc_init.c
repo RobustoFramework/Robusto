@@ -31,6 +31,7 @@
  */
 #include <robusto_misc_init.h>
 #include <robusto_init_internal.h>
+#include <robusto_init.h>
 #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
 #include <robusto_pubsub_server.h>
 #endif
