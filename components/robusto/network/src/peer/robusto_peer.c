@@ -417,6 +417,7 @@ void robusto_peer_init(char *_log_prefix)
     
     #ifdef USE_ESPIDF
         esp_read_mac(&(robusto_host.base_mac_address), ESP_MAC_WIFI_STA);
+        ROB_LOGI(peer_log_prefix, "WIFI base MAC address:");
         rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, &robusto_host.base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     #endif
 

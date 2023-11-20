@@ -51,11 +51,6 @@ void robusto_misc_start() {
     #endif
 }
 
-void register_misc_service() {
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
-    #endif
-}
 
 void robusto_misc_init(char * _log_prefix) {
     register_misc_service();
@@ -68,5 +63,13 @@ void robusto_misc_init(char * _log_prefix) {
     #endif   
     #ifdef CONFIG_ROBUSTO_UMTS_SERVER
     robusto_umts_init(_log_prefix);
+    #endif
+}
+
+
+
+void register_misc_service() {
+    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
+    register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
     #endif
 }

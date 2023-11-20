@@ -48,10 +48,6 @@ void robusto_network_start()
     robusto_qos_start();
 }
 
-void register_network_service()
-{
-    register_service(robusto_network_init, robusto_network_start, robusto_network_stop, 2, "Network services");
-}
 
 void robusto_network_init(char *_log_prefix)
 {
@@ -64,6 +60,9 @@ void robusto_network_init(char *_log_prefix)
     robusto_media_init(_log_prefix);
     robusto_qos_init(_log_prefix);
 
-    // Register services
-    register_network_service();
+}
+
+void register_network_service()
+{
+    register_service(robusto_network_init, robusto_network_start, robusto_network_stop, 2, "Network services");
 }

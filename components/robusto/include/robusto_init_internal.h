@@ -40,10 +40,9 @@ extern "C"
 //void robusto_init_compatibility();
 
 /**
- * @brief Initialize the networking-related functionality
- * @param _log_prefix The log prefix
+ * @brief Register the Network service
  */
-void robusto_network_init(char *_log_prefix);
+void register_network_service();
 /**
  * @brief Initialize the server-related functionality
  * @param _log_prefix The log prefix
@@ -63,10 +62,9 @@ void robusto_conductor_client_init(char *_log_prefix);
 void robusto_conductor_server_init(char *_log_prefix);
 
 /**
- * @brief Initialize the miscellaneous
- * @param _log_prefix The log prefix
+ * @brief Register the miscellaneous service
  */
-void robusto_misc_init(char * _log_prefix);
+void register_misc_service();
 
 /**
  * @brief Initialize the flash and mount any SPIFFs

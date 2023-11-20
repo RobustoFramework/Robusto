@@ -37,6 +37,5 @@ void robusto_repeater_start();
 void robusto_repeater_init(char * _log_prefix);
 void robusto_memory_monitor_init(char *_log_prefix);
 void register_server_service();
-void robusto_server_init(char * _log_prefix);
 
 

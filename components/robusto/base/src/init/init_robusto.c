@@ -135,15 +135,13 @@ void stop_services()
 
 void init_robusto()
 {
-
-
     // Initialize base functionality
     robusto_log_prefix = CONFIG_ROBUSTO_PEER_NAME;
     robusto_system_init(robusto_log_prefix);
     robusto_flash_init(robusto_log_prefix);
     robusto_sleep_init(robusto_log_prefix);
     robusto_init_compatibility();
-    robusto_network_init(robusto_log_prefix);
+    register_network_service();
 
     robusto_server_init(robusto_log_prefix);
 
@@ -154,11 +152,11 @@ void init_robusto()
     robusto_conductor_server_init(robusto_log_prefix);
     #endif
 
-    robusto_misc_init(robusto_log_prefix);
+    register_misc_service();
 
 
     init_services(robusto_log_prefix);
-    curr_runlevel = 1;
+
     for (uint8_t runlevel = 2; runlevel < 6; runlevel++)
     {
         start_services(runlevel);

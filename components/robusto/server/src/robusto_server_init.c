@@ -44,14 +44,15 @@ void robusto_server_start() {
 
 }
 
-void register_server_service() {
-    register_service(robusto_server_init, robusto_server_start, robusto_server_stop, 2, "Server service");    
-}
 
 void robusto_server_init(char * _log_prefix) {
     robusto_repeater_init(_log_prefix);    
     #ifdef CONFIG_ROBUSTO_MONITOR_MEMORY
     robusto_memory_monitor_init(_log_prefix);
     #endif
-    register_server_service();    
+}
+
+
+void register_server_service() {
+    register_service(robusto_server_init, robusto_server_start, robusto_server_stop, 2, "Server service");    
 }
