@@ -153,4 +153,25 @@ void tst_esp_now_message_receive_string_message(void) {
 }
 
 
+
+void tst_esp_now_message_receive_multipart_message(void) {
+
+    // Register the on work callback
+    robusto_register_handler(esp_now_tst_do_on_work);
+    async_receive_flag = false;
+    incoming_item = NULL;	
+
+    if (robusto_waitfor_bool(&async_receive_flag, 30000)) {
+        ROB_LOGI("Test", "Async receive flag was set to true.");
+    } else {
+        TEST_FAIL_MESSAGE("Test failed, timed out.");
+    }
+    if (incoming_item == NULL) {
+        TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1000, incoming_item->message->binary_data_length, "The binary data length is wrong.");
+    
+
+}
+
 #endif

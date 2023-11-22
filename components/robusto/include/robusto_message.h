@@ -186,9 +186,9 @@ uint8_t robusto_encode_message_context(message_context_t *context);
 message_context_t *robusto_decode_message_context(uint8_t *message);
 
 rob_ret_val_t send_message_strings(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                              uint8_t *strings_data, uint16_t strings_length, queue_state *state);
+                              uint8_t *strings_data, uint32_t strings_length, queue_state *state);
 rob_ret_val_t send_message_binary(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                             uint8_t *binary_data, uint16_t binary_length, queue_state *state);
+                             uint8_t *binary_data, uint32_t binary_length, queue_state *state);
 
 
 /**
@@ -221,7 +221,7 @@ rob_ret_val_t send_message_binary(robusto_peer_t *peer, uint16_t service_id, uin
  * @return rob_ret_val_t Return ROB_OK if the message was successfully put on the appropriate media send queue.
  */
 rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                            uint8_t *strings_data, uint16_t strings_length, uint8_t *binary_data, uint16_t binary_length, queue_state *state, e_media_type force_media_type);
+                            uint8_t *strings_data, uint32_t strings_length, uint8_t *binary_data, uint32_t binary_length, queue_state *state, e_media_type force_media_type);
 /**
  * @brief Put a raw message to a specified peer on a specified media send queue. Mostly for internal use. 
  * 
@@ -233,7 +233,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
  * @param receipt Require a receipt for successful transfer
  * @return rob_ret_val_t Was the message successfully built and put on the queue for sending?
  */
-rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  uint8_t *data, int data_length, queue_state *state, bool receipt);
+rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  uint8_t *data, uint32_t data_length, queue_state *state, bool receipt);
 /**
  * @brief For internal use, like send_message_raw but takes more parameters for recursion and heartbeats
  * @internal
@@ -244,7 +244,7 @@ rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  u
  */
 rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types);
 
-typedef rob_ret_val_t (send_callback_cb)(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+typedef rob_ret_val_t (send_callback_cb)(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
 typedef void(poll_callback_cb)(queue_context_t * queue_context);
 /**
@@ -258,8 +258,8 @@ typedef void(poll_callback_cb)(queue_context_t * queue_context);
  */
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context);
 
-int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint16_t strings_length, uint8_t **dest_message);
-int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *binary_data, uint16_t binary_length, uint8_t **dest_message);
+int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t **dest_message);
+int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
 
 
 /**
@@ -274,7 +274,7 @@ int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, 
  * @param dest_message 
  * @return int 
  */
-int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint16_t strings_length, uint8_t *binary_data, uint16_t binary_length, uint8_t **dest_message);
+int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
 
 
 /**
@@ -315,7 +315,7 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
  * @param prefix_bytes
  * @return rob_ret_val_t* 
  */
-rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint16_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes);
+rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes);
 
 /**
  * @brief Check a message against its CRC32 or Fletcher 16 for consistency

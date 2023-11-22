@@ -51,7 +51,7 @@
 char *espnow_messaging_log_prefix;
 
 #define ESPNOW_MAXDELAY 512
-#define ESPNOW_CHUNK_SIZE ESP_NOW_MAX_DATA_LEN - 10
+#define ESPNOW_CHUNK_SIZE (ESP_NOW_MAX_DATA_LEN - 10)
 
 /* Used to identify multipart message data (as opposed to the initiating message) */
 #define MULTIPART_DATA_CONTEXT MSG_MULTIPART + 0x40 
@@ -298,7 +298,7 @@ rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *dat
  */
 rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
-#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH> - 1
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH> - 1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
     {
         ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
@@ -313,6 +313,8 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
         part_count++;
     }
 
+    ROB_LOGI(espnow_messaging_log_prefix, "Creating and sending a %lu-part, %lu-byte multipart message in %i-byte chunks.", part_count, data_length, ESPNOW_CHUNK_SIZE); 
+
     uint32_t curr_part = 0;
     uint8_t* buffer = robusto_malloc(ESPNOW_CHUNK_SIZE + sizeof(curr_part));
 
@@ -323,9 +325,9 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
     memcpy(buffer + 1, &data_length, 4);
     memcpy(buffer + 5, &part_count, 4);
     memcpy(buffer + 9, &chunk_size, 4);
-    
-    if (esp_now_send_message(&(peer->base_mac_address), buffer, 13, true) != ROB_OK) {
-        ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a negative receipt");    
+
+    if (esp_now_send_check(&(peer->base_mac_address), buffer, 13) != ROB_OK) {
+        ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a failure sending");    
         return ROB_FAIL;
     }
   
@@ -359,7 +361,7 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
         // Counter
         memcpy(buffer, &curr_part, sizeof(curr_part));
         // Data
-        memcpy(buffer +  sizeof(curr_part), data + (ESPNOW_CHUNK_SIZE * curr_part), ESPNOW_CHUNK_SIZE);
+        memcpy(buffer + sizeof(curr_part), data + (ESPNOW_CHUNK_SIZE * curr_part), ESPNOW_CHUNK_SIZE);
 
         if (esp_now_send_check(&(peer->base_mac_address), buffer, ESPNOW_CHUNK_SIZE + sizeof(curr_part)) != ROB_OK) {
             // TODO: We might want store failures to resend this
@@ -374,9 +376,9 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
 /**
  * @brief Sends a message through ESPNOW.
  */
-rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
-#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > - 1
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > - 1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
     {
         ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
@@ -386,7 +388,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data
 #endif
 
     if (data_length > (ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10)) {
-        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
+        ROB_LOGI(espnow_messaging_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending multipart", data_length, ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10);
         return esp_now_send_message_multipart(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
     }
 
@@ -420,7 +422,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data
 }
 int esp_now_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes)
 {
-#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH> - 1
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > - 1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
     {
         ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing reading data");

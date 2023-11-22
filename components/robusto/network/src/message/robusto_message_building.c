@@ -86,8 +86,8 @@ uint8_t robusto_encode_message_context(message_context_t *context)
 }
 
 int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
-                               uint8_t *strings_data, uint16_t strings_length,
-                               uint8_t *binary_data, uint16_t binary_length, uint8_t **dest_message)
+                               uint8_t *strings_data, uint32_t strings_length,
+                               uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message)
 {
 
     ROB_LOGD(message_building_log_prefix, "In robusto_make_multi_message");
@@ -98,7 +98,7 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
      * 3. A 1-byte message context
      * 4. A 16-byte encryption pad reference (not implemented = 0)
      */
-    uint16_t message_length = ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN + 0;
+    uint32_t message_length = ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN + 0;
     struct message_context context = {
         .message_type = message_type,
         .is_service_call = (service_id > 0),
@@ -142,7 +142,7 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
             message_length += strings_offset;
         }
     }
-    ROB_LOGD(message_building_log_prefix, "Allocating %u bytes for message", message_length);
+    ROB_LOGI(message_building_log_prefix, "Allocating %lu bytes for message %lu", message_length, binary_length);
     *dest_message = robusto_malloc(message_length);
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);
@@ -182,13 +182,13 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
     return message_length;
 }
 
-int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint16_t strings_length, uint8_t **dest_message)
+int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t **dest_message)
 {
     return robusto_make_multi_message(message_type, service_id, conversation_id, strings_data, strings_length, NULL, 0, dest_message);
 }
 
 int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
-                                uint8_t *binary_data, uint16_t binary_length, uint8_t **dest_message)
+                                uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message)
 {
     ROB_LOGD(message_building_log_prefix, "In robusto_make_binary_message");
     return robusto_make_multi_message(message_type, service_id, conversation_id, NULL, 0, binary_data, binary_length, dest_message);

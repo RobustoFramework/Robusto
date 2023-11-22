@@ -182,13 +182,13 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     return retval;
 }
 
-rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int data_length, queue_state *state, bool receipt) {
+rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt) {
     return send_message_raw_internal(peer, media_type, data, data_length, state, receipt, false, 0, robusto_mt_none);
 }
 
 
 rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                            uint8_t *strings_data, uint16_t strings_length, uint8_t *binary_data, uint16_t binary_length, queue_state *state, e_media_type force_media_type)
+                            uint8_t *strings_data, uint32_t strings_length, uint8_t *binary_data, uint32_t binary_length, queue_state *state, e_media_type force_media_type)
 {
     if (peer == NULL)
     {
@@ -196,7 +196,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
         return ROB_FAIL;
     }
     uint8_t *dest_message;
-    uint8_t message_length = robusto_make_multi_message(MSG_MESSAGE, service_id, conversation_id,
+    uint32_t message_length = robusto_make_multi_message(MSG_MESSAGE, service_id, conversation_id,
                                                         strings_data, strings_length, binary_data, binary_length, &dest_message);
     e_media_type media_type;
     if (force_media_type == robusto_mt_none) {
@@ -224,13 +224,13 @@ fail:
 
 }
 rob_ret_val_t send_message_strings(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                              uint8_t *strings_data, uint16_t strings_length, queue_state *state)
+                              uint8_t *strings_data, uint32_t strings_length, queue_state *state)
 {
     return send_message_multi(peer, service_id, conversation_id, strings_data, strings_length, NULL, 0, state, robusto_mt_none);
 }
 
 rob_ret_val_t send_message_binary(robusto_peer_t *peer, uint16_t service_id, uint16_t conversation_id,
-                             uint8_t *binary_data, uint16_t binary_length, queue_state *state)
+                             uint8_t *binary_data, uint32_t binary_length, queue_state *state)
 {
     return send_message_multi(peer, service_id, conversation_id, NULL, 0, binary_data, binary_length, state, robusto_mt_none);
 }

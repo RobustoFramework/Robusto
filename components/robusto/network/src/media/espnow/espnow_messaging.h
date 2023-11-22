@@ -119,7 +119,7 @@ typedef struct {
  * @param receipt Do not wait for a receipt
  * @return rob_ret_val_t 
  */
-rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
 
 void espnow_do_on_poll_cb(queue_context_t *q_context);

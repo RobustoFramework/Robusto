@@ -73,7 +73,7 @@ bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes) {
 
 }
 
-rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint16_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes) 
+rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes) 
 {
     ROB_LOGD(message_parsing_log_prefix, "In robusto_network_parse_message, prefix bytes: %"PRIu8"", prefix_bytes);
         

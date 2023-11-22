@@ -95,9 +95,6 @@ void runUnityTests(void *pvParameters)
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
-    register_network_service();
-    register_server_service();
-    register_misc_service();
 #ifdef ARDUINO_ARCH_MBED
     init_arduino_mbed();
 #endif
@@ -272,7 +269,7 @@ void runUnityTests(void *pvParameters)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 
     /* Asynchronous testing*/
-#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR != 0xFFFFFFFFFFFF - 1 && defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
 
     RUN_TEST(tst_esp_now_message_send_presentation, "TEST DEST");
     robusto_yield();
@@ -288,7 +285,6 @@ void runUnityTests(void *pvParameters)
 
 #endif
 
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
 
     RUN_TEST(tst_esp_now_message_send_message);
@@ -303,15 +299,21 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
 #endif
 
-    RUN_TEST(tst_esp_now_message_receive_string_message);
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
+    RUN_TEST(tst_esp_now_message_send_message_multipart);
     robusto_yield();
+#endif
+
+    RUN_TEST(tst_esp_now_message_receive_multipart_message);
+    robusto_yield();
+
 
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
     RUN_TEST(tst_esp_now_message_send_message_multipart);
     robusto_yield();
 #endif
 
-#endif
+
 
 #endif
 
