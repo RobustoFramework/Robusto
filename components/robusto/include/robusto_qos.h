@@ -40,7 +40,9 @@ extern "C"
 #include <robusto_peer_def.h>
 
 // The message context for heart beats is always 0x43 (MSG_HEARTBEAT + binary data)
-#define HEARTBEAT_CONTEXT 0x43 
+#define HEARTBEAT_CONTEXT 0x03 + 0x40 
+
+
 
 typedef struct recover_params {
     robusto_peer_t *peer;

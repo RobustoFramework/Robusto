@@ -302,6 +302,15 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_esp_now_message_send_message);
     robusto_yield();
 #endif
+
+    RUN_TEST(tst_esp_now_message_receive_string_message);
+    robusto_yield();
+
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
+    RUN_TEST(tst_esp_now_message_send_message_multipart);
+    robusto_yield();
+#endif
+
 #endif
 
 #endif

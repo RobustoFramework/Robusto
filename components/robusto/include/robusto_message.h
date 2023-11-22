@@ -99,11 +99,13 @@ typedef enum e_msg_type
     MSG_STREAM      = 1, // TODO: How should we implement a stream interface over the existing?
     MSG_NETWORK     = 2, // Network commands
     MSG_HEARTBEAT   = 3, // The heartbeat, sent to peers to check if an idle connection works
-    MSG_UNUSED_2    = 4, 
+    MSG_MULTIPART   = 4, // A multipart message will follow
     MSG_UNUSED_3    = 5,
     MSG_UNUSED_4    = 6,
     MSG_UNUSED_5    = 7
 } e_msg_type_t;
+
+
 
 typedef enum e_network_request 
 {
@@ -114,6 +116,7 @@ typedef enum e_network_request
     /* A request to help with listening */
     NET_HELP_LISTEN = 0x02
 } e_network_request_t;
+
 
 
 /* This is information that is encoded into a byte and sent with every message.  */

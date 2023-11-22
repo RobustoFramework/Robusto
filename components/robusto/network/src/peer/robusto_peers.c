@@ -250,7 +250,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     }
     else
     {
-        strcpy(peer->name, name);
+        strncpy(peer->name, name, CONFIG_ROBUSTO_PEER_NAME_LENGTH -1);
     }
     robusto_peer_init_peer(peer);
 

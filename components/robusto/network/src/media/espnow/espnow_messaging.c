@@ -51,6 +51,12 @@
 char *espnow_messaging_log_prefix;
 
 #define ESPNOW_MAXDELAY 512
+#define ESPNOW_CHUNK_SIZE ESP_NOW_MAX_DATA_LEN - 10
+
+/* Used to identify multipart message data (as opposed to the initiating message) */
+#define MULTIPART_DATA_CONTEXT MSG_MULTIPART + 0x40 
+
+
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
@@ -61,6 +67,30 @@ static esp_now_send_status_t send_status = ESP_NOW_SEND_FAIL;
 static uint8_t *synchro_data = NULL;
 static int synchro_data_len = 0;
 static robusto_peer_t *synchro_peer = NULL;
+
+// TODO: If this works, centralize multipart handling for all medias (will a stream be similar?)
+typedef struct multipart_item  {
+    uint8_t *data;
+    uint32_t data_length;
+    uint32_t parts_count;
+    uint32_t curr_counter;
+    uint32_t identifier;
+    /* When the item was created, a non-used element */
+    uint32_t start_time;
+    SLIST_ENTRY(multipart_item) multipart_items;             /* Singly linked list */
+
+} multipart_item_t;
+
+SLIST_HEAD(multipart_item_head_t, multipart_item);
+
+struct multipart_item_head_t multipart_item_head;                  
+
+// Cache the last item for optimization
+multipart_item_t *last_multipart_item;
+
+
+
+
 
 /**
  * @brief Handle the receipt from the peer
@@ -92,7 +122,6 @@ static void espnow_receipt_cb(const uint8_t *mac_addr, esp_now_send_status_t sta
         robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_addr);
         if (peer)
         {
-
             peer->espnow_info.send_failures++;
         }
         else
@@ -164,6 +193,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_messaging_log_prefix, data, len);
         peer->espnow_info.last_peer_receive = parse_heartbeat(data, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
     }
+    if (data[ROBUSTO_CRC_LENGTH] == MSG_MULTIPART) {
+        // Initiate a new multipart  (...stream?)
+    } 
+    if (data[ROBUSTO_CRC_LENGTH] == MULTIPART_DATA_CONTEXT) {
+        // Initiate a new multipart  (...stream?)
+    }
 
     peer->espnow_info.last_receive = r_millis();
     // Is there *really* a need for a synchronized version like below..probably only for testing the comms layer at some initial situation?
@@ -211,26 +246,13 @@ static void espnow_deinit(espnow_send_param_t *send_param)
     esp_now_deinit();
 }
 
-/**
- * @brief Sends a message through ESPNOW.
- */
-rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
-{
-#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH> - 1
-    if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
-    {
-        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
-        r_delay(100);
-        return ROB_FAIL;
-    }
-#endif
+rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *data, int data_length) {
 
-    has_receipt = false;
-    int rc = esp_now_send(&(peer->base_mac_address), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES);
+    int rc = esp_now_send(base_mac_address, data, data_length);
     if (rc != ESP_OK)
     {
         ROB_LOGE(espnow_messaging_log_prefix, "Mac address:");
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_messaging_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_messaging_log_prefix, base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         if (rc == ESP_ERR_ESPNOW_NOT_INIT)
         {
             ROB_LOGE(espnow_messaging_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NOT_INIT");
@@ -267,6 +289,111 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data
         {
             ROB_LOGE(espnow_messaging_log_prefix, "ESP-NOW unknown error: %i", rc);
         }
+        return -ROB_ERR_SEND_FAIL;
+    } 
+    return ROB_OK;
+}
+/**
+ * @brief Sends a message through ESPNOW.
+ */
+rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
+{
+#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH> - 1
+    if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
+    {
+        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
+        r_delay(100);
+        return ROB_FAIL;
+    }
+#endif
+    int rc = ROB_FAIL;
+    // How many parts will it have?
+    uint32_t part_count = data_length / ESPNOW_CHUNK_SIZE;
+    if (part_count % ESPNOW_CHUNK_SIZE > 0) {
+        part_count++;
+    }
+
+    uint32_t curr_part = 0;
+    uint8_t* buffer = robusto_malloc(ESPNOW_CHUNK_SIZE + sizeof(curr_part));
+
+    // First, tell the peer that we are going to send it a multipart message
+    // This is a message saying just that
+    buffer[0] = MSG_MULTIPART;
+    uint32_t chunk_size = ESPNOW_CHUNK_SIZE;
+    memcpy(buffer + 1, &data_length, 4);
+    memcpy(buffer + 5, &part_count, 4);
+    memcpy(buffer + 9, &chunk_size, 4);
+    
+    if (esp_now_send_message(&(peer->base_mac_address), buffer, 13, true) != ROB_OK) {
+        ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a negative receipt");    
+        return ROB_FAIL;
+    }
+  
+    // We want to wait to make shure the transmission succeeded.
+    // There are integrity checks in ESP-NOW, so we do not need any CRC checks here.
+    int64_t start = r_millis();
+    has_receipt = false;
+    // TODO: Should we have a separate timeout setting here? It is not like a healty ESP-NOW-peer would take more han milliseconds to send a receipt.
+    while (!has_receipt && r_millis() < start + 2000)
+    {
+        robusto_yield();
+    }
+    
+    if (has_receipt)
+    {
+        rc = send_status == ESP_NOW_SEND_SUCCESS ? ROB_OK : ROB_FAIL;
+        if (rc == ROB_FAIL) {
+            ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a negative receipt");    
+            return ROB_FAIL;
+        }
+        has_receipt = false;
+    }
+    else
+    {
+        ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, timeout.");
+        return ROB_ERR_NO_RECEIPT;
+    }
+    has_receipt = false;
+    
+    while (curr_part < part_count) {
+        // Counter
+        memcpy(buffer, &curr_part, sizeof(curr_part));
+        // Data
+        memcpy(buffer +  sizeof(curr_part), data + (ESPNOW_CHUNK_SIZE * curr_part), ESPNOW_CHUNK_SIZE);
+
+        if (esp_now_send_check(&(peer->base_mac_address), buffer, ESPNOW_CHUNK_SIZE + sizeof(curr_part)) != ROB_OK) {
+            // TODO: We might want store failures to resend this
+            ROB_LOGE(espnow_messaging_log_prefix, ".");
+        }
+        curr_part++;
+    }   
+    robusto_free(buffer);
+    return ROB_OK;
+}
+
+/**
+ * @brief Sends a message through ESPNOW.
+ */
+rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+{
+#ifdef CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > - 1
+    if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
+    {
+        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
+        r_delay(100);
+        return ROB_FAIL;
+    }
+#endif
+
+    if (data_length > (ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10)) {
+        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing sending");
+        return esp_now_send_message_multipart(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
+    }
+
+    has_receipt = false;
+    int rc = esp_now_send_check(&(peer->base_mac_address), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES);
+    if (rc != ESP_OK)
+    {
         return -ROB_ERR_SEND_FAIL;
     }
     // We want to wait to make shure the transmission succeeded.
@@ -332,6 +459,7 @@ void espnow_messaging_init(char *_log_prefix)
 {
     espnow_messaging_log_prefix = _log_prefix;
     espnow_init();
+    SLIST_INIT(&multipart_item_head);                      /* Initialize the queue */
 }
 
 #endif
