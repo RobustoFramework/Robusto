@@ -124,7 +124,7 @@ void tst_esp_now_message_receive_presentation(void)
 
 
 void esp_now_tst_do_on_work(incoming_queue_item_t *_incoming_item) {
-    ROB_LOGI("TEST", "In lora_tst_do_on_work");
+    ROB_LOGI("TEST", "In esp_now_tst_do_on_work");
     incoming_item = _incoming_item;
     async_receive_flag = true;   
 
