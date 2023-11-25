@@ -249,6 +249,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_messaging_log_prefix, data, len);
         peer->espnow_info.last_peer_receive = parse_heartbeat(data, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
     }
+
     // TODO: Break out multipart handling, is not mediaspecific, obviously
     if (data[ROBUSTO_CRC_LENGTH] == MSG_MULTIPART)
     {
@@ -297,7 +298,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             ROB_LOGI(espnow_messaging_log_prefix, "Matched with cached frag");
             frag_msg = last_frag_msg;
         }
-        uint32_t msg_frag_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH);
+        uint32_t msg_frag_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 1);
         
         
         // We check the length of all fragments, start with calculating what the current should be
@@ -308,9 +309,10 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             curr_frag_size = frag_msg->data_length - (frag_msg->fragment_size * msg_frag_count);
         }
         uint32_t expected_message_length = FRAG_HEADER_LEN + curr_frag_size;
+        ROB_LOGI(espnow_messaging_log_prefix, "Received part %lu (of %lu), length %lu bytes.", msg_frag_count, frag_msg->fragment_count, curr_frag_size);
         if (expected_message_length != len)
         {
-            ROB_LOGE(espnow_messaging_log_prefix, "Wrong length of fragment: %i bytes, expected %lu", len, expected_message_length);
+            ROB_LOGE(espnow_messaging_log_prefix, "Wrong length of fragment %lu: %i bytes, expected %lu", msg_frag_count, len, expected_message_length);
             return;
         }
     
@@ -455,12 +457,13 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
         ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a failure sending");
         return ROB_FAIL;
     }
+    has_receipt = false;
     robusto_yield();
 
     // We want to wait to make shure the transmission succeeded.
     // There are integrity checks in ESP-NOW, so we do not need any CRC checks here.
     int64_t start = r_millis();
-    has_receipt = false;
+
     // TODO: Should we have a separate timeout setting here? It is not like a healty ESP-NOW-peer would take more han milliseconds to send a receipt.
     while (!has_receipt && r_millis() < start + 2000)
     {
