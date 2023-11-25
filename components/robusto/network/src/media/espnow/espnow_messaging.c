@@ -309,7 +309,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             curr_frag_size = frag_msg->data_length - (frag_msg->fragment_size * msg_frag_count);
         }
         uint32_t expected_message_length = FRAG_HEADER_LEN + curr_frag_size;
-        ROB_LOGI(espnow_messaging_log_prefix, "Received part %lu (of %lu), length %lu bytes.", msg_frag_count, frag_msg->fragment_count, curr_frag_size);
+        ROB_LOGI(espnow_messaging_log_prefix, "Received part %lu (of %lu - 1), length %lu bytes.", msg_frag_count, frag_msg->fragment_count, curr_frag_size);
         if (expected_message_length != len)
         {
             ROB_LOGE(espnow_messaging_log_prefix, "Wrong length of fragment %lu: %i bytes, expected %lu", msg_frag_count, len, expected_message_length);
@@ -354,16 +354,17 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             // Last, check hash and 
             if (frag_msg->hash != robusto_crc32(0, frag_msg->data, frag_msg->data_length)) {
                 ROB_LOGE(espnow_messaging_log_prefix, "The full message did not match with the hash");
-                // 
                 return;
 
             } else {
-                ROB_LOGI(espnow_messaging_log_prefix, "The full message matched the hash;");
+                ROB_LOGI(espnow_messaging_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->data_length);
                 add_to_history(&peer->espnow_info, false, robusto_handle_incoming(frag_msg->data, frag_msg->data_length, peer, robusto_mt_espnow, 0));
-                // Send a respo
                 return;
             }
         } 
+        peer->espnow_info.last_receive = r_millis();
+        return;
+
 
     }
 
@@ -452,14 +453,12 @@ rob_ret_val_t esp_now_send_message_multipart(robusto_peer_t *peer, uint8_t *data
     memcpy(buffer, &msg_hash, 4);
     ROB_LOGI(espnow_messaging_log_prefix, "ESP-NOW is heartbeat");
     rob_log_bit_mesh(ROB_LOG_INFO, espnow_messaging_log_prefix, buffer, ROBUSTO_CRC_LENGTH + 17);
+    has_receipt = false;
     if (esp_now_send_check(&(peer->base_mac_address), buffer, ROBUSTO_CRC_LENGTH + 17) != ROB_OK)
     {
         ROB_LOGE(espnow_messaging_log_prefix, "Could not initiate multipart messaging, got a failure sending");
         return ROB_FAIL;
     }
-    has_receipt = false;
-    robusto_yield();
-
     // We want to wait to make shure the transmission succeeded.
     // There are integrity checks in ESP-NOW, so we do not need any CRC checks here.
     int64_t start = r_millis();

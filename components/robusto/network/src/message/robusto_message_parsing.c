@@ -102,7 +102,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
     msg_inst->context.has_binary ? "true" : "false");
     
     /* curr_pos indicates how far we've come in the parsing */
-    int curr_pos = prefix_bytes + ROBUSTO_CRC_LENGTH + 1;
+    uint32_t curr_pos = prefix_bytes + ROBUSTO_CRC_LENGTH + 1;
 
     /* If it is a call to a service, add the call to the service, this is where we find the conversation id. */
     if (msg_inst->context.is_service_call) {
@@ -138,7 +138,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
         }
         if (nullcount == 0) {
             // TODO: Should we add separate error codes for security violations? 
-            // TODO: And a ROB_EXTLOGE()-macro that sends to a logging (forwarding    ) server? Or are we doing categories as well for that?
+            // TODO: And a ROB_EXT_LOGE()-macro that sends to a logging (forwarding    ) server? Or are we doing categories as well for that?
             ROB_LOGE(message_parsing_log_prefix, "The strings had no null separators at all, this is a protocol and security violation. Message discarded.");
             // TODO: Mark the connection suspect
             rob_log_bit_mesh(ROB_LOG_ERROR, message_parsing_log_prefix, data, data_len);
@@ -156,7 +156,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
         msg_inst->string_count = 0;
         ROB_LOGD(message_parsing_log_prefix, "String[%i] = %s", msg_inst->string_count, msg_inst->strings[msg_inst->string_count]);
         // Loop the data and set pointers, note that it disregards it if it doesn't end with a NULL value.
-        for (int j = curr_pos; j < strings_end; j++)
+        for (uint32_t j = curr_pos; j < strings_end; j++)
         {
             if (data[j] == 0)
             {
@@ -166,7 +166,6 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
                     msg_inst->strings[msg_inst->string_count] = (char *)&(data[j + 1]);
                     ROB_LOGD(message_parsing_log_prefix, "String[%i] = %s", msg_inst->string_count, msg_inst->strings[msg_inst->string_count]);
                 }
-                
             }
         }
         curr_pos = strings_end;

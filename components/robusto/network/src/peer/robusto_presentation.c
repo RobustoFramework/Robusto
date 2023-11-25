@@ -92,7 +92,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         ROB_LOGE(presentation_log_prefix, "<< Got a HI or HIR-message with information but message->peer is NULL, internal error!");
         return ROB_FAIL;
     }
-    ROB_LOGI(presentation_log_prefix, "<< Got a HI or HIR-message with information, length %u.", message->binary_data_length);
+    ROB_LOGI(presentation_log_prefix, "<< Got a HI or HIR-message with information, length %lu.", message->binary_data_length);
 
     message->peer->state = PEER_PRESENTING;
     /* Parse the base MAC address*/

@@ -147,7 +147,7 @@ typedef struct robusto_message
     /* The data */
     uint8_t *raw_data;
     /* The length of the data in bytes */
-    uint16_t raw_data_length;
+    uint32_t raw_data_length;
     /* Strings data as an array of null-terminated strings */
     char **strings;
     /* The number of strings */
@@ -155,7 +155,7 @@ typedef struct robusto_message
     /* The data */
     uint8_t *binary_data;
     /* The length of the data in bytes */
-    uint16_t binary_data_length;
+    uint32_t binary_data_length;
     /* The relevant peer, destination if outgoing, source if incoming */  
     robusto_peer_t *peer;
     /* The media type that sent the message */
