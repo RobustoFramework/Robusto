@@ -214,7 +214,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     {
         ROB_LOGI(espnow_messaging_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
                  esp_now_info->rx_ctrl->rssi, esp_now_info->rx_ctrl->rate);
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_messaging_log_prefix, data, len);
+        rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_messaging_log_prefix, data, len);
     }
     else
     {
