@@ -99,7 +99,7 @@ typedef enum e_msg_type
     MSG_STREAM      = 1, // TODO: How should we implement a stream interface over the existing?
     MSG_NETWORK     = 2, // Network commands
     MSG_HEARTBEAT   = 3, // The heartbeat, sent to peers to check if an idle connection works
-    MSG_MULTIPART   = 4, // A multipart message will follow
+    MSG_FRAGMENTED   = 4, // A multipart message will follow
     MSG_UNUSED_3    = 5,
     MSG_UNUSED_4    = 6,
     MSG_UNUSED_5    = 7

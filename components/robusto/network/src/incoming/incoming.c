@@ -116,8 +116,8 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
         } else {
             ROB_LOGD(incoming_log_prefix, "Freeing message from %s, type %hhu", queue_item->message->peer->name, queue_item->message->media_type);
         }
-        ROB_LOGI(incoming_log_prefix, "Message to be freed : ");    
-        rob_log_bit_mesh(ROB_LOG_INFO, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
+        ROB_LOGD(incoming_log_prefix, "Message to be freed : ");    
+        rob_log_bit_mesh(ROB_LOG_DEBUG, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);
         robusto_message_free(queue_item->message);
     }
     
