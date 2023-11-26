@@ -281,6 +281,10 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         SLIST_INSERT_HEAD(&fragmented_message_head, frag_msg, fragmented_messages);
         last_frag_msg = frag_msg;
         peer->espnow_info.last_receive = r_millis();
+        
+        // Postpone QoS so it doesn't interfere with long transmissions.
+        peer->espnow_info.postpone_qos = true;
+
         return;
     }
     if (data[ROBUSTO_CRC_LENGTH] == MULTIPART_DATA_CONTEXT)
@@ -362,10 +366,9 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
                 return;
             }
         } 
-        peer->espnow_info.last_receive = r_millis();
+        // Postpone QoS so it doesn't interfere with long transmissions.
+        peer->espnow_info.postpone_qos = true;
         return;
-
-
     }
 
     peer->espnow_info.last_receive = r_millis();

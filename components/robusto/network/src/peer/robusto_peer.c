@@ -118,6 +118,8 @@ void peer_stat_reset(robusto_media_t *stats)
     stats->last_send = r_millis();
     stats->last_peer_receive = stats->last_send;
     stats->last_receive = stats->last_send;
+    stats->postpone_qos = false;
+    
 }
 
 void robusto_peer_init_peer(robusto_peer_t *peer)

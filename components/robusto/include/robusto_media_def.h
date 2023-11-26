@@ -125,7 +125,8 @@ typedef struct robusto_media
     uint64_t last_send;
     /* Last time the peer received something from us, doubly used as a counter */
     uint64_t last_peer_receive;
-    
+    /* Postpone qos, resetting all last to now. Used during long, fragmented transmissions. */
+    bool postpone_qos;
     /* Last score */
     float last_score;
     /* Last scored when */
@@ -188,9 +189,6 @@ typedef void (media_queue_callback)(media_queue_item_t *work_item);
 
 /* Callbacks that act as filters on incoming work items */
 typedef int(media_filter_callback)(media_queue_item_t *work_item);
-
-
-
 
 
 
