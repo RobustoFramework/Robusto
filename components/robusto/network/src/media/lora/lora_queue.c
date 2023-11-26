@@ -43,7 +43,7 @@
 // The queue context
 struct queue_context lora_queue_context;
 
-char *lora_worker_log_prefix;
+static char *lora_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(lora_work_q, media_queue_item) 

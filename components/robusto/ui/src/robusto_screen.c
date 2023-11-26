@@ -5,7 +5,7 @@
 #include "robusto_screen_minimal.h"
 #endif
 
-char * ui_log_prefix;
+static char * ui_log_prefix;
 
 void robusto_screen_init(char * _log_prefix) {
 

@@ -37,7 +37,8 @@
 #include "robusto_queue.h"
 #include "robusto_qos.h"
 #include "string.h"
-char *presentation_log_prefix;
+
+static char * presentation_log_prefix;
 
 
 

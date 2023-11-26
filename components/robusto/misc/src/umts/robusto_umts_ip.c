@@ -23,7 +23,7 @@
 #include <robusto_conductor.h>
 
 
-char *umts_ip_log_prefix;
+static char *umts_ip_log_prefix;
 esp_netif_t *umts_ip_esp_netif = NULL;
 
 static char * ip_addr_string = NULL;

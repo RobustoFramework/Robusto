@@ -45,7 +45,7 @@
 #include <inttypes.h>
 #include "espnow_messaging.h"
 
-char * espnow_peer_log_prefix;
+static char * espnow_peer_log_prefix;
 
 uint32_t espnow_unknown_failures = 0;
 uint32_t espnow_crc_failures = 0;

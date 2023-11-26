@@ -12,7 +12,7 @@
 // The queue context
 queue_context_t *sample_queue_context;
 
-char *sample_worker_log_prefix;
+static char *sample_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(sample_work_q, sample_queue_item) 

@@ -44,7 +44,7 @@
 #include "../media/mock/mock_messaging.h"
 #endif
 
-char *message_receiving_log_prefix;
+static char *message_receiving_log_prefix;
 // TODO: Either this should go or be explained. This vs incoming and if used in testing.
 rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robusto_message_t **dest_msg)
 {

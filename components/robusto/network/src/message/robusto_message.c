@@ -33,7 +33,7 @@
 #include <robusto_message.h>
 #include <robusto_system.h>
 
-char *message_log_prefix;
+static char *message_log_prefix;
 
 void robusto_message_free(robusto_message_t *message) {
     robusto_free(message->raw_data);

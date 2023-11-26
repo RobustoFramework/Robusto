@@ -43,7 +43,7 @@
 /* We reserve the first byte that we use for internal signaling.
  * For example, when data has been transmitted, and how it went. */
 
-char *message_building_log_prefix;
+static char *message_building_log_prefix;
 /**
  * @brief Encode the message context struct into a byte
  *

@@ -17,7 +17,7 @@
 #include <robusto_flash.h>
 #endif
 
-char *umts_http_log_prefix;
+static char *umts_http_log_prefix;
 
 uint32_t startTime = 0;
 

@@ -52,7 +52,7 @@
 
 
 robusto_media_types host_supported_media_types = 0;
-char * media_log_prefix;
+static char * media_log_prefix;
 
 void list_media_types(robusto_media_types media_types, char *log_str)
 {

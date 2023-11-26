@@ -5,7 +5,7 @@
 #include <robusto_screen_minimal.h>
 #include <robusto_time.h>
 
-char * hello_ui_log_prefix;
+static char * hello_ui_log_prefix;
 
 void start_hello_ui(char * _log_prefix)
 {

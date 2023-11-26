@@ -43,7 +43,7 @@
 #include <robusto_repeater.h>
 #include "qos_recovery.h"
 
-char *qos_state_log_prefix;
+static char *qos_state_log_prefix;
 
 void qos_state_cb();
 void qos_state_shutdown_cb();

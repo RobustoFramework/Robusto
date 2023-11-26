@@ -57,7 +57,7 @@ using namespace mbed;
 #include <string.h>
 
 #define I2C_TIMING 0x00B21847
-char *i2c_arduino_messaging_log_prefix;
+static char * i2c_arduino_messaging_log_prefix;
 bool ismaster = true; // TODO: Defaulting this to true is not the nicest workaround.
 uint8_t i2c_arduino_data[I2C_RX_BUF];
 uint32_t i2c_arduino_data_length = 0;

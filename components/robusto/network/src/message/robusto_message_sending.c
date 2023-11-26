@@ -56,7 +56,7 @@
 #include <inttypes.h>
 #include <string.h>
 
-char *message_sending_log_prefix;
+static char *message_sending_log_prefix;
 
 /**
  * @brief  Calculate a reasonable wait time in milliseconds

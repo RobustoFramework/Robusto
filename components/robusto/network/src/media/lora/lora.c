@@ -46,7 +46,7 @@
 
 
 /* The log prefix for all logging */
-char *lora_log_prefix;
+static char *lora_log_prefix;
 
 
 void robusto_lora_start()

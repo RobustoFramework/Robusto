@@ -39,7 +39,7 @@
 #include <robusto_logging.h>
 #include <robusto_concurrency.h>
 #include <robusto_qos.h>
-char *mock_recovery_log_prefix;
+static char *mock_recovery_log_prefix;
 
 void mock_recover(recover_params_t * params)
 {

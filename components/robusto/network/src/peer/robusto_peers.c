@@ -56,7 +56,7 @@ uint16_t _peer_handle_incrementor_ = 0;
 struct robusto_peers robusto_peers;
 
 /* The log prefix for all logging */
-char *peers_log_prefix;
+static char *peers_log_prefix;
    
 static callback_new_peer_t *on_new_peer_cb = NULL;
 

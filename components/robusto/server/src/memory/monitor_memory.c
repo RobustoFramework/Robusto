@@ -52,7 +52,7 @@ It is also not recommended to include the first sample as that is taken before s
 and thus less helpful for finding memory leaks. "
 #endif
 
-char *memory_monitor_log_prefix;
+static char *memory_monitor_log_prefix;
 
 void monitor_memory_cb();
 void monitor_memory_shutdown_cb();

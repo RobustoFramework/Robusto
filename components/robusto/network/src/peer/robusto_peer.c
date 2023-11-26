@@ -95,7 +95,7 @@ uint32_t has_relations_indicator;
 #endif
 
 
-char *peer_log_prefix;
+static char *peer_log_prefix;
 
 robusto_peer_t *get_host_peer() {
     return &robusto_host;

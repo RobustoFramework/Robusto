@@ -34,7 +34,7 @@
 #include "robusto_message.h"
 #include "robusto_peer.h"
 
-char *incoming_network_log_prefix;
+static char *incoming_network_log_prefix;
 
 rob_ret_val_t robusto_handle_network(incoming_queue_item_t *queue_item)
 {

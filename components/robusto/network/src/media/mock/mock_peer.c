@@ -38,7 +38,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-char *mock_peer_log_prefix;
+static char *mock_peer_log_prefix;
 
 void mock_peer_init_peer(robusto_peer_t *peer)
 {

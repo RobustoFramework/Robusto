@@ -39,7 +39,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-char * i2c_peer_log_prefix;
+static char * i2c_peer_log_prefix;
 
 
 

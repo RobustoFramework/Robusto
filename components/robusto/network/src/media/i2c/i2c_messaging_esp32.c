@@ -46,7 +46,7 @@
 #include <string.h>
 // int i2c_hearbeat(robusto_peer *peer);
 
-char *i2c_esp32_messaging_log_prefix;
+static char *i2c_esp32_messaging_log_prefix;
 
 #define I2C_ADDR_LEN 1
 

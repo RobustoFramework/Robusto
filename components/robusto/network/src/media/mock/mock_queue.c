@@ -45,7 +45,7 @@
 // The queue context
 queue_context_t *mock_queue_context;
 
-char *mock_worker_log_prefix;
+static char *mock_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(mock_work_q, media_queue_item) 

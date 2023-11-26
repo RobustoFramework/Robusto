@@ -46,7 +46,7 @@
 #include <esp_adc/adc_oneshot.h>
 
 /* The log prefix for all logging */
-char *espnow_log_prefix;
+static char *espnow_log_prefix;
 
 void init_wifi()
 {

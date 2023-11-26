@@ -18,7 +18,7 @@ void on_incoming(robusto_message_t *message);
 void shutdown_hello_network_service(void);
 
 
-char * hello_log_prefix;
+static char * hello_log_prefix;
 
 
 

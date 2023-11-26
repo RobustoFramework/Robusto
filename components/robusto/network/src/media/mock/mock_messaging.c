@@ -53,7 +53,7 @@ char mock_binary[4] = MOCK_BINARY;
 char mock_peername_0[6] = MOCK_PEERNAME_0;
 char mock_peername_1[6] = MOCK_PEERNAME_1;
 
-char *mock_messaging_log_prefix;
+static char *mock_messaging_log_prefix;
 
 rob_ret_val_t mock_before_comms(bool is_sending, bool first_call)
 {

@@ -8,7 +8,7 @@
 
 static ssd1306_handle_t ssd1306_dev = NULL;
 
-char *minimal_log_prefix;
+static char *minimal_log_prefix;
 
 void robusto_screen_minimal_write(char * txt, uint8_t col, uint8_t row) {
     if (ssd1306_dev) {

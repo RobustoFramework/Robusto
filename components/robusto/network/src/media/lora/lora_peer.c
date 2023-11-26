@@ -38,7 +38,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-char * lora_peer_log_prefix;
+static char * lora_peer_log_prefix;
 
 void lora_peer_init_peer(robusto_peer_t *peer)
 {

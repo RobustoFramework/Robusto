@@ -41,7 +41,7 @@
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
     #include "esp_heap_trace.h"
 #endif
-char *incoming_log_prefix;
+static char *incoming_log_prefix;
 
 static incoming_callback_cb *incoming_callback = NULL;
 

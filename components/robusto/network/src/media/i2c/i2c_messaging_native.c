@@ -36,7 +36,7 @@
 #include <robusto_logging.h>
 #include "i2c_queue.h"
 
-char *i2c_native_messaging_log_prefix;
+static char *i2c_native_messaging_log_prefix;
 
 rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
 {

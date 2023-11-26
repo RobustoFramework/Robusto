@@ -56,7 +56,7 @@
 #include <RadioLib.h>
 
 /* The log prefix for all logging */
-char *lora_messaging_log_prefix;
+static char *lora_messaging_log_prefix;
 
 #ifdef CONFIG_LORA_SX126X
 SX1262 radio = NULL;

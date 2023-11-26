@@ -22,7 +22,7 @@
 #include <robusto_camera.h>
 #endif
 
-char * camera_log_prefix;
+static char * camera_log_prefix;
 
 // Illumination LAMP and status LED
 #if defined(LAMP_DISABLE)

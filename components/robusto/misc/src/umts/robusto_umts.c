@@ -24,7 +24,7 @@
 #include <robusto_sleep.h>
 #include <robusto_network_service.h>
 
-char *umts_log_prefix;
+static char *umts_log_prefix;
 
 bool successful_data = false;
 

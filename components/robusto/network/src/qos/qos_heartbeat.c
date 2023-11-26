@@ -45,7 +45,8 @@
 /* The margin for which to wait before considering the peer/media to be idle*/
 #define HEARTBEAT_IDLE_MARGIN_MS (CONFIG_ROBUSTO_REPEATER_DELAY_MS * CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT) + 100
 #define HEARTBEAT_PROBLEM_MARGIN_MS (CONFIG_ROBUSTO_REPEATER_DELAY_MS * CONFIG_ROBUSTO_PEER_HEARTBEAT_PROBLEM_SKIP_COUNT) 
-char *heartbeat_log_prefix;
+
+static char *heartbeat_log_prefix;
 
 void heartbeat_cb();
 void heartbeat_shutdown_cb();

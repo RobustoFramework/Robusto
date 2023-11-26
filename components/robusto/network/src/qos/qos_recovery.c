@@ -44,7 +44,7 @@
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
     #include "../media/mock/mock_recover.h"
 #endif  
-char *recovery_log_prefix;
+static char *recovery_log_prefix;
 
 
 void create_recovery_task (robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t task_function) {

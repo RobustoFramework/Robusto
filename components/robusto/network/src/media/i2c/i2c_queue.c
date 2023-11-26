@@ -41,7 +41,7 @@
 // The queue context
 struct queue_context i2c_queue_context;
 
-char *i2c_worker_log_prefix;
+static char *i2c_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(i2c_work_q, media_queue_item) 

@@ -44,7 +44,7 @@
 // The queue context
 queue_context_t *incoming_queue_context;
 
-char *incoming_worker_log_prefix;
+static char *incoming_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(incoming_work_q, incoming_queue_item) 

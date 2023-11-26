@@ -31,7 +31,7 @@
 #include <robusto_media.h>
 #include <robusto_logging.h>
 
-char *ble_init_log_prefix;
+static char *ble_init_log_prefix;
 
 void ble_shutdown() {
     ESP_LOGI(ble_init_log_prefix, "Shutting down BLE:");

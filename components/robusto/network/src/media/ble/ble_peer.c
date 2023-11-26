@@ -53,7 +53,7 @@ peer_dsc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
                 void *arg);
 
 /* Log prefix*/
-char *ble_peer_log_prefix; 
+static char *ble_peer_log_prefix; 
 
 
 /**

@@ -38,7 +38,7 @@
 #include <robusto_system.h>
 #include <inttypes.h>
 #include <string.h>
-char * message_parsing_log_prefix;
+static char * message_parsing_log_prefix;
 
 bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes) {
 

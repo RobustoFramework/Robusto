@@ -8,7 +8,7 @@
 #include <robusto_logging.h>
 #include <robusto_system.h>
 #define CHUNK_SIZE 1024
-char *spiffs_log_prefix;
+static char *spiffs_log_prefix;
 
 unsigned long get_file_size(char * filename)
 {

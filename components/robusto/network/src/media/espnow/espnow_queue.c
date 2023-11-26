@@ -40,7 +40,7 @@
 // The queue context
 queue_context_t espnow_queue_context;
 
-char *espnow_worker_log_prefix;
+static char *espnow_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(espnow_work_q, media_queue_item ) 

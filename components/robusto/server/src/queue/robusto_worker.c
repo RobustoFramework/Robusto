@@ -41,7 +41,7 @@
 #include <robusto_time.h>
 #include <robusto_system.h>
 /* The log prefix for all logging */
-char *robusto_worker_log_prefix;
+static char *robusto_worker_log_prefix;
 
 
 void *safe_get_head_work_item(queue_context_t *q_context)

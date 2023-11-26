@@ -20,7 +20,7 @@
 // The queue context
 queue_context_t umts_queue_context;
 
-char *umts_queue_log_prefix;
+static char *umts_queue_log_prefix;
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(umts_work_q, umts_queue_item) umts_work_q;
