@@ -99,14 +99,16 @@ typedef enum e_msg_type
     MSG_STREAM      = 1, // TODO: How should we implement a stream interface over the existing?
     MSG_NETWORK     = 2, // Network commands
     MSG_HEARTBEAT   = 3, // The heartbeat, sent to peers to check if an idle connection works
-    MSG_FRAGMENTED   = 4, // A multipart message will follow
+    MSG_FRAGMENTED   = 4, // Fragmented messaging
     MSG_UNUSED_3    = 5,
     MSG_UNUSED_4    = 6,
     MSG_UNUSED_5    = 7
 } e_msg_type_t;
 
 
-
+/**
+ * @brief Byte-values used by network type messages
+ */
 typedef enum e_network_request 
 {
     /* A HI-message */
@@ -117,7 +119,20 @@ typedef enum e_network_request
     NET_HELP_LISTEN = 0x02
 } e_network_request_t;
 
-
+/**
+ * @brief Byte-values used by the fragmentaton communication
+ */
+typedef enum e_fragment_request 
+{
+    /* This means that a fragmented message transmission will follow */
+    FRAG_REQUEST      = 0x00,
+    /* This is a part of a fragmented message transmission */
+    FRAG_MESSAGE  = 0x01,
+    /* This is a message sent by the receiver which either a success message or a list of fragments that needs to be re-sent */ 
+    FRAG_RESULT   = 0x02,
+    /* Asking the receiver the state of the request (if no result is received before the timeout or if progress is needed) */ 
+    FRAG_CHECK   = 0x03
+} e_fragment_request_t;
 
 /* This is information that is encoded into a byte and sent with every message.  */
 typedef struct message_context
