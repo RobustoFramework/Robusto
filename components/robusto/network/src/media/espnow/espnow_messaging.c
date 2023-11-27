@@ -43,6 +43,7 @@
 #endif
 #include <robusto_logging.h>
 #include <robusto_system.h>
+#include <robusto_message.h>
 #include <robusto_peer.h>
 #include <robusto_incoming.h>
 #include <robusto_qos.h>
@@ -65,9 +66,9 @@ static int synchro_data_len = 0;
 static robusto_peer_t *synchro_peer = NULL;
 
 
-rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *data, int data_length)
+rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *data, int data_length, bool receipt)
 {
-
+    has_receipt = false;
     int rc = esp_now_send(base_mac_address, data, data_length);
     if (rc != ESP_OK)
     {
@@ -109,9 +110,40 @@ rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *dat
         {
             ROB_LOGE(espnow_log_prefix, "ESP-NOW unknown error: %i", rc);
         }
-        return -ROB_ERR_SEND_FAIL;
+        rc = -ROB_ERR_SEND_FAIL;
     }
-    return ROB_OK;
+    rc = ROB_OK;
+
+    if (!receipt) {
+        return rc;
+    }
+
+    // We want to wait to make sure the transmission is done.
+    int64_t start = r_millis();
+
+    // TODO: Should we have a separate timeout setting here? It is not like a healty ESP-NOW-peer would take more han milliseconds to send a receipt.
+    while (!has_receipt && r_millis() < start + 2000)
+    {
+        robusto_yield();
+    }
+
+    if (has_receipt)
+    {
+        has_receipt = false;
+        rc = (send_status == ESP_NOW_SEND_SUCCESS) ? ROB_OK : ROB_FAIL;
+        if (rc == ROB_FAIL)
+        {
+            ROB_LOGE(espnow_log_prefix, "Got a negative receipt");
+            return ROB_FAIL;
+        }
+    }
+    else
+    {
+        ROB_LOGE(espnow_log_prefix, "Timed out waiting for receipt, timeout.");
+        return ROB_ERR_NO_RECEIPT;
+    }
+    return rc;
+
 }
 
 /**
@@ -219,7 +251,8 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
 
     if ((data[ROBUSTO_CRC_LENGTH] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
     {
-        return handle_fragmented(peer, data, len, esp_now_send_check);
+        handle_fragmented(peer, data, len, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
+        return;
     }
 
     peer->espnow_info.last_receive = r_millis();
@@ -258,33 +291,14 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
     if (data_length > (ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10))
     {
         ROB_LOGI(espnow_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10);
-        return esp_now_send_message_fragmented(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
+        return send_message_fragmented(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
     }
 
     has_receipt = false;
-    int rc = esp_now_send_check(&(peer->base_mac_address), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES);
+    int rc = esp_now_send_check(&(peer->base_mac_address), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, true);
     if (rc != ESP_OK)
     {
         return -ROB_ERR_SEND_FAIL;
-    }
-    // We want to wait to make shure the transmission succeeded.
-    // There are integrity checks in ESP-NOW, so we do not need any CRC checks here.
-    int64_t start = r_millis();
-    // TODO: Should we have a separate timeout setting here? It is not like a healty ESP-NOW-peer would take more han milliseconds to send a receipt.
-    while (!has_receipt && r_millis() < start + 2000)
-    {
-        robusto_yield();
-    }
-
-    if (has_receipt)
-    {
-        rc = send_status == ESP_NOW_SEND_SUCCESS ? ROB_OK : ROB_FAIL;
-        has_receipt = false;
-    }
-    else
-    {
-        ROB_LOGE(espnow_log_prefix, "Sending failed, timeout.");
-        rc = ROB_ERR_NO_RECEIPT;
     }
 
     return rc;

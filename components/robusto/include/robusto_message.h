@@ -273,6 +273,37 @@ typedef void(poll_callback_cb)(queue_context_t * queue_context);
  */
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context);
 
+// A callback that can be used to send messages
+typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt);
+
+/**
+ * @brief Handle incoming fragmented messaged
+ * 
+ * @param peer The remote peer
+ * @param data Incoming data
+ * @param len Length of data
+ * @param fragment_size The fragment size of the media
+ * @param send_message A callback to be able to respond
+ */
+
+void handle_fragmented(robusto_peer_t *peer, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
+
+
+/**
+ * @brief Send a message in fragments. Data must be a Robusto message
+ * 
+ * @param peer The destination peer
+ * @param data The message. Must be a valid and parsable Robusto message.
+ * @param data_length The length of the message
+ * @param fragment_size The size of the fragments
+ * @param send_message A callback to be able to send messages
+ * @return rob_ret_val_t 
+ */
+rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
+
+/*
+Make messages
+*/
 int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t **dest_message);
 int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
 
