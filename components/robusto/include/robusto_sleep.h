@@ -3,9 +3,11 @@
 #include <robconfig.h>
 
 #include "inttypes.h"
+
+#ifdef USE_NATIVE
 #include "stdbool.h"
-
-
+#include "stdint.h"
+#endif
 
 void robusto_goto_sleep(uint32_t millisecs);
 /**

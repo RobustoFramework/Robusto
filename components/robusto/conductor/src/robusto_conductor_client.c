@@ -22,7 +22,7 @@
 
 static char *conductor_log_prefix;
 
-RTC_DATA_ATTR int availibility_retry_count;
+ROB_RTC_DATA_ATTR int availibility_retry_count;
 
 static void on_incoming_conductor_client(robusto_message_t *message);
 static void on_shutting_down_conductor_client(robusto_message_t *message);

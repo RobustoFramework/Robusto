@@ -286,7 +286,7 @@ typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data,
  * @param send_message A callback to be able to respond
  */
 
-void handle_fragmented(robusto_peer_t *peer, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
+void handle_fragmented(robusto_peer_t *peer, robusto_media_t * media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
 
 
 /**
@@ -299,7 +299,7 @@ void handle_fragmented(robusto_peer_t *peer, const uint8_t *data, int len, uint3
  * @param send_message A callback to be able to send messages
  * @return rob_ret_val_t 
  */
-rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
+rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t * media, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
 
 /*
 Make messages

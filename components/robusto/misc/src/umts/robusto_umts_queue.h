@@ -13,7 +13,7 @@
  *********************/
 
 #include <robconfig.h>
-#include "esp_err.h"
+
 #include <robusto_media_def.h>
 #include <robusto_message.h>
 /*********************

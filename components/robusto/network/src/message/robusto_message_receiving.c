@@ -105,17 +105,22 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
 
     if (media_type == robusto_mt_mock)
     {
-        
+        ROB_LOGI("1","2");
         data_len = mock_read_data(&data, &peer);
+        ROB_LOGI("1","3");
         prefix_bytes = ROBUSTO_PREFIX_BYTES;
     }
 #endif
     if (data_len > 0)
     {
+
         int retval = ROB_FAIL;
+        ROB_LOGI("1","4");
         rob_log_bit_mesh(ROB_LOG_INFO, message_receiving_log_prefix, data, data_len);
         if (robusto_check_message(data, data_len, prefix_bytes)) {
+            ROB_LOGI("1","5");
             retval = robusto_network_parse_message(data, data_len, peer,dest_msg, prefix_bytes);
+            ROB_LOGI("1","6");
         }
         return retval;
 

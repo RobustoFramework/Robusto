@@ -55,3 +55,9 @@
 #else
 #include "robconfig_.h"
 #endif
+
+#if defined(USE_ESPIDF) || defined(USE_ARDUINO) || defined(USE_STM32)
+#define ROB_RTC_DATA_ATTR RTC_DATA_ATTR
+#else 
+#define ROB_RTC_DATA_ATTR
+#endif

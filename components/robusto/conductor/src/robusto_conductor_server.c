@@ -32,9 +32,9 @@ static uint32_t wait_time = 0;
 static uint32_t requested_time = 0;
 
 /* Store the moment we last went to sleep in persistent storage */
-RTC_DATA_ATTR uint32_t last_sleep_time;
+ROB_RTC_DATA_ATTR uint32_t last_sleep_time;
 /* How long we were awake last */
-RTC_DATA_ATTR uint32_t last_wake_time;
+ROB_RTC_DATA_ATTR uint32_t last_wake_time;
 
 static void on_incoming_conductor_server(robusto_message_t *message);
 static void on_shutting_down_conductor_server(robusto_message_t *message);

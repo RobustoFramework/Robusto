@@ -23,13 +23,13 @@
 #include "robusto_time.h"
 
 /* Number of times we've slept */
-static RTC_DATA_ATTR int sleep_count;
+static ROB_RTC_DATA_ATTR int sleep_count;
 
 /* The time we waited */
-static RTC_DATA_ATTR uint32_t last_sleep_duration;
+static ROB_RTC_DATA_ATTR uint32_t last_sleep_duration;
 
 /* Tracking the time we've been awake */
-static RTC_DATA_ATTR uint32_t wake_time;
+static ROB_RTC_DATA_ATTR uint32_t wake_time;
 
 /* Is it the first boot, have we not slept? */
 static bool b_first_boot;

@@ -36,6 +36,10 @@
 #include <string.h>
 #endif
 
+#ifdef USE_NATIVE
+#include <assert.h>
+#endif
+
 
 #include <robusto_concurrency.h>
 #include <robusto_time.h>

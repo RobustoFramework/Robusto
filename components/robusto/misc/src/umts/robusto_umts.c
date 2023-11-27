@@ -28,8 +28,8 @@ static char *umts_log_prefix;
 
 bool successful_data = false;
 
-RTC_DATA_ATTR unsigned int connection_failures;
-RTC_DATA_ATTR unsigned int connection_successes;
+ROB_RTC_DATA_ATTR unsigned int connection_failures;
+ROB_RTC_DATA_ATTR unsigned int connection_successes;
 
 EventGroupHandle_t umts_event_group = NULL;
 

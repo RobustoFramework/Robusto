@@ -62,6 +62,7 @@ void tst_sync_mock_receive_binary_message_restricted(void)
     set_message_expectation(MMI_BINARY_RESTRICTED);
     robusto_message_t *message;
     rob_ret_val_t res = robusto_receive_message_media_type(robusto_mt_mock, &message);
+    ROB_LOGI("1","3");
     TEST_ASSERT_MESSAGE(res == ROB_OK, "Receive message did not return ROB_OK.");
     TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(&tst_binary, 
     message->binary_data, message->binary_data_length,    "Binary data did not match");

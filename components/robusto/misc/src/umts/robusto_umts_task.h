@@ -1,9 +1,11 @@
 #pragma once
 #include <robconfig.h>
+#include <stdbool.h>
+#ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-
 extern TaskHandle_t umts_modem_setup_task;
+#endif
 
 extern char *operator_name;
 
