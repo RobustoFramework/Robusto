@@ -31,7 +31,7 @@ void init_defs_mock()
     {
         return;
     }
-    test_peer_mock = robusto_add_init_new_peer("TEST_MOCK", kconfig_mac_to_6_bytes(0), robusto_mt_mock);
+    test_peer_mock = robusto_add_init_new_peer("TEST_MOCK", kconfig_mac_to_6_bytes(11), robusto_mt_mock);
     test_peer_mock->protocol_version = 0;
     test_peer_mock->relation_id_incoming = TST_RELATIONID_01;
     test_peer_mock->peer_handle = 0;

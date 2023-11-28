@@ -94,7 +94,7 @@ This library assumes this and may fail using other lengths for this setting.
     /* The SD MAC-address type */
     typedef uint8_t rob_mac_address[ROBUSTO_MAC_ADDR_LEN];
 
-    /* A peer name in SDP */
+    /* A peer name in Robusto */
     typedef char rob_peer_name[CONFIG_ROBUSTO_PEER_NAME_LENGTH];
     /* A peer */
     typedef struct robusto_peer

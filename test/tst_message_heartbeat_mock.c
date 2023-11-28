@@ -3,12 +3,15 @@
 #include <unity.h>
 #include <robusto_logging.h>
 #include <robusto_message.h>
+#include <robusto_peer.h>
 #include <robusto_concurrency.h>
+
+
 
 void tst_async_mock_heartbeats(void)
 {
 
-    robusto_peer_t *peer = robusto_peers_find_peer_by_name("TEST_MOCK");
+    robusto_peer_t *peer = robusto_peers_find_peer_by_name(get_host_peer()->name);
     TEST_ASSERT_MESSAGE(peer != NULL, "The TEST MOCK peer is not set");
 
     uint64_t start_time = r_millis();

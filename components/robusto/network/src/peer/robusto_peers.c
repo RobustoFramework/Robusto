@@ -65,6 +65,18 @@ void robusto_register_on_new_peer(callback_new_peer_t *_on_new_peer_cb)
     on_new_peer_cb = _on_new_peer_cb;
 } 
 
+
+void robusto_print_peers()
+{
+    robusto_peer_t *peer;
+    ROB_LOGI(peers_log_prefix, "Peer list:"); 
+    SLIST_FOREACH(peer, &robusto_peers, next)
+    {
+       ROB_LOGI(peers_log_prefix, "Name: %s", peer->name);
+    }
+
+}
+
 bool notify_on_new_peer(robusto_peer_t *peer) {
     if (on_new_peer_cb) {
         return on_new_peer_cb(peer);
@@ -79,6 +91,7 @@ robusto_peers_find_peer_by_name(const char *name)
 
     SLIST_FOREACH(peer, &robusto_peers, next)
     {
+
         if (strcmp(peer->name, name) == 0)
         {
             return peer;
@@ -116,7 +129,8 @@ robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t * check_peer)
         if ((peer != check_peer) &&
            (memcmp(peer->base_mac_address, check_peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN) == 0))
         {
-            ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address, duplicate found: %s", peer->name);
+            ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address, duplicate found: %s, same as %s, handles (%u/%u)", 
+            peer->name, check_peer->name, peer->peer_handle, check_peer->peer_handle);
             rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
             return peer;
         }
@@ -250,12 +264,19 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     }
     else
     {
-        strncpy(peer->name, name, CONFIG_ROBUSTO_PEER_NAME_LENGTH);
+        if (strlen(name) > (CONFIG_ROBUSTO_PEER_NAME_LENGTH -1)) {
+            memcpy(&peer->name, name, CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1);
+            peer->name[CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1] = 0x00;
+        } else {
+            strcpy(&peer->name, name);
+        }
+        
     }
     robusto_peer_init_peer(peer);
 
     SLIST_INSERT_HEAD(&robusto_peers, peer, next);
     *new_peer = peer;
+    ROB_LOGI(peers_log_prefix, "robusto_peers_peer_add: Added %s", peer->name);
 
     return ROB_OK;
 }
@@ -306,7 +327,7 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
     robusto_peers_peer_add(peer_name, &peer);
     if (peer != NULL)
     {
-        ROB_LOGI(peers_log_prefix, "Mac");
+        ROB_LOGI(peers_log_prefix, "Mac:");
         rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
         // TODO: Note that we have a potentially pointless 6-byte leak here, trust that the mac_address pointer perseveres?
         memcpy(peer->base_mac_address, mac_address, ROBUSTO_MAC_ADDR_LEN);

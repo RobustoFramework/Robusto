@@ -22,7 +22,7 @@ bool on_new_peer(robusto_peer_t * _peer) {
 
 void tst_async_mock_presentation(void)
 {   
-    
+    robusto_print_peers();
     // Register the on work callback
     robusto_register_on_new_peer(&on_new_peer);
     async_receive_flag = false;
@@ -38,11 +38,11 @@ void tst_async_mock_presentation(void)
     if (!incoming_peer) {
         TEST_FAIL_MESSAGE("Test failed, incoming_peer NULL.");
     }
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(incoming_peer->name, get_host_peer()->name, "The host name of the informed peer doesn't match");
-    TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(incoming_peer->base_mac_address,  get_host_peer()->base_mac_address,  ROBUSTO_MAC_ADDR_LEN,
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(get_host_peer()->name, incoming_peer->name, "The host name of the informed peer doesn't match");
+    TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(get_host_peer()->base_mac_address, incoming_peer->base_mac_address,  ROBUSTO_MAC_ADDR_LEN,
         "The base_mac_address doesn't match");    
     r_delay(10);    
-    
+    robusto_print_peers();
 }
 
 #endif

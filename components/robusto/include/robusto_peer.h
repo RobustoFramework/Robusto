@@ -66,7 +66,7 @@ extern "C"
      */
     bool notify_on_new_peer(robusto_peer_t *peer);
     void robusto_peer_init_peer(robusto_peer_t *peer);
-
+    void robusto_print_peers();
     void init_supported_media_types(robusto_peer_t *peer);
 
     void log_peer_info(char *_log_prefix, robusto_peer_t *peer);

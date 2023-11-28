@@ -425,6 +425,11 @@ void robusto_peer_init(char *_log_prefix)
 
     robusto_host.protocol_version = ROBUSTO_PROTOCOL_VERSION;
     robusto_host.min_protocol_version = ROBUSTO_PROTOCOL_VERSION_MIN;
-    strcpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME);   
-    robusto_host.supported_media_types = get_host_supported_media_types();   
+        if (strlen(CONFIG_ROBUSTO_PEER_NAME) > (CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1)) {
+        strncpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME "\00", CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1);
+    } else {
+        strcpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME "\00");
+    }
+    robusto_host.supported_media_types = get_host_supported_media_types();  
+ 
 }
