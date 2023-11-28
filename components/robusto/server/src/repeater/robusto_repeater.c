@@ -64,6 +64,17 @@ rob_ret_val_t robusto_register_recurrence(recurrence_t * recurrence) {
     return ROB_OK;
 }
 
+
+void run_all_repeaters_now() {
+    recurrence_t * curr_repeater = NULL;
+    for (uint16_t i = 0; i < recurrence_count; i++) {
+        curr_repeater = recurrences[i];
+        curr_repeater->recurrence_callback();
+    }
+}
+
+
+
 void run_repeaters() {
     recurrence_t * curr_repeater = NULL;
     for (uint16_t i = 0; i < recurrence_count; i++) {

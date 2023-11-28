@@ -102,10 +102,11 @@ void runUnityTests(void *pvParameters)
 
     init_robusto();
 
-#if !(defined(USE_ESPIDF) && defined(ARDUIONO))
-    ROB_LOGI("NATIVE", "Waiting a short while to let things start.");
+#ifdef USE_NATIVE
+    ROB_LOGW("NATIVE", "Waiting a short while to let things start.");
     // TODO: Something is obviously not waiting properly for something
     r_delay(1000);
+    ROB_LOGW("NATIVE", "Done waiting.");
 #endif
 
 #if defined(USE_ESPIDF)
@@ -159,20 +160,26 @@ void runUnityTests(void *pvParameters)
     // Adds the MOCK media type to the host, and tests if it was added
     RUN_TEST(tst_add_host_media_type_mock);
     robusto_yield();
+    ROB_LOGW("NATIVE", "Adding test peer.");
+    // Adds 
+    /* TODO: This adds the TEST_MOCK peer, perhaps this should not be done in the test*/
+    init_defs_mock();
 
+    ROB_LOGW("NATIVE", "Done waiting.");
     /* Synchronous testing*/
 
-    /* TODO: This adds the TEST_MOCK peer, perhaps this should not be done in the test*/
     RUN_TEST(tst_sync_mock_send_message);
     robusto_yield();
-
+    
     RUN_TEST(tst_sync_mock_receive_string_message);
     robusto_yield();
 
     RUN_TEST(tst_sync_mock_receive_binary_message);
     robusto_yield();
+
     RUN_TEST(tst_sync_mock_receive_multi_message);
     robusto_yield();
+
 
     RUN_TEST(tst_sync_mock_receive_binary_message_restricted);
     robusto_yield();
@@ -186,7 +193,7 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_async_mock_presentation);
     robusto_yield();
-
+    
     RUN_TEST(tst_async_mock_service);
     robusto_yield();
 

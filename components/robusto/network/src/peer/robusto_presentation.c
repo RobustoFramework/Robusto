@@ -152,7 +152,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         }
         else
         {
-            ROB_LOGE(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
+            ROB_LOGW(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
         }
     } else if (message->binary_data[0] == NET_HIR) {
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");

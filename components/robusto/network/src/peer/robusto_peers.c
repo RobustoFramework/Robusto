@@ -308,7 +308,7 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
     {
         ROB_LOGI(peers_log_prefix, "Mac");
         rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
-        // TODO: Note that we have a potentially pointless 6-byte leak here, trust that the macaddress pointer perseveres?
+        // TODO: Note that we have a potentially pointless 6-byte leak here, trust that the mac_address pointer perseveres?
         memcpy(peer->base_mac_address, mac_address, ROBUSTO_MAC_ADDR_LEN);
         peer->supported_media_types = media_type;
         init_supported_media_types(peer);

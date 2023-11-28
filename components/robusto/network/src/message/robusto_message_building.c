@@ -90,7 +90,8 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
                                uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message)
 {
 
-    ROB_LOGD(message_building_log_prefix, "In robusto_make_multi_message");
+    ROB_LOGD(message_building_log_prefix, "In robusto_make_multi_message. message_type: %hu, service_id: %u, conversation_id: %u, strings_length: %lu, binary_length: %lu.",
+     message_type, service_id, conversation_id, strings_length, binary_length);
     /**
      * We always have:
      * 1. Some media-dependent prefix data (probably source address or relation id)
@@ -142,7 +143,7 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
             message_length += strings_offset;
         }
     }
-    ROB_LOGI(message_building_log_prefix, "Allocating %lu bytes for message %lu", message_length, binary_length);
+    ROB_LOGI(message_building_log_prefix, "Allocating %lu bytes for message.", message_length);
     *dest_message = robusto_malloc(message_length);
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);

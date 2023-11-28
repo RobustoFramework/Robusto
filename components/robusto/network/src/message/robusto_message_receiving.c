@@ -105,9 +105,7 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
 
     if (media_type == robusto_mt_mock)
     {
-        ROB_LOGI("1","2");
         data_len = mock_read_data(&data, &peer);
-        ROB_LOGI("1","3");
         prefix_bytes = ROBUSTO_PREFIX_BYTES;
     }
 #endif
@@ -115,12 +113,10 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
     {
 
         int retval = ROB_FAIL;
-        ROB_LOGI("1","4");
+        ROB_LOGI(message_receiving_log_prefix,"Data received (%i bytes):", data_len);   
         rob_log_bit_mesh(ROB_LOG_INFO, message_receiving_log_prefix, data, data_len);
         if (robusto_check_message(data, data_len, prefix_bytes)) {
-            ROB_LOGI("1","5");
             retval = robusto_network_parse_message(data, data_len, peer,dest_msg, prefix_bytes);
-            ROB_LOGI("1","6");
         }
         return retval;
 
@@ -130,7 +126,6 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
 
         return ROB_INFO_RECV_NO_MESSAGE;
     }
-    // return ROB_INFO_RECV_NO_MESSAGE;
 }
 
 void robusto_message_receiving_init(char *_log_prefix)

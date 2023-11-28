@@ -73,6 +73,12 @@ typedef struct recurrence
 } recurrence_t;
 
 /**
+ * @brief Force runnig all the repeaters immidiately, normally not needed, used to speed up testing.
+ * 
+ */
+void run_all_repeaters_now();
+
+/**
  * @brief Register a recurrence 
  * 
  * @param recurrence A struct containing all important information

@@ -18,6 +18,8 @@ void tst_async_mock_heartbeats(void)
    
     r_delay(delay *3);
     
+    set_message_expectation(MMI_NONE);
+    
     //ROB_LOGI("", "AFTR %llu %llu", peer->mock_info.last_send , start_time);
 
     TEST_ASSERT_MESSAGE(peer->mock_info.last_send > start_time, "No heartbeat has been sent during idle");

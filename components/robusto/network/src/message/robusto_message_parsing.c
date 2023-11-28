@@ -38,9 +38,10 @@
 #include <robusto_system.h>
 #include <inttypes.h>
 #include <string.h>
-static char * message_parsing_log_prefix;
+static char * message_parsing_log_prefix = "Message parsing not initiated!";
 
 bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes) {
+    ROB_LOGD(message_parsing_log_prefix, "In robusto_check_message, prefix bytes: %"PRIu8"", prefix_bytes);
 
     // After the prefix (likely addressing), the message begins with a CRC32 or a CRC16 followed by 
     uint32_t crc32 = 0;
@@ -48,7 +49,7 @@ bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes) {
     memcpy(&crc32, &(data[prefix_bytes]), ROBUSTO_CRC_LENGTH);
     // Calculate it for rest of the message
 
-    uint32_t calc_crc32 = crc32; //robusto_crc32(0, data + prefix_bytes + ROBUSTO_CRC_LENGTH, data_len - prefix_bytes - ROBUSTO_CRC_LENGTH);
+    uint32_t calc_crc32 = robusto_crc32(0, data + prefix_bytes + ROBUSTO_CRC_LENGTH, data_len - prefix_bytes - ROBUSTO_CRC_LENGTH);
     bool crc_failed = (crc32 != calc_crc32);
     if (crc_failed) {
         // Check so that bytes 3 and 4 aren't 0, which means that this it is a 16-bit calc_fletcher16 checksum used by very resource restricted peers.
@@ -83,7 +84,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
     msg_inst->raw_data = data;
     msg_inst->raw_data_length = data_len;
     msg_inst->peer = peer;
-    ROB_LOGD(message_parsing_log_prefix, "Memory allocated. Parsing context.");
+    ROB_LOGD(message_parsing_log_prefix, "%"PRIu32" bytes memory allocated. Parsing context.", data_len);
     
     // Then, there is the message context.
     uint8_t first_byte = data[prefix_bytes + ROBUSTO_CRC_LENGTH];
@@ -103,20 +104,17 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
     
     /* curr_pos indicates how far we've come in the parsing */
     uint32_t curr_pos = prefix_bytes + ROBUSTO_CRC_LENGTH + 1;
-
     /* If it is a call to a service, add the call to the service, this is where we find the conversation id. */
     if (msg_inst->context.is_service_call) {
         memcpy(&msg_inst->service_id, data + curr_pos, 2);
         curr_pos += 2;
     }
-
     /* If it is a conversation, this is where we find the conversation id. */
     if (msg_inst->context.is_conversation) {
         memcpy(&msg_inst->conversation_id, data + curr_pos, 2);
         curr_pos += 2;
     }
 
-       
     /* If there are null terminated string arrays in the message, they begin here */ 
     if (msg_inst->context.has_strings) {
         uint16_t strings_end = 0;
@@ -152,7 +150,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
         ROB_LOGD(message_parsing_log_prefix, "Number of null terminators: %d", nullcount);
         msg_inst->strings = robusto_malloc(nullcount * sizeof(int32_t)); 
         // The first byte is always the beginning of a part
-        msg_inst->strings[0] = (char *)&(data[curr_pos]);
+        msg_inst->strings[0] = (char *)(data + curr_pos);
         msg_inst->string_count = 0;
         ROB_LOGD(message_parsing_log_prefix, "String[%i] = %s", msg_inst->string_count, msg_inst->strings[msg_inst->string_count]);
         // Loop the data and set pointers, note that it disregards it if it doesn't end with a NULL value.
@@ -163,7 +161,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
                 msg_inst->string_count++;
                 // The last null does not mean there is more data.
                 if (j < strings_end -1) {
-                    msg_inst->strings[msg_inst->string_count] = (char *)&(data[j + 1]);
+                    msg_inst->strings[msg_inst->string_count] = (char *)(data + j + 1);
                     ROB_LOGD(message_parsing_log_prefix, "String[%i] = %s", msg_inst->string_count, msg_inst->strings[msg_inst->string_count]);
                 }
             }

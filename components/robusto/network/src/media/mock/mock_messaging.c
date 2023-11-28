@@ -162,11 +162,11 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     else
     {
         ROB_LOGI(mock_messaging_log_prefix, "Invalid message expectation on mock message generation");
-        set_message_expectation(0);
+        set_message_expectation(MMI_NONE);
         return ROB_FAIL;
     }
-    // This has to be set at all times data is mocked in an async fashion
-    set_message_expectation(0);
+    // This has to be set at all times (especially when called async)
+    set_message_expectation(MMI_NONE);
 
     
     return length;
