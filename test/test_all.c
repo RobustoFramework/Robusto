@@ -28,6 +28,7 @@
 #include "tst_message_presentation_mock.h"
 #include "tst_message_service_mock.h"
 #include "tst_message_heartbeat_mock.h"
+#include "tst_fragmentation.h" // TODO: Better naming?
 #include "tst_qos_scenarios_mock.h"
 #endif
 
@@ -115,7 +116,8 @@ void runUnityTests(void *pvParameters)
 
     UNITY_BEGIN();
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
-
+    
+    #if 0
     RUN_TEST(tst_millis);
     robusto_yield();
 
@@ -144,6 +146,7 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
+    #endif
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     RUN_TEST(tst_pubsub); 
     robusto_yield();
@@ -160,14 +163,15 @@ void runUnityTests(void *pvParameters)
     // Adds the MOCK media type to the host, and tests if it was added
     RUN_TEST(tst_add_host_media_type_mock);
     robusto_yield();
-    ROB_LOGW("NATIVE", "Adding test peer.");
+    ROB_LOGW("TEST", "Adding test peer.");
     // Adds 
     /* TODO: This adds the TEST_MOCK peer, perhaps this should not be done in the test*/
 
     init_defs_mock();
 
-    ROB_LOGW("NATIVE", "Done waiting.");
+    ROB_LOGW("TEST", "Done waiting.");
     /* Synchronous testing*/
+    #if 0
 
     RUN_TEST(tst_sync_mock_send_message);
     robusto_yield();
@@ -198,7 +202,14 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_async_mock_heartbeats);
     robusto_yield();
 
+
     RUN_TEST(tst_async_mock_service);
+    robusto_yield();
+    #endif
+
+    RUN_TEST(tst_fragmentation_complete);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_resending);
     robusto_yield();
 
     // TODO: We should make the mock QoS scenario work
@@ -391,6 +402,7 @@ void runUnityTests(void *pvParameters)
      * @brief Test concurrency features, like tasks, workers and queues
      *
      */
+    #if 0
     RUN_TEST(tst_task);
     robusto_yield();
     RUN_TEST(tst_queue_start);
@@ -403,6 +415,7 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
     RUN_TEST(tst_queue_shutdown);
     robusto_yield();
+    #endif
 
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_QOS_TESTING

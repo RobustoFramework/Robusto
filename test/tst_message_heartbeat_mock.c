@@ -12,7 +12,7 @@ void tst_async_mock_heartbeats(void)
 {
 
     robusto_peer_t *peer = robusto_peers_find_peer_by_name(get_host_peer()->name);
-    TEST_ASSERT_MESSAGE(peer != NULL, "The TEST MOCK peer is not set");
+    TEST_ASSERT_MESSAGE(peer != NULL, "tst_async_mock_heartbeats :The host peer is not set");
 
     uint64_t start_time = r_millis();
     set_message_expectation(MMI_HEARTBEAT);

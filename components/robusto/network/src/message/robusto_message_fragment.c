@@ -16,10 +16,8 @@
 /* Used to identify fragmented message data (as opposed to the initiating message) */
 #define FRAGMENTED_DATA_CONTEXT MSG_FRAGMENTED + 0x40
 
-// Define a short cut. 4 the fragment counter uint32_t bytes.
+// Define a short cut. CRC + CONTEXT_BYTE + FRAG_TYPE + Fragment counter  the fragment counter uint32_t bytes.
 #define FRAG_HEADER_LEN (ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN + 1 + 4)
-
-
 
 // TODO: If this works, centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
 typedef struct fragmented_message
@@ -30,7 +28,7 @@ typedef struct fragmented_message
     uint8_t *data;
     // The length of the message
     uint32_t data_length;
-    // The number of fragments 
+    // The number of fragments
     uint32_t fragment_count;
     // Size of each fragment
     uint32_t fragment_size;
@@ -41,7 +39,8 @@ typedef struct fragmented_message
     /* When the frag_msg was created, a non-used element */
     uint32_t start_time;
 
-    SLIST_ENTRY(fragmented_message) fragmented_messages; /* Singly linked list */
+    SLIST_ENTRY(fragmented_message)
+    fragmented_messages; /* Singly linked list */
 
 } fragmented_message_t;
 
@@ -61,11 +60,11 @@ char *fragmentation_log_prefix = "NOT SET";
  * @param len
  * @param fragment_size
  */
-void handle_frag_request(robusto_peer_t *peer, robusto_media_t * media, const uint8_t *data, int len, uint32_t fragment_size)
+void handle_frag_request(robusto_peer_t *peer, robusto_media_t *media, const uint8_t *data, int len, uint32_t fragment_size)
 {
 
     // Manually check CRC32 hash
-    if (*(uint32_t *)(data) != robusto_crc32(0, data + 4, 17))
+    if (*(uint32_t *)(data) != robusto_crc32(0, data + 4, 18))
     {
         add_to_history(media, false, ROB_FAIL);
         ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because hash mismatch.");
@@ -73,27 +72,30 @@ void handle_frag_request(robusto_peer_t *peer, robusto_media_t * media, const ui
     }
 
     fragmented_message_t *frag_msg = robusto_malloc(sizeof(fragmented_message_t));
-    frag_msg->data_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 1);
-    frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 5);
-    frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 9);
-    frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 13);
+    frag_msg->data_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
+    frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 6);
+    frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 10);
+    frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14);
     // TODO: How big should we allow before SPIRAM and more?
     frag_msg->data = robusto_malloc(frag_msg->data_length);
     frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
-
+   
     ROB_LOGI(fragmentation_log_prefix, "Fragmented initialization received, info:\n \
         data_length: %lu bytes, fragment_count: %lu, fragment_size: %lu, hash: %lu.",
                 frag_msg->data_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
 
     /* When the frag_msg was created, a non-used element */
     frag_msg->start_time = r_millis();
+    
     SLIST_INSERT_HEAD(&fragmented_message_head, frag_msg, fragmented_messages);
+    
     last_frag_msg = frag_msg;
     media->last_receive = r_millis();
+
 }
 
-void handle_frag_message(robusto_peer_t *peer, robusto_media_t * media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message)
+void handle_frag_message(robusto_peer_t *peer, robusto_media_t *media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     // Initiate a new fragmented  (...stream?)
     fragmented_message_t *frag_msg;
@@ -102,16 +104,18 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t * media, const ui
         // Not the last fragmented message, find it
         ROB_LOGE(fragmentation_log_prefix, "Time to implement looking up the fragment message");
         return;
-    } 
-    else if (!last_frag_msg) {
+    }
+    else if (!last_frag_msg)
+    {
         ROB_LOGE(fragmentation_log_prefix, "We are getting fragments without having had a declared fragmented message.");
         return;
-    } else
+    }
+    else
     {
         ROB_LOGI(fragmentation_log_prefix, "Matched with cached frag");
         frag_msg = last_frag_msg;
     }
-    uint32_t msg_frag_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 1);
+    uint32_t msg_frag_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
 
     // We check the length of all fragments, start with calculating what the current should be
     uint32_t curr_frag_size = frag_msg->fragment_size;
@@ -180,7 +184,7 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t * media, const ui
         {
             ROB_LOGI(fragmentation_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->data_length);
             add_to_history(media, false, robusto_handle_incoming(frag_msg->data, frag_msg->data_length, peer, robusto_mt_espnow, 0));
-            //TODO: Decide when to remove the fragmented message. It should probably have a "done" property and timeout component. Perhaps a cleanup should be done periodically
+            // TODO: Decide when to remove the fragmented message. It should probably have a "done" property and timeout component. Perhaps a cleanup should be done periodically
         }
     }
 }
@@ -188,34 +192,33 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t * media, const ui
 /**
  * @brief Handled fragmented messages
  *
- * @param peer
- * @param data
- * @param len
+ * @param peer The sending peer
+ * @param data The fragment data
+ * @param len The length of the data
  * @param fragment_size The size of the fragment of the media
  */
-void handle_fragmented(robusto_peer_t *peer, robusto_media_t * media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message)
+void handle_fragmented(robusto_peer_t *peer, robusto_media_t *media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
-
-    if (data[ROBUSTO_CRC_LENGTH + 1] == FRAG_REQUEST)
+    switch (data[ROBUSTO_CRC_LENGTH + 1])
     {
-        handle_frag_request(peer, peer->state, data, len, fragment_size);
+    case FRAG_REQUEST:
+        handle_frag_request(peer, media, data, len, fragment_size);
+        break;
+    case FRAG_MESSAGE:
+        handle_frag_message(peer, media, data, len, fragment_size, send_message);
+        break;
+    default:
+        ROB_LOGE(fragmentation_log_prefix, "Invalid fragment type byte: %hu", data[ROBUSTO_CRC_LENGTH + 1]);
     }
-
-    if (data[ROBUSTO_CRC_LENGTH + 1] == FRAG_MESSAGE)
-    {
-        handle_frag_message(peer, peer->state, data, len, fragment_size, send_message);
-    }
-
     // Postpone QoS so it doesn't interfere with long transmissions.
     media->postpone_qos = true;
     return;
-
 }
 
 /**
- * @brief Sends a fragmented message 
+ * @brief Sends a fragmented message
  */
-rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t * media, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message)
+rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t *media, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message *send_message)
 {
 
     int rc = ROB_FAIL;
@@ -245,17 +248,18 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t * me
 
     // Encode into a message
     buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
-    memcpy(buffer + ROBUSTO_CRC_LENGTH + 1, &data_length, 4);
-    memcpy(buffer + ROBUSTO_CRC_LENGTH + 5, &fragment_count, 4);
-    memcpy(buffer + ROBUSTO_CRC_LENGTH + 9, &frag_msg->fragment_size, 4);
-    memcpy(buffer + ROBUSTO_CRC_LENGTH + 13, &frag_msg->hash, 4);
-    uint32_t msg_hash = robusto_crc32(0, buffer + 4, 17);
+    buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_REQUEST;
+    memcpy(buffer + ROBUSTO_CRC_LENGTH + 2, &data_length, 4);
+    memcpy(buffer + ROBUSTO_CRC_LENGTH + 6, &fragment_count, 4);
+    memcpy(buffer + ROBUSTO_CRC_LENGTH + 10, &frag_msg->fragment_size, 4);
+    memcpy(buffer + ROBUSTO_CRC_LENGTH + 14, &frag_msg->hash, 4);
+    uint32_t msg_hash = robusto_crc32(0, buffer + 4, 18);
     memcpy(buffer, &msg_hash, 4);
 
     ROB_LOGI(fragmentation_log_prefix, "ESP-NOW is heartbeat");
     rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, buffer, ROBUSTO_CRC_LENGTH + 17);
- 
-    if (send_message(&(peer->base_mac_address), buffer, ROBUSTO_CRC_LENGTH + 17, true) != ROB_OK)
+
+    if (send_message(&(peer->base_mac_address), buffer, ROBUSTO_CRC_LENGTH + 18, true) != ROB_OK)
     {
         ROB_LOGE(fragmentation_log_prefix, "Could not initiate fragmented messaging, got a failure sending");
         return ROB_FAIL;
@@ -265,12 +269,13 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t * me
     uint32_t curr_frag_size = fragment_size;
     // We always send the same hash, as an identifier
     memcpy(buffer, &frag_msg->hash, 4);
-    buffer[ROBUSTO_CRC_LENGTH] = FRAGMENTED_DATA_CONTEXT;
+    buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
+    buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
     // TODO: Do this against a map of parts to (re-) send.
     while (curr_part < fragment_count)
     {
         // Counter
-        memcpy(buffer + ROBUSTO_CRC_LENGTH + 1, &curr_part, sizeof(curr_part));
+        memcpy(buffer + ROBUSTO_CRC_LENGTH + 2, &curr_part, sizeof(curr_part));
 
         // If it is the last part, send only the remaining data
         if (curr_part == (fragment_count - 1))
