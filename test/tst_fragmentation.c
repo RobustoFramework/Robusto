@@ -31,8 +31,9 @@ void cb_incoming(incoming_queue_item_t *incoming_item) {
 
 rob_ret_val_t callback_response_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt) {
 
-    ROB_LOGI(FRAG_TAG,"response");
+    ROB_LOGI(FRAG_TAG,"Got response");
     rob_log_bit_mesh(ROB_LOG_INFO, FRAG_TAG, data, len);
+    handle_fragmented(peer, &(peer->mock_info), data, len, TST_FRAG_SIZE, &callback_response_message);
     return ROB_OK;
 }
 
@@ -53,11 +54,9 @@ rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, i
  */
 void fake_message() {
 
-    ROB_LOGI("fragmentation", "in tst_fragmentation_complete");
     robusto_register_handler(&cb_incoming);
     peer = robusto_peers_find_peer_by_name("TEST_MOCK");
-    TEST_ASSERT_MESSAGE(peer != NULL, "tst_fragmentation_complete :TEST_MOCK is not set");
-
+    TEST_ASSERT_MESSAGE(peer != NULL, "tst_fragmentation_complete TEST_MOCK is not set");
 
     // Build a 10K message
     uint8_t * data = robusto_malloc(TST_DATA_SIZE);
@@ -85,6 +84,7 @@ void fake_message() {
  * @brief Fake a happy flow fragmented transmission
  */
 void tst_fragmentation_complete(void) {
+    ROB_LOGI("fragmentation", "in tst_fragmentation_complete");
     skip_fragments = false;
     fake_message();
 
@@ -94,6 +94,7 @@ void tst_fragmentation_complete(void) {
  * @brief Fake a fragmented transmission, resending missing parts
  */
 void tst_fragmentation_resending(void) {
+    ROB_LOGI("fragmentation", "in tst_fragmentation_resending");
     skip_fragments = true;
     fake_message();
 
