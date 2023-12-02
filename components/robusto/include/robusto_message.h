@@ -283,10 +283,17 @@ typedef struct fragmented_message
 {
     // The hash of the message, used to identify the message
     uint32_t hash;
+    // We do not reuse the data pointer to:
+    // 1. save memory on sender, 2. make testing in the same space possible
     // The data to send
-    uint8_t *data;
+    uint8_t *send_data;
     // The length of the message
-    uint32_t data_length;
+    uint32_t send_data_length;
+    // The receive buffer
+    uint8_t *receive_buffer;
+    // The length of the message
+    uint32_t receive_buffer_length;
+
     // The number of fragments
     uint32_t fragment_count;
     // Size of each fragment

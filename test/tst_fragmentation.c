@@ -32,15 +32,16 @@ void cb_incoming(incoming_queue_item_t *incoming_item) {
 
 rob_ret_val_t callback_response_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt) {
 
-    ROB_LOGI(FRAG_TAG,"Got response");
+    ROB_LOGI(FRAG_TAG,"Got response, call %lu", call_counter);
     //rob_log_bit_mesh(ROB_LOG_INFO, FRAG_TAG, data, len);
     handle_fragmented(peer, &(peer->mock_info), data, len, TST_FRAG_SIZE, &callback_response_message);
+    call_counter++;
     return ROB_OK;
 }
 
 rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt) {
     ROB_LOGI(FRAG_TAG,"callback_send_message: call %lu", call_counter);
-    
+   // memcpy(get_last_frag_message()->data, test_data, TST_DATA_SIZE);
     if (skip_fragments && (call_counter == 2 || call_counter == 4)) {
         ROB_LOGI(FRAG_TAG,"Skipping call %lu", call_counter);
     } else {
@@ -73,7 +74,16 @@ void fake_message() {
     call_counter = 0;
     async_receive_flag = false;
     rob_ret_val_t res = send_message_fragmented(peer, &peer->mock_info, msg  + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES, TST_FRAG_SIZE, &callback_send_message);
-    //robusto_message_free(message);
+   if (robusto_waitfor_bool(&async_receive_flag, 30000)) {
+        ROB_LOGI("Test", "tst_fragmentation_complete: Async receive flag was set to true.");
+    } else {
+        TEST_FAIL_MESSAGE("Test failed, timed out.");
+    }
+    if (message == NULL) {
+        TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(TST_DATA_SIZE, message->binary_data_length, "The length of the binary data is wrong.");
+    robusto_message_free(message);
 }
 
 /**

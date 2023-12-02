@@ -60,6 +60,10 @@ void r_init_logging() {
     */
 
     printf("NOTE: Using microseconds in logging.\n      This due to the higher performance and faster logging on workstations.\n");
+    /* 
+        Disable buffering, as buffering causes missing output on segmentation faults. 
+    */
+    setbuf(stdout, NULL);
 };
 
 

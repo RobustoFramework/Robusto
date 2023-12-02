@@ -84,20 +84,28 @@ void handle_frag_request(robusto_peer_t *peer, robusto_media_t *media, const uin
         return;
     }
 
-    fragmented_message_t *frag_msg = robusto_malloc(sizeof(fragmented_message_t));
-    frag_msg->data_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
-    frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 6);
-    frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 10);
-    frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14);
+    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14));
+    if (!frag_msg)
+    {
+        frag_msg = robusto_malloc(sizeof(fragmented_message_t));
+
+        frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 6);
+        frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 10);
+        frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14);
+    } else {
+        ROB_LOGI(fragmentation_log_prefix, "The fragment transmission is already added, assuming same properties. Might be duplicate try or or testing.");
+    }
+
+    frag_msg->receive_buffer_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
     // TODO: How big should we allow before SPIRAM and more?
-    frag_msg->data = robusto_malloc(frag_msg->data_length);
+    frag_msg->receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);
     frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
     frag_msg->state = ROB_ST_RUNNING;
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
     
     ROB_LOGI(fragmentation_log_prefix, "Fragmented initialization received, info:\n \
         data_length: %lu bytes, fragment_count: %lu, fragment_size: %lu, hash: %lu.",
-             frag_msg->data_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
+             frag_msg->receive_buffer_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
 
     /* When the frag_msg was created, a non-used element */
     frag_msg->start_time = r_millis();
@@ -143,7 +151,7 @@ void check_parts(robusto_peer_t *peer, fragmented_message_t *frag_msg, robusto_m
     else
     {
         // Last, check hash and
-        if (frag_msg->hash != robusto_crc32(0, frag_msg->data, frag_msg->data_length))
+        if (frag_msg->hash != robusto_crc32(0, frag_msg->receive_buffer, frag_msg->receive_buffer_length))
         {
             ROB_LOGE(fragmentation_log_prefix, "The full message did not match with the hash");
             send_result(peer, frag_msg, ROB_ERR_WRONG_CRC, send_message);
@@ -152,9 +160,9 @@ void check_parts(robusto_peer_t *peer, fragmented_message_t *frag_msg, robusto_m
         }
         else
         {
-            ROB_LOGI(fragmentation_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->data_length);
+            ROB_LOGI(fragmentation_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->receive_buffer_length);
             send_result(peer, frag_msg, ROB_OK, send_message);
-            add_to_history(media, false, robusto_handle_incoming(frag_msg->data, frag_msg->data_length, peer, robusto_mt_none, 0));
+            add_to_history(media, false, robusto_handle_incoming(frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, robusto_mt_none, 0));
             // TODO: We'll need the media type here and instead go through that. Or have a callback for the handling of the finished message.
             // TODO: Remove the frag_msg from the list. (handle incoming have already freed the data)
             return;
@@ -165,10 +173,12 @@ void check_parts(robusto_peer_t *peer, fragmented_message_t *frag_msg, robusto_m
 void handle_frag_message(robusto_peer_t *peer, robusto_media_t *media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     // Initiate a new fragmented  (...stream?)
-
     ROB_LOGI(fragmentation_log_prefix, "handle_frag_message (hash %lu):", *(uint32_t *)data);
-    rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
-
+    if (len > ROBUSTO_CRC_LENGTH + 18) {
+        rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
+    } else {
+        rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
+    }    
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
     {
@@ -179,12 +189,12 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t *media, const uin
 
     // We check the length of all fragments, start with calculating what the current should be
     uint32_t curr_frag_size = frag_msg->fragment_size;
-    // TOOD: Handle an excplicit 0xFFFFFFFF
     if (msg_frag_count == frag_msg->fragment_count - 1)
     {
         // If it is the last fragment, it is whatever is left
-        curr_frag_size = frag_msg->data_length - (frag_msg->fragment_size * msg_frag_count);
+        curr_frag_size = frag_msg->receive_buffer_length - (frag_msg->fragment_size * msg_frag_count);
     }
+
     uint32_t expected_message_length = FRAG_HEADER_LEN + curr_frag_size;
     ROB_LOGI(fragmentation_log_prefix, "Received part %lu (of %lu - 1), length %lu bytes.", msg_frag_count, frag_msg->fragment_count, curr_frag_size);
     if (expected_message_length != len)
@@ -195,7 +205,7 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t *media, const uin
 
     // Length of the data checks out
     ROB_LOGI(fragmentation_log_prefix, "Storing fragment: %lu. Offset: %lu, length: %i", msg_frag_count, fragment_size * msg_frag_count, len - FRAG_HEADER_LEN);
-    memcpy(frag_msg->data + (frag_msg->fragment_size * msg_frag_count), data + FRAG_HEADER_LEN, len - FRAG_HEADER_LEN);
+    memcpy(frag_msg->receive_buffer + (frag_msg->fragment_size * msg_frag_count), data + FRAG_HEADER_LEN, len - FRAG_HEADER_LEN);
     frag_msg->received_fragments[msg_frag_count] = 1;
 
     // Are we at the last, or last requested, fragment, no less?
@@ -211,22 +221,22 @@ void handle_frag_message(robusto_peer_t *peer, robusto_media_t *media, const uin
     }
 }
 
-void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, uint32_t fragment_count, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message *send_message)
+void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_send_message *send_message)
 {
     uint8_t *buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
 
-    ROB_LOGI(fragmentation_log_prefix, "Send fragments (%" PRIu32 "):", fragment_count);
+    ROB_LOGI(fragmentation_log_prefix, "Send fragments (%" PRIu32 "):", frag_msg->fragment_count);
     //rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, data_length);
 
     // TODO: Apparently, ESP-NOW has no acknowledgement, we might need to add the same we do for LoRa, for example.
 
-    uint32_t curr_frag_size = fragment_size;
+    uint32_t curr_frag_size = frag_msg->fragment_size;
     // We always send the same hash, as an identifier
     memcpy(buffer, &frag_msg->hash, 4);
     buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
     buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
-    // TODO: Do this against a map of parts to (re-) send.
-    for (uint32_t curr_fragment = 0; curr_fragment < fragment_count; curr_fragment++)
+
+    for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
         if (frag_msg->received_fragments[curr_fragment] == 1)
         {
@@ -237,14 +247,14 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, uint32
         memcpy(buffer + ROBUSTO_CRC_LENGTH + 2, &curr_fragment, sizeof(curr_fragment));
 
         // If it is the last part, send only the remaining data
-        if (curr_fragment == (fragment_count - 1))
+        if (curr_fragment == (frag_msg->fragment_count - 1))
         {
-            curr_frag_size = data_length - (frag_msg->fragment_size * curr_fragment);
+            curr_frag_size = frag_msg->send_data_length - (frag_msg->fragment_size * curr_fragment);
         }
 
-        // Data
-        memcpy(buffer + FRAG_HEADER_LEN, data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
-        ROB_LOGI(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes.", curr_fragment, fragment_count, frag_msg->fragment_size * curr_fragment, curr_frag_size);
+        ROB_LOGI(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).", 
+            curr_fragment, frag_msg->fragment_count, frag_msg->fragment_size * curr_fragment, curr_frag_size, frag_msg->send_data_length);
+        memcpy(buffer + FRAG_HEADER_LEN, frag_msg->send_data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
         if (send_message(&(peer->base_mac_address), buffer, FRAG_HEADER_LEN + curr_frag_size, false) != ROB_OK)
         {
             ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment (%" PRIu32 "):", curr_fragment);
@@ -274,6 +284,7 @@ void handle_frag_resend(robusto_peer_t *peer, robusto_media_t *media, const uint
     {
         return;
     }
+    ROB_LOGI(fragmentation_log_prefix, "In handle_frag_resend, fragment count: %lu ", frag_msg->fragment_count);
     frag_msg->state = ROB_ST_RETRYING;
     if (len - (ROBUSTO_CRC_LENGTH + 2) != frag_msg->fragment_count)
     {
@@ -283,7 +294,7 @@ void handle_frag_resend(robusto_peer_t *peer, robusto_media_t *media, const uint
     }
     media->receive_successes++;
     memcpy(frag_msg->received_fragments, data + ROBUSTO_CRC_LENGTH + 2, len - (ROBUSTO_CRC_LENGTH + 2));
-    send_fragments(peer, frag_msg, frag_msg->fragment_count, frag_msg->data, frag_msg->data_length, frag_msg->fragment_size, send_message);
+    send_fragments(peer, frag_msg, send_message);
 }
 
 
@@ -389,12 +400,13 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t *med
     // First, tell the peer that we are going to send it a fragmented message
     // This is a message saying just that
     fragmented_message_t *frag_msg = robusto_malloc(sizeof(fragmented_message_t));
-    frag_msg->data_length = data_length;
+    frag_msg->send_data_length = data_length;
+    frag_msg->send_data = data;
     frag_msg->fragment_count = fragment_count;
     frag_msg->fragment_size = fragment_size;
     frag_msg->hash = robusto_crc32(0, data, data_length);
-    // TODO: How big should we allow before SPIRAM and more?
-    frag_msg->data = robusto_malloc(frag_msg->data_length);
+    
+
     frag_msg->state = ROB_ST_RUNNING;
     frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
@@ -422,7 +434,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t *med
     }
     // TODO: Apparently, ESP-NOW has no acknowledgement, we might need to add the same we do for LoRa, for example.
 
-    send_fragments(peer, frag_msg, fragment_count, data, data_length, fragment_size, send_message);
+    send_fragments(peer, frag_msg, send_message);
 
     return ROB_OK;
 }
