@@ -57,6 +57,7 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
 void send_result(robusto_peer_t * peer, fragmented_message_t * frag_msg, rob_ret_val_t return_value, cb_send_message *send_message) {
 
     uint8_t *buffer = robusto_malloc(ROBUSTO_CRC_LENGTH + 4);
+    memcpy(buffer, &frag_msg->hash, 4);
     // Encode into a message
     buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
     buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_RESULT;
@@ -306,24 +307,32 @@ void handle_frag_result(robusto_peer_t *peer, robusto_media_t *media, const uint
     {
         return;
     }
-    
-    rob_ret_val_t result = *(rob_ret_val_t *)data[ROBUSTO_CRC_LENGTH + 2];
+    rob_ret_val_t result;
+    memcpy(&result, data + ROBUSTO_CRC_LENGTH + 2, 2);
+   
+
     switch (result) {
         case ROB_OK:
+            ROB_LOGI(fragmentation_log_prefix, "Receiver reports successful transmisstion.");
             frag_msg->state = ROB_ST_SUCCEEDED;
             break;
         case ROB_FAIL:
+            ROB_LOGE(fragmentation_log_prefix, "Receiver reports unsuccessful successful transmisstion.");
+            frag_msg->state = ROB_ST_FAILED;
+            break;
+        case ROB_ERR_WRONG_CRC:
+            ROB_LOGE(fragmentation_log_prefix, "Receiver reports CRC mismatch");
             frag_msg->state = ROB_ST_FAILED;
             break;
         case ROB_ERR_TIMEOUT:
+            ROB_LOGE(fragmentation_log_prefix, "Receiver reports timeout ");
             frag_msg->state = ROB_ST_TIMED_OUT;
             break;
         default:
-            ROB_LOGE(fragmentation_log_prefix, "Unhandled fragmentation result code: %hi", result);
+            ROB_LOGE(fragmentation_log_prefix, "Unhandled fragmentation result code: %i", result);
             break;
         
     }
-     
     
 }
 
@@ -349,7 +358,7 @@ void handle_fragmented(robusto_peer_t *peer, robusto_media_t *media, const uint8
         handle_frag_resend(peer, media, data, len, fragment_size, send_message);
         break;
     case FRAG_RESULT:
-     //   handle_frag_result(peer, media, data, len, fragment_size, send_message);
+        handle_frag_result(peer, media, data, len, fragment_size, send_message);
         break;
     default:
         ROB_LOGE(fragmentation_log_prefix, "Invalid fragment type byte: %hu", data[ROBUSTO_CRC_LENGTH + 1]);
