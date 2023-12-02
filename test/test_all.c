@@ -171,7 +171,7 @@ void runUnityTests(void *pvParameters)
 
     ROB_LOGW("TEST", "Done waiting.");
     /* Synchronous testing*/
-    #if 0
+
 
     RUN_TEST(tst_sync_mock_send_message);
     robusto_yield();
@@ -205,8 +205,7 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_async_mock_service);
     robusto_yield();
-    #endif
-
+    
     RUN_TEST(tst_fragmentation_complete);
     robusto_yield();
     RUN_TEST(tst_fragmentation_resending);

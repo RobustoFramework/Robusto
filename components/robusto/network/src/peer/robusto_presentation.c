@@ -213,7 +213,7 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     
     peer->relation_id_incoming = relation_id_incoming;
     memcpy(data + 9, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
-    strcpy(data + 9 + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
+    strcpy((char *)data + 9 + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
     return robusto_make_binary_message(MSG_NETWORK, 0, 0, data, data_len, msg);
 }
 

@@ -1,5 +1,5 @@
 #include "tst_fragmentation.h"
-
+#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 // TODO: Add copyrights on all these files
 #include <unity.h>
 
@@ -105,4 +105,6 @@ void tst_fragmentation_resending(void) {
     fake_message();
 
 }
+
+#endif
 

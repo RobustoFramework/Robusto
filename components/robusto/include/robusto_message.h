@@ -329,26 +329,28 @@ typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data,
  * @brief Handle incoming fragmented messaged
  * 
  * @param peer The remote peer
+ * @param media_type The media type
  * @param data Incoming data
  * @param len Length of data
  * @param fragment_size The fragment size of the media
  * @param send_message A callback to be able to respond
  */
 
-void handle_fragmented(robusto_peer_t *peer, robusto_media_t * media, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
+void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
 
 
 /**
  * @brief Send a message in fragments. Data must be a Robusto message
  * 
  * @param peer The destination peer
+ * @param media_type The media type
  * @param data The message. Must be a valid and parsable Robusto message.
  * @param data_length The length of the message
  * @param fragment_size The size of the fragments
  * @param send_message A callback to be able to send messages
  * @return rob_ret_val_t 
  */
-rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, robusto_media_t * media, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
+rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
 
 /*
 Make messages
