@@ -44,6 +44,7 @@ extern "C"
 #include <robusto_peer.h>
 #include <robusto_media.h>
 #include <robusto_queue.h>
+#include <robusto_states.h>
 
 #include <inttypes.h>
 
@@ -128,10 +129,13 @@ typedef enum e_fragment_request
     FRAG_REQUEST      = 0x00,
     /* This is a part of a fragmented message transmission */
     FRAG_MESSAGE  = 0x01,
-    /* This is a message sent by the receiver which either a success message or a list of fragments that needs to be re-sent */ 
-    FRAG_RESULT   = 0x02,
     /* Asking the receiver the state of the request (if no result is received before the timeout or if progress is needed) */ 
-    FRAG_CHECK   = 0x03
+    FRAG_CHECK   = 0x02,
+    /* This is the success message from the receiver */ 
+    FRAG_RESEND   = 0x05,
+    /* This is the success message from the receiver */ 
+    FRAG_RESULT   = 0x06,
+
 } e_fragment_request_t;
 
 /* This is information that is encoded into a byte and sent with every message.  */
@@ -272,6 +276,44 @@ typedef void(poll_callback_cb)(queue_context_t * queue_context);
  * @param queue_context The queue context
  */
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context);
+
+
+// TODO: If this works, centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
+typedef struct fragmented_message
+{
+    // The hash of the message, used to identify the message
+    uint32_t hash;
+    // The data to send
+    uint8_t *data;
+    // The length of the message
+    uint32_t data_length;
+    // The number of fragments
+    uint32_t fragment_count;
+    // Size of each fragment
+    uint32_t fragment_size;
+
+    // A map of all the fragments that has been received (not automatically updated on the sender)
+    uint8_t *received_fragments; // TODO: This should instead be a bitmap to save space.
+    /* When the frag_msg was created, a non-used element */
+    uint32_t start_time;
+    /* If not 0, we have requested things to be sent again, and this is the last fragment we requested */
+    uint32_t last_requested;
+    /* The state of the fragment */
+    e_rob_state_t state;
+
+    SLIST_ENTRY(fragmented_message)
+    fragmented_messages; /* Singly linked list */
+
+} fragmented_message_t;
+
+/**
+ * @brief Get the last used frag message object. 
+ * @note Used mainly for intercepting during testing
+ * 
+ * @return fragmented_message_t * 
+ */
+fragmented_message_t * get_last_frag_message();
+
 
 // A callback that can be used to send messages
 typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt);

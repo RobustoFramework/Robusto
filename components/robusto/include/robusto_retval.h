@@ -55,7 +55,7 @@ typedef int16_t rob_ret_val_t;
 typedef enum e_robusto_return_codes
 {
 
-    /* An "return" code of 0x0 means success */
+    /* A "return" code of 0x0 means success */
     ROB_OK = 0,
 
     /* ------ General (RBC_GEN)-------*/
@@ -101,6 +101,8 @@ typedef enum e_robusto_return_codes
     ROB_ERR_WRONG_CRC = RBC_COM - 14,
     /* Invalid media */
     ROB_ERR_INVALID_MEDIA = RBC_COM - 15,
+
+
 
     /* There was an error adding a conversation to the conversation list */
     ROB_ERR_CONV_LIST = RBC_COM - 20,
