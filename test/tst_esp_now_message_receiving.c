@@ -9,7 +9,7 @@
 #include <robusto_incoming.h>
 
 static bool async_receive_flag = false;
-static incoming_queue_item_t *incoming_item = NULL;
+static robusto_message_t *incoming_message = NULL;
 
 static robusto_peer_t *incoming_peer = NULL;
 static uint8_t *reply_msg = NULL;
@@ -28,9 +28,7 @@ void tst_esp_now_message_receive_string_message_sync(void)
     while ((r_millis() < startime + 120000) && (retval == ROB_INFO_RECV_NO_MESSAGE)) {
         retval = robusto_receive_message_media_type(robusto_mt_espnow, &message);
         if ((retval == ROB_INFO_RECV_NO_MESSAGE) && (message != NULL)) {
-            robusto_free(message->strings);
-            robusto_free(message->raw_data);
-            robusto_free(message);
+            robusto_message_free(incoming_message);
         }
         attempts++;
         r_delay(10);
@@ -38,7 +36,6 @@ void tst_esp_now_message_receive_string_message_sync(void)
 
     robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 0);
 
-    
     ROB_LOGI("TEST", "Receive attempts: %i ", attempts);
 
     TEST_ASSERT_EQUAL_MESSAGE(ROB_OK,retval, "Receive message did not return ROB_OK (-203 is no message).");
@@ -47,9 +44,7 @@ void tst_esp_now_message_receive_string_message_sync(void)
         TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, message->strings[0], "First string did not match");
         TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), message->strings[1], "Second string did not match");
     }
-    robusto_free(message->strings);
-    //robusto_free(message->raw_data);
-    robusto_free(message);
+    robusto_message_free(incoming_message);
 
 
 }
@@ -125,8 +120,9 @@ void tst_esp_now_message_receive_presentation(void)
 
 void esp_now_tst_do_on_work(incoming_queue_item_t *_incoming_item) {
     ROB_LOGI("TEST", "In esp_now_tst_do_on_work");
-    incoming_item = _incoming_item;
+    incoming_message = _incoming_item->message;
     async_receive_flag = true;   
+    _incoming_item->service_frees_message = true;
 
 }
 
@@ -135,42 +131,43 @@ void tst_esp_now_message_receive_string_message(void) {
     // Register the on work callback
     robusto_register_handler(esp_now_tst_do_on_work);
     async_receive_flag = false;
-    incoming_item = NULL;	
+    incoming_message = NULL;	
 
     if (robusto_waitfor_bool(&async_receive_flag, 30000)) {
         ROB_LOGI("Test", "Async receive flag was set to true.");
     } else {
         TEST_FAIL_MESSAGE("Test failed, timed out.");
     }
-    if (incoming_item == NULL) {
+    if (incoming_message == NULL) {
         TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
     }
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, incoming_item->message->string_count, "The string count is wrong.");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, incoming_item->message->strings[0], "First string did not match");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), incoming_item->message->strings[1], "Second string did not match");
-    
-
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(2, incoming_message->string_count, "The string count is wrong.");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, incoming_message->strings[0], "First string did not match");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), incoming_message->strings[1], "Second string did not match");
+    robusto_message_free(incoming_message);
+    // TODO: Rewrite all incoming items to incoming message
 }
 
 
 
-void tst_esp_now_message_receive_multipart_message(void) {
+void tst_esp_now_message_receive_fragmented_message(void) {
 
     // Register the on work callback
     robusto_register_handler(esp_now_tst_do_on_work);
     async_receive_flag = false;
-    incoming_item = NULL;	
+    incoming_message = NULL;	
 
-    if (robusto_waitfor_bool(&async_receive_flag, 30000)) {
+    if (robusto_waitfor_bool(&async_receive_flag, 6000)) {
         ROB_LOGI("Test", "Async receive flag was set to true.");
     } else {
         TEST_FAIL_MESSAGE("Test failed, timed out.");
     }
-    if (incoming_item == NULL) {
+    if (incoming_message == NULL) {
         TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
     }
-    TEST_ASSERT_EQUAL_INT_MESSAGE(1000, incoming_item->message->binary_data_length, "The binary data length is wrong.");
     
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, incoming_message->binary_data_length, "The binary data length is wrong.");
+    robusto_message_free(incoming_message);
 
 }
 

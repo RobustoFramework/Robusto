@@ -66,14 +66,14 @@ static int synchro_data_len = 0;
 static robusto_peer_t *synchro_peer = NULL;
 
 
-rob_ret_val_t esp_now_send_check(rob_mac_address *base_mac_address, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_length, bool receipt)
 {
     has_receipt = false;
-    int rc = esp_now_send(base_mac_address, data, data_length);
+    int rc = esp_now_send(&peer->base_mac_address, data, data_length);
     if (rc != ESP_OK)
     {
         ROB_LOGE(espnow_log_prefix, "Mac address:");
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, &peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         if (rc == ESP_ERR_ESPNOW_NOT_INIT)
         {
             ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NOT_INIT");
@@ -295,7 +295,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
     }
 
     has_receipt = false;
-    int rc = esp_now_send_check(&(peer->base_mac_address), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, true);
+    int rc = esp_now_send_check(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, true);
     if (rc != ESP_OK)
     {
         return -ROB_ERR_SEND_FAIL;

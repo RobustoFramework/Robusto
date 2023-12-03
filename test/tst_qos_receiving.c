@@ -12,7 +12,7 @@
 #include "tst_defs.h"
 
 static bool async_receive_flag = false;
-static incoming_queue_item_t *incoming_item = NULL;
+static robusto_message *incoming_message = NULL;
 
 static robusto_peer_t *incoming_peer = NULL;
 static uint8_t *reply_msg = NULL;
@@ -98,7 +98,8 @@ void tst_i2c_message_receive_presentation(void)
 
 void i2c_tst_do_on_work(incoming_queue_item_t *_incoming_item) {
     ROB_LOGI("TEST", "In i2c_tst_do_on_work");
-    incoming_item = _incoming_item;
+    incoming_message = _incoming_item->message;
+
     async_receive_flag = true;   
 
 }
@@ -108,19 +109,19 @@ void tst_i2c_message_receive_string_message(void) {
     // Register the on work callback
     robusto_register_handler(i2c_tst_do_on_work);
     async_receive_flag = false;
-    incoming_item = NULL;	
+    incoming_message = NULL;	
 
     if (robusto_waitfor_bool(&async_receive_flag, 30000)) {
         ROB_LOGI("Test", "Async receive flag was set to true.");
     } else {
         TEST_FAIL_MESSAGE("Test failed, timed out.");
     }
-    if (incoming_item == NULL) {
-        TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
+    if (incoming_message == NULL) {
+        TEST_FAIL_MESSAGE("Test failed, incoming_message NULL.");
     }
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, incoming_item->message->string_count, "The string count is wrong.");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, incoming_item->message->strings[0], "First string did not match");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), incoming_item->message->strings[1], "Second string did not match");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(2, incoming_message->string_count, "The string count is wrong.");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, incoming_message->strings[0], "First string did not match");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), incoming_message->strings[1], "Second string did not match");
     
 
 }

@@ -278,6 +278,7 @@ typedef void(poll_callback_cb)(queue_context_t * queue_context);
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context);
 
 
+
 // TODO: If this works, centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
 typedef struct fragmented_message
 {
@@ -307,9 +308,10 @@ typedef struct fragmented_message
     uint32_t last_requested;
     /* The state of the fragment */
     e_rob_state_t state;
+    /* Abort the transmission (wait 1000ms before removing structure) */
+    bool abort_transmission;
 
-    SLIST_ENTRY(fragmented_message)
-    fragmented_messages; /* Singly linked list */
+    SLIST_ENTRY(fragmented_message) fragmented_messages; /* Singly linked list */
 
 } fragmented_message_t;
 

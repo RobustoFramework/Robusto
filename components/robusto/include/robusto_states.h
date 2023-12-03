@@ -46,10 +46,11 @@ typedef enum e_rob_state
     ROB_ST_RUNNING     = 1,
     ROB_ST_PAUSED      = 2,
     ROB_ST_RETRYING    = 3,
-    ROB_ST_STOPPED     = 4,
+    // End states
+    ROB_ST_SUCCEEDED   = 4,
     ROB_ST_FAILED      = 5,
     ROB_ST_TIMED_OUT   = 6,
-    ROB_ST_SUCCEEDED   = 7,
+    ROB_ST_ABORTED     = 7,
 
 } e_rob_state_t;
 
