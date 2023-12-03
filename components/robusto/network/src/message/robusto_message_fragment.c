@@ -199,6 +199,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     // Initiate a new fragmented  (...stream?)
     ROB_LOGI(fragmentation_log_prefix, "handle_frag_message (hash %lu):", *(uint32_t *)data);
     robusto_media_t *media = get_media_info(peer, media_type);
+    /*
     if (len > ROBUSTO_CRC_LENGTH + 18)
     {
         rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
@@ -206,7 +207,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     else
     {
         rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
-    }
+    }*/
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
     {
