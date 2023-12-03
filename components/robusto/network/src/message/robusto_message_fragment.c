@@ -286,7 +286,7 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
         ROB_LOGI(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).",
                  curr_fragment + 1, frag_msg->fragment_count, frag_msg->fragment_size * curr_fragment, curr_frag_size, frag_msg->send_data_length);
         memcpy(buffer + FRAG_HEADER_LEN, frag_msg->send_data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
-        if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false) != ROB_OK)
+        if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
         {
             ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment  ([%" PRIu32 "]):", curr_fragment);
             // TODO: We might want store failures to resend this
