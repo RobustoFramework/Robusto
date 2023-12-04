@@ -68,6 +68,8 @@ static robusto_peer_t *synchro_peer = NULL;
 
 rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_length, bool receipt)
 {
+
+    // TODO: Recommend more wifi TX buffers and add warning if not enabled
     has_receipt = false;
     int rc = esp_now_send(&peer->base_mac_address, data, data_length);
     if (rc != ESP_OK)
