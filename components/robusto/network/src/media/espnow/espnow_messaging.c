@@ -213,7 +213,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(esp_now_info->src_addr);
     if (peer != NULL)
     {
-        ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
+        ROB_LOGD(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
                  esp_now_info->rx_ctrl->rssi, esp_now_info->rx_ctrl->rate);
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
     }

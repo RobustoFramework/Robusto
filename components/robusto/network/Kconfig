@@ -145,6 +145,22 @@ menu "Networking"
 					
 
 		endmenu
+        config ROBUSTO_TESTING_SKIP_NTH_FRAGMENT
+            int "Fragment to skip in testing"
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING
+            default 2
+            help
+                This causes the mentioned fragment to be skipped in testing to test resending fragments.
+                -1 means no fragments are skipped.
+
+        config ROBUSTO_TESTING_FRAGMENT_MESSAGE_SIZE
+            int "Fragment size in testing"
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING
+            default 20000
+            help
+                The size in kb of the fragments tested (also used for the number of milliseconds until the tests timeout for ESP-NOW).
+                Note that they need to match on sender and receiver.
+        
         choice ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA
             bool "The media to start testing with"
             help

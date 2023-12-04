@@ -17,6 +17,12 @@
 // Define a short cut. CRC + CONTEXT_BYTE + FRAG_TYPE + Fragment counter  the fragment counter uint32_t bytes.
 #define FRAG_HEADER_LEN (ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN + 1 + 4)
 
+#if CONFIG_ROBUSTO_TESTING_SKIP_NTH_FRAGMENT > -1
+#define SKIP_FRAGMENT (curr_fragment != CONFIG_ROBUSTO_TESTING_SKIP_NTH_FRAGMENT) && 
+#else
+#define SKIP_FRAGMENT
+#endif
+
 char *fragmentation_log_prefix = "NOT SET";
 
 SLIST_HEAD(slist_fragmented_messages_head, fragmented_message);
@@ -59,7 +65,7 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
     }
     else
     {
-        ROB_LOGI(fragmentation_log_prefix, "Matched with cached frag");
+        ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
         retval = last_frag_msg;
     }
     if (retval)
@@ -140,7 +146,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     media->last_receive = r_millis();
 }
 
-void check_parts(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)
+void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)
 {
 
     // Check that we have no missing parts, we do this extra pass to save memory
@@ -167,8 +173,6 @@ void check_parts(robusto_peer_t *peer, e_media_type media_type, fragmented_messa
         {
             *(uint32_t *)(missing + ROBUSTO_CRC_LENGTH + 2 + missing_counter) = frag_msg->received_fragments[missing_counter];
         }
-        // TODO: We probably needs to have CRCs on some medias
-        //*(uint32_t *)(missing) = robusto_crc32(0, missing + ROBUSTO_CRC_LENGTH, FRAG_HEADER_LEN + missing_fragments);
         send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, false);
         return;
     }
@@ -233,7 +237,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     }
 
     // Length of the data checks out
-    ROB_LOGI(fragmentation_log_prefix, "Storing fragment: %lu. Offset: %lu, length: %i", msg_frag_count, fragment_size * msg_frag_count, len - FRAG_HEADER_LEN);
+    ROB_LOGD(fragmentation_log_prefix, "Storing fragment: %lu. Offset: %lu, length: %i", msg_frag_count, fragment_size * msg_frag_count, len - FRAG_HEADER_LEN);
     memcpy(frag_msg->receive_buffer + (frag_msg->fragment_size * msg_frag_count), data + FRAG_HEADER_LEN, len - FRAG_HEADER_LEN);
     frag_msg->received_fragments[msg_frag_count] = 1;
 
@@ -245,7 +249,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
         // If received fragments doesn't add up to fragment count, send list of missing fragments to sender
         // Note that we probably do not want to handle larger data typically, even though SPIRAM may support it. A larger ESP-NOW frame size would change that though.
 
-        check_parts(peer, media_type, frag_msg, send_message);
+        check_fragments(peer, media_type, frag_msg, send_message);
     }
 }
 
@@ -284,10 +288,11 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
             curr_frag_size = frag_msg->send_data_length - (frag_msg->fragment_size * curr_fragment);
         }
 
-        ROB_LOGI(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).",
+        ROB_LOGD(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).",
                  curr_fragment + 1, frag_msg->fragment_count, frag_msg->fragment_size * curr_fragment, curr_frag_size, frag_msg->send_data_length);
         memcpy(buffer + FRAG_HEADER_LEN, frag_msg->send_data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
-        if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
+        
+        if (SKIP_FRAGMENT send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
         {
             ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment  ([%" PRIu32 "]):", curr_fragment);
             // TODO: We might want store failures to resend this
@@ -330,6 +335,29 @@ void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uin
     send_fragments(peer, frag_msg, send_message);
 }
 
+/**
+ * @brief Do a check
+ *
+ * @param peer
+ * @param media
+ * @param data
+ * @param len
+ * @param fragment_size
+ * @param send_message
+ */
+
+void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+{
+    ROB_LOGI(fragmentation_log_prefix, "In handle_frag_check");
+    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
+    if (!frag_msg)
+    {
+        return;
+    } else {
+        check_fragments(peer, media_type, frag_msg, send_message);
+    }
+
+}
 /**
  * @brief Handle the success message
  *
@@ -401,6 +429,9 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
     case FRAG_RESULT:
         handle_frag_result(peer, media_type, data, len, fragment_size, send_message);
         break;
+    case FRAG_CHECK:
+        handle_frag_check(peer, media_type, data, len, fragment_size, send_message);
+        break;
     default:
         ROB_LOGE(fragmentation_log_prefix, "Invalid fragment type byte: %hu", data[ROBUSTO_CRC_LENGTH + 1]);
     }
@@ -409,6 +440,17 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
     return;
 }
 
+rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message) {
+
+    ROB_LOGI(fragmentation_log_prefix, "In send_frag_check");
+    uint8_t *msg_frag_check = robusto_malloc(ROBUSTO_CRC_LENGTH + 2);
+    memcpy(msg_frag_check, &frag_msg->hash, 4);
+    msg_frag_check[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
+    msg_frag_check[ROBUSTO_CRC_LENGTH + 1] = FRAG_CHECK;
+
+    send_message(peer, msg_frag_check, ROBUSTO_CRC_LENGTH + 2, false);
+    return ROB_OK;
+}
 /**
  * @brief Sends a fragmented message
  */
@@ -467,46 +509,63 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
 
     send_fragments(peer, frag_msg, send_message);
     uint32_t starttime = r_millis();
-    // TODO: This is a catch-all, but to improve and handle very slow medias, how do we know for how long to wait? Add an increasing TTL on the frag_msg?
-    while (frag_msg->state < ROB_ST_SUCCEEDED && (r_millis() < starttime + 30000))
-    {
-        r_delay(10);
-    }
-    if (r_millis() > starttime + 30000)
-    {
-        ROB_LOGE(fragmentation_log_prefix, "Waited for fragmented message too long, timing out and closing the transmission.");
-        frag_msg->abort_transmission = true;
-        r_delay(1000);
-    }
-    else
-        // TODO: Remove
+
+    // A state machine that handles the probes
+    while (1) {
+        // First, we identify that we are at least done.
+        while (frag_msg->state < ROB_ST_SUCCEEDED && (r_millis() < starttime + 30000))
+        {
+            robusto_yield();
+        }
+        if (r_millis() > (starttime + 30000)) {
+            ROB_LOGE(fragmentation_log_prefix, "Waited for fragmented message too long, timing out and closing the transmission.");
+            frag_msg->abort_transmission = true;
+            r_delay(1000);
+            goto finish;
+        }        
+        starttime = r_millis();
+        if (frag_msg->state == ROB_ST_DONE) {
+            // If we are in done state, await result or timeout
+            while ((frag_msg->state == ROB_ST_DONE) && (r_millis() < starttime + 500)) {
+                robusto_yield();
+            }
+            if (frag_msg->state == ROB_ST_DONE) {
+                // We haven't received a result, ask for it.
+                send_frag_check(peer, media_type, frag_msg, send_message);
+                continue;
+            }
+        }
         if (frag_msg->state == ROB_ST_SUCCEEDED)
         {
             ROB_LOGI(fragmentation_log_prefix, "Fragmented message sent successfully");
             rc = ROB_OK;
-        }
-        else
+            goto finish;
+        }   
+
+        switch (frag_msg->state)
         {
-            switch (frag_msg->state)
-            {
             case ROB_ST_TIMED_OUT:
                 ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message timed out.");
                 rc = ROB_FAIL;
+                goto finish;
                 break;
             case ROB_ST_ABORTED:
                 ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message aborted.");
                 rc = ROB_FAIL;
+                goto finish;
                 break;
             case ROB_ST_FAILED:
                 ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message failed (likely bad CRC).");
                 rc = ROB_FAIL;
+                goto finish;
                 break;
             default:
                 ROB_LOGE(fragmentation_log_prefix, "Internal error: Sending fragmented message ended in an unexpected state: %u.", frag_msg->state);
                 rc = ROB_FAIL;
+                goto finish;
                 break;
-            }
         }
+    }
 finish:
     remove_fragmented_message(frag_msg);
     // TODO: Remove frag_msg from list
