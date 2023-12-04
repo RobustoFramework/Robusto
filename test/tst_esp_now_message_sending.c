@@ -99,9 +99,9 @@ void tst_esp_now_message_send_message_fragmented(void)
 	robusto_peer_t * peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
 	TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Did not find the peer, did the presentation fail?");
     queue_state *state = robusto_malloc(sizeof(queue_state));
-    uint8_t * test_data = robusto_malloc(1000);
-    memset(test_data, 1, 1000);
-	rob_ret_val_t ret_val = send_message_binary(peer, 0, 0,test_data, 1000, state);
+    uint8_t * test_data = robusto_malloc(20000);
+    memset(test_data, 1, 20000);
+	rob_ret_val_t ret_val = send_message_binary(peer, 0, 0,test_data, 20000, state);
     TEST_ASSERT_MESSAGE(ret_val == ROB_OK ,"Bad result from send message (fragmented).");
     rob_ret_val_t ret_val_flag;
     if (!robusto_waitfor_queue_state(state, 2000, &ret_val_flag)) {

@@ -166,7 +166,7 @@ void tst_esp_now_message_receive_fragmented_message(void) {
         TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
     }
     
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1000, incoming_message->binary_data_length, "The binary data length is wrong.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2000, incoming_message->binary_data_length, "The binary data length is wrong.");
     robusto_message_free(incoming_message);
 
 }
