@@ -253,7 +253,9 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
 
     if ((data[ROBUSTO_CRC_LENGTH] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
     {
-        handle_fragmented(peer, robusto_mt_espnow, data, len, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
+        uint8_t *n_data = robusto_malloc(len);
+        memcpy(n_data, data, len);
+        handle_fragmented(peer, robusto_mt_espnow, n_data, len, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
         return;
     }
 

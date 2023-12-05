@@ -325,6 +325,15 @@ fragmented_message_t * get_last_frag_message();
 
 
 // A callback that can be used to send messages
+/**
+ * @brief 
+ * 
+ * @param peer A callback that can be used to send messages
+ * @param data The data to send
+ * @param len Length of the data
+ * @param receipt Wait for a receipt
+ * @return typedef The return value
+ */
 typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt);
 
 /**
