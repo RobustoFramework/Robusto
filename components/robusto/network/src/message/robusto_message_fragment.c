@@ -18,9 +18,9 @@
 #define FRAG_HEADER_LEN (ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN + 1 + 4)
 
 #if CONFIG_ROBUSTO_TESTING_SKIP_NTH_FRAGMENT > -1
-#define SKIP_FRAGMENT (curr_fragment != CONFIG_ROBUSTO_TESTING_SKIP_NTH_FRAGMENT || frag_msg->state == ROB_ST_RETRYING) &&
+#define SKIP_FRAGMENT_TEST curr_fragment != CONFIG_ROBUSTO_TESTING_SKIP_NTH_FRAGMENT || frag_msg->state == ROB_ST_RETRYING 
 #else
-#define SKIP_FRAGMENT
+#define SKIP_FRAGMENT_TEST 1
 #endif
 
 char *fragmentation_log_prefix = "NOT SET";
@@ -297,10 +297,10 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
         }
         memcpy(buffer + FRAG_HEADER_LEN, frag_msg->send_data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
         
-        if (SKIP_FRAGMENT send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
-        {
-            ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment  ([%" PRIu32 "]):", curr_fragment);
-            // TODO: We might want store failures to resend this
+        if (SKIP_FRAGMENT_TEST) {
+            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK) {
+                ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
+            }
         }
         robusto_yield();
     }
@@ -572,7 +572,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
                 goto finish;
                 break;
             case ROB_ST_RETRYING:
-                ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message is retrying.");
+                ROB_LOGI(fragmentation_log_prefix, "Sending fragmented message is retrying.");
                 continue;
                 break;
             default:
