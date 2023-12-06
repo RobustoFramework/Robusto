@@ -1,0 +1,79 @@
+; PlatformIO Project Configuration File
+;
+;   Build options: build flags, source filter
+;   Upload options: custom upload port, speed and extra flags
+;   Library options: dependencies, extra library storages
+;   Advanced options: extra scripting
+;
+; Please visit documentation for the other options and examples
+; https://docs.platformio.org/page/projectconf.html
+
+[platformio]
+src_dir = examples/src
+test_dir = test
+
+[env]
+test_framework = unity
+;monitor_raw = yes
+lib_deps =
+  https://github.com/nicklasb/robusto-platformio.git
+
+build_type = debug
+
+
+[env:Native]
+; Linux/MacOs/Windows functionality.
+platform=native
+lib_extra_dirs = components, test
+; If there is a way to make things work without turning of compatibility checks?
+lib_compat_mode = off
+build_flags =
+  --coverage
+debug_test = *
+
+extra_scripts = 
+  ${env.extra_scripts}
+  test/test-coverage.py
+
+[env:TTGO-T-Beam_SIM7000G]
+; Used with the TTGO T-BEAM SIM-7000 board
+platform = espressif32@6.4.0
+framework = espidf
+board = ttgo-t-beam
+monitor_port = /dev/cu.wchusbserial54D80084791
+upload_port = /dev/cu.wchusbserial54D80084791
+test_port = /dev/cu.wchusbserial54D80084791
+
+debug_test = *
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+
+;lib_extra_dirs = test
+; Better partioning
+board_build.partitions = min_spiffs.csv
+; Private: MAC 08b61fc0d660
+lib_deps = 
+  ${env.lib_deps}
+  ;https://github.com/jgromes/RadioLib.git
+  ;jgromes/RadioLib@^6.0.0
+
+
+[env:ESP32cam]
+; Used with the The ESP32 cam board
+platform = espressif32@6.4.0
+framework = espidf
+board = esp32cam
+
+monitor_port = /dev/cu.usbserial-14130
+upload_port = /dev/cu.usbserial-14130
+test_port = /dev/cu.usbserial-14130
+
+monitor_speed = 115200
+monitor_filters = esp32_exception_decoder
+upload_protocol = esptool
+
+;lib_extra_dirs = test
+
+; Better partioning
+board_build.partitions = min_spiffs.csv
+
