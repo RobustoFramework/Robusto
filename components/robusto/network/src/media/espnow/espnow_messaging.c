@@ -113,17 +113,16 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_
             ROB_LOGE(espnow_log_prefix, "ESP-NOW unknown error: %i", rc);
         }
         rc = -ROB_ERR_SEND_FAIL;
+    } else  {
+        rc = ROB_OK;
     }
-    rc = ROB_OK;
-
+    
     if (!receipt) {
         return rc;
     }
 
     // We want to wait to make sure the transmission is done.
-    int64_t start = r_millis();
-
-    // TODO: Should we have a separate timeout setting here? It is not like a healty ESP-NOW-peer would take more han milliseconds to send a receipt.
+    int32_t start = r_millis();
     while (!has_receipt && r_millis() < start + 2000)
     {
         robusto_yield();
