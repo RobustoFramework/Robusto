@@ -1,7 +1,7 @@
 
 /**
  * @file incoming_network.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Handling of incoming networking-control-related messaging.
  * @version 0.1
  * @date 2023-02-19

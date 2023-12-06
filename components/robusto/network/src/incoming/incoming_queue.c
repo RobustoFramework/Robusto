@@ -1,7 +1,7 @@
 
 /**
  * @file incoming_queue.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The queue for incoming messages
  * @version 0.1
  * @date 2023-02-19

@@ -1,7 +1,7 @@
 
 /**
  * @file qos_recovery.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief QoS failure recovery
  * @version 0.1
  * @date 2023-02-19

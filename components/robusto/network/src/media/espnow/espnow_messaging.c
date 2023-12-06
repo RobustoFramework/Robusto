@@ -1,7 +1,7 @@
 
 /**
  * @file espnow_messaging.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Implementation of ESP-NOW media
  * @version 0.1
  * @date 2023-02-19

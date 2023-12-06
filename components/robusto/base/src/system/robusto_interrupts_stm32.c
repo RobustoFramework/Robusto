@@ -1,6 +1,6 @@
 /**
  * @file compat_interrupts_stm32.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief STM32 interrupt handling implementations
  * @version 0.1
  * @date 2023-02-19

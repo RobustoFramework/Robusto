@@ -1,6 +1,6 @@
 /**
  * @file conductor_server.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief An example Robusto project.
  * @note This file is not supposed to be executed, but a part of the development functionality.
  * @version 0.1

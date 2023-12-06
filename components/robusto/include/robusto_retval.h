@@ -1,6 +1,6 @@
 /**
  * @file robusto_retval.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Return values functionality.
  * @version 0.1
  * @date 2023-02-19

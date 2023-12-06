@@ -1,6 +1,6 @@
 /**
  * @file compat_mbed.hpp
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Mbed compatibility layer
  * @version 0.1
  * @date 2023-02-19

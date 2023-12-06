@@ -1,6 +1,6 @@
 /**
  * @file robconfig.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief This includes the Robusto config generated configuration files.
  * @version 0.1
  * @date 2023-02-19

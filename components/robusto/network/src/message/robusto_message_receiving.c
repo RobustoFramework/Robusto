@@ -1,6 +1,6 @@
 /**
  * @file robusto_message_sending.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto functionality for receiving messages
  * @version 0.1
  * @date 2023-02-19

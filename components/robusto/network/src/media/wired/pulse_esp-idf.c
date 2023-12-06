@@ -1,7 +1,7 @@
 
 /**
  * @file pulse_esp-idf.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief ESP-IDF implementation of the pulse library
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file robusto_queue.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief A template queue and the base worker. TODO: This should probably be reworked somehow
  * @version 0.1
  * @date 2023-02-19

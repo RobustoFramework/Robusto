@@ -1,7 +1,7 @@
 /**
  * @file robusto_message_building.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
- * @brief Robusto messaging functionality
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
+ * @brief Robusto message parsing
  * @version 0.1
  * @date 2023-02-19
  * 

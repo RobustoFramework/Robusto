@@ -1,6 +1,6 @@
 /**
  * @file robusto_concurrency_freertos.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The Robusto concurrency implementation for freeRTOS-compatible platforms.
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file init_arduino.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robust initialization for the Arduino platform. 
  * @version 0.1
  * @date 2023-02-19

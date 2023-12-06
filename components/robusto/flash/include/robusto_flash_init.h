@@ -1,6 +1,6 @@
 /**
  * @file robusto_flash_init.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The internal header for the Robusto flash initialization
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file robusto_concurrency_native.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The Robusto concurrency implementation for native-compatible platforms (Linux/Windows/MacOS).
  * @version 0.1
  * @date 2023-02-19

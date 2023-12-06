@@ -1,6 +1,6 @@
 /**
  * @file robusto_concurrency_init.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
  * @note This is for the most normal cases, for more advanced variants, look into using the platform specific variants
  * @version 0.1

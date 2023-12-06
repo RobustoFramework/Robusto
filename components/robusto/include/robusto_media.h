@@ -1,6 +1,6 @@
 /**
  * @file robusto_media.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto media handling
  * @version 0.1
  * @date 2023-02-19

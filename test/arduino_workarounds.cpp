@@ -1,6 +1,6 @@
 /**
  * @file arduino_workarounds.cpp
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief This file contains workarounds for Arduino-based platform variants.
  * @version 0.1
  * @date 2023-04-09

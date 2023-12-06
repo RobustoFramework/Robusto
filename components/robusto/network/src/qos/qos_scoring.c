@@ -2,7 +2,7 @@
 
 /**
  * @file qos_scoring.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief QoS scoring implementation
  * @version 0.1
  * @date 2023-02-19

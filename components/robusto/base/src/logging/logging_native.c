@@ -1,6 +1,6 @@
 /**
  * @file log_native.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Logging implementation for the native platform (host). 
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file robusto_cryptography.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Provides the Robusto cryptography interface
  * @version 0.1
  * @date 2023-02-19

@@ -1,7 +1,7 @@
 /**
  * @file robusto_message_sending.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
- * @brief Robusto messaging functionality
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
+ * @brief Robusto message sending management, retrying, 
  * @version 0.1
  * @date 2023-02-19
  *
@@ -218,6 +218,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
         return ROB_OK;
     }
 fail: 
+    // TODO: Establish a practice for all functions and queues, when is who responsible for freeing
     robusto_free(dest_message);
     robusto_set_queue_state_queued_on_ok(state, ROB_FAIL);
     return ROB_FAIL;

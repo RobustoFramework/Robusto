@@ -1,6 +1,6 @@
 /**
  * @file i2c_messaging.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief I2C messaging implementation
  * @version 0.1
  * @date 2023-02-19

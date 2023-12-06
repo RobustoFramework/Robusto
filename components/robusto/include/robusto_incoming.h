@@ -1,7 +1,7 @@
 
 /**
  * @file robusto_handler.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Handling of incoming data
  * @version 0.1
  * @date 2023-02-19

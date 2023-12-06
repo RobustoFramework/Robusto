@@ -1,6 +1,6 @@
 /**
  * @file robusto_flash.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Flash memory management.
  * @version 0.1
  * @date 2023-02-19

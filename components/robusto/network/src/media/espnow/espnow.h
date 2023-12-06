@@ -1,6 +1,6 @@
 /**
  * @file espnow.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The ESP-NOW media implements the proprietary ESP-NOW protocol by Espressif
  * @version 0.1
  * @date 2023-02-19

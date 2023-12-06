@@ -1,6 +1,6 @@
 /**
  * @file robusto_time.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Time keeping functionality.
  * @version 0.1
  * @date 2023-02-19

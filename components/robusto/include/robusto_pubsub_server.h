@@ -1,6 +1,6 @@
 /**
  * @file robusto_pubsub.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief This is a publish-subscribe implementation Robusto-style
  
  * @version 0.1

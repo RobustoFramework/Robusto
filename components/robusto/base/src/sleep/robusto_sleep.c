@@ -1,6 +1,6 @@
 /**
  * @file robusto_sleep.c
- * @author Nicklas Borjesson (nicklasb@gmail.com)
+ * @author Nicklas Borjesson (<nicklasb at gmail dot com>)
  * @brief Manages and tracks how a peer goes to sleep and wakes up
  * @date 2022-10-22
  *

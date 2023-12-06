@@ -1,6 +1,6 @@
 /**
  * @file mock_messaging.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief This is a mock implementation of a general messaging media
  * @version 0.1
  * @date 2023-02-19

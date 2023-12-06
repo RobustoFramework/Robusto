@@ -1,6 +1,6 @@
 /**
  * @file i2c_messaging_esp32.cpp
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief ESP32 I2C implementation
  * @version 0.1
  * @date 2023-02-19

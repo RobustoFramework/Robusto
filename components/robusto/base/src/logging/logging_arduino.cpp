@@ -1,6 +1,6 @@
 /**
  * @file logging_arduino.cpp
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Logging implementation for the Arduino platform. 
  * @version 0.1
  * @date 2023-02-19

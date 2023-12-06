@@ -1,6 +1,6 @@
 /**
  * @file robusto_repeater.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Base repeatomg functionality 
  * @version 0.1
  * @date 2023-07-28

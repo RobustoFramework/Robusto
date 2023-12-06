@@ -1,7 +1,7 @@
 
 /**
  * @file robusto_media.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The Robusto Media initialization
  * @todo Rename to robusto_media_init.c?
  * @version 0.1

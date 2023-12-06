@@ -1,6 +1,6 @@
 /**
  * @file robusto_message.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Provides the Robusto messaging interface
  * @version 0.1
  * @date 2023-02-19

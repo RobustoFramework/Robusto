@@ -1,7 +1,7 @@
 
 /**
  * @file robusto_qos_init.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief QoS functionality initialization
  * @version 0.1
  * @date 2023-02-19

@@ -1,7 +1,7 @@
 
 /**
  * @file spi_hal.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto SPI-HAL
  * @todo Only used by RadioLib HAL, should we move it there?
  * @version 0.1

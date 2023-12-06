@@ -1,6 +1,6 @@
 /**
  * @file robusto_qos.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto Quality-of-service functionality
  * @version 0.1
  * @date 2023-02-19

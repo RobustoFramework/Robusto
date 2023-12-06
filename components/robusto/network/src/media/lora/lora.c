@@ -1,6 +1,6 @@
 /**
  * @file lora.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief LoRa (from "long range") is a physical proprietary radio communication technique.
  * See wikipedia: https://en.wikipedia.org/wiki/LoRa
  * @version 0.1

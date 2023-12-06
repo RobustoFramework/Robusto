@@ -1,7 +1,7 @@
 
 /**
  * @file lora_queue.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The Lora worker maintain and monitor the Lora work queue and uses callbacks to notify the user code
  * This code uses robusto_work_queue to automatically handle queues, semaphores and tasks
  * @version 0.1

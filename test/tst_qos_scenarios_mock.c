@@ -1,6 +1,6 @@
 /**
  * @file tst_qos_scenarios_mock.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief These tests provokes the QoS state engine to cycle the media states
  * @version 0.1
  * @date 2023-08-04

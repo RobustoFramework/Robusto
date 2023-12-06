@@ -1,7 +1,7 @@
 
 /**
  * @file spi_hal_esp32.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto SPI-HAL for esp32
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file robusto_network_init.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The Robusto networking initialization
  * @version 0.1
  * @date 2023-02-19

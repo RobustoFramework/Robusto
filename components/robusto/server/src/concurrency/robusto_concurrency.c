@@ -1,6 +1,6 @@
 /**
  * @file robusto_concurrency.v
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
   * @version 0.1
  * @date 2023-02-19

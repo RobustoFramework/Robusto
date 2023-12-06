@@ -1,6 +1,6 @@
 /**
  * @file main.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Main entry point for the Robusto project.
  * @note This file is not supposed to be executed, but a part of the development functionality.
  * @version 0.1

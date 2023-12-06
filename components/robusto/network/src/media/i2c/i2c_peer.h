@@ -1,6 +1,6 @@
 /**
  * @file i2c_peer.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief I2C peer implementation
  * @version 0.1
  * @date 2023-02-19

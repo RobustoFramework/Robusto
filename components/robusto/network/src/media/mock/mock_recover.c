@@ -1,6 +1,6 @@
 /**
  * @file mock_recover.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Mock connection recovery implementation. 
  * @todo: Implement this for real where applicable
  * @version 0.1

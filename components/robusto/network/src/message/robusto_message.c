@@ -1,7 +1,7 @@
 /**
  * @file robusto_message.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
- * @brief Robusto functionality for messages
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
+ * @brief Robusto message-related utilities
  * @version 0.1
  * @date 2023-02-19
  *

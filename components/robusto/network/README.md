@@ -4,12 +4,13 @@ These are the components of Robusto that pertains to being part of a network of 
 
 ## Message
 This implemects the Robusto communication protocols:
-* builds messages, puts it on the queue. 
-* parse messages from it.
+* builds messages, puts it on the send queue from media queues. 
+* parse messages from receive queue.
+* fragments and reassembles messages that are to big for single transmissions
 
 ## Media
 The implementations of the physical layers of the communitation.
-Here, much of the functionality is platform specific, it is a bit of an #ifdef-city here.
+Here, much of the functionality is platform specific, it is a bit of #ifdef-city here.
 
 
 ## Incoming

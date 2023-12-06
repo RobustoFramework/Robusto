@@ -1,6 +1,6 @@
 /**
  * @file log_esp-idf.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Logging implementation for the ESP-IDF platform.
  * @version 0.1
  * @date 2023-02-19

@@ -2,7 +2,7 @@
 
 /**
  * @file pulse_stm32.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief STM32 implementation of the pulse library
  * @version 0.1
  * @date 2023-02-19

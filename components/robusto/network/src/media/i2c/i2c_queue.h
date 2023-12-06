@@ -1,6 +1,6 @@
 /**
  * @file i2c_queue.c
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The i2c worker maintain and monitor the i2c work queue and uses callbacks to notify the user code
  * @version 0.1
  * @date 2023-02-19

@@ -1,6 +1,6 @@
 /**
  * @file robusto_conductor.c
- * @author Nicklas Borjesson (nicklasb@gmail.com)
+ * @author Nicklas Borjesson (<nicklasb at gmail dot com>)
  * @brief Conducting refers to process-level operations, like scheduling and timing sleep and timeboxing wake time
  * @version 0.1
  * @date 2022-11-20

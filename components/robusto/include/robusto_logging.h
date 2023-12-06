@@ -1,6 +1,6 @@
 /**
  * @file robusto_logging.h
- * @author Nicklas Börjesson (nicklasb@gmail.com)
+ * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Logging functionality.
  * @note The functional interface is modeled after the ESP-IDF ESP-LOG functionality.
  * It implements some of the functionality, but not all.
