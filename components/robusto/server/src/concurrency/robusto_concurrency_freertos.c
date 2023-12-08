@@ -35,10 +35,9 @@
 
 #ifdef USE_ARDUINO
 #include <Arduino.h>
-#include <Arduino_FreeRTOS.h>
+#include <FreeRTOS.h>
 #include <task.h>
 #include <semphr.h>
-#include <avr/wdt.h>
 #elif defined(USE_ESPIDF)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -118,7 +117,9 @@ void robusto_watchdog_set_timeout(int watchdog_timeout) {
 
 void robusto_yield(void) {
     // TODO: This should be used instead of r_delay in approximately a million places. Plz fix.
-#ifdef USE_ESPIDF
+#if defined(USE_ESPIDF)
+    vTaskDelay(1);
+#elif defined(ARDUINO_ARCH_RP2040)
     vTaskDelay(1);
 #elif defined(ARDUINO_ARCH_STM32)    
     HAL_Delay(1);

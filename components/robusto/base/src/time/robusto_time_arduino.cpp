@@ -29,14 +29,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <robconfig.h>
 #include <robusto_time.h>
 #ifdef USE_ARDUINO
-#include "Arduino.h"
-#include <robconfig.h>
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
-#include "Arduino_FreeRTOS.h"
-#endif
+#include <Arduino.h>
 
+// TODO: Remove synchronous mode
+#ifdef ARDUINO_ARCH_RP2040
+    #include <FreeRTOS.h>
+    #include <task.h>
+#endif
 
 /**
  * @brief 
@@ -54,11 +56,15 @@ unsigned long r_micros()
 
 void r_delay(unsigned long milliseconds)
 {
+    #ifdef ARDUINO_ARCH_RP2040
+    vTaskDelay(milliseconds/portTICK_PERIOD_MS);
+    #else
     delay(milliseconds);
+    #endif
 }
 void r_delay_microseconds(unsigned long microseconds)
 {
-    delayMicroseconds(milliseconds);
+    delayMicroseconds(microseconds);
 }
 
 void r_init_time(){};

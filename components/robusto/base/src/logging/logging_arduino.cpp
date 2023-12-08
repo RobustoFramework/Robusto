@@ -40,14 +40,17 @@ void compat_rob_log_writev(rob_log_level_t level, const char* tag, const char* f
     char msg[256];
     vsprintf(msg, format, args);
     Serial.print(msg);
+    Serial.flush();
 }
 
 #endif
 void r_init_logging() {
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE  
+
     Serial.begin(115200);
     while (!Serial); // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
     Serial.print("Robusto initiated serial communication for Arduino.\n");
+    Serial.flush();
     delay(2000);
 #endif
 }

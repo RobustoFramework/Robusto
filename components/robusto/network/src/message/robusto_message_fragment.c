@@ -81,12 +81,13 @@ void remove_fragmented_message(fragmented_message_t *frag_msg)
 
 fragmented_message_t *find_fragmented_message(uint32_t hash)
 {
+    ROB_LOGI(fragmentation_log_prefix, "ff 1");
     fragmented_message_t *retval;
-    NULL;
     if ((!last_frag_msg) || ((last_frag_msg) && (last_frag_msg->hash != hash)))
     {
         if (!last_frag_msg)
         {
+            ROB_LOGI(fragmentation_log_prefix, "ff 1.1");
             return NULL;
         }
 
@@ -96,15 +97,18 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
     }
     else
     {
+        ROB_LOGI(fragmentation_log_prefix, "ff 2");
         ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
         retval = last_frag_msg;
     }
     if (retval)
     {
+        ROB_LOGI(fragmentation_log_prefix, "ff 3");
         return retval->abort_transmission ? NULL : retval;
     }
     else
     {
+        ROB_LOGI(fragmentation_log_prefix, "ff 4");
         return NULL;
     }
 }
@@ -131,30 +135,30 @@ void send_result(robusto_peer_t *peer, fragmented_message_t *frag_msg, rob_ret_v
  */
 void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size)
 {
-
     robusto_media_t *media = get_media_info(peer, media_type);
     // Manually check CRC32 hash
     if (*(uint32_t *)(data) != robusto_crc32(0, data + 4, 18))
     {
-
         add_to_history(media, false, ROB_FAIL);
         ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because hash mismatch.");
         return;
     }
-
+     ROB_LOGI(fragmentation_log_prefix, "-2");
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14));
     if (!frag_msg)
     {
+        ROB_LOGI(fragmentation_log_prefix, "-1");
         frag_msg = robusto_malloc(sizeof(fragmented_message_t));
         frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 6);
         frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 10);
         frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14);
+        ROB_LOGI(fragmentation_log_prefix, "0");
     }
     else
     {
         ROB_LOGI(fragmentation_log_prefix, "The fragment transmission is already added, assuming same properties. Might be duplicate try or or testing.");
     }
-
+    ROB_LOGI(fragmentation_log_prefix, "1");
     frag_msg->receive_buffer_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
     // TODO: How big should we allow before SPIRAM and more?
     frag_msg->receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);

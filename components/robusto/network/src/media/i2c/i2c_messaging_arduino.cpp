@@ -32,20 +32,12 @@
 #include "i2c_messaging.h"
 
 #if defined(USE_ARDUINO) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
-// #include <Arduino.h>
-// #define USE_WIRE
-#ifdef USE_WIRE
+
+
+#if defined(ARDUINO_ARCH_RP2040)
 #include <Wire.h>
-#endif
-
-#ifdef ARDUINO_ARCH_STM32
+#elif defined(ARDUINO_ARCH_STM32)
 #include "Arduino.h"
-
-#else
-#include "i2c_api.h"
-#include "mbed/mbed.h"
-
-using namespace mbed;
 #endif
 
 #include <robusto_logging.h>
@@ -67,6 +59,8 @@ uint8_t i2c_arduino_receipt[2];
 
 I2C_HandleTypeDef I2cHandle;
 
+#elif defined(ARDUINO_ARCH_RP2040)
+
 #else
 // Tricks to expand the config int into PinName.
 #define PN_DEF_HELPER(num) p##num
@@ -76,7 +70,7 @@ static I2CSlave *i2c_slave;
 static I2C *i2c_master;
 
 #endif
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
 void receiveEvent(int howMany)
 {
     ROB_LOGI(i2c_arduino_messaging_log_prefix, "In arduino receiveEvent");
@@ -106,10 +100,10 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
 
     if (!dont_delete)
     {
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
         Wire.end();
-#endif
-#ifdef ARDUINO_ARCH_STM32
+#elif defined(ARDUINO_ARCH_STM32)
+
 #else
         if (is_master)
         {
@@ -125,7 +119,7 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
     if (is_master)
     {
 
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
         Wire.setClock(CONFIG_I2C_MAX_FREQ_HZ);
         Wire.begin();
 #endif
@@ -140,7 +134,7 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
     }
     else
     {
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
         Wire.begin(CONFIG_I2C_ADDR);
         Wire.onReceive(receiveEvent);
         Wire.onRequest(requestEvent);
@@ -199,7 +193,7 @@ rob_ret_val_t i2c_after_comms(bool first_param, bool second_param)
     return ret;
 }
 
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool heartbeat, bool receipt)
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
 {
     int64_t starttime = r_millis();
     int send_retries = 0;
@@ -226,7 +220,7 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
         }*/
 
 #else
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
         Wire.beginTransmission(peer->i2c_address);
         Wire.write(CONFIG_I2C_ADDR);
         Wire.write(data, data_length);
@@ -299,7 +293,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     do
     {
         ROB_LOGI(i2c_arduino_messaging_log_prefix, "I2C Master - << Reading receipt from %u, try %i.", peer->i2c_address, read_retries);
-#ifdef USE_WIRE
+#ifdef ARDUINO_ARCH_RP2040
         Wire.requestFrom(peer->i2c_address, 2);
         if (Wire.available())
         {
@@ -416,7 +410,7 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
 #endif
             if (i2c_arduino_data_length > 0)
             {   
-                peer->i2c_info.last_receive = r_millis();
+                (*peer)->i2c_info.last_receive = r_millis();
                 //memcpy((uint8_t *)data, &i2c_arduino_data, i2c_arduino_data_length);
                 data_len = i2c_arduino_data_length;
                 ret_val = ROB_OK;
@@ -460,23 +454,27 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
             ROB_LOGI(i2c_arduino_messaging_log_prefix, "I2C Slave - >> Message valid, sending receipt.");
             //TODO: Implement reading hearbeats and not responding
             //(*peer)->espnow_info.last_peer_receive = parse_heartbeat(data, I2C_ADDR_LEN + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
-
-            i2c_send_receipt(*peer, true);
+            // TODO: Implement handling 
+            i2c_send_receipt(*peer, true, false);
             return data_len;
         } else {
             ROB_LOGI(i2c_arduino_messaging_log_prefix, "I2C Slave - >> Message NOT valid, sending invalid receipt.");
-            i2c_send_receipt(*peer, false);
+            i2c_send_receipt(*peer, false, false);
             return ROB_FAIL;
         }
         
     }
 }
 
-rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success)
+rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
 {
     ROB_LOGI(i2c_arduino_messaging_log_prefix, "I2C Slave - >> In i2c_send_receipt");
 
     // char receipt[2];
+    if (unknown) {
+        i2c_arduino_receipt[0] = 0x0f;
+        i2c_arduino_receipt[1] = 0xf0;
+    } else    
     if (success)
     {
         i2c_arduino_receipt[0] = 0xff;
@@ -489,7 +487,14 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success)
     }
 
     // return ROB_OK;
-    // int ret = Wire.write(i2c_arduino_receipt, 2);
+    #if defined(ARDUINO_ARCH_RP2040)
+    int ret = Wire.write(i2c_arduino_receipt, 2);
+    if (ret = 0)
+        {
+            ROB_LOGE(i2c_arduino_messaging_log_prefix, "I2C Slave - >> Error: %u", ret);
+
+
+    #elif defined(ARDUINO_ARCH_STM32)
 
     // int ret = i2c_slave.write((char *)&i2c_arduino_receipt, 2);
     r_delay(1000);
@@ -497,12 +502,13 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success)
     int ret = HAL_I2C_Slave_Transmit(&I2cHandle,(uint8_t *)&i2c_arduino_receipt, 2, 5000);
 
 
-
-    //  (i2c1, "\ff\00");
-
     if (ret != HAL_OK)
-    {
-        ROB_LOGE(i2c_arduino_messaging_log_prefix, "I2C Slave - >> Result: %u, ErrorCode: %u, State: %u, Size: %u", ret, I2cHandle.ErrorCode, I2cHandle.State, I2cHandle.XferSize);
+        {
+            ROB_LOGE(i2c_arduino_messaging_log_prefix, "I2C Slave - >> Result: %u, ErrorCode: %u, State: %u, Size: %u", ret, I2cHandle.ErrorCode, I2cHandle.State, I2cHandle.XferSize);
+    
+    //  (i2c1, "\ff\00");
+    #endif
+
         if (peer)
         {
             peer->i2c_info.send_failures++; // TODO: Not sure how this should count, but probably it should
@@ -520,7 +526,12 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success)
     return ret;
 }
 
-void i2c_messaging_init(char *_log_prefix)
+void i2c_compat_messaging_start()
+{
+
+}
+
+void i2c_compat_messaging_init(char *_log_prefix)
 {
     // TODO: Implement detection and handling of these error states: https://arduino.stackexchange.com/questions/46680/i2c-packet-ocasionally-send-a-garbage-data
     i2c_arduino_messaging_log_prefix = _log_prefix;

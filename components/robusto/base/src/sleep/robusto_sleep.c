@@ -22,14 +22,23 @@
 #include "robusto_logging.h"
 #include "robusto_time.h"
 
+#ifdef USE_ARDUINO
+#define PERSISTENT_STORAGE
+#warning "Sleep functionality does not work properly on Arduino yet."
+#else
+#define PERSISTENT_STORAGE ROB_RTC_DATA_ATTR
+#endif
+
+
+// TODO: RPI Pico is a bit behind with the sleep implementation, should we disable this in this case? And do something else that times with a conductor?
 /* Number of times we've slept */
-static ROB_RTC_DATA_ATTR int sleep_count;
+static PERSISTENT_STORAGE int sleep_count;
 
 /* The time we waited */
-static ROB_RTC_DATA_ATTR uint32_t last_sleep_duration;
+static PERSISTENT_STORAGE uint32_t last_sleep_duration;
 
 /* Tracking the time we've been awake */
-static ROB_RTC_DATA_ATTR uint32_t wake_time;
+static PERSISTENT_STORAGE uint32_t wake_time;
 
 /* Is it the first boot, have we not slept? */
 static bool b_first_boot;
@@ -130,6 +139,8 @@ bool robusto_sleep_init(char *_log_prefix)
         return true;
         break;
     }
+#else 
+    return false;
 #endif
 }
 

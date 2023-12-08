@@ -6,7 +6,8 @@
 
 #ifdef USE_ARDUINO
 #include <Arduino.h>
-#include <Arduino_FreeRTOS.h>
+#include <FreeRTOS.h>
+
 #endif
 
 #ifdef USE_ESPIDF
@@ -39,7 +40,7 @@ int main(void) { \
 #if defined(USE_ARDUINO) 
 #define TEST_ENTRY_POINT(run_func) \
 void setup() { \
-    xTaskCreate((TaskFunction_t) &run_func, "Test task",384, NULL, 1, NULL); \
+    xTaskCreate((TaskFunction_t) &run_func, "Test task", 8192, NULL, 8, NULL); \
 } \
 \
 void loop() {} \

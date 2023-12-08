@@ -33,21 +33,14 @@
 #ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 
 #pragma once
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "stdint.h"
 #include "stdbool.h"
-
 
 //#include "robusto_media.h"
 
 #ifdef USE_ARDUINO
 #include <Arduino.h>
-#include <Arduino_FreeRTOS.h>
+#include <FreeRTOS.h>
 #include <semphr.h>
 #include <compat/arduino_sys_queue.h>
 
@@ -68,6 +61,11 @@ extern "C"
 #include <robusto_logging.h>
 #include <robusto_retval.h>
 #include <robusto_concurrency.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #if 0
 /**

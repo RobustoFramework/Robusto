@@ -246,7 +246,8 @@ uint64_t get_free_mem(void) {
         return heap_caps_get_free_size(MALLOC_CAP_8BIT);
     #endif
 #elif defined(USE_ARDUINO)
-#error "Needs to add memory usage support here"
+    #warning "This is not implemented on the Arduino platform yet."
+    return 0;
 #elif defined(__APPLE__) 
     return getAppleFreeMemory();
 #elif defined(__linux__)
@@ -265,7 +266,9 @@ uint64_t get_free_mem_spi(void) {
         return 0;
     #endif
 #elif defined(USE_ARDUINO)
-#error "Needs to add SPI memory usage support here, if applicable"
+    #warning "Robusto: Free mem for SPI is not implemented for Arduino."
+    return 0;
+    
 #elif defined(__APPLE__) 
     return 0;
 #elif defined(__linux__)

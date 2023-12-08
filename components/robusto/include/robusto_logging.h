@@ -34,13 +34,21 @@
 
 #pragma once
 #include <robconfig.h>
+
+
+#include <stdint.h>
+
+#define ROB_LOG_LOCAL_LEVEL CONFIG_ROB_LOG_MAXIMUM_LEVEL
+
+#if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
+#include "robusto_time.h"
+#include <stdarg.h>
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-
-#define ROB_LOG_LOCAL_LEVEL CONFIG_ROB_LOG_MAXIMUM_LEVEL
 
 
 /**
@@ -56,11 +64,8 @@ typedef enum
     ROB_LOG_VERBOSE /*!< Bigger chunks of debugging information, or frequent messages which can potentially flood the output. */
 } rob_log_level_t;
 
-#include <stdint.h>
 
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
-#include "robusto_time.h"
-#include <stdarg.h>
 
 #define ROB_LOG_DO_FORMAT 1
 

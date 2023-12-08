@@ -100,9 +100,9 @@ void runUnityTests(void *pvParameters)
     init_arduino_mbed();
 #endif
     char log_prefix[8] = "Robusto\x00";
-
+    ROB_LOGW(log_prefix, "Robusto starting.");
     init_robusto();
-
+    ROB_LOGW(log_prefix, "Robusto started.");
 #ifdef USE_NATIVE
     ROB_LOGW("NATIVE", "Waiting a short while to let things start.");
     // TODO: Something is obviously not waiting properly for something
@@ -117,7 +117,7 @@ void runUnityTests(void *pvParameters)
     UNITY_BEGIN();
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
     
-    #if 0
+
     RUN_TEST(tst_millis);
     robusto_yield();
 
@@ -146,7 +146,7 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
-    #endif
+
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     RUN_TEST(tst_pubsub); 
     robusto_yield();
@@ -170,9 +170,8 @@ void runUnityTests(void *pvParameters)
     init_defs_mock();
 
     ROB_LOGW("TEST", "Done waiting.");
+
     /* Synchronous testing*/
-
-
     RUN_TEST(tst_sync_mock_send_message);
     robusto_yield();
     
@@ -198,10 +197,11 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_async_mock_presentation);
     robusto_yield();
-    
+    // TODO: Add a do-not-run-long-running-tests setting
+/*    
     RUN_TEST(tst_async_mock_heartbeats);
     robusto_yield();
-
+*/
 
     RUN_TEST(tst_async_mock_service);
     robusto_yield();

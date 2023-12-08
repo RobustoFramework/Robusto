@@ -37,8 +37,7 @@
 #endif
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
-#include <Arduino_FreeRTOS.h>
-#include <task.h>
+#include <robusto_concurrency.h>
 #endif
 
 #if 0
@@ -88,7 +87,7 @@ static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in 
 
 char * example_log_prefix = "Example";
 
-void setup() {
+void setup_examples() {
 
     #ifdef CONFIG_HEAP_TRACING_STANDALONE
         ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
@@ -175,7 +174,7 @@ int main(void)
  */
 void app_main()
 {
-    setup();
+    setup_examples();
     log_test();
 
 
@@ -208,7 +207,7 @@ void app_main()
 
 void main_task(void *parameters)
 {
-    init_robusto();
+    setup_examples();
     ROB_LOGI("Arduino", "Before creating task.");
     delay(2000);
     log_test();
@@ -217,7 +216,7 @@ void main_task(void *parameters)
 
 void setup()
 {
-    xTaskCreate((TaskFunction_t)&main_task, "Test task", 128, NULL, 1, NULL);
+    robusto_create_task((TaskFunction_t)&main_task, NULL, "Test task", NULL, 1);
 }
 
 void loop() {}

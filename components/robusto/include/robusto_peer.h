@@ -33,10 +33,6 @@
 
 #include <robconfig.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #ifndef USE_ARDUINO
 #include "sys/queue.h"
@@ -49,6 +45,12 @@ extern "C"
 #include <robusto_system.h>
 #include <robusto_media_def.h>
 #include <robusto_peer_def.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 
     /**
      * @brief Sets a callback that will be called when a peer presentation has been received

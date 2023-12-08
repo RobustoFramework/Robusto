@@ -33,10 +33,6 @@
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #include <robusto_peer.h>
 #include <robusto_retval.h>
@@ -47,6 +43,12 @@ extern "C"
 
 #ifdef CONFIG_ROBUSTO_SIM
 #include "i2c_simulate.h"
+#endif
+
+
+#ifdef __cplusplus
+extern "C"
+{
 #endif
 
 

@@ -49,7 +49,7 @@ extern "C"
 #endif
 #ifdef USE_ARDUINO
 #include <Arduino.h>
-#include <Arduino_freeRTOS.h>
+#include <FreeRTOS.h>
 #include <task.h>
 #endif
 

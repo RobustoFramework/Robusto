@@ -141,6 +141,8 @@ board_build.partitions = min_spiffs.csv
 lib_deps =
   ${env.lib_deps}
   esp32-camera
+
+
 ; --------------------------
 ; The RaspberryPi Pico uses picotool for uploading.
 ; Note: There is nothing that identifies the board, so having multiple

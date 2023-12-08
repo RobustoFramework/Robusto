@@ -126,7 +126,6 @@ float add_to_failure_rate_history(robusto_media_t *stats, float rate)
 
 void update_score(robusto_peer_t *peer, e_media_type media_type)
 {
-    
     // TODO: Clarify in documentation that we only care about our ability to reach others,
     // not their ability to reach us. This is for us to be able to choose the best medium to
     // send a message to them.
@@ -240,6 +239,7 @@ void peer_scoring(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
         if (media_type == robusto_mt_mock)
         {
+
             update_score(peer, robusto_mt_mock);
         }
 #endif
@@ -249,8 +249,6 @@ void peer_scoring(robusto_peer_t *peer)
 void scoring_cb()
 {
     struct robusto_peer *peer;
-    ROB_LOGD("scoring_log_prefix", "in scorings()");
-
     SLIST_FOREACH(peer, get_peer_list(), next)
     {
         peer_scoring(peer);

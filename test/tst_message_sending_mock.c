@@ -36,8 +36,10 @@ void init_defs_mock()
     test_peer_mock->relation_id_incoming = TST_RELATIONID_01;
     test_peer_mock->peer_handle = 0;
     // TODO: We run this twice, not sure why, probably to get the curr_info->send_successes up to properly calculate a score. 
+    #ifndef ARDUINO
     run_all_repeaters_now();
     run_all_repeaters_now();
+    #endif
 
 }
 

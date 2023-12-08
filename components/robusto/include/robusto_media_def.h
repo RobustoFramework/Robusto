@@ -33,13 +33,14 @@
 #pragma once
 #include <robconfig.h>
 #include "stdint.h"
+
+#include <robusto_retval.h>
+#include <robusto_queue.h>
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include <robusto_retval.h>
-#include <robusto_queue.h>
 
 #define FAILURE_RATE_HISTORY_LENGTH 4
 
