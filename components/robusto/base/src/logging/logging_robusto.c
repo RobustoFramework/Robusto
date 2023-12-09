@@ -35,11 +35,8 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #define ROW_LEN (8 * 9) + 1
 #define ASCII_CODE_SPACE 32
-
-
 
 void rob_log_write(rob_log_level_t level,
                    const char *tag,
@@ -56,59 +53,57 @@ void rob_log_bit_mesh(rob_log_level_t level,
                       const char *tag,
                       uint8_t *data, int data_len)
 {
-#if (ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE )
-    unsigned int curr_pos = 0;
-    char str_value[9];
-    int value_len;
-    char value_row[ROW_LEN];
-    char bit_row[ROW_LEN];
-
-    do
+    if (ROB_LOG_LOCAL_LEVEL >= level)
     {
-        /* Do eight bytes */
-        memset(&value_row, 20, ROW_LEN);
-        memset(&bit_row, 20, ROW_LEN);
-        for (int byte_counter = 0;
-             (byte_counter < 8) && (byte_counter + curr_pos < data_len);
-             byte_counter++)
+        unsigned int curr_pos = 0;
+        char str_value[9];
+        int value_len;
+        char value_row[ROW_LEN];
+        char bit_row[ROW_LEN];
+
+        do
         {
-            /* Make the values row */
-            uint8_t curr_byte = data[curr_pos + byte_counter];
-
-            int start_pos = byte_counter + (byte_counter * 8);
-       
-            value_len = sprintf(str_value, "%hu(x%.02hx)", curr_byte, curr_byte); 
-            memcpy(&value_row[start_pos], &str_value, value_len);
-            // Fill with spaces, space is 32
-            memset(&value_row[start_pos + value_len], ASCII_CODE_SPACE, 9 - value_len);
-    
-            /* Make the bits row*/
-            for (int bit_counter = 0; bit_counter < 8; bit_counter++)
+            /* Do eight bytes */
+            memset(&value_row, 20, ROW_LEN);
+            memset(&bit_row, 20, ROW_LEN);
+            for (int byte_counter = 0;
+                 (byte_counter < 8) && (byte_counter + curr_pos < data_len);
+                 byte_counter++)
             {
-                if (curr_byte & 1 << bit_counter)
+                /* Make the values row */
+                uint8_t curr_byte = data[curr_pos + byte_counter];
+
+                int start_pos = byte_counter + (byte_counter * 8);
+
+                value_len = sprintf(str_value, "%hu(x%.02hx)", curr_byte, curr_byte);
+                memcpy(&value_row[start_pos], &str_value, value_len);
+                // Fill with spaces, space is 32
+                memset(&value_row[start_pos + value_len], ASCII_CODE_SPACE, 9 - value_len);
+
+                /* Make the bits row*/
+                for (int bit_counter = 0; bit_counter < 8; bit_counter++)
                 {
-                    bit_row[start_pos + bit_counter] = 49;
+                    if (curr_byte & 1 << bit_counter)
+                    {
+                        bit_row[start_pos + bit_counter] = 49;
+                    }
+                    else
+                    {
+                        bit_row[start_pos + bit_counter] = 48;
+                    }
                 }
-                else
-                {
-                    bit_row[start_pos + bit_counter] = 48;
-                }
+                bit_row[start_pos + 8] = ASCII_CODE_SPACE;
             }
-            bit_row[start_pos + 8] = ASCII_CODE_SPACE;
 
-        }
+            // Null-terminate..
+            value_row[ROW_LEN - 1] = 0;
+            bit_row[ROW_LEN - 1] = 0;
+            /* Print values*/
+            ROB_LOG_LEVEL(level, tag, "%s", value_row);
+            /* Print bits */
+            ROB_LOG_LEVEL(level, tag, "%s", bit_row);
 
-        // Null-terminate..
-        value_row[ROW_LEN - 1] = 0;
-        bit_row[ROW_LEN - 1] = 0;
-        /* Print values*/
-        ROB_LOG_LEVEL(level, tag, "%s", value_row);
-        /* Print bits */
-        ROB_LOG_LEVEL(level, tag, "%s", bit_row);
-
-        curr_pos = curr_pos + 8;
-    } while (curr_pos < data_len);
-
-#endif
-
+            curr_pos = curr_pos + 8;
+        } while (curr_pos < data_len);
+    }
 }

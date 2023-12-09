@@ -25,6 +25,7 @@ bool skip_fragments = false;
 uint8_t * test_data;
 
 void cb_incoming(incoming_queue_item_t *incoming_item) {
+    ROB_LOGI(FRAG_TAG,"cb_incoming");
     incoming_item->service_frees_message = true;
     message = incoming_item->message;
     async_receive_flag = true;
@@ -44,7 +45,10 @@ rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, i
     if (skip_fragments && (call_counter == 2 || call_counter == 4)) {
         ROB_LOGI(FRAG_TAG,"Skipping call %lu", call_counter);
     } else {
-       handle_fragmented(peer, robusto_mt_mock, data, len, TST_FRAG_SIZE, &callback_response_message);
+        // We need to copy here so we can free the data on both ends as normal.
+        uint8_t * tmp_data = robusto_malloc(len);
+        memcpy(tmp_data, data, len);
+        handle_fragmented(peer, robusto_mt_mock, tmp_data, len, TST_FRAG_SIZE, &callback_response_message);
     }
     
     call_counter ++;
@@ -73,6 +77,7 @@ void fake_message() {
     call_counter = 0;
     async_receive_flag = false;
     rob_ret_val_t res = send_message_fragmented(peer, robusto_mt_mock, msg  + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES, TST_FRAG_SIZE, &callback_send_message);
+    ROB_LOGI("Test", "tst_fragmentation_complete");
    if (robusto_waitfor_bool(&async_receive_flag, 10000)) {
         ROB_LOGI("Test", "tst_fragmentation_complete: Async receive flag was set to true.");
     } else {

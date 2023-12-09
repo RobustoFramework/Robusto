@@ -299,7 +299,6 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
 
     for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
-        ROB_LOGI(fragmentation_log_prefix, "curr_fragment %lu", curr_fragment);
         if (frag_msg->abort_transmission)
         {
             return;
@@ -482,6 +481,7 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
     // Postpone QoS so it doesn't interfere with long transmissions.
     get_media_info(peer, media_type)->postpone_qos = true;
     // The data must be freeable.
+    
     robusto_free(data);
     return;
 }
@@ -495,6 +495,7 @@ rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fra
     msg_frag_check[ROBUSTO_CRC_LENGTH + 1] = FRAG_CHECK;
 
     send_message(peer, msg_frag_check, ROBUSTO_CRC_LENGTH + 2, false);
+    // TODO: We should probably free data here as well. And duplicate the data in the test send_message call back.
     return ROB_OK;
 }
 /**
@@ -621,8 +622,8 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     }
 finish:
     remove_fragmented_message(frag_msg);
-    // TODO: Remove frag_msg from list
     robusto_free(buffer);
+    
     return rc;
 }
 
