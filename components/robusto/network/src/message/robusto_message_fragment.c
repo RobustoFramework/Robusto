@@ -54,14 +54,14 @@
 #define SKIP_FRAGMENT_TEST 1
 #endif
 
-char *fragmentation_log_prefix = "NOT SET";
+static char *fragmentation_log_prefix = "NOT SET";
 
 SLIST_HEAD(slist_fragmented_messages_head, fragmented_message);
 
 struct slist_fragmented_messages_head fragmented_messages_head;
 
 // Cache the last frag_msg for optimization
-fragmented_message_t *last_frag_msg = NULL;
+static fragmented_message_t *last_frag_msg = NULL;
 
 fragmented_message_t *get_last_frag_message()
 {
@@ -81,13 +81,12 @@ void remove_fragmented_message(fragmented_message_t *frag_msg)
 
 fragmented_message_t *find_fragmented_message(uint32_t hash)
 {
-    ROB_LOGI(fragmentation_log_prefix, "ff 1");
+
     fragmented_message_t *retval;
     if ((!last_frag_msg) || ((last_frag_msg) && (last_frag_msg->hash != hash)))
     {
         if (!last_frag_msg)
         {
-            ROB_LOGI(fragmentation_log_prefix, "ff 1.1");
             return NULL;
         }
 
@@ -97,25 +96,21 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
     }
     else
     {
-        ROB_LOGI(fragmentation_log_prefix, "ff 2");
         ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
         retval = last_frag_msg;
     }
     if (retval)
     {
-        ROB_LOGI(fragmentation_log_prefix, "ff 3");
         return retval->abort_transmission ? NULL : retval;
     }
     else
     {
-        ROB_LOGI(fragmentation_log_prefix, "ff 4");
         return NULL;
     }
 }
 
 void send_result(robusto_peer_t *peer, fragmented_message_t *frag_msg, rob_ret_val_t return_value, cb_send_message *send_message)
 {
-
     uint8_t *buffer = robusto_malloc(ROBUSTO_CRC_LENGTH + 4);
     memcpy(buffer, &frag_msg->hash, 4);
     // Encode into a message
@@ -137,45 +132,46 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
 {
     robusto_media_t *media = get_media_info(peer, media_type);
     // Manually check CRC32 hash
+    
     if (*(uint32_t *)(data) != robusto_crc32(0, data + 4, 18))
     {
         add_to_history(media, false, ROB_FAIL);
         ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because hash mismatch.");
         return;
     }
-     ROB_LOGI(fragmentation_log_prefix, "-2");
-    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14));
+    
+    if (len <ROBUSTO_CRC_LENGTH + 18) {
+        ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because wrong length, %lu.", len);
+    }
+    uint32_t hash;
+    memcpy(&hash, data + ROBUSTO_CRC_LENGTH + 14, 4);
+    
+    fragmented_message_t *frag_msg = find_fragmented_message(hash);
     if (!frag_msg)
     {
-        ROB_LOGI(fragmentation_log_prefix, "-1");
         frag_msg = robusto_malloc(sizeof(fragmented_message_t));
-        frag_msg->fragment_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 6);
-        frag_msg->fragment_size = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 10);
-        frag_msg->hash = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 14);
-        ROB_LOGI(fragmentation_log_prefix, "0");
+        SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
     }
     else
     {
         ROB_LOGI(fragmentation_log_prefix, "The fragment transmission is already added, assuming same properties. Might be duplicate try or or testing.");
     }
-    ROB_LOGI(fragmentation_log_prefix, "1");
-    frag_msg->receive_buffer_length = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
+    memcpy(&frag_msg->receive_buffer_length, data + ROBUSTO_CRC_LENGTH + 2, 4);
+    memcpy(&frag_msg->fragment_count, data + ROBUSTO_CRC_LENGTH + 6, 4);
+    memcpy(&frag_msg->fragment_size, data + ROBUSTO_CRC_LENGTH + 10, 4);
+    frag_msg->hash = hash;
     // TODO: How big should we allow before SPIRAM and more?
     frag_msg->receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);
     frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
     frag_msg->abort_transmission = false;
     frag_msg->state = ROB_ST_RUNNING;
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
-
     ROB_LOGI(fragmentation_log_prefix, "Fragmented initialization received, info:\n \
         data_length: %lu bytes, fragment_count: %lu, fragment_size: %lu, hash: %lu.",
              frag_msg->receive_buffer_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
-
     /* When the frag_msg was created, a non-used element */
     frag_msg->start_time = r_millis();
 
-    SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
-    
     last_frag_msg = frag_msg;
     media->last_receive = r_millis();
 }
@@ -237,7 +233,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     // Initiate a new fragmented  (...stream?)
     ROB_LOGI(fragmentation_log_prefix, "handle_frag_message (hash %lu):", *(uint32_t *)data);
     robusto_media_t *media = get_media_info(peer, media_type);
-    /*
+    
     if (len > ROBUSTO_CRC_LENGTH + 18)
     {
         rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
@@ -245,14 +241,15 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     else
     {
         rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
-    }*/
+    }
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
     {
         return;
     }
 
-    uint32_t msg_frag_count = *(uint32_t *)(data + ROBUSTO_CRC_LENGTH + 2);
+    uint32_t msg_frag_count;
+    memcpy(&msg_frag_count, data + ROBUSTO_CRC_LENGTH + 2, 4);
 
     // We check the length of all fragments, start with calculating what the current should be
     uint32_t curr_frag_size = frag_msg->fragment_size;
@@ -285,33 +282,36 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
 
         check_fragments(peer, media_type, frag_msg, send_message);
     }
+    ROB_LOGD(fragmentation_log_prefix, "Returning from handle_frag_message");
+
 }
 
 void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_send_message *send_message)
 {
-    uint8_t *buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
-
+    
     ROB_LOGI(fragmentation_log_prefix, "Send fragments (%" PRIu32 "):", frag_msg->fragment_count);
     // rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, data_length);
 
     // TODO: Apparently, ESP-NOW has no acknowledgement, we might need to add the same we do for LoRa, for example.
 
-    uint32_t curr_frag_size = frag_msg->fragment_size;
-    // We always send the same hash, as an identifier
-    memcpy(buffer, &frag_msg->hash, 4);
-    buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
-    buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
+    uint8_t *buffer = NULL;
+    uint32_t curr_frag_size = curr_frag_size = frag_msg->fragment_size;
 
     for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
+        ROB_LOGI(fragmentation_log_prefix, "curr_fragment %lu", curr_fragment);
         if (frag_msg->abort_transmission)
         {
             return;
         }
+        buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
+        // We always send the same hash, as an identifier
+        memcpy(buffer, &frag_msg->hash, 4);
+        buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
+        buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
         if (frag_msg->received_fragments[curr_fragment] == 1)
         {   
             ROB_LOGD(fragmentation_log_prefix, "Skipping part %lu", curr_fragment);
-          
             continue;
         }
         // Counter
@@ -337,6 +337,7 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
             }
         }
+
         robusto_yield();
     }
     frag_msg->state = ROB_ST_DONE;
@@ -477,6 +478,7 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
     default:
         ROB_LOGE(fragmentation_log_prefix, "Invalid fragment type byte: %hu", data[ROBUSTO_CRC_LENGTH + 1]);
     }
+    
     // Postpone QoS so it doesn't interfere with long transmissions.
     get_media_info(peer, media_type)->postpone_qos = true;
     // The data must be freeable.
@@ -627,5 +629,6 @@ finish:
 void robusto_message_fragment_init(char *_log_prefix)
 {
     fragmentation_log_prefix = _log_prefix;
+    last_frag_msg = NULL;
     SLIST_INIT(&fragmented_messages_head); /* Initialize the queue */
 }

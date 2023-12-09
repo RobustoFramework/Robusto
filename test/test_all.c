@@ -198,7 +198,7 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_async_mock_presentation);
     robusto_yield();
     // TODO: Add a do-not-run-long-running-tests setting
-/*    
+    /*
     RUN_TEST(tst_async_mock_heartbeats);
     robusto_yield();
 */

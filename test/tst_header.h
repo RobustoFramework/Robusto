@@ -50,7 +50,7 @@ int main(void) { \
 #if defined(USE_ARDUINO) 
 #define TEST_ENTRY_POINT(run_func) \
 void setup() { \
-    run_func(NULL); \
+    xTaskCreate((TaskFunction_t) &run_func, "Test task",16384, NULL, 10, NULL); \
 } \
 \
 void loop() {} \
