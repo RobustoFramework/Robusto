@@ -15,10 +15,20 @@
 #include <freertos/task.h>
 #endif
 
-#ifdef ARDUINO_ARCH_MBED
+#if defined (ARDUINO_ARCH_MBED)
 REDIRECT_STDOUT_TO(Serial);
 #endif
 
+#ifdef ARDUINO
+#include "test_log.h"
+#ifndef UNITY_OUTPUT_CHAR
+
+#error "Missing build parameter to make test logging work on Arduino. \
+    If you use PlatformIO, add this to platformio.ini: \
+    nbuild_flags =  \n\
+       -DUNITY_OUTPUT_CHAR=robusto_test_log"
+#endif
+#endif
 
 #include <unity.h>
 
@@ -40,7 +50,7 @@ int main(void) { \
 #if defined(USE_ARDUINO) 
 #define TEST_ENTRY_POINT(run_func) \
 void setup() { \
-    xTaskCreate((TaskFunction_t) &run_func, "Test task", 8192, NULL, 8, NULL); \
+    run_func(NULL); \
 } \
 \
 void loop() {} \

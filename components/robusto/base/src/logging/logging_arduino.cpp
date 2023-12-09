@@ -41,6 +41,7 @@ void compat_rob_log_writev(rob_log_level_t level, const char* tag, const char* f
     vsprintf(msg, format, args);
     Serial.print(msg);
     Serial.flush();
+
 }
 
 #endif

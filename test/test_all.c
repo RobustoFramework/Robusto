@@ -443,6 +443,7 @@ void runUnityTests(void *pvParameters)
 #endif
 #endif
 #endif
+    
     UNITY_END();
 
 #if defined(USE_ARDUINO) || defined(USE_ESPIDF)
