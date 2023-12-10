@@ -30,7 +30,6 @@
  */
 
 #include <robconfig.h>
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 
 #pragma once
 #include "stdint.h"
@@ -260,6 +259,4 @@ void cleanup_queue_task(queue_context_t *q_context);
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
-
 #endif

@@ -50,7 +50,6 @@
 /* The log prefix for all logging */
 static char *i2c_messaging_log_prefix;
 
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 void i2c_do_on_poll_cb(queue_context_t *q_context)
 {
 
@@ -77,7 +76,4 @@ void i2c_messaging_init(char *_log_prefix)
     i2c_messaging_log_prefix = _log_prefix;
     i2c_compat_messaging_init(i2c_messaging_log_prefix);
 }
-
-#endif
-
 

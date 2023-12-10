@@ -37,7 +37,6 @@
 #include <robusto_peer.h>
 #include <robusto_retval.h>
 #include <robusto_message.h>
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 #include "i2c_queue.h"
 #endif
 
@@ -87,10 +86,8 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t * peer);
 int i2c_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
 rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown);
 
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 void i2c_do_on_work_cb(media_queue_item_t *queue_item);
 void i2c_do_on_poll_cb(queue_context_t *q_context);
-#endif
 void i2c_messaging_init(char * _log_prefix);
 
 void i2c_compat_messaging_start(void);
@@ -100,6 +97,4 @@ void i2c_compat_messaging_init(char * _log_prefix);
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
-
 #endif

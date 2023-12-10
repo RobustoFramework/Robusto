@@ -68,7 +68,7 @@ void robusto_i2c_stop() {
 
 void robusto_i2c_start(char * _log_prefix) {
     i2c_compat_messaging_start();
-    #if !(defined(CONFIG_ROB_SYNCHRONOUS_MODE))
+
     ROB_LOGI(i2c_log_prefix, "Starting I2C worker");
     if (i2c_init_worker(&i2c_do_on_work_cb, &i2c_do_on_poll_cb, i2c_log_prefix) != ROB_OK)
     {
@@ -76,7 +76,6 @@ void robusto_i2c_start(char * _log_prefix) {
        return;
     }
     i2c_set_queue_blocked(false);
-    #endif
 
     //i2c_receive();
     add_host_supported_media_type(robusto_mt_i2c);

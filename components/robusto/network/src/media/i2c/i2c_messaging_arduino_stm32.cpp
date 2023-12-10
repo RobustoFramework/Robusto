@@ -31,7 +31,7 @@
 
 #include "i2c_messaging.h"
 
-#if defined(USE_ARDUINO) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#if defined(ARDUINO_ARCH_STM32) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
 
 
 #if defined(ARDUINO_ARCH_RP2040)

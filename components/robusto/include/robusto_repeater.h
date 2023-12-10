@@ -30,7 +30,6 @@
  */
 
 #include <robconfig.h>
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 
 #pragma once
 
@@ -93,6 +92,4 @@ void robusto_repeater_shutdown();
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
-
 #endif

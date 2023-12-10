@@ -30,7 +30,6 @@
  */
 #include <robusto_concurrency.h>
 
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
 
 #ifdef USE_ARDUINO
@@ -128,5 +127,4 @@ void robusto_yield(void) {
 #endif
 }
     
-#endif
 #endif

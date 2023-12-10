@@ -32,8 +32,6 @@
 
 #pragma once
 #include <robconfig.h>
-#ifndef CONFIG_ROB_SYNCHRONOUS_MODE
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -166,4 +164,3 @@ typedef pthread_mutex_t *mutex_ref_t;
 } /* extern "C" */
 #endif
 
-#endif
