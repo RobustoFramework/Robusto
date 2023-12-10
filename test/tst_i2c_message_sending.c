@@ -26,7 +26,7 @@ void i2c_init_defs() {
     remote_peer->peer_handle = 0;
     remote_peer->i2c_address = CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR;
     remote_peer->supported_media_types = robusto_mt_i2c;
-    remote_peer->state = PEER_UNKNOWN;
+    remote_peer->state = PEER_KNOWN_INSECURE;
     memcpy(remote_peer->name, TST_PEERNAME_0, sizeof(TST_PEERNAME_0));
     strncpy((char *)(remote_peer->base_mac_address), ROBUSTO_MAC_ADDRESS_BASE, 6);
     

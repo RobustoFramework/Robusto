@@ -22,5 +22,3 @@ void runUnityTests(void *pvParameters)
 }
 
 TEST_ENTRY_POINT(runUnityTests)
-
-

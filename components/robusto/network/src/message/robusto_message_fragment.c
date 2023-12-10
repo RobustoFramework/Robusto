@@ -141,7 +141,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     }
     
     if (len <ROBUSTO_CRC_LENGTH + 18) {
-        ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because wrong length, %lu.", len);
+        ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because wrong length, %i.", len);
     }
     uint32_t hash;
     memcpy(&hash, data + ROBUSTO_CRC_LENGTH + 14, 4);
