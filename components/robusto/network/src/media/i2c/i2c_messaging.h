@@ -38,7 +38,7 @@
 #include <robusto_retval.h>
 #include <robusto_message.h>
 #include "i2c_queue.h"
-#endif
+
 
 #ifdef CONFIG_ROBUSTO_SIM
 #include "i2c_simulate.h"
@@ -66,7 +66,7 @@ extern "C"
 #define I2C_TX_BUF 1000 /*!< I2C master doesn't need buffer */
 #define I2C_RX_BUF 1000 /*!< I2C master doesn't need buffer */
 
-
+#define I2C_FRAGMENT_SIZE (I2C_TX_BUF - 10)
 
 int i2c_heartbeat(robusto_peer_t *peer);
 rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
@@ -97,4 +97,5 @@ void i2c_compat_messaging_init(char * _log_prefix);
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
 #endif

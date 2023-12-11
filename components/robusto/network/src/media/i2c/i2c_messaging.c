@@ -68,7 +68,7 @@ void i2c_do_on_work_cb(media_queue_item_t *queue_item)
 }
 
 
-#endif
+
 
 
 void i2c_messaging_init(char *_log_prefix)
@@ -77,3 +77,4 @@ void i2c_messaging_init(char *_log_prefix)
     i2c_compat_messaging_init(i2c_messaging_log_prefix);
 }
 
+#endif

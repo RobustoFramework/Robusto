@@ -94,8 +94,8 @@ void robusto_i2c_start(char * _log_prefix) {
  */
 void robusto_i2c_init(char * _log_prefix) {
     i2c_log_prefix = _log_prefix;
-    i2c_compat_messaging_init(_log_prefix); 
     ROB_LOGI(i2c_log_prefix, "Initializing I2C");
+    i2c_compat_messaging_init(_log_prefix); 
 
     #if CONFIG_ROB_NETWORK_TEST_I2C_KILL_SWITCH > -1
         ROB_LOGE("----", "I2C KILL SWITCH ENABLED - GPIO %i", CONFIG_ROB_NETWORK_TEST_I2C_KILL_SWITCH);

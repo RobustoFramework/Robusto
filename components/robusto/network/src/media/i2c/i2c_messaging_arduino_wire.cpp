@@ -40,23 +40,91 @@
 #include <robusto_system.h>
 #include <robusto_time.h>
 #include <robusto_peer.h>
+#include <robusto_incoming.h>
+#include <robusto_qos.h>
 #include <inttypes.h>
 #include <string.h>
 
 #define I2C_TIMING 0x00B21847
 static char *i2c_wire_messaging_log_prefix;
 static bool ismaster = true; // TODO: Defaulting this to true is not the nicest workaround.
-static uint8_t i2c_arduino_data[I2C_RX_BUF];
-static uint32_t i2c_arduino_data_length = 0;
+
 static uint8_t i2c_arduino_receipt[2];
 
-void receiveEvent(int howMany)
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+
+void i2c_incoming_cb(int howMany)
 {
-    ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire receiveEvent");
-    int count = Wire.available();
-    Wire.readBytes((uint8_t *)&i2c_arduino_data, count); // receive byte as a character
-    i2c_arduino_data_length = count;
-    rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, (uint8_t *)&i2c_arduino_data, count);
+    ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire i2c_incoming_cb. %i bytes", howMany);
+    int data_length = Wire.available();
+    if (data_length > I2C_RX_BUF) {
+        ROB_LOGE(i2c_wire_messaging_log_prefix, "Error, too large message with %i bytes, cannot be larger than I2C_RX_BUF.", data_length);
+        return;
+    }
+    
+    uint8_t* data = (uint8_t*)robusto_malloc(data_length);
+    Wire.readBytes(data, data_length); // receive byte as a character
+    rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, data, data_length);
+
+    robusto_peer_t *peer = robusto_peers_find_peer_by_i2c_address(data[0]);
+    if (peer != NULL)
+    {
+        ROB_LOGI(i2c_wire_messaging_log_prefix, "<< i2c_incoming_cb got a message from a peer, data:");
+        rob_log_bit_mesh(ROB_LOG_DEBUG, i2c_wire_messaging_log_prefix, data, data_length);
+    }
+    else
+    {
+        /* We didn't find the peer */
+        ROB_LOGW(i2c_wire_messaging_log_prefix, "<< i2c_incoming_cb got a message from an unknown peer. Data:");
+        rob_log_bit_mesh(ROB_LOG_WARN, i2c_wire_messaging_log_prefix, data, data_length);
+        ROB_LOGW(i2c_wire_messaging_log_prefix, "<< Mac address:");
+        rob_log_bit_mesh(ROB_LOG_WARN, i2c_wire_messaging_log_prefix, data + 1, ROBUSTO_MAC_ADDR_LEN);
+        if (data[ROBUSTO_CRC_LENGTH + 1] != 0x42)
+        {
+            // If it is unknown, and not a presentation, disregard
+            // TODO: Marking as a presentation sort of bypasses this, is this proper?
+            return;
+        }
+
+        peer = robusto_add_init_new_peer_i2c(NULL, data[0]);
+    }
+
+    bool is_heartbeat = data[ROBUSTO_CRC_LENGTH + 1] == HEARTBEAT_CONTEXT;
+    if (is_heartbeat)
+    {
+        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C is heartbeat");
+        rob_log_bit_mesh(ROB_LOG_DEBUG, i2c_wire_messaging_log_prefix, data + 1, data_length);
+        peer->i2c_info.last_peer_receive = parse_heartbeat(data + 1, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
+    }
+
+    if ((data[ROBUSTO_CRC_LENGTH + 1] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
+    {
+        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length -1);
+        memcpy(n_data, data +1 , data_length - 1);
+        handle_fragmented(peer, robusto_mt_i2c, n_data, data_length - 1, I2C_FRAGMENT_SIZE, &i2c_send_message);
+        robusto_free(data);
+        return;
+    }
+
+    peer->i2c_info.last_receive = r_millis();
+    // Is there *really* a need for a synchronized version like below..probably only for testing the comms layer at some initial situation?
+    /*
+    synchro_data = data;
+    synchro_data_len = len;
+    synchro_peer = peer;
+    */
+    if (is_heartbeat)
+    {
+        add_to_history(&peer->i2c_info, false, ROB_OK);
+    }
+    else
+    {
+        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length);
+        memcpy(n_data, data, data_length);
+        ROB_LOGI(i2c_wire_messaging_log_prefix, "Got a message");
+        add_to_history(&peer->i2c_info, false, robusto_handle_incoming(n_data, data_length - 1, peer, robusto_mt_i2c, 1));
+        robusto_free(data);
+    }
 }
 
 void requestEvent()
@@ -86,6 +154,7 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
     {
 
         Wire.setClock(CONFIG_I2C_MAX_FREQ_HZ);
+        
         Wire.begin();
 
         ROB_LOGI(i2c_wire_messaging_log_prefix, "Wire I2C set to master");
@@ -94,7 +163,7 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
     {
 
         Wire.begin(CONFIG_I2C_ADDR);
-        Wire.onReceive(receiveEvent);
+        Wire.onReceive(i2c_incoming_cb);
         Wire.onRequest(requestEvent);
 
         ROB_LOGI(i2c_wire_messaging_log_prefix, "Wire I2C set to slave");
@@ -106,6 +175,8 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
 
 rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
 {
+
+// TODO: Think that this isn't needed?
     if (is_sending)
     {
 
@@ -143,26 +214,28 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
     int64_t starttime = r_millis();
     int send_retries = 0;
     rob_ret_val_t send_ret = ROB_FAIL;
+    i2c_set_master(true, false);
+    data_length = data_length - ROBUSTO_PREFIX_BYTES;
     uint8_t *msg = (uint8_t *)robusto_malloc(data_length + 1);
-    memcpy(msg + 1, data, data_length);
+    memcpy(msg + 1, data + ROBUSTO_PREFIX_BYTES, data_length);
     msg[0] = CONFIG_I2C_ADDR;
-
     do
     {
 
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - >> Sending, try %i.", send_retries + 1);
+        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - >> Sending %i bytes to %hu, try %i.", data_length, peer->i2c_address, send_retries + 1);
 
         Wire.beginTransmission(peer->i2c_address);
-        Wire.write(CONFIG_I2C_ADDR);
-        Wire.write(data, data_length);
-
+        send_ret = Wire.write(msg, data_length + 1);
+        if (send_ret == 0) {
+            ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - >> Send failure");
+        }
         Wire.endTransmission();
         send_ret = ROB_OK;
 
         if (send_ret != ROB_OK)
         {
 
-            ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - >> Send failure, code %i.", send_ret);
+            ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Master - >> Send failure, code %i.", send_ret);
 
             r_delay(I2C_TIMEOUT_MS / 4);
             // TODO: We need to follow up these small failures
@@ -188,7 +261,7 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
         peer->i2c_info.actual_speed = (peer->i2c_info.actual_speed + speed) / 2;
         peer->i2c_info.theoretical_speed = (CONFIG_I2C_MAX_FREQ_HZ / 2);
     }
-
+    i2c_set_master(false, false);
     return send_ret;
 }
 
@@ -277,6 +350,9 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
 
 int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes)
 {
+
+    return ROB_FAIL;
+    #if 0
     int ret_val;
     prefix_bytes[0] = 0x01;
     int retries = 0;
@@ -294,7 +370,7 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
             if (i2c_arduino_data_length > 0)
             {
                 (*peer)->i2c_info.last_receive = r_millis();
-                // memcpy((uint8_t *)data, &i2c_arduino_data, i2c_arduino_data_length);
+                memcpy((uint8_t *)data, &data, i2c_arduino_data_length);
                 data_len = i2c_arduino_data_length;
                 ret_val = ROB_OK;
                 i2c_arduino_data_length = 0;
@@ -349,7 +425,10 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
             return ROB_FAIL;
         }
     }
+    #endif
+    
 }
+
 
 rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
 {
@@ -420,6 +499,9 @@ void i2c_compat_messaging_init(char *_log_prefix)
     i2c_wire_messaging_log_prefix = _log_prefix;
     i2c_arduino_receipt[0] = 0;
     i2c_arduino_receipt[1] = 0;
+    Wire.setSCL(CONFIG_I2C_SCL_IO);
+    Wire.setSDA(CONFIG_I2C_SDA_IO);
+    Wire.setClock(CONFIG_I2C_MAX_FREQ_HZ);
 
     i2c_set_master(false, true);
     /*
