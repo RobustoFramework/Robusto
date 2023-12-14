@@ -76,6 +76,8 @@ bool i2c_tst_on_new_peer(robusto_peer_t * _peer) {
 void tst_i2c_message_receive_presentation(void)
 {
     ROB_LOGI("Test", "In tst_i2c_message_receive_presentation");
+    #ifndef CONFIG_ROB_NETWORK_TEST_I2C_LOOP_INITIATOR 
+    // We began, so we already know who the other peer is (as we added it)
     // Register the on work callback
     robusto_register_on_new_peer(&i2c_tst_on_new_peer);
     async_receive_flag = false;
@@ -89,6 +91,14 @@ void tst_i2c_message_receive_presentation(void)
     if (incoming_peer == NULL) {
         TEST_FAIL_MESSAGE("Test failed, incoming_peer NULL.");
     }
+    #else 
+    robusto_peer_t * peer = robusto_peers_find_peer_by_i2c_address(CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
+    TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Did not find the peer, did we not succeed in adding it earlier?");
+   
+    if ((peer) && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 10000))) {
+        TEST_FAIL_MESSAGE("The peer did not reach PEER_KNOWN_INSECURE state");
+    }
+	#endif
     // TODO: We need more tests here. I think.
     #if 0
     

@@ -66,24 +66,27 @@ rob_ret_val_t robusto_register_recurrence(recurrence_t * recurrence) {
 
 
 void run_all_repeaters_now() {
-    recurrence_t * curr_repeater = NULL;
+    recurrence_t * curr_recurrence = NULL;
     for (uint16_t i = 0; i < recurrence_count; i++) {
-        curr_repeater = recurrences[i];
-        curr_repeater->recurrence_callback();
+        curr_recurrence = recurrences[i];
+        curr_recurrence->recurrence_callback();
     }
 }
 
 
 
 void run_repeaters() {
-    recurrence_t * curr_repeater = NULL;
+    recurrence_t * curr_recurrence = NULL;
     for (uint16_t i = 0; i < recurrence_count; i++) {
-        curr_repeater = recurrences[i];
-        if (curr_repeater->skips_left == 0) {
-            curr_repeater->recurrence_callback();
-            curr_repeater->skips_left = curr_repeater->skip_count;
+        curr_recurrence = recurrences[i];
+        if (curr_recurrence->skips_left == 0) {
+            ROB_LOGI(repeater_log_prefix, "Repeating: %s", curr_recurrence->recurrence_name);
+                r_delay(100);
+            curr_recurrence->recurrence_callback();
+            ROB_LOGI(repeater_log_prefix, "Done %s", curr_recurrence->recurrence_name);
+            curr_recurrence->skips_left = curr_recurrence->skip_count;
         } else {
-            curr_repeater->skips_left--;
+            curr_recurrence->skips_left--;
         }
     }
 }

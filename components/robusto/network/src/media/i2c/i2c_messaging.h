@@ -82,6 +82,8 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
 rob_ret_val_t i2c_before_comms(bool first_param, bool second_param);
 rob_ret_val_t i2c_after_comms(bool first_param, bool second_param);
 
+void i2c_handle_incoming(uint8_t * data, uint32_t data_length);
+
 rob_ret_val_t i2c_read_receipt(robusto_peer_t * peer);
 int i2c_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
 rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown);

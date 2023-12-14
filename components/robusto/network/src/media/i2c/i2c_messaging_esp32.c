@@ -155,7 +155,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     r_delay(10);
     do
     {
-        ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Master - << Reading receipt from %hhu, try %i.", peer->i2c_address, read_retries);
+        ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - << Reading receipt from %hhu, try %i.", peer->i2c_address, read_retries);
         read_ret = i2c_master_read_from_device(CONFIG_I2C_CONTROLLER_NUM, peer->i2c_address, dest_data, 20, 1000 / portTICK_PERIOD_MS);
     
         // TODO: It seems like we always get some unexpected bytes here. The weird thing is that is almost always the same value.
@@ -168,7 +168,6 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
             )
         )
         {
-
             if (read_retries > 2)
             {
                 ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Master - >> Failed to read receipt after %i retries. Error code: %i.",
@@ -194,7 +193,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
         if ((dest_data[0] == 0xff) && (dest_data[1] == 0x00)) {
             read_ret = ROB_OK;
             peer->i2c_info.send_successes++;
-            ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Master - << Read receipt: OK.");
+            ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - << Read receipt: OK.");
         } else {
             read_ret = ROB_FAIL;
             peer->i2c_info.send_failures++;

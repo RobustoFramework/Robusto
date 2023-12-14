@@ -47,8 +47,10 @@
 
 #define I2C_TIMING 0x00B21847
 static char *i2c_wire_messaging_log_prefix;
-static bool ismaster = true; // TODO: Defaulting this to true is not the nicest workaround.
+static bool ismaster = false;
 
+static uint8_t incoming_data[I2C_RX_BUF];
+static uint32_t incoming_data_length;
 static uint8_t i2c_arduino_receipt[2];
 
 rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
@@ -57,88 +59,25 @@ void i2c_incoming_cb(int howMany)
 {
     ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire i2c_incoming_cb. %i bytes", howMany);
     int data_length = Wire.available();
-    if (data_length > I2C_RX_BUF) {
+    if (data_length > I2C_RX_BUF)
+    {
         ROB_LOGE(i2c_wire_messaging_log_prefix, "Error, too large message with %i bytes, cannot be larger than I2C_RX_BUF.", data_length);
         return;
     }
-    
-    uint8_t* data = (uint8_t*)robusto_malloc(data_length);
-    Wire.readBytes(data, data_length); // receive byte as a character
-    rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, data, data_length);
-
-    robusto_peer_t *peer = robusto_peers_find_peer_by_i2c_address(data[0]);
-    if (peer != NULL)
-    {
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "<< i2c_incoming_cb got a message from a peer, data:");
-        rob_log_bit_mesh(ROB_LOG_DEBUG, i2c_wire_messaging_log_prefix, data, data_length);
-    }
-    else
-    {
-        /* We didn't find the peer */
-        ROB_LOGW(i2c_wire_messaging_log_prefix, "<< i2c_incoming_cb got a message from an unknown peer. Data:");
-        rob_log_bit_mesh(ROB_LOG_WARN, i2c_wire_messaging_log_prefix, data, data_length);
-        ROB_LOGW(i2c_wire_messaging_log_prefix, "<< Mac address:");
-        rob_log_bit_mesh(ROB_LOG_WARN, i2c_wire_messaging_log_prefix, data + 1, ROBUSTO_MAC_ADDR_LEN);
-        if (data[ROBUSTO_CRC_LENGTH + 1] != 0x42)
-        {
-            // If it is unknown, and not a presentation, disregard
-            // TODO: Marking as a presentation sort of bypasses this, is this proper?
-            return;
-        }
-
-        peer = robusto_add_init_new_peer_i2c(NULL, data[0]);
-    }
-
-    bool is_heartbeat = data[ROBUSTO_CRC_LENGTH + 1] == HEARTBEAT_CONTEXT;
-    if (is_heartbeat)
-    {
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C is heartbeat");
-        rob_log_bit_mesh(ROB_LOG_DEBUG, i2c_wire_messaging_log_prefix, data + 1, data_length);
-        peer->i2c_info.last_peer_receive = parse_heartbeat(data + 1, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
-    }
-
-    if ((data[ROBUSTO_CRC_LENGTH + 1] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
-    {
-        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length -1);
-        memcpy(n_data, data +1 , data_length - 1);
-        handle_fragmented(peer, robusto_mt_i2c, n_data, data_length - 1, I2C_FRAGMENT_SIZE, &i2c_send_message);
-        robusto_free(data);
-        return;
-    }
-
-    peer->i2c_info.last_receive = r_millis();
-    // Is there *really* a need for a synchronized version like below..probably only for testing the comms layer at some initial situation?
-    /*
-    synchro_data = data;
-    synchro_data_len = len;
-    synchro_peer = peer;
-    */
-    if (is_heartbeat)
-    {
-        add_to_history(&peer->i2c_info, false, ROB_OK);
-    }
-    else
-    {
-        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length);
-        memcpy(n_data, data, data_length);
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "Got a message");
-        add_to_history(&peer->i2c_info, false, robusto_handle_incoming(n_data, data_length - 1, peer, robusto_mt_i2c, 1));
-        robusto_free(data);
-    }
+    incoming_data_length = data_length;
+    Wire.readBytes((uint8_t *)&incoming_data, data_length); // receive byte as a character
 }
 
-void requestEvent()
+void i2c_peripheral_request()
 {
-    ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire requestEvent");
-    Wire.write(i2c_arduino_receipt, 2);
-    // TODO: This is just an entirely *awful* "solution" to peripheral writing. Can't we either use another library or other way?
+    ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire i2c_peripheral_request - send receipt");
+    Wire.write((uint8_t *)&i2c_arduino_receipt, (size_t)2);
     i2c_arduino_receipt[0] = 0;
     i2c_arduino_receipt[1] = 0;
 }
 
 rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
 {
-
     if (ismaster == is_master)
     {
         return ROB_OK;
@@ -146,37 +85,28 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
 
     if (!dont_delete)
     {
-
         Wire.end();
     }
 
     if (is_master)
     {
-
         Wire.setClock(CONFIG_I2C_MAX_FREQ_HZ);
-        
         Wire.begin();
-
         ROB_LOGI(i2c_wire_messaging_log_prefix, "Wire I2C set to master");
     }
     else
     {
-
         Wire.begin(CONFIG_I2C_ADDR);
-        Wire.onReceive(i2c_incoming_cb);
-        Wire.onRequest(requestEvent);
-
         ROB_LOGI(i2c_wire_messaging_log_prefix, "Wire I2C set to slave");
     }
     ismaster = is_master;
-
     return ROB_OK;
 }
 
 rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
 {
 
-// TODO: Think that this isn't needed?
+    // TODO: Think that this isn't needed?
     if (is_sending)
     {
 
@@ -203,10 +133,83 @@ rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
 }
 rob_ret_val_t i2c_after_comms(bool first_param, bool second_param)
 {
-
     int ret = i2c_set_master(false, false);
-
     return ret;
+}
+
+rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
+{
+    uint8_t *dest_data = (uint8_t *)robusto_malloc(20);
+    memset(dest_data, 0xAA, 20);
+    int read_retries = 0;
+    int read_ret = ROB_FAIL;
+
+    r_delay(10);
+    do
+    {
+        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Reading receipt from %u, try %i.", peer->i2c_address, read_retries);
+        Wire.requestFrom(peer->i2c_address, 2);
+        if (Wire.available())
+        {
+            Wire.readBytes(dest_data, 2);
+            read_ret = ROB_OK;
+        }
+        else
+        {
+            read_ret = ROB_FAIL;
+        }
+
+        // TODO: It seems like we always get some unexpected bytes here. The weird thing is that is almost always the same value.
+        if ((read_ret != ROB_OK) ||
+            !(
+                ((dest_data[0] == 0x00) && (dest_data[1] == 0xff)) ||
+                ((dest_data[0] == 0xff) && (dest_data[1] == 0x00))))
+        {
+
+            if (read_retries > 2)
+            {
+                ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Master - >> Failed to read receipt after %i retries. Error code: %i.",
+                         read_retries, read_ret);
+            }
+            else
+            {
+                ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt failure, code %i. Waiting a short while.", read_ret);
+                rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
+                r_delay(CONFIG_ROB_RECEIPT_TIMEOUT_MS);
+                read_ret = ROB_FAIL;
+            }
+        }
+        read_retries++;
+    } while ((read_ret != ROB_OK) && (read_retries < 3)); // We always retry reading three times. TODO: Why?
+
+    if ((read_ret == ROB_OK) && (read_retries < 3))
+    {
+        // TODO: Break out from both wire and esp32
+        if ((dest_data[0] == 0x0f) && (dest_data[1] == 0xf0))
+        {
+            read_ret = ROB_ERR_WHO;
+            peer->state = PEER_UNKNOWN;
+            ROB_LOGW(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt: Rejected, the peer has forgotten us.");
+        }
+        else if ((dest_data[0] == 0xff) && (dest_data[1] == 0x00))
+        {
+            read_ret = ROB_OK;
+            peer->i2c_info.send_successes++;
+            ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt: OK.");
+        }
+        else
+        {
+            read_ret = ROB_FAIL;
+            peer->i2c_info.send_failures++;
+
+            ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt: FAILED, %i retries:", read_retries - 1);
+            rob_log_bit_mesh(ROB_LOG_ERROR, i2c_wire_messaging_log_prefix, dest_data, 20);
+        }
+    }
+    robusto_free(dest_data);
+
+    // i2c_cmd_link_delete(cmd);
+    return read_ret;
 }
 
 rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
@@ -226,7 +229,8 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
 
         Wire.beginTransmission(peer->i2c_address);
         send_ret = Wire.write(msg, data_length + 1);
-        if (send_ret == 0) {
+        if (send_ret == 0)
+        {
             ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - >> Send failure");
         }
         Wire.endTransmission();
@@ -261,162 +265,91 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_len
         peer->i2c_info.actual_speed = (peer->i2c_info.actual_speed + speed) / 2;
         peer->i2c_info.theoretical_speed = (CONFIG_I2C_MAX_FREQ_HZ / 2);
     }
+
+    if (receipt)
+    {
+        send_ret = i2c_read_receipt(peer);
+    }
+
     i2c_set_master(false, false);
     return send_ret;
 }
 
-rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
+rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
 {
-    uint8_t *dest_data = (uint8_t *)robusto_malloc(20);
-    memset(dest_data, 0xAA, 20);
+    ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> In i2c_send_receipt");
 
-    /*
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_start(cmd));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_write_byte(cmd, (peer->i2c_address << 1) | I2C_MASTER_READ, ACK_CHECK_EN));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_read(cmd, dest_data, 19, ACK_VAL));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_read_byte(cmd, dest_data + 19, NACK_VAL));
-    ESP_ERROR_CHECK_WITHOUT_ABORT(i2c_master_stop(cmd));
-*/
-    int read_retries = 0;
-    int read_ret = ROB_FAIL;
-
-    // TODO: This should probably use CONFIG_ROBUSTO_RECEIPT_TIMEOUT_MS * 1000 in some way.
-    // And SDP_RECEIPT must be recalculated based on transmission speeds.
-    // Also, the delay here is slightly strange.
-
-    r_delay(50);
-    do
+    if (unknown)
     {
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Reading receipt from %u, try %i.", peer->i2c_address, read_retries);
-        Wire.requestFrom(peer->i2c_address, 2);
-        if (Wire.available())
-        {
-            Wire.readBytes(dest_data, 2);
-        }
-        else
-        {
-            return ROB_FAIL;
-        }
-
-        return ROB_FAIL;
-
-        // read_ret = i2c_master_read_from_device(CONFIG_I2C_CONTROLLER_NUM, peer->i2c_address, dest_data, 20, 1000 / portTICK_PERIOD_MS);
-
-        // TODO: It seems like we always get some unexpected bytes here. The weird thing is that is almost always the same value.
-        if ((read_ret != ROB_OK) ||
-            !(
-                ((dest_data[0] == 0x00) && (dest_data[1] == 0xff)) ||
-                ((dest_data[0] == 0xff) && (dest_data[1] == 0x00))))
-        {
-
-            if (read_retries > 2)
-            {
-                ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Master - >> Failed to read receipt after %i retries. Error code: %i.",
-                         read_retries, read_ret);
-            }
-            else
-            {
-                ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt failure, code %i. Waiting a short while.", read_ret);
-                rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
-                r_delay(CONFIG_ROB_RECEIPT_TIMEOUT_MS);
-                read_ret = ROB_FAIL;
-            }
-        }
-        read_retries++;
-    } while ((read_ret != ROB_OK) && (read_retries < 3)); // We always retry reading three times. TODO: Why?
-
-    if ((read_ret == ROB_OK) && (read_retries < 3))
-    {
-        peer->i2c_info.last_receive = r_millis();
-        if ((dest_data[0] == 0xff) && (dest_data[1] == 0x00))
-        {
-            read_ret = ROB_OK;
-            ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt, was OK.");
-            // rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
-        }
-        else
-        {
-            read_ret = ROB_FAIL;
-            ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt, was FAILED, %i retries:", read_retries - 1);
-            rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
-        }
+        i2c_arduino_receipt[0] = 0x0f;
+        i2c_arduino_receipt[1] = 0xf0;
     }
-    robusto_free(dest_data);
-
-    // i2c_cmd_link_delete(cmd);
-    return read_ret;
+    else if (success)
+    {
+        if (peer)
+        {
+            peer->i2c_info.send_failures++; // TODO: Not sure how this should count, but probably it should
+        }
+        i2c_arduino_receipt[0] = 0xff;
+        i2c_arduino_receipt[1] = 0x00;
+    }
+    else
+    {
+        i2c_arduino_receipt[0] = 0x00;
+        i2c_arduino_receipt[1] = 0xff;
+        peer->i2c_info.last_send = r_millis();
+        peer->i2c_info.send_successes++;
+    }
+    return ROB_OK;
 }
 
 int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes)
 {
 
-    return ROB_FAIL;
-    #if 0
     int ret_val;
     prefix_bytes[0] = 0x01;
     int retries = 0;
-    int data_len = 0;
-    uint8_t *data = *rcv_data;
+    int data_length = 0;
+    uint8_t *data;
     do
     {
         if (retries > 0)
         {
             r_delay(1);
         }
-        do
+        if (incoming_data_length > 0)
         {
-
-            if (i2c_arduino_data_length > 0)
-            {
-                (*peer)->i2c_info.last_receive = r_millis();
-                memcpy((uint8_t *)data, &data, i2c_arduino_data_length);
-                data_len = i2c_arduino_data_length;
-                ret_val = ROB_OK;
-                i2c_arduino_data_length = 0;
-            }
-            else
-            {
-                ret_val = ROB_FAIL;
-                r_delay(50);
-            }
-
-            /*
-            if (ret_val > I2C_RX_BUF)
-            {
-                // TODO: Add another buffer, chain them or something, obviously we need to be able to receive much more data
-                ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Slave - << Got too much data: %i bytes", data_len);
-            }
-
-            if (ret_val> 0) {
-                ROB_LOGE(i2c_wire_messaging_log_prefix, "We have %i bytes of data ", ret_val);
-                ret_val = Wire.readBytes(data, I2C_RX_BUF);
-            }
-            */
-
-            data_len = data_len + i2c_arduino_data_length;
-
-        } while (i2c_arduino_data_length > 0); // Continue as long as there is a result.
+            (*peer)->i2c_info.last_receive = r_millis();
+            ret_val = ROB_OK;
+            data = incoming_data;
+            data_length = incoming_data_length;
+            incoming_data_length = 0;
+        }
+        else
+        {
+            ret_val = ROB_FAIL;
+            r_delay(50);
+        }
+        // TODO: Will we get shorter writes?
         retries++;
-    } while ((data_len == 0) && (retries < 3)); // Continue as long as there is a result.
+    } while ((data_length == 0) && (retries < 3)); // Continue as long as there is a result.
     // If we haven't got any data, and an error in the end, we return that error.
-    if (data_len == 0 && ret_val != 0)
+    if (data_length == 0 && ret_val != 0)
     {
         return ROB_FAIL;
     }
     else
     {
-
         ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> Checking message");
         // Check CRC
-        if (robusto_check_message(data, i2c_arduino_data_length, 1))
+        if (robusto_check_message(data, data_length, 1))
         {
             ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> Message valid, sending receipt.");
             // TODO: Implement reading hearbeats and not responding
             //(*peer)->espnow_info.last_peer_receive = parse_heartbeat(data, I2C_ADDR_LEN + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
-            //  TODO: Implement handling
             i2c_send_receipt(*peer, true, false);
-            return data_len;
+            i2c_handle_incoming(data, data_length);
+            return data_length;
         }
         else
         {
@@ -425,68 +358,6 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
             return ROB_FAIL;
         }
     }
-    #endif
-    
-}
-
-
-rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
-{
-    ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> In i2c_send_receipt");
-
-    // char receipt[2];
-    if (unknown)
-    {
-        i2c_arduino_receipt[0] = 0x0f;
-        i2c_arduino_receipt[1] = 0xf0;
-    }
-    else if (success)
-    {
-        i2c_arduino_receipt[0] = 0xff;
-        i2c_arduino_receipt[1] = 0x00;
-    }
-    else
-    {
-        i2c_arduino_receipt[0] = 0x00;
-        i2c_arduino_receipt[1] = 0xff;
-    }
-
-// return ROB_OK;
-#if defined(ARDUINO_ARCH_RP2040)
-    int ret = Wire.write(i2c_arduino_receipt, 2);
-    if (ret = 0)
-    {
-        ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Slave - >> Error: %u", ret);
-
-#elif defined(ARDUINO_ARCH_STM32)
-
-    // int ret = i2c_slave.write((char *)&i2c_arduino_receipt, 2);
-    r_delay(1000);
-
-    int ret = HAL_I2C_Slave_Transmit(&I2cHandle, (uint8_t *)&i2c_arduino_receipt, 2, 5000);
-
-    if (ret != HAL_OK)
-    {
-        ROB_LOGE(i2c_wire_messaging_log_prefix, "I2C Slave - >> Result: %u, ErrorCode: %u, State: %u, Size: %u", ret, I2cHandle.ErrorCode, I2cHandle.State, I2cHandle.XferSize);
-
-//  (i2c1, "\ff\00");
-#endif
-
-        if (peer)
-        {
-            peer->i2c_info.send_failures++; // TODO: Not sure how this should count, but probably it should
-        }
-        ret = ROB_FAIL;
-    }
-    else
-    {
-        ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> Sent %i bytes: %02x%02x", ret, i2c_arduino_receipt[0], i2c_arduino_receipt[1]);
-        ret = ROB_OK;
-        peer->i2c_info.last_send = r_millis();
-        peer->i2c_info.send_successes++;
-    }
-
-    return ret;
 }
 
 void i2c_compat_messaging_start()
@@ -497,18 +368,16 @@ void i2c_compat_messaging_init(char *_log_prefix)
 {
     // TODO: Implement detection and handling of these error states: https://arduino.stackexchange.com/questions/46680/i2c-packet-ocasionally-send-a-garbage-data
     i2c_wire_messaging_log_prefix = _log_prefix;
+    incoming_data_length = 0;
     i2c_arduino_receipt[0] = 0;
     i2c_arduino_receipt[1] = 0;
+
     Wire.setSCL(CONFIG_I2C_SCL_IO);
     Wire.setSDA(CONFIG_I2C_SDA_IO);
-    Wire.setClock(CONFIG_I2C_MAX_FREQ_HZ);
 
+    Wire.onReceive(i2c_incoming_cb);
+    Wire.onRequest(i2c_peripheral_request);
     i2c_set_master(false, true);
-    /*
-        i2c_slave.address(CONFIG_I2C_ADDR);
-        i2c_slave.frequency(100000);
-        i2c_slave.stop();
-        */
 }
 
 #endif

@@ -80,9 +80,8 @@ void tst_i2c_message_send_message(void)
 
 	ROB_LOGI("TEST", "In tst_i2c_message_send_message.");
 
-	//robusto_peer_t * peer = robusto_peers_find_peer_by_i2c_address(CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
-    robusto_peer_t * peer = remote_peer;
-	TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Did not find the peer, did the presentation fail?");
+	robusto_peer_t * peer = robusto_peers_find_peer_by_i2c_address(CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
+    TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Did not find the peer, did the presentation fail?");
     TEST_ASSERT_NOT_EQUAL_MESSAGE(peer->state, PEER_UNKNOWN, "Peer not properly initialized.");
     queue_state *state = robusto_malloc(sizeof(queue_state));
 	rob_ret_val_t ret_val_flag = send_message_multi(peer, 0, 0, &tst_strings, sizeof(tst_strings), NULL, 0, state, robusto_mt_none);

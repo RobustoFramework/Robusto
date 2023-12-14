@@ -149,8 +149,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
     }
 
     curr_info->failure_rate = add_to_failure_rate_history(curr_info, failure_rate);
-    ROB_LOGI(scoring_log_prefix, "Scored peer  %s, media %hhu, avg failure rate %f", peer->name, media_type, curr_info->failure_rate );
-
+    ROB_LOGI(scoring_log_prefix, "Scored peer %s, media %hhu, avg failure rate %f", peer->name, media_type, curr_info->failure_rate );
 #define FAILURE_COUNT 4
     // We do not want large numbers at all, as this makes new change not matter
     if ((curr_info->send_successes + curr_info->send_failures) > 5)
@@ -182,6 +181,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
             curr_info->send_failures = 1 * failure_quotient;
         }
     }
+    ROB_LOGI(scoring_log_prefix, "1");
 
 }
 

@@ -62,7 +62,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     rob_ret_val_t ret_val_flag;
     robusto_media_t *info = get_media_info(peer, media_type);
-    rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, is_reply);
+    rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, true);
     if (queue_ret != ROB_OK) {
         peer->state = failstate;
         ROB_LOGE(presentation_log_prefix, "Error queueing presentation: %i %i", queue_ret, media_type);
