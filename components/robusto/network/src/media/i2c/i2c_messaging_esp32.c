@@ -105,7 +105,7 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
             .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL,
         };
         ESP_ERROR_CHECK(i2c_param_config(CONFIG_I2C_CONTROLLER_NUM, &conf));
-
+        i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 0x1f); 
         ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - Installing driver");
 
         return i2c_driver_install(CONFIG_I2C_CONTROLLER_NUM, conf.mode, I2C_TX_BUF, I2C_RX_BUF, 0);
@@ -152,11 +152,12 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
 
     int read_retries = 0;
     int read_ret = ROB_FAIL;    
-    r_delay(10);
-    do
+    r_delay(50);
+    i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 0x1f); 
+    while(1)
     {
         ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - << Reading receipt from %hhu, try %i.", peer->i2c_address, read_retries);
-        read_ret = i2c_master_read_from_device(CONFIG_I2C_CONTROLLER_NUM, peer->i2c_address, dest_data, 20, 1000 / portTICK_PERIOD_MS);
+        read_ret = i2c_master_read_from_device(CONFIG_I2C_CONTROLLER_NUM, peer->i2c_address, dest_data, 2, 100 / portTICK_PERIOD_MS);
     
         // TODO: It seems like we always get some unexpected bytes here. The weird thing is that is almost always the same value.
         // If it was either not successful, or that the data didn't indicate whether it worked or not..
@@ -168,21 +169,25 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
             )
         )
         {
+            read_retries++;
             if (read_retries > 2)
             {
                 ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Master - >> Failed to read receipt after %i retries. Error code: %i.",
                          read_retries, read_ret);
+                break;
             }
             else
             {
-                ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Master - << Read receipt failure, code %i. Waiting a short while.", read_ret);
+                ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - << Read receipt failure, code %i. Waiting a short while.", read_ret);
                 rob_log_bit_mesh(ROB_LOG_DEBUG, i2c_esp32_messaging_log_prefix, dest_data, 20);
                 r_delay(CONFIG_ROB_RECEIPT_TIMEOUT_MS);
                 read_ret = ROB_FAIL;
             }
-        }
-        read_retries++;
-    } while ((read_ret != ROB_OK) && (read_retries < 3)); // We always retry reading three times. TODO: Why?
+        } else {
+            read_ret = ROB_OK;
+            break;
+        }  
+    } 
     
     if ((read_ret == ROB_OK) && (read_retries < 3)) {
         if ((dest_data[0] == 0x0f) && (dest_data[1] == 0xf0)) {
@@ -427,7 +432,8 @@ void i2c_compat_messaging_init(char *_log_prefix)
 {
     // TODO: Implement detection and handling of these error states: https://arduino.stackexchange.com/questions/46680/i2c-packet-ocasionally-send-a-garbage-data
     i2c_esp32_messaging_log_prefix = _log_prefix;
-
+    // This we have to set manually for some non-s3 cards
+    i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 1000 / portTICK_PERIOD_MS); 
 }
 
 #endif

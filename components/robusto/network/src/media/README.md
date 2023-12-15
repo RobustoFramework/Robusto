@@ -10,7 +10,7 @@ This way, one can achieve redundancy, increase security and an ability to report
 * Fragmentation and ressembly of large messages 
 
 
-# Tested controllers
+# Tested boards
 
 |Microcontroller|Framework|I2C|LoRa|WiFi|ESP-NOW|Comments|
 |----|----|----|----|----|----|----|
@@ -19,8 +19,8 @@ This way, one can achieve redundancy, increase security and an ability to report
 |TTGO T-BEAM SX1262|ESP-IDF|X|X||X||
 |LoRa32 V1 SX1278|ESP-IDF|X|X||X||
 |RaspberryPi Pico|Arduino|X||||[I2C Peripheral times out](https://github.com/espressif/esp-idf/issues/12801)|
-|STM32 F03C8|Mbed|||||WiP (used to work)|
-|STM32 F407VE|Mbed|||||WiP (used to work)|
+|STM32 F03C8|Mbed|||||WiP (I2c used to work)|
+|STM32 F407VE|Mbed|||||WiP (I2c used to work)|
 
 
 Restricted (i.e cannot run Robusto, but can easily send data to Robusto peers using Fletch16 checksums)

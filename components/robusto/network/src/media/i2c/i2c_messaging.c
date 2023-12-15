@@ -104,7 +104,7 @@ void i2c_handle_incoming(uint8_t * data, uint32_t data_length){
         memcpy(n_data, data, data_length);
         ROB_LOGI(i2c_messaging_log_prefix, "Got a message");
         add_to_history(&peer->i2c_info, false, robusto_handle_incoming(n_data, data_length - 1, peer, robusto_mt_i2c, 1));
-        robusto_free(data);
+        //robusto_free(data);
     }
 }
 
@@ -126,9 +126,6 @@ void i2c_do_on_work_cb(media_queue_item_t *queue_item)
     ROB_LOGD(i2c_messaging_log_prefix, ">> In i2c work callback.");
     send_work_item(queue_item, &(queue_item->peer->i2c_info), robusto_mt_i2c, &i2c_send_message, &i2c_do_on_poll_cb, i2c_get_queue_context());
 }
-
-
-
 
 
 void i2c_messaging_init(char *_log_prefix)
