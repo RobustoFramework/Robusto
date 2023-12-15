@@ -71,9 +71,14 @@ void i2c_incoming_cb(int howMany)
 void i2c_peripheral_request()
 {
     ROB_LOGI(i2c_wire_messaging_log_prefix, "In wire i2c_peripheral_request - send receipt");
-    Wire.write((uint8_t *)&i2c_arduino_receipt, (size_t)2);
-    i2c_arduino_receipt[0] = 0;
-    i2c_arduino_receipt[1] = 0;
+    if (i2c_arduino_receipt[0] + i2c_arduino_receipt[1]) {
+        Wire.write((uint8_t *)&i2c_arduino_receipt, (size_t)2);
+        i2c_arduino_receipt[0] = 0;
+        i2c_arduino_receipt[1] = 0;
+    } else {
+        ROB_LOGW(i2c_wire_messaging_log_prefix, "In wire i2c_peripheral_request - have no data to send");
+    }
+    
 }
 
 rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
@@ -140,7 +145,8 @@ rob_ret_val_t i2c_after_comms(bool first_param, bool second_param)
 rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
 {
     uint8_t *dest_data = (uint8_t *)robusto_malloc(20);
-    memset(dest_data, 0xAA, 20);
+    // aa everywhere makes it easy to discern from random noise
+    memset(dest_data, 0xaa, 20);
     int read_retries = 0;
     int read_ret = ROB_FAIL;
 
@@ -163,7 +169,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
         if ((read_ret != ROB_OK) ||
             !(
                 ((dest_data[0] == 0x00) && (dest_data[1] == 0xff)) ||
-                ((dest_data[0] == 0xff) && (dest_data[1] == 0x00))))
+                ((dest_data[0] == 0xff) && (dest_data[1] == 0x00)))) 
         {
 
             if (read_retries > 2)
@@ -174,7 +180,9 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
             else
             {
                 ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Master - << Read receipt failure, code %i. Waiting a short while.", read_ret);
-                rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
+                if (!(dest_data[0] == 0xaa || dest_data[1] == 0xaa)) {
+                    rob_log_bit_mesh(ROB_LOG_INFO, i2c_wire_messaging_log_prefix, dest_data, 20);
+                }                
                 r_delay(CONFIG_ROB_RECEIPT_TIMEOUT_MS);
                 read_ret = ROB_FAIL;
             }
@@ -208,7 +216,6 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     }
     robusto_free(dest_data);
 
-    // i2c_cmd_link_delete(cmd);
     return read_ret;
 }
 
@@ -328,7 +335,6 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
         else
         {
             ret_val = ROB_FAIL;
-            r_delay(50);
         }
         // TODO: Will we get shorter writes?
         retries++;
@@ -340,14 +346,14 @@ int i2c_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_byt
     }
     else
     {
+        // TODO: Move this as well to i2c_handle_incoming.
         ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> Checking message");
         // Check CRC
         if (robusto_check_message(data, data_length, 1))
         {
             ROB_LOGI(i2c_wire_messaging_log_prefix, "I2C Slave - >> Message valid, sending receipt.");
-            // TODO: Implement reading hearbeats and not responding
-            //(*peer)->espnow_info.last_peer_receive = parse_heartbeat(data, I2C_ADDR_LEN + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
             i2c_send_receipt(*peer, true, false);
+            
             i2c_handle_incoming(data, data_length);
             return data_length;
         }
