@@ -25,5 +25,5 @@ Restricted (i.e cannot run Robusto, but can easily send data to Robusto peers us
 |Microcontroller|Framework|I2C|
 |----|----|----|
 |Arduino UNO|Arduino|X|
-|ATTINY85|Arduino|X|
+|Atmel ATtiny85|Arduino|X|
 
