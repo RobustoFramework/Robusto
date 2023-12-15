@@ -20,10 +20,10 @@ This way, one can achieve redundancy, increase security and an ability to report
 |RaspberryPi Pico|Arduino|X||||[I2C Peripheral times out](https://github.com/espressif/esp-idf/issues/12801)|
 |STM32|Mbed|||||WiP (used to work)|
 
-Restricted (i.e cannot run Robusto, but can send data using Fletch16 checksums)
+Restricted (i.e cannot run Robusto, but can easily send data to Robusto peers using Fletch16 checksums)
 
-|Microcontroller|Framework|I2C|LoRa|WiFi|ESP-NOW|Comments|
-|----|----|----|----|----|----|----|
-|Arduino UNO|Arduino|X||||||
-|ATTINY85|Arduino|X||||||
+|Microcontroller|Framework|I2C|
+|----|----|----|
+|Arduino UNO|Arduino|X|
+|ATTINY85|Arduino|X|
 
