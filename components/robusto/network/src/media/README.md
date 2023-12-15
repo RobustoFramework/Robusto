@@ -1,7 +1,29 @@
-# Media implementations
-This is the implementation of the Robusto LoRa medias
-## Purpose
+# Robusto Media
+Robusto implements several medias, and is able to switch between them. 
+This way, one can achieve redundancy, increase security and an ability to report health issues even if medias are down. It handles this by scoring medias based on success rate, speed, suitability and any other aspects that may be important. 
 
-## Heading 1
+# Features
+* Redundancy by using several medias
+* Security by using several medias
+* Re-sending
+* CRC32 or Fletch16 depending on MCU (Fletch16 takes much less memory)
+* Fragmentation and ressembly of large messages 
 
-## Heading 2
+
+# Tested controllers
+
+|Microcontroller|Framework|I2C|LoRa|WiFi|ESP-NOW|Comments|
+|----|----|----|----|----|----|----|
+|ESP32-DevKit V4|ESP-IDF|X|||X||
+|ESP32-SIM7000G|ESP-IDF|X|||X|+ works as 3G/4G [UMTS gateway](https://github.com/RobustoFramework/Robusto/tree/main/components/robusto/misc/src/umts) |
+|LoRa32 V1|ESP-IDF|X|X||X||
+|RaspberryPi Pico|Arduino|X||||[I2C Peripheral times out](https://github.com/espressif/esp-idf/issues/12801)|
+|STM32|Mbed|||||WiP (used to work)|
+
+Restricted (i.e cannot run Robusto, but can send data using Fletch16 checksums)
+
+|Microcontroller|Framework|I2C|LoRa|WiFi|ESP-NOW|Comments|
+|----|----|----|----|----|----|----|
+|Arduino UNO|Arduino|X||||||
+|ATTINY85|Arduino|X||||||
+
