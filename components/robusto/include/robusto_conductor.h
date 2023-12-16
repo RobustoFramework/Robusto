@@ -36,6 +36,10 @@
 #include <robusto_time.h>
 #include <robusto_peer_def.h>
 #include <inttypes.h>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /* The most amount of time the peer gives itself until it goes to sleep */
 #define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS * 2
@@ -111,3 +115,8 @@ int robusto_conductor_client_send_when_message(robusto_peer_t *peer);
  * @param _on_before_sleep_cb The callback
  */
 void robusto_conductor_server_set_before_sleep(before_sleep *_on_before_sleep_cb);
+
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

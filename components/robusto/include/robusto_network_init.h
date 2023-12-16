@@ -29,7 +29,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /* Initialize things */
 
@@ -55,3 +58,6 @@ void robusto_qos_start();
 
 /* Shutting stuff down */
 void robusto_media_stop();
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

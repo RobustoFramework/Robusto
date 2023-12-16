@@ -31,13 +31,13 @@
 
 #pragma once
 
+#include <robconfig.h>
+#include <inttypes.h>
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-#include <robconfig.h>
-#include <inttypes.h>
-
 typedef void(init_callback_t)(char * log_prefix);
 typedef void(start_callback_t)(void);
 typedef void(stop_callback_t)(void);

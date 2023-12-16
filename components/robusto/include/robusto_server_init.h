@@ -32,10 +32,16 @@
 
 #pragma once
 #include <robconfig.h>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 void robusto_repeater_stop();
 void robusto_repeater_start();
 void robusto_repeater_init(char * _log_prefix);
 void robusto_memory_monitor_init(char *_log_prefix);
 void register_server_service();
-
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 

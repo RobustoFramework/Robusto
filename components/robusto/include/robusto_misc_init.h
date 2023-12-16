@@ -34,7 +34,14 @@
 
 #pragma once
 #include <robconfig.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 void register_misc_service();
 void robusto_misc_init(char * _log_prefix);
 
-
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

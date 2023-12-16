@@ -32,10 +32,6 @@
 
 #pragma once
 #include <robconfig.h>
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -62,6 +58,10 @@ typedef uint32_t rob_task_handle_t;
 typedef pthread_mutex_t *mutex_ref_t;
 #endif
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
     void init_robusto_concurrency(char * _log_prefix);
 
