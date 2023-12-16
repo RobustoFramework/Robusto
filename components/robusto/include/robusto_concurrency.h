@@ -52,7 +52,6 @@ extern "C"
 #endif
 
 
-
 // Tasks'n threads (FreeRTOS tasks are equated with POSIX threads here)
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
     typedef TaskHandle_t rob_task_handle_t;

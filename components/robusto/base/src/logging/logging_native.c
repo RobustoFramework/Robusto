@@ -29,10 +29,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
-
 #include "robusto_logging.h"
 
+#if !(defined(USE_ARDUINO) || defined(USE_ESPIDF))
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE 
 #include <stdio.h>
 #include <inttypes.h>

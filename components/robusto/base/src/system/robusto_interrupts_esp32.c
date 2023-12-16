@@ -47,14 +47,14 @@
 #endif
 
 uint8_t robusto_digitalPinToInterrupt(uint8_t pin) {
-  if (pin < 0 || pin >= GPIO_PIN_COUNT) {
+  if (pin >= GPIO_PIN_COUNT) {
     return NOT_AN_INTERRUPT;
   }
   return pin;
 }
 uint8_t digitalPinToGPIO(uint8_t pin) {
   // Check if the pin is within range
-  if (pin >= 0 && pin < GPIO_PIN_COUNT) {
+  if (pin < GPIO_PIN_COUNT) {
     // Get the GPIO number corresponding to the pin
     switch (pin) {
       case 0:  return GPIO_NUM_0;
@@ -111,6 +111,7 @@ void robusto_attachInterrupt(int pin, void (*isr)(void), int mode) {
   if (gpio_num == GPIO_NUM_MAX) {
     return;
   }
+  gpio_isr_t
   gpio_pad_select_gpio(gpio_num);
   gpio_set_intr_type(gpio_num, mode == RISING ? GPIO_INTR_POSEDGE : mode == FALLING ? GPIO_INTR_NEGEDGE : GPIO_INTR_ANYEDGE);
   gpio_isr_handler_add(gpio_num, isr, (void *)gpio_num);
@@ -118,7 +119,7 @@ void robusto_attachInterrupt(int pin, void (*isr)(void), int mode) {
 }
 
 void robusto_detachInterrupt(uint8_t pin){
-  if (pin < 0 || pin >= GPIO_PIN_COUNT) {
+  if (pin >= GPIO_PIN_COUNT) {
     return;
   }
   gpio_num_t gpio_num = digitalPinToGPIO(pin);
