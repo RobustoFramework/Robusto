@@ -31,7 +31,7 @@
 
 #pragma once
 #include <robconfig.h>
-
+#if !defined(ARDUINO_ARCH_STM32)
 #if defined(USE_ARDUINO)
 #include <Wire.h>
 #endif
@@ -287,3 +287,5 @@ protected:
     iic_fptr_t  thisReadRegCallback     = NULL;
     iic_fptr_t  thisWriteRegCallback    = NULL;
 };
+
+#endif /* !ARDUINO_ARCH_STM32 */

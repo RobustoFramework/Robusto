@@ -30,6 +30,7 @@
 
 
 #include "XPowersLibInterface.hpp"
+#if !defined(ARDUINO_ARCH_STM32)
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif
@@ -106,3 +107,4 @@ uint16_t XPowersLibInterface::getVbusVoltage()
 {
     return 0;
 }
+#endif

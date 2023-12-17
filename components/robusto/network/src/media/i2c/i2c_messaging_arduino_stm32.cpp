@@ -543,7 +543,7 @@ void i2c_compat_messaging_init(char *_log_prefix)
 #ifdef ARDUINO_ARCH_STM32
     
         RCC->APB1ENR |= (1 << 21);
-        RCC->AHBENR |= (1 << 1);
+        RCC->AHB1ENR |= (1 << 1);
 /*
         LL_GPIO_SetPinMode(GPIOB, 44, LL_GPIO_MODE_FLOATING);
         // LL_GPIO_SetPinPull(GPIOB, 42,   LL_GPIO_PULL_UP);

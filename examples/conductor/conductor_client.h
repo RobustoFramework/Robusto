@@ -35,7 +35,15 @@
 #include <robconfig.h>
 #include <robusto_message.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 void init_conductor_client(char * _log_prefix);
 
 void conductor_client_call_server();
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

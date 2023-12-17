@@ -12,6 +12,7 @@
 static robusto_peer_t *r_peer;
 const uint16_t serviceid = 1959;
 
+// TODO: Not sure if we should use the constructor variant, it is a bit implicit
 void register_hello_service()__attribute__((constructor));
 
 void on_incoming(robusto_message_t *message);

@@ -29,6 +29,7 @@
  */
 
 #include "XPowersCommon.tpp"
+#if !defined(ARDUINO_ARCH_STM32)
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #else
@@ -2078,4 +2079,4 @@ private:
 };
 
 
-
+#endif

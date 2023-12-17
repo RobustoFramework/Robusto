@@ -9,7 +9,7 @@
 
 #ifndef __XPOWERSLIB_H__
 #define __XPOWERSLIB_H__
-
+#if !defined(ARDUINO_ARCH_STM32)
 
 #if defined(XPOWERS_CHIP_AXP192)
 #include "XPowersAXP192.tpp"
@@ -26,10 +26,6 @@ typedef XPowersAXP2101 XPowersPMU;
 #include "XPowersAXP2101.tpp"
 #endif
 
-
-
-
-
-
-
 #endif /*__XPOWERSLIB_H__*/
+
+#endif /* ARDUINO_ARCH_STM32 */

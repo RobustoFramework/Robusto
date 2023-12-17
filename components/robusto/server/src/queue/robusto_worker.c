@@ -36,7 +36,7 @@
 #include <string.h>
 #endif
 
-#ifdef USE_NATIVE
+#if defined(USE_NATIVE) || (defined(USE_ARDUINO) && defined(ARDUINO_ARCH_STM32))
 #include <assert.h>
 #endif
 

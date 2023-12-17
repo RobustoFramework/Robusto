@@ -30,6 +30,7 @@
 
 
 #include "XPowersCommon.tpp"
+#if !defined(ARDUINO_ARCH_STM32)
 #if defined(USE_ARDUINO)
 #include <Arduino.h>
 #endif /*USE_ARDUINO*/
@@ -3066,5 +3067,4 @@ private:
     uint8_t intRegister[XPOWERS_AXP2101_INTSTS_CNT];
 };
 
-
-
+#endif /* !ARDUINO_ARCH_STM32 */

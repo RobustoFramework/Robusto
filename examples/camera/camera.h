@@ -37,5 +37,14 @@
 
 #define CONFIG_ESP32_SPIRAM_SUPPORT y
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void start_camera_example();
 void init_camera_example(char * _log_prefix);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

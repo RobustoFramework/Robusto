@@ -29,13 +29,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef ARDUINO_ARCH_STM32
+// TODO: Along with the pulse implementation, this might not be relevant
+
+#if 0
+
+// #ifdef ARDUINO_ARCH_STM32
+
 
 /*
 Note that the implementation assumes that the interrupt pin numbers are mapped to EXTI lines 0 to 15, as is the case for most STM32 microcontrollers. If your specific microcontroller maps interrupt pins to different EXTI lines, you may need to modify the implementation accordingly.
 */
 
 #include "stm32f1xx_hal.h"
+#include "stm32f1xx_ll_exti.h"
 
 #define STM32_PIN_COUNT 37
 

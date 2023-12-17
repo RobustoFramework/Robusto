@@ -166,17 +166,11 @@ int main(void)
 }
 
 #endif
-
-#ifdef USE_ESPIDF
-
-/**
- * For ESP-IDF framework
- */
-void app_main()
+void main_task(void *parameters)
 {
     setup_examples();
     log_test();
-
+    
 
     #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_CLIENT
     
@@ -190,10 +184,21 @@ void app_main()
     #else
     while (1)
     {
-        r_delay(100);
+        ROB_LOGI(example_log_prefix, "Alive.");
+        r_delay(5000);
     };
     #endif
-    // while(1) {r_delay(100);};
+}
+
+
+#ifdef USE_ESPIDF
+
+/**
+ * For ESP-IDF framework
+ */
+void app_main()
+{
+    main_task(NULL);
     
 }
 
@@ -205,17 +210,10 @@ void app_main()
  * For the Arduino platform, here everything must manually run in a task if we are running freeRTOS.
  */
 
-void main_task(void *parameters)
-{
-    setup_examples();
-    ROB_LOGI("Arduino", "Before creating task.");
-    delay(2000);
-    log_test();
-    vTaskDelete(NULL);
-}
 
 void setup()
 {
+    ROB_LOGI("Arduino", "Before creating task.");
     robusto_create_task((TaskFunction_t)&main_task, NULL, "Test task", NULL, 1);
 }
 

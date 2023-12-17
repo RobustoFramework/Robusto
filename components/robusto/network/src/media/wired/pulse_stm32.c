@@ -32,11 +32,14 @@
  */
 
 #include "pulse.h"
+// TODO: Along with the HAL implementation for radiolib, this might not be relevant
+#if 0
 #ifdef ARDUINO_ARCH_STM32
 #include "stm32f1xx_hal.h"
 /* PulseIn implementation for STM32. Note that it uses GPIO B and Timer 1, */
 
-uint32_t robusto_pulseIn(GPIO_TypeDef* GPIOx, uint32_t pin, TIM_HandleTypeDef* htim, uint8_t state, uint32_t timeout)
+//uint32_t robusto_pulseIn(GPIO_TypeDef* GPIOx, uint32_t pin, TIM_HandleTypeDef* htim, uint8_t state, uint32_t timeout)
+unsigned long robusto_pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
     TIM_HandleTypeDef TIM_InitStruct;
@@ -81,4 +84,5 @@ uint32_t robusto_pulseIn(GPIO_TypeDef* GPIOx, uint32_t pin, TIM_HandleTypeDef* h
 
     return (endTime - startTime);
 }
+#endif
 #endif

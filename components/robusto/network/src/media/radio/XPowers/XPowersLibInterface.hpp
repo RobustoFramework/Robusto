@@ -29,6 +29,7 @@
  */
 #pragma once
 #include <robconfig.h>
+#if !defined(ARDUINO_ARCH_STM32)
 #include <stdint.h>
 #include "XPowersParams.hpp"
 
@@ -628,3 +629,4 @@ protected:
 
 };
 
+#endif

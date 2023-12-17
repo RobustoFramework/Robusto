@@ -29,7 +29,7 @@
  */
 
 #pragma once
-
+#if !defined(ARDUINO_ARCH_STM32)
 #ifdef _BV
 #undef _BV
 #endif
@@ -355,7 +355,7 @@ typedef enum __xpowers_axp202_irq {
     XPOWERS_AXP202_ALL_IRQ                  = (0xFFFFFFFFFFULL)
 } xpowers_axp202_irq_t;
 
-
+#endif /* !ARDUINO_ARCH_STM32 */
 
 
 
