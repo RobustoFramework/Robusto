@@ -191,6 +191,7 @@ lib_deps =
 ; itself after being updated.
 
 [env:STM32F03C8]
+; This board has been deemed to have too little RAM or Flash to work with robusto.
 platform=ststm32
 board = bluepill_f103c8
 lib_extra_dirs = test, components
