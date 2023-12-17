@@ -52,7 +52,16 @@ void init_conductor_client(char *_log_prefix)
     conductor_server_log_prefix = _log_prefix;
 
     char *dest = "The server";
+#ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_I2C
+    conductor_peer = robusto_peers_find_peer_by_i2c_address(CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
+#endif
+
+#ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_LORA
+    conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR));
+#endif
+#ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_ESP_NOW
     conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
+#endif
     if (conductor_peer != NULL)
     {
         ROB_LOGW(conductor_server_log_prefix, "Conductor peer already existed.");
@@ -60,13 +69,13 @@ void init_conductor_client(char *_log_prefix)
     }
 // Add peer and presentat ourselvers
 #ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_I2C
-    r_peer = add_peer_by_i2c_address(dest, CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
+    conductor_peer = add_peer_by_i2c_address(dest, CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR);
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_ESP_NOW
     conductor_peer = add_peer_by_mac_address(dest, kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR), robusto_mt_espnow);
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_LORA
-    r_peer = add_peer_by_mac_address(dest, kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR), robusto_mt_lora);
+    conductor_peer = add_peer_by_mac_address(dest, kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR), robusto_mt_lora);
 #endif
     if (conductor_peer == NULL)
     {

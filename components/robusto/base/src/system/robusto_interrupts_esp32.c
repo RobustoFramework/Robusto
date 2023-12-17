@@ -111,7 +111,6 @@ void robusto_attachInterrupt(int pin, void (*isr)(void), int mode) {
   if (gpio_num == GPIO_NUM_MAX) {
     return;
   }
-  gpio_isr_t
   gpio_pad_select_gpio(gpio_num);
   gpio_set_intr_type(gpio_num, mode == RISING ? GPIO_INTR_POSEDGE : mode == FALLING ? GPIO_INTR_NEGEDGE : GPIO_INTR_ANYEDGE);
   gpio_isr_handler_add(gpio_num, isr, (void *)gpio_num);
