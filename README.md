@@ -12,16 +12,44 @@ For more information, the [Robusto web site](https://robustoframework.github.io/
 
 ## What is Robusto?
 Robusto is a framework for development of cheap and robust networks, applications and services on microcontrollers.<br /> 
-Features include peer management, synchronized sleep pattern, redundant communication, services, runlevels, pub sub, monitoring, configuration management and other things associated with "big" computer systems. Without their memory footprint and power consumption.
+
+Features include:
+* Communication
+  * peer management
+    * presentation, information exchange
+    * problem solving
+  * redundant communication
+    * indepentent queues per media
+    * I2C, ESP-NOW, LoRa
+    * scoring media
+  * retryings
+  * fragmentation large message
+* Management
+  * energy management
+    * sleeping
+    * synchronized sleep patterns
+  * runlevels
+  * configuration (KConfig also for Arduino, STM32)
+  * monitoring / reporting
+  * services
+* Technical
+  * flash support
+  * logging
+* Misc
+  * UMTS/GSM gateway
+  * Publisher subscriber
+  
+  
+..and other things associated with "big" computer systems. Without their memory footprint and power consumption.
 
 By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
-* **Make available some of the feel and functionality of servers**<br/>
+* **Make available some of the feel and functionality of "real" servers**<br/>
 By bringing forth some of the most important, but perhaps not too performance-hungry, [bells and whistles](https://github.com/RobustoFramework/pub_test/blob/main/components/robusto-misc/include/robusto_pubsub.h) of "real" server development, developing using Robusto feels a bit more like developing your average off-the-shelf server.
 * **Create very energy efficient networks**<br/>
 The ability to coordinate the sleeping patterns of peers make networks able to run with extremely low average current draws (< 1 mA) and on low voltages. 
 * **Work longer when networks degrade**<br/>
 Even if wires start glitching or wireless networks are saturated or interfered with, systems can be kept functioning by changing techniques and even lowering speeds(WIP). 
-* **Help applications to gracefully degrade their functionality**<br/>
+* **Help applications gracefully degrading their functionality**<br/>
 Telling applications what communication speeds are available allows them to adapt their functionality to what the circumstances allow.[^2]
 And if they don’t, they will receive helpful errors.
 * **Use cheap, replaceable components and materials**<br/>
@@ -30,7 +58,7 @@ Components are mass produced by several manufacturers and it should be easy to f
 * **Enable agile hardware development**<br/>
 The lower cost and cheaper hardware, in conjunction with thinner and easier-to-route cabling and simpler connector makes it easier to work more iteratively. 
 * **Test much of you code on the PC**  
-The ability to run at least most your code on native PC:s makes software development easier to make test driven, as you get to run the tests on a way faster and more powerful platform, without having to wait for firmware uploads and long build times (applies especially to ESP-IDF).
+The ability to run at least most your code on native PC:s makes software development easier to make test driven, as you get to run the tests on a way faster and more powerful platform, without having to wait for firmware uploads and long build times (looking at you, ESP-IDF).
 
 # What is it not? 
 
@@ -44,8 +72,23 @@ Instead, it is about reliably connecting sensors, actuators, controls, microcont
 [^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
 
 
-# Work in progress (WIP)
+# Tested boards
 
+|Microcontroller|Framework|Comments|
+|----|----|----|
+|ESP32-DevKit V4|ESP-IDF|Works|
+|ESP32-SIM7000G|ESP-IDF|Works|
+|TTGO T-BEAM SX1262|ESP-IDF|Works|
+|LoRa32 V1 SX1278|ESP-IDF|Works|
+|RaspberryPi Pico|Arduino|Works|
+|STM32 F407VE|Mbed|Builds, uploads, boots, but untested|
+|Arduino UNO*|Arduino|Too little RAM/Flash|
+|Atmel ATtiny85*|Arduino|Way too little RAM/Flash|
+|STM32 F03C8*|Arduino|Too little RAM/Flash|
+
+\* Note that these chips may till communicate with Robusto Peers via I2C using the Fletch16 checksum library.
+
+# Work in progress (WIP)
 
 * **Tell users about problems**<br/>
 This will help them take the proper corrective action before problems escalate.[^3] 
