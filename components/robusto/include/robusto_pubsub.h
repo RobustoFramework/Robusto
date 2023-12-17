@@ -34,6 +34,10 @@
 #include <robconfig.h>
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 #define PUBSUB_SUBSCRIBE 0U
 #define PUBSUB_SUBSCRIBE_RESPONSE 1U
 #define PUBSUB_UNSUBSCRIBE 2U
@@ -46,10 +50,6 @@
 #define PUBSUB_CLIENT_ID 1957U
 #define PUBSUB_SERVER_ID 1958U
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

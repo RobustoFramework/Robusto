@@ -33,10 +33,7 @@
 
 #include <robconfig.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+
 
 #ifndef USE_ARDUINO
 #include "sys/queue.h"
@@ -49,6 +46,10 @@ extern "C"
 #include <robusto_system.h>
 #include <robusto_media_def.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifndef CONFIG_ROBUSTO_PEER_NAME
 #define CONFIG_ROBUSTO_PEER_NAME 16

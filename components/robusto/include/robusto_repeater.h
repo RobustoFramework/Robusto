@@ -35,6 +35,7 @@
 
 #include <inttypes.h>
 #include <robusto_retval.h>
+
 #ifdef __cplusplus
 extern "C"
 {

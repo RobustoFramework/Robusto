@@ -10,6 +10,11 @@
 
 #include "stdbool.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void robusto_goto_sleep(uint32_t millisecs);
 /**
  * @brief Returns how long we went to sleep last
@@ -23,3 +28,8 @@ bool robusto_is_first_boot();
 int robusto_get_sleep_count();
 
 bool robusto_sleep_init(char * _log_prefix); 
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+

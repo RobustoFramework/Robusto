@@ -31,10 +31,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #include <robconfig.h>
 
@@ -47,6 +43,12 @@ extern "C"
 #include <robusto_states.h>
 
 #include <inttypes.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 
 /* The current protocol version */
 #define ROBUSTO_PROTOCOL_VERSION 0x00

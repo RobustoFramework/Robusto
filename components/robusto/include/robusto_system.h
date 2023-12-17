@@ -31,17 +31,17 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include <robconfig.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <robusto_retval.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /* The version of Robusto. TODO: Add something more DevOps:y instead. */
 #define ROBUSTO_VERSION "0.1"

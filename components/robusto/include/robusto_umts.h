@@ -34,6 +34,10 @@
 #include <robusto_retval.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
@@ -63,4 +67,8 @@ void umts_reset_rtc();
 
 rob_ret_val_t robusto_umts_sms_send(const char *number, const char *message_string);
 rob_ret_val_t robusto_umts_mqtt_publish(TBD);
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif

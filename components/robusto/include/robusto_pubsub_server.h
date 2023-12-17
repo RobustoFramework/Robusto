@@ -34,15 +34,19 @@
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <robusto_retval.h>
 #include <robusto_peer_def.h>
+
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef void (pubsub_server_subscriber_callback)(uint8_t *data, uint16_t data_length);
 
 typedef struct pubsub_server_subscriber pubsub_server_subscriber_t;

@@ -4,6 +4,11 @@
 #include <robusto_peer.h>
 #include <robusto_retval.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 // The subscription callback
 
 typedef struct subscribed_topic subscribed_topic_t;
@@ -27,3 +32,7 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t * peer, char 
 rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t * topic, uint8_t * data, int16_t data_length);
 rob_ret_val_t robusto_pubsub_client_start();
 rob_ret_val_t robusto_pubsub_client_init(char * _log_prefix);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif

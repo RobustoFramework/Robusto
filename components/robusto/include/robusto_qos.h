@@ -31,13 +31,13 @@
 #pragma once
 #include <robconfig.h>
 
+#include <robusto_media_def.h>
+#include <robusto_peer_def.h>
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include <robusto_media_def.h>
-#include <robusto_peer_def.h>
 
 // The message context for heart beats is always 0x43 (MSG_HEARTBEAT + binary data)
 #define HEARTBEAT_CONTEXT 0x03 + 0x40 

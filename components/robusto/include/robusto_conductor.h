@@ -36,10 +36,6 @@
 #include <robusto_time.h>
 #include <robusto_peer_def.h>
 #include <inttypes.h>
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 /* The most amount of time the peer gives itself until it goes to sleep */
 #define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS * 2
@@ -57,7 +53,10 @@ extern "C"
 #define ROBUSTO_CONDUCTOR_MSG_THEN 2U
 #define ROBUSTO_CONDUCTOR_MSG_MORE 3U
 
-
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /* Callbacks that are called before sleeping, return true to prohibit sleep. */
 typedef bool(before_sleep)(void);
