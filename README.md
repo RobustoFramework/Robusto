@@ -81,7 +81,7 @@ Instead, it is about reliably connecting sensors, actuators, controls, microcont
 |TTGO T-BEAM SX1262|ESP-IDF|Works|
 |LoRa32 V1 SX1278|ESP-IDF|Works|
 |RaspberryPi Pico|Arduino|Works|
-|STM32 F407VE|Mbed|Builds, uploads, boots, but untested|
+|STM32 F407VE|Arduino|Builds, uploads, boots, but untested|
 |Arduino UNO*|Arduino|Too little RAM/Flash|
 |Atmel ATtiny85*|Arduino|Way too little RAM/Flash|
 |STM32 F03C8*|Arduino|Too little RAM/Flash|
