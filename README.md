@@ -2,7 +2,7 @@
 # The Robusto framework
 
 ## Getting started
-The easiest, way is to:
+The easiest way is to:
 1. Clone this repository, <br />
 2. Open it in PlatformIO<br />
 3. See if any of your MCU:s match the platform.ini ones (can also try using platform.ini.all)<br />
@@ -25,11 +25,11 @@ Features include:
   * retryings
   * fragmentation large message
 * Management
-  * energy management
+  * energy
     * sleeping
     * synchronized sleep patterns
   * runlevels
-  * configuration (KConfig also for Arduino, STM32)
+  * configuration (KConfig not only for ESP-IDF, but also for Arduino, STM32)
   * monitoring / reporting
   * services
 * Technical
@@ -40,7 +40,7 @@ Features include:
   * Publisher subscriber
   
   
-..and other things associated with "big" computer systems. Without their memory footprint and power consumption.
+..and other things associated with "big" computer systems. But obviously without their memory footprint and power consumption.
 
 By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
 * **Make available some of the feel and functionality of "real" servers**<br/>
