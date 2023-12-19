@@ -263,7 +263,7 @@ rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  u
  * @param exclude_media_types What media types to exclude when retrying
 
  */
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types);
+rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types);
 
 typedef rob_ret_val_t (send_callback_cb)(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
@@ -336,7 +336,7 @@ fragmented_message_t * get_last_frag_message();
  * @param receipt Wait for a receipt
  * @return typedef The return value
  */
-typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, uint8_t *data, int len, bool receipt);
+typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt);
 
 /**
  * @brief Handle incoming fragmented messaged

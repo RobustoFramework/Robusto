@@ -93,7 +93,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, uint16_t req_body_len, char *bearer, char *context_type, char *name, char* parent)
+rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, uint32_t req_body_len, char *bearer, char *context_type, char *name, char* parent)
 {
     esp_http_client_config_t config = {
         .url = url,
@@ -157,7 +157,7 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
     char * content_length;
     asprintf(&content_length, "%u", post_data_len);
     // We proably need to use SPIRAM here
-    char *post_data = robusto_malloc(post_data_len);
+    char *post_data = heap_caps_malloc(post_data_len, MALLOC_CAP_SPIRAM);
 
     if (post_data == NULL)
     {
@@ -193,7 +193,7 @@ rob_ret_val_t robusto_umts_http_post_form_multipart(char *url, char *req_body, u
     return ROB_OK;
 }
 
-rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, uint16_t req_body_len, char *bearer)
+rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, uint32_t req_body_len, char *bearer)
 {
     esp_http_client_config_t config = {
         .url = url,
@@ -223,7 +223,7 @@ rob_ret_val_t robusto_umts_http_post_form_urlencoded(char *url, char *req_body, 
 
     esp_http_client_set_post_field(client, req_body, req_body_len);
 
-    ROB_LOGI(umts_http_log_prefix, "POST body: %.*s\n", req_body_len, req_body);
+    //ROB_LOGI(umts_http_log_prefix, "POST body: %.*s\n", req_body_len, req_body);
     startTime = r_millis();
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
@@ -451,9 +451,9 @@ rob_ret_val_t request_access_token()
     }
 }
 
-rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint16_t data_len, char *context_type, char *name, char* parent)
+rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint32_t data_len, char *context_type, char *name, char* parent)
 {
-    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart, %i bytes body", data_len);
+    ROB_LOGI(umts_http_log_prefix, "In robusto_umts_http_post_form_multipart, %lu bytes body", data_len);
     if (!access_token)
     {
         if (request_access_token() != ROB_OK)
@@ -466,7 +466,7 @@ rob_ret_val_t robusto_umts_oauth_post_form_multipart(char *url, char *data, uint
     return robusto_umts_http_post_form_multipart(url, data, data_len, access_token, context_type, name, parent);
 }
 
-rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint16_t data_len)
+rob_ret_val_t robusto_umts_oauth_post_urlencode(char *url, char *data, uint32_t data_len)
 {
     ROB_LOGI(umts_http_log_prefix, "In robusto_umts_oauth_post_urlencode");
     if (!access_token)

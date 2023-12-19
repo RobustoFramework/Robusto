@@ -106,7 +106,7 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
 }
 
 
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types)
+rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types)
 {
     
     rob_ret_val_t retval = ROB_FAIL;

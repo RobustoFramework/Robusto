@@ -165,7 +165,7 @@ typedef struct media_queue_item
     /* The data */
     uint8_t *data;
     /* The length of the data in bytes */
-    uint16_t data_length;
+    uint32_t data_length;
     /* The peer */  
     struct robusto_peer *peer;
     /* The queue item state */  
