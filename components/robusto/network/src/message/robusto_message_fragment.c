@@ -231,16 +231,21 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
 void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     // Initiate a new fragmented  (...stream?)
-    ROB_LOGI(fragmentation_log_prefix, "handle_frag_message (hash %lu):", *(uint32_t *)data);
+    ROB_LOGD(fragmentation_log_prefix, "handle_frag_message (hash %lu)", *(uint32_t *)data);
     robusto_media_t *media = get_media_info(peer, media_type);
     
+    #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_INFO
+    #warning "Sending fragmented messages may fail if debug logging is enabled."
+    #endif
+
     if (len > ROBUSTO_CRC_LENGTH + 18)
     {
-        rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
+        
+        rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, ROBUSTO_CRC_LENGTH + 18);
     }
     else
     {
-        rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
+        rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
     }
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
