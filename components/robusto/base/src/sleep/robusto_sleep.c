@@ -9,6 +9,7 @@
  */
 
 #include <robusto_sleep.h>
+#ifdef CONFIG_ROBUSTO_SLEEP
 // TODO: Ifdef depending om some setting?
 
 #include "robusto_retval.h"
@@ -156,3 +157,4 @@ int robusto_get_sleep_count()
 uint32_t robusto_get_total_time_awake() {
     return wake_time + r_millis();
 }
+#endif

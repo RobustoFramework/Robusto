@@ -1,19 +1,12 @@
 # Kconfig file for Robusto v0.1.0
 
 menu "Base system configuration"
-    config ROB_SYNCHRONOUS_MODE
-        bool "Run in synchronous mode"
-        default false
+    config ROBUSTO_SLEEP
+        bool "Sleep functionality"  
         help
-            As some MCU:s have very limited resources, not only with regards to memory and computing power, but also lacks proper timers
-            and other features that are required for proper concurrency, Robusto has a synchronous mode. 
-            In this mode, no queues or other concurrent functionality is available, and no RTOS is required, enabling Robusto
-            to run on more limites MCUs. 
-            Monitoring and other services will not work in synchronous mode. 
-            NOTE #1: Synchronous mode is actually useful in some other cases, typically for testing functionality that doesn't depend on concurrency.
-            NOTE #2: For much more restricted MCU:s like the Arduino UNO or even the ATtiny45, which have only 256 bytes of program memory,
-            please use the specialized Robusto network libraries that specifically for that purpose.
-            
+            The Robusto sleeping functionality.
+            This is a setting as the sleep functionality uses some of the very scarce RTC memory.
+
     choice ROB_LOG_DEFAULT_LEVEL
         prompt "Default log level"
         default ROB_LOG_LEVEL_INFO
@@ -61,5 +54,5 @@ menu "Base system configuration"
         help
             If > -1, the GPIO of a LED that can be used as an indicator.
 
-        
+   #ifdef CONFIG_ROBUSTO_SLEEP     
 endmenu                    
