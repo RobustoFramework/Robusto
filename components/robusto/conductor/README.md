@@ -41,7 +41,7 @@ gantt
     axisFormat %S
     
 ``````
-_Note that sleep cycles normally are much longer, this is just to be able to illustrate the cycle_
+_Sleep cycles normally are much longer than in the example, this is just to be able to illustrate the cycle._
 
 The sleep cycle on the conductor has three parts:
 * Sleep cycle length<br/>The total time of the sleep cycle
@@ -51,7 +51,9 @@ The sleep cycle on the conductor has three parts:
 
 On the client:
 * Wake-up margin:  A little extra time to wait to avoid crowding the conductor<br/> (if that is the peer we are contacting)
-  
+
+These settings can be used to optimize the time the clients are active and minimize current draw. With very long sleep times however, it is wise to increase the margins as the internal clocks on MCUs are surprisingly imprecise. More than several hours of sleep may require significant margins. It can be a good idea to add an external crystal to the conductor or sync it using NTP if you do want the network to not drift as a whole. 
+
 ### Sleep cycle length
 _-> Sleep cycle length in seconds_
 
