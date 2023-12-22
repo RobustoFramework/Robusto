@@ -31,8 +31,7 @@ static uint32_t wait_time = 0;
 /* Latest requested extra time so far */
 static uint32_t requested_time = 0;
 
-/* Store the moment we last went to sleep in persistent storage */
-ROB_RTC_DATA_ATTR uint32_t last_sleep_time;
+
 /* How long we were awake last */
 ROB_RTC_DATA_ATTR uint32_t last_wake_time;
 
@@ -72,10 +71,13 @@ void on_incoming_conductor_server(robusto_message_t *message)
  */
 uint32_t robusto_conductor_server_get_time_since_start()
 {
-    if (last_sleep_time > 0)
+    
+    time_t
+    // TODO: This should be possible to replace entirely with an actual
+    if (get_last_sleep_time() > 0)
     {
         /* The time we fell asleep + the time we slept + the time since waking up = Total time*/
-        return last_sleep_time + get_last_sleep_duration() + r_millis();
+        return get_last_sleep_time() + get_last_sleep_duration() + r_millis();
     }
     else
     {

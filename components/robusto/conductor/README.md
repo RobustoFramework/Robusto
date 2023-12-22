@@ -3,6 +3,51 @@ This is the implementation of the Robusto orchestration.
 ## Purpose
 For devices in a network to be able to conserve energy, they need to go down in low-energy modes and shut down some aspects, like networking.<br />
 The orchestration enables devices to be synchronized so that they can wake up at the same time.
-## Heading 1
+# Settings
+_Conductor configuration ->_
+
+The settings are kept in this submenu in the Robusto configuration
+## Enable the conductor
+_-> Enable the conductor server_
+
+This enables the conductor service, and causes the conductor to go into deep sleep when the wake time is over. 
+## Sleep cycle timing
+
+```mermaid
+gantt
+    dateFormat  s
+    title  The conductor sleep cycle:    
+    section Conductor  
+    Sleep cycle length        :crit,active, cycle,0,120s
+    Awake time         :active, wake,0,40s
+    Extension     :active, ext,after wake,10s
+    Sleep         :active, sleep, after ext, 70s
+    section Voltages,<br/>amperes,<br/>and load
+    Awake margin         :active, w1, 0, 3s
+    Collect data       :active, c1, after w1, 1s
+    Report some data to peer :active, r1, after c1, 1s
+    Ask for sleep time :active, a1, after r1, 1s
+    Sleep :active, s1, after a1, 114s
+    section Temperature sensor
+    Awake margin         :active, w2, 0, 5s
+    Collect data       :active, c2, after w2, 4s
+    Report some data to peer :active, r2, after c2, 1s
+    Ask for sleep time :active, a2, after r2, 1s
+    Sleep :active, s1, after a2, 109s
+    
+    tickInterval 10second
+    axisFormat %S
+    
+``````
+The sleep cycle has three parts:
+* Wake time: The least time the
+### Sleep cycle length
+_-> Sleep cycle length in seconds_
+
+This is the sleep cycle length. More exactly, this is the time between waking up, since that is when clients can start connect to it. The conductor takes its own wake time into account to make this predictable for the clients regardless of how long it stays awake.
+
+## #Awake time
+_-> Seconds awake if not extended_
+This is how many seconds the server is awake if not asked to extend its time awake. This is common, for example to be able to answer incoming requests, connecting to cellular networks and sending data and so forth. 
 
 ## Heading 2

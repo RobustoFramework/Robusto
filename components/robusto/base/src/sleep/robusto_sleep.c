@@ -41,6 +41,9 @@ static PERSISTENT_STORAGE uint32_t last_sleep_duration;
 /* Tracking the time we've been awake */
 static PERSISTENT_STORAGE uint32_t wake_time;
 
+/* Store the moment we last went to sleep in persistent storage */
+static PERSISTENT_STORAGE uint32_t last_sleep_time;
+
 /* Is it the first boot, have we not slept? */
 static bool b_first_boot;
 
@@ -154,6 +157,11 @@ int robusto_get_sleep_count()
 {
     return sleep_count;
 }
+
+uint32_t get_last_sleep_time() {
+    return last_sleep_time;
+}
+
 uint32_t robusto_get_total_time_awake() {
     return wake_time + r_millis();
 }
