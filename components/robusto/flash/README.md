@@ -12,15 +12,16 @@ There are main two reasons to use flash memory:
 2. Flash memory is persistent. That means the the information in it won't disappear after reset. 
 
 ## Why not use flash?
-Flash memory has two major drawback compared to ram:
-1. Flash memory is much slower than RAM. <br/>
+Flash memory has two major drawbacks compared to RAM:
+1. It is much slower than RAM. <br/>
 Note however, that it is still faster than many transmission media, so that might not matter in many use cases.
-2. Flash memory will break if you write too many times to it. 
+1. It will break if you write too many times to it. 
 While this is thousands of times, it is not really that hard to break it if you misuse it. 
 
 # What is SPIFFS and VFS?
 
 SPIFFS is the [SPI Flash File System](https://github.com/pellepl/spiffs?tab=readme-ov-file#spiffs-spi-flash-file-system). 
+
 It is a file system for flash that among others are implemented in ESP-IDF and on the Arduino platforms. 
 
 # Settings
