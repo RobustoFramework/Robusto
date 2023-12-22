@@ -33,7 +33,9 @@ _-> Enable the robusto flash library_
 This enables the flash library.
 ## Mount a SPIFF path
 _-> Mount a SPIFF path_
+
 If set, this makes Robusto flash mount the specified SPIFFS path in the VFS.
 ## Select the SPIFFS path to mount
 _-> The SPIFFS path to mount_
+
 Here you can select the path you want to mount. The default is /spiffs.
