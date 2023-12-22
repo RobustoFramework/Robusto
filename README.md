@@ -74,7 +74,7 @@ Instead, it is about reliably connecting sensors, actuators, controls, microcont
 # Table of contents
 
  - [Base](/components/robusto/base/README.md)
- - [Networking](/components/robusto/networking/README.md)
+ - [Networking](/components/robusto/network/README.md)
  - [Conductor](/components/robusto/conductor/README.md)
  - [Flash](/components/robusto/flash/README.md)
  - [Server](/components/robusto/server/README.md)
