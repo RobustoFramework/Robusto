@@ -57,15 +57,15 @@ menu "Conductor configuration"
         config ROBUSTO_CONDUCTOR_RETRY_WAIT_MS
             depends on ROBUSTO_CONDUCTOR_CLIENT
             int "Retry delay"
-            default 30000
+            default 30
             help
                 How long to wait before we try to reconnect to the conductor if 
                 we fail connecting. 
   
         config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS
             depends on ROBUSTO_CONDUCTOR_CLIENT
-            int "Wait with waking" 
-            default 2000 
+            int "Wake-up margin" 
+            default 2 
             depends on ROBUSTO_CONDUCTOR_CLIENT
             help
                 Wait a little extra to wake up to get into the queue when 
