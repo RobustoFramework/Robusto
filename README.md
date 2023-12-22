@@ -8,9 +8,36 @@ The easiest way is to:
 3. See if any of your MCU:s match the platform.ini ones (can also try using platform.ini.all)<br />
 4. Run the examples. <br />
 
-For more information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) holds everything togetether.
+For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) holds everything togetether.
 
-## What is Robusto?
+# Table of contents
+
+- [The Robusto framework](#the-robusto-framework)
+  - [Getting started](#getting-started)
+- [Table of contents](#table-of-contents)
+- [Documentation](#documentation)
+- [What is Robusto?](#what-is-robusto)
+- [What is it not?](#what-is-it-not)
+- [Tested boards](#tested-boards)
+- [Work in progress (WIP)](#work-in-progress-wip)
+- [Architecture](#architecture)
+  - [Design principles](#design-principles)
+    - [Easy to understand](#easy-to-understand)
+    - [Easy to port..partially](#easy-to-portpartially)
+    - [No more principles](#no-more-principles)
+
+# Documentation
+The more technical documentation is in the README:s in this repository:
+   - [Base functionality](/components/robusto/base/README.md) 
+   - [Networking](/components/robusto/network/README.md)
+   - [Conductor](/components/robusto/conductor/README.md)
+   - [Flash](/components/robusto/flash/README.md)
+   - [Server](/components/robusto/server/README.md)
+   - [Sensor](/components/robusto/sensor/README.md)
+   - [Misc](/components/robusto/misc/README.md)
+
+
+# What is Robusto?
 Robusto is a framework for development of cheap and robust networks, applications and services on microcontrollers.<br /> 
 
 Features include:
@@ -71,15 +98,6 @@ Instead, it is about reliably connecting sensors, actuators, controls, microcont
 [^3]: Sometimes that information, for example about radio interference may even help you troubleshoot other issues, like your WiFi network.
 [^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
 
-# Table of contents
-
- - [Base](/components/robusto/base/README.md)
- - [Networking](/components/robusto/network/README.md)
- - [Conductor](/components/robusto/conductor/README.md)
- - [Flash](/components/robusto/flash/README.md)
- - [Server](/components/robusto/server/README.md)
- - [Sensor](/components/robusto/sensor/README.md)
- - [Misc](/components/robusto/misc/README.md)
 
 
 # Tested boards
