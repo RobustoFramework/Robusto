@@ -31,8 +31,8 @@ gantt
     Sleep :active, s1, after a1, 113s
 
     section Temperature<br/>and humidity<br/>sensors
-    Awake margin         :active, w2, 0, 5s
-    Collect data       :active, c2, after w2, 5s
+    Awake margin         :active, w2, 0, 2s
+    Collect data       :active, c2, after w2, 7s
     Report some data to peer :active, r2, after c2, 1s
     Ask for sleep time :active, a2, after r2, 1s
     Sleep :active, s1, after a2, 108s
@@ -44,13 +44,14 @@ gantt
 _Note that sleep cycles normally are much longer, this is just to be able to illustrate the cycle_
 
 The sleep cycle on the conductor has three parts:
-* Sleep cycle length: The total time of the sleep cycle
-* Awake time: The least time the conductor is awake
-* Extension: The conductor is asked to stay awake longer
-* Server margin: Time for the server needs to get going before being contacted
+* Sleep cycle length<br/>The total time of the sleep cycle
+* Awake time<br/>The least time the conductor is awake
+* Extension<br/>The conductor is asked to stay awake longer
+* Server margin<br/>Time for the server needs to get going before being contacted
 
 On the client:
-* Wake-up margin:  A little extra time to wait to avoid crowding the conductor (if that is the peer we are contacting)
+* Wake-up margin:  A little extra time to wait to avoid crowding the conductor<br/> (if that is the peer we are contacting)
+  
 ### Sleep cycle length
 _-> Sleep cycle length in seconds_
 
