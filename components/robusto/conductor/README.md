@@ -1,7 +1,15 @@
+<!-- omit from toc -->
 # Robusto orchestration
 This is the implementation of the Robusto orchestration.
 
-## Purpose
+- [Purpose](#purpose)
+- [Settings](#settings)
+  - [Enable the conductor](#enable-the-conductor)
+  - [Sleep cycle timing](#sleep-cycle-timing)
+    - [Sleep cycle length](#sleep-cycle-length)
+    - [Awake time](#awake-time)
+
+# Purpose
 For devices in a network to be able to conserve energy, they need to go down in low-energy modes and shut down some aspects, like networking.<br />
 The orchestration enables devices to be synchronized so that they can wake up at the same time.
 # Settings
@@ -41,7 +49,8 @@ gantt
     tickInterval 10second
     axisFormat %S
     
-``````
+```
+
 _Sleep cycles normally are much longer than in the example, this is just to be able to illustrate the cycle._
 
 The sleep cycle on the conductor has three parts:
@@ -60,8 +69,6 @@ _-> Sleep cycle length in seconds_
 
 This is the sleep cycle length. More exactly, this is the time between waking up, since that is when clients can start connect to it. The conductor takes its own wake time into account to make this predictable for the clients regardless of how long it stays awake.
 
-## #Awake time
+### Awake time
 _-> Seconds awake if not extended_
 This is how many seconds the server is awake if not asked to extend its time awake. This is common, for example to be able to answer incoming requests, connecting to cellular networks and sending data and so forth. 
-
-## Heading 2
