@@ -1,7 +1,23 @@
+<!-- omit from toc -->
 # Concepts
 
 Learning a lot of new and convoluted concepts is always a chore, so in this section, only non-technical concepts are covered.  
 They should be enough for someone to be able to “work” with a Robusto network.  
+
+
+- [Peer](#peer)
+- [Relation](#relation)
+- [Media](#media)
+- [Message](#message)
+- [Service](#service)
+- [Network service](#network-service)
+  - [Combinations](#combinations)
+- [Applications](#applications)
+- [Runlevel](#runlevel)
+- [Work in progress](#work-in-progress)
+  - [Connection level](#connection-level)
+  - [Groups](#groups)
+  
 
 *Technical concepts are in their respective sections.*
 

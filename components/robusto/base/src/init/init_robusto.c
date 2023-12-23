@@ -31,7 +31,9 @@
 
 #include <robusto_init.h>
 #include <robusto_system.h>
+#ifdef CONFIG_ROBUSTO_SLEEP
 #include <robusto_sleep.h>
+#endif
 #include <robusto_logging.h>
 #include <robusto_init_internal.h>
 #include <sys/queue.h>
@@ -139,7 +141,9 @@ void init_robusto()
     robusto_log_prefix = CONFIG_ROBUSTO_PEER_NAME;
     robusto_system_init(robusto_log_prefix);
     robusto_flash_init(robusto_log_prefix);
+    #ifdef CONFIG_ROBUSTO_SLEEP
     robusto_sleep_init(robusto_log_prefix);
+    #endif
     robusto_init_compatibility();
 
     /* Register services */

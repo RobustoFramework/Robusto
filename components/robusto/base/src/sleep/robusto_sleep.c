@@ -10,7 +10,6 @@
 
 #include <robusto_sleep.h>
 #ifdef CONFIG_ROBUSTO_SLEEP
-// TODO: Ifdef depending om some setting?
 
 #include "robusto_retval.h"
 
@@ -36,13 +35,13 @@
 static PERSISTENT_STORAGE int sleep_count;
 
 /* The time we waited */
-static PERSISTENT_STORAGE uint32_t last_sleep_duration;
+static PERSISTENT_STORAGE uint32_t last_sleep_duration_ms;
 
 /* Tracking the time we've been awake */
-static PERSISTENT_STORAGE uint32_t wake_time;
+static PERSISTENT_STORAGE uint32_t wake_time_ms;
 
 /* Store the moment we last went to sleep in persistent storage */
-static PERSISTENT_STORAGE uint32_t last_sleep_time;
+static PERSISTENT_STORAGE time_t last_sleep_time;
 
 /* Is it the first boot, have we not slept? */
 static bool b_first_boot;
@@ -56,7 +55,7 @@ rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
 
     if (esp_sleep_enable_timer_wakeup((uint64_t)millisecs * (uint64_t)1000) == ESP_OK)
     {
-        last_sleep_duration = millisecs;
+        last_sleep_duration_ms = millisecs;
         esp_deep_sleep_start();
 
         return ROB_OK;
@@ -77,7 +76,7 @@ void robusto_goto_sleep(uint32_t millisecs)
     ROB_LOGI(sleep_log_prefix, "---------------------------------------- S L E E P ----------------------------------------");
     ROB_LOGI(sleep_log_prefix, "At %li and going to sleep for %lu milliseconds", r_millis(), millisecs);
     /* Now we know how long we were awake this time */
-    wake_time+= r_millis();
+    wake_time_ms+= r_millis();
     sleep_count++;
 
 
@@ -90,7 +89,7 @@ void robusto_goto_sleep(uint32_t millisecs)
  * @return uint32_t 
  */
 uint32_t get_last_sleep_duration(){
-    return last_sleep_duration;
+    return last_sleep_duration_ms;
 }
 
 
@@ -128,8 +127,8 @@ bool robusto_sleep_init(char *_log_prefix)
         ROB_LOGI(sleep_log_prefix, "Normal boot, not returning from sleep mode.");
 
         sleep_count = 0;
-        last_sleep_duration = 0;
-        wake_time = 0;
+        last_sleep_duration_ms = 0;
+        wake_time_ms = 0;
         // TODO: Implement a callback before sleep ?
         // robusto_reset_rtc();
         b_first_boot = true;
@@ -163,6 +162,6 @@ uint32_t get_last_sleep_time() {
 }
 
 uint32_t robusto_get_total_time_awake() {
-    return wake_time + r_millis();
+    return wake_time_ms + r_millis();
 }
 #endif

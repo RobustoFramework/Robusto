@@ -1,4 +1,5 @@
 [![Join the chat at https://app.gitter.im/#/room/!WtMzOtrXhykXImnhsr:gitter.im](https://badges.gitter.im/Join%20Chat.svg)](https://app.gitter.im/#/room/!WtMzOtrXhykXImnhsr:gitter.im?utm_source=badge&utm_medium=badge&utm_content=badge)
+<!-- omit from toc -->
 # The Robusto framework
 
 ## Getting started
@@ -10,11 +11,9 @@ The easiest way is to:
 
 For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) holds everything togetether.
 
+<!-- omit from toc -->
 # Table of contents
 
-- [The Robusto framework](#the-robusto-framework)
-  - [Getting started](#getting-started)
-- [Table of contents](#table-of-contents)
 - [Documentation](#documentation)
 - [What is Robusto?](#what-is-robusto)
 - [What is it not?](#what-is-it-not)
