@@ -23,8 +23,9 @@ To make sure that everything starts in the correct order, it uses the concepts o
 The `init_robusto()` function is responsible for initializing and starting all registered services in the right order, and makes the system reach a runlevel where it can return control to the caller. 
 
 # Return values
-In the `robusto_retval.h` header file, all Robusto return values are organized and defined. Note that all defined values are negative except `ROB_OK`, which it 0.
-The purpos of this is to maximize the use of return values of functions, basically if the return value is negative, an error has occurred, and you can use all other values to convey data lengths or other useful values.
+In the `robusto_retval.h` header file, all Robusto return values are organized and defined. Note that all defined values are negative except `ROB_OK`, which is 0.
+
+The purpose of this is to maximize the usability of return values of functions, basically if the return value is negative, an error has occurred, and you can use all other values to convey data lengths or other useful values.
 
 # States
 In `robusto_states.h` some predefined states that are used around Robusto.
@@ -60,7 +61,9 @@ However, as it is about supporting IDE, basically, it is _technically_ no a part
 _It would be interesting to add this as a plugin to the Arduino development environment (or others), but that is a remaining task_
 
 # Sleep functions
-Sleeping is an essential feature of power management when it comes microcontrollers. It provides a way for sensors to operate on a fraction of the power consumption they would if they were to be fully powered all the time.
+Sleeping is an essential feature of power management when it comes microcontrollers. 
+
+It provides a way for sensors to operate on a fraction of the power consumption they would if they were to be fully powered all the time.
 
 # Time functions
 Robusto provide some functions to simplify the handling of time and timing on Microcontrollers. 
