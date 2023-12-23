@@ -1,6 +1,3 @@
----
-title: Robusto base
----
 <!-- omit from toc -->
 # Robusto base
 This library holds the most common cross-cutting concerns of the Robusto framework.
