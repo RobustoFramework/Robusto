@@ -23,28 +23,31 @@ This enables the conductor service, and causes the conductor to go into deep sle
 ## Sleep cycle timing
 
 ```mermaid
+
 gantt
     dateFormat  s
-    title  The conductor sleep cycle:    
+    title  The conducting sleep cycle:    
     section Conductor  
     Sleep cycle length        :crit,active, cycle,0,120s
-    Awake time         :active, wake, 0,36s
+    Awake time         :active, wake, after sm,36s
     Extension     :active, ext,after wake,10s
-    Sleep         :active, sleep, after ext, 70s
-    Server margin   :active, after sleep,4s
+    Server margin   :active, sm,0, 4s
+    Server wake :crit, sw, 0, 50
+
+    
     section Voltages,<br/>amperes,<br/>and load
-    Awake margin         :active, w1, 0, 3s
+    Awake margin         :active, w1, after sm, 3s
     Collect data       :active, c1, after w1, 2s
     Report some data to peer :active, r1, after c1, 1s
     Ask for sleep time :active, a1, after r1, 1s
-    Sleep :active, s1, after a1, 113s
+    Client wake :crit, cw, after w1, 4s
 
     section Temperature<br/>and humidity<br/>sensors
-    Awake margin         :active, w2, 0, 2s
+    Awake margin         :active, w2, after sm, 2s
     Collect data       :active, c2, after w2, 7s
     Report some data to peer :active, r2, after c2, 1s
     Ask for sleep time :active, a2, after r2, 1s
-    Sleep :active, s1, after a2, 108s
+    Client wake :crit, cw, after w2, 9s
     
     tickInterval 10second
     axisFormat %S
