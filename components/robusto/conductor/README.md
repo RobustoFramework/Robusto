@@ -32,22 +32,21 @@ gantt
     Awake time         :active, wake, after sm,36s
     Extension     :active, ext,after wake,10s
     Server margin   :active, sm,0, 4s
-    Server wake :crit, sw, 0, 50
-
+    Awake :crit, sw, 0, 50
     
     section Voltages,<br/>amperes,<br/>and load
     Awake margin         :active, w1, after sm, 3s
     Collect data       :active, c1, after w1, 2s
     Report some data to peer :active, r1, after c1, 1s
     Ask for sleep time :active, a1, after r1, 1s
-    Client wake :crit, cw, after w1, 4s
+    Awake :crit, cw, after w1, 4s
 
     section Temperature<br/>and humidity<br/>sensors
     Awake margin         :active, w2, after sm, 2s
     Collect data       :active, c2, after w2, 7s
     Report some data to peer :active, r2, after c2, 1s
     Ask for sleep time :active, a2, after r2, 1s
-    Client wake :crit, cw, after w2, 9s
+    Awake :crit, cw, after w2, 9s
     
     tickInterval 10second
     axisFormat %S
