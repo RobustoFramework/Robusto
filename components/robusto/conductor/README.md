@@ -38,7 +38,10 @@ From the perspecive of the devices of the network, a network that is usually dow
 * Controlling<br />Lights, irrigation or whatever may have to be turned on or of at specific times.
 
 ## Reporting
-Reporting problems, as failing cameras, wired or wired networks
+Reporting problems, as failing cameras, wired or wireless network issues to will ensure easy maintenance.
+
+Note that Robusto _verifies_ all its communication, rather than sending hundreds of messages per second, hoping 
+that some are correct. This makes it possible to notice and react to any change in the transmission environment.
 
 # Sleep cycle timing
 
@@ -145,7 +148,7 @@ Write it as a large hexadecimal number, for example 0x01AB11BB12BC (6*8 bits)
 ### Conductor I2C address
 _-> "The I2C-address of the conductor"_
 
-This is the I2C address of the conductor.
+This is the I2C address of the conductor. A value from 0 - 255.
 
 ### Retry delay
 _-> "Retry delay"_
@@ -161,11 +164,12 @@ _Note that if the sleep cycle is long, for example five hours, it will that long
 _-> "Wake-up margin in seconds"_
 
 Wait a little extra to wake up to get into the queue when having many clients.
-As there are no routers or other collision avoidance features in these kind of networks.
-If there are lots of clients sending at the same time, the network may be congested by a lot of clients retrying to send, and receipts may be lost or data sent twice.
-Effectively, this means that about one client per second can report to the conductor. 
-While this might not seem very fast, it will (almost) guarantee that we don't get cascading errors.
 
+As there are no routers or other collision avoidance features in these kind of networks and lots of clients sending at the same time, the network may be congested by a lot of clients retrying to send, and receipts may be lost or data sent twice.
+
+Effectively, this means that about one client per second can report to the conductor. 
+While this might not seem very fast, it will (almost) guarantee that we don't get cascading errors.<br />
+(and if you wan't subsecond data resolution, you are using the wrong tech anyways..)
 
 
 # Appendices
@@ -203,7 +207,8 @@ Not suitable for:
 
 * ULP(or similar functionality) usage
   * Wake up integration (I2C/GPIO)
-    * If it can wake on network event, it can be the perfect center of an alarm system that can be aler
+    * If it can wake on a wired network event, it can be the perfect center of an alarm system that can be alerted and react immidiately.
+    * A wireless variation of this is to have sensors sleeping and only the conductor always awake (you cannot wake on radio communication)
     * To elegantly wake on external events and not mix up the sleep cycle timing, making it smoother to combine with security and intrusion alarm features.
   * Wired network checks
     * Like having clients checking in on I2c once every minute to make sure no wires have been burnt or shorted.
