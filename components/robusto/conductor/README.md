@@ -167,9 +167,9 @@ Wait a little extra to wake up to get into the queue when having many clients.
 
 As there are no routers or other collision avoidance features in these kind of networks and lots of clients sending at the same time, the network may be congested by a lot of clients retrying to send, and receipts may be lost or data sent twice.
 
-Effectively, this means that about one client per second can report to the conductor. 
+Effectively, this means that the thinking is that about one client per second can report to the conductor. 
 While this might not seem very fast, it will (almost) guarantee that we don't get cascading errors.<br />
-(and if you wan't subsecond data resolution, you are using the wrong tech anyways..)
+_If you want subsecond data sample timing resolution, you will need an external clock, like the DS3231 for example._
 
 
 # Appendices
@@ -179,10 +179,10 @@ While this might not seem very fast, it will (almost) guarantee that we don't ge
 In early versions the precision of the conductor was milliseconds, but this was changed into seconds as:
 * The precision on MCU timers is quite poor, settings in milliseconds will just elicit an overconfidence in the timing. 
 * Constantly having to handle large values, like 360000 for an hour is cumbersome and easy to foul up. _Just did it there and you missed it._
-* The general time format (`Time_t`) is in seconds. The conductor and clients may want to make decisions on perhaps only taking a photo each day at noon or at any other time that meets a time criteria.
 * Such precision is perhaps also a different use case, were an MCU perhaps wakes every 500 ms to check some state or make some measurement. 
 
-Note that if it becomes standard with high-precision TCXOs (Temperature compensated crystal oscillator) or similar on MCUs, it is possible that decimals are added to the timing.
+Note #1: If it becomes standard with high-precision TCXOs (Temperature compensated crystal oscillator) or similar on MCUs, it is possible that instead decimals are added to the timing to increase usable precision. Also, this will not break current settings. 
+Note #2: Internally, Robusto uses millisecond precision to handle short timeframes.
 
 ## Use cases
 

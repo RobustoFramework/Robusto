@@ -37,6 +37,7 @@ static network_service_t conductor_client_service = {
 void on_shutting_down_conductor_client(robusto_message_t *message)
 {
     ROB_LOGI(conductor_log_prefix, "Conductor client is shutting down");
+
 }
 
 void on_incoming_conductor_client(robusto_message_t *message)

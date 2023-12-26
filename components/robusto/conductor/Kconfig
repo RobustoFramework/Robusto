@@ -63,7 +63,7 @@ menu "Conductor configuration"
                 How long to wait before we try to reconnect to the conductor if 
                 we fail connecting. In seconds.
   
-        config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_S
+        config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS
             depends on ROBUSTO_CONDUCTOR_CLIENT
             int "Wake-up margin" 
             default 2
