@@ -93,8 +93,6 @@ void setup_examples() {
         ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
     #endif
 
-
-
     init_robusto();
 
     r_delay(100);   

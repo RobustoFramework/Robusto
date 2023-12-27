@@ -53,7 +53,7 @@ rob_ret_val_t robusto_register_network_service(network_service_t * service) {
     }
     services[services_count] = service;
     services_count++;
-    ROB_LOGI(incoming_service_log_prefix, "%s service, successfully added. Service id: %i", service->service_name, service->service_id);
+    ROB_LOGI(incoming_service_log_prefix, "%s network service, successfully added. Service id: %i", service->service_name, service->service_id);
     return ROB_OK;
 }
 

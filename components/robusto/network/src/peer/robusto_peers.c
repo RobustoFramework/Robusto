@@ -225,7 +225,6 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     if (name != NULL) {
         ROB_LOGI(peers_log_prefix, "robusto_peers_peer_add %s ", name);
     }
-    
     robusto_peer_t *peer;
     if (name != NULL)
     {
@@ -248,7 +247,6 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
         /* Out of memory. */
         return -ROB_ERR_OUT_OF_MEMORY;
     }
-
     memset(peer, 0, sizeof(robusto_peer_t));
     peer->peer_handle = _peer_handle_incrementor_++;
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
@@ -257,7 +255,6 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     peer->relation_id_incoming = 0;
     peer->relation_id_outgoing = 0;
     peer->state = PEER_UNKNOWN;
-
     if (name == NULL)
     {
         sprintf(peer->name, "UNKNOWN_%" PRIu16 "", peer->peer_handle);
@@ -346,7 +343,6 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
         }
         
     }
-
     return peer;
 }
 
@@ -361,6 +357,7 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
 robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, e_media_type media_type)
 {
     robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_type);
+    
     if (peer->state < PEER_KNOWN_INSECURE) {
         // TODO: This should be able to handle trying with several media types
         robusto_send_presentation(peer, media_type, false);

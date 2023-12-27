@@ -400,6 +400,15 @@ void add_host_supported_media_type (e_media_type supported_media_type) {
     robusto_host.supported_media_types |= supported_media_type;
 }
 
+bool peer_waitfor_at_least_state(robusto_peer_t * peer, e_peer_state state, uint32_t timeout) {
+    uint32_t starttime = r_millis();
+    while ((peer-state < state) && (r_millis() < (starttime + timeout))) {
+        r_delay(10);
+    }
+    return r_millis() < (starttime + timeout);
+}
+
+
 /**
  * @brief
  *

@@ -80,10 +80,10 @@ void run_repeaters() {
     for (uint16_t i = 0; i < recurrence_count; i++) {
         curr_recurrence = recurrences[i];
         if (curr_recurrence->skips_left == 0) {
-            ROB_LOGI(repeater_log_prefix, "Repeating: %s", curr_recurrence->recurrence_name);
-                r_delay(100);
+            ROB_LOGD(repeater_log_prefix, "Repeating: %s", curr_recurrence->recurrence_name);
+            r_delay(1);
             curr_recurrence->recurrence_callback();
-            ROB_LOGI(repeater_log_prefix, "Done %s", curr_recurrence->recurrence_name);
+            ROB_LOGD(repeater_log_prefix, "Done %s", curr_recurrence->recurrence_name);
             curr_recurrence->skips_left = curr_recurrence->skip_count;
         } else {
             curr_recurrence->skips_left--;

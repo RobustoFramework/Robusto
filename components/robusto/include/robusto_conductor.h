@@ -37,8 +37,7 @@
 #include <robusto_peer_def.h>
 #include <inttypes.h>
 
-/* The most amount of time the peer gives itself until it goes to sleep */
-#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S * 2000
+
 
 #if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S * 1000) < ROBUSTO_AWAKE_TIMEBOX_MS
 #error "You cannot set the conductor cycle time to less than twice the awake time"
@@ -87,20 +86,6 @@ void robusto_conductor_server_take_control();
  */
 int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
 
-/* Client functionality*/
-
-/**
- * @brief Check with the peer when its available next, and goes to sleep until then.
- * @param peer The peer that one wants to follow
- */
-void robusto_conductor_client_give_control(robusto_peer_t *peer);
-
-/**
- * @brief Send a "When"-message that asks the peer to describe themselves
- *
- * @return int A handle to the created conversation
- */
-int robusto_conductor_client_send_when_message(robusto_peer_t *peer);
 /**
  * @brief Register a callback that is called before sleep
  * 
@@ -108,6 +93,29 @@ int robusto_conductor_client_send_when_message(robusto_peer_t *peer);
  */
 void robusto_conductor_server_set_before_sleep(before_sleep *_on_before_sleep_cb);
 
+
+
+/* Client functionality*/
+
+/**
+ * @brief Check with the peer when its available next, and goes to sleep until then.
+ * @param peer The peer that one wants to follow
+ */
+void robusto_conductor_client_give_control();
+
+/**
+ * @brief Send a "When"-message that asks the peer to describe themselves
+ *
+ * @return int A handle to the created conversation
+ */
+int robusto_conductor_client_send_when_message();
+
+/**
+ * @brief Get the conductor peer
+ *
+ * @return The main conductor peer
+ */
+robusto_peer_t *robusto_conductor_client_get_conductor();
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -181,7 +181,6 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
             curr_info->send_failures = 1 * failure_quotient;
         }
     }
-    ROB_LOGI(scoring_log_prefix, "1");
 
 }
 

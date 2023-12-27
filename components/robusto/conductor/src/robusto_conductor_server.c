@@ -13,11 +13,19 @@
 
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 #include <robusto_init_internal.h>
+#include <robusto_init.h>
 #include <robusto_sleep.h>
 
 #include <robusto_network_service.h>
 #include <string.h>
 #include <inttypes.h>
+
+#define CYCLE_TIME_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S * 1000
+#define AWAKE_TIME_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S * 1000
+#define SERVER_MARGIN_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_S * 1000
+
+/* The most amount of time the peer gives itself until it goes to sleep, double the awake time */
+#define ROBUSTO_AWAKE_TIMEBOX_MS AWAKE_TIME_MS * 2
 
 static char *conductor_log_prefix;
 static before_sleep *on_before_sleep_cb;
@@ -69,7 +77,7 @@ void robusto_conductor_server_calc_next_time()
 {
     // TODO: This needs some tweaking to take in account: Short delay in reboot (~800 ms) and something else that causes some miscalculation
     /* Next time  = Time now + Cycle time - how long we've been awake */
-    next_time = robusto_sleep_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S - r_millis();
+    next_time = robusto_sleep_get_time_since_start() + CYCLE_TIME_MS - r_millis();
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %" PRIu32 ".", next_time);
 }
 
@@ -89,7 +97,7 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
 
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_sleep_get_time_since_start());
 
-    uint32_t delta_next = next_time - robusto_sleep_get_time_since_start() + (CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_S * 1000);
+    uint32_t delta_next = next_time - robusto_sleep_get_time_since_start() + SERVER_MARGIN_MS;
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %" PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
@@ -130,8 +138,8 @@ bool robusto_conductor_server_ask_for_time(uint32_t ask)
 void robusto_conductor_server_take_control()
 {
     /* Wait for the awake period*/
-    if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S > r_millis()) {
-        wait_time = CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S - r_millis();
+    if (AWAKE_TIME_MS > r_millis()) {
+        wait_time = AWAKE_TIME_MS - r_millis();
     } else {
         wait_time = 0;
     }
@@ -145,7 +153,7 @@ void robusto_conductor_server_take_control()
             break;
         }
         wait_ms = wait_time;
-        ROB_LOGI(conductor_log_prefix, "Hi there! awaiting sleep for %" PRIu32 " ms.", wait_ms);
+        ROB_LOGI(conductor_log_prefix, "Conductor has taken control, awaiting sleep for %" PRIu32 " ms.", wait_ms);
         wait_for_sleep_started = r_millis();
         r_delay(wait_ms);
         if (requested_time > 0)
@@ -172,11 +180,21 @@ void robusto_conductor_server_take_control()
     }
 
 
-    robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S - r_millis());
+    robusto_goto_sleep(CYCLE_TIME_MS- r_millis());
 }
 
 void robusto_conductor_server_set_before_sleep(before_sleep _on_before_sleep_cb) {
     on_before_sleep_cb = _on_before_sleep_cb;
+}
+
+
+void robusto_conductor_server_start()
+{
+    robusto_register_network_service(&conductor_server_service);
+}
+
+void robusto_conductor_server_stop()
+{
 }
 
 void robusto_conductor_server_init(char *_log_prefix)
@@ -185,9 +203,15 @@ void robusto_conductor_server_init(char *_log_prefix)
 
     // Set the next available time.
     robusto_conductor_server_calc_next_time();
-    robusto_register_network_service(&conductor_server_service);
-    ROB_LOGI(conductor_log_prefix, "Conductor server initiated.");
 
+}
+
+
+
+
+void robusto_conductor_server_register_service()
+{
+    register_service(robusto_conductor_server_init, robusto_conductor_server_start, robusto_conductor_server_stop, 4, "Conductor server service");    
 }
 
 #endif

@@ -13,15 +13,15 @@ static char *conductor_server_log_prefix;
 void on_incoming_conductor_server_example(incoming_queue_item_t *incoming_item)
 {
     if (incoming_item->message->string_count > 0) {
-        ROB_LOGI(conductor_server_log_prefix, "Peer %s sent us a message: %s", incoming_item->message->peer->name, incoming_item->message->strings[0]);
+        ROB_LOGI(conductor_server_log_prefix, "Example: Peer %s sent us a message: %s", incoming_item->message->peer->name, incoming_item->message->strings[0]);
     } else {
-        ROB_LOGI(conductor_server_log_prefix, "Peer %s sent us something.", incoming_item->message->peer->name);
+        ROB_LOGI(conductor_server_log_prefix, "Example: Peer %s sent us something.", incoming_item->message->peer->name);
         rob_log_bit_mesh(ROB_LOG_INFO, conductor_server_log_prefix, incoming_item->message->raw_data, incoming_item->message->raw_data_length);
     }
 }
 
 void run_conductor_server() {
-    ROB_LOGW(conductor_server_log_prefix, "Doing nothing, giving control to conductor");
+    ROB_LOGW(conductor_server_log_prefix, "Example: Doing nothing, giving control to conductor");
     robusto_conductor_server_take_control();
 }
 

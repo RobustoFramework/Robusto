@@ -35,6 +35,7 @@ menu "Robusto Examples"
 
     config ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
         bool "The conductor client example"
+        select ROBUSTO_CONDUCTOR_CLIENT
         default false
         help
             This is the conductor client, it will contact the conductor and then fall asleep periodically and communicate with the conductor peer.
@@ -42,6 +43,7 @@ menu "Robusto Examples"
 
     config ROBUSTO_EXAMPLE_CONDUCTOR_SERVER
         bool "The conductor server example"
+        select ROBUSTO_CONDUCTOR_SERVER
         default false
         help
             This is the conductor server, it will:

@@ -15,7 +15,7 @@
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
 
 #include <robusto_sleep.h>
-
+#include <robusto_init.h>
 #include <robusto_message.h>
 #include <robusto_network_service.h>
 #include <inttypes.h>
@@ -24,7 +24,7 @@ static char *conductor_log_prefix;
 
 ROB_RTC_DATA_ATTR int availability_retry_count;
 
-robusto_peer_t * main_conductor_peer;
+robusto_peer_t * main_conductor_peer = NULL;
 
 static void on_incoming_conductor_client(robusto_message_t *message);
 static void on_shutting_down_conductor_client(robusto_message_t *message);
@@ -50,16 +50,35 @@ void on_incoming_conductor_client(robusto_message_t *message)
         message->peer->next_availability = r_millis() + time_until_available;
         ROB_LOGI(conductor_log_prefix, "Peer %s sent us %" PRIu32 " and is available at %" PRIu32 ".", message->peer->name, time_until_available, message->peer->next_availability);
     } else {
-        ROB_LOGE(conductor_log_prefix, "Condustor %s server sent something we didn't understand:", message->peer->name);
+        ROB_LOGE(conductor_log_prefix, "Conductor %s server sent something we didn't understand:", message->peer->name);
         rob_log_bit_mesh(ROB_LOG_ERROR, conductor_log_prefix, message->binary_data, message->binary_data_length);
     }
     
 }
 
-int robusto_conductor_client_send_when_message(robusto_peer_t *peer)
+
+robusto_peer_t * robusto_conductor_client_get_conductor() {
+    if (!main_conductor_peer) {
+        ROB_LOGE(conductor_log_prefix, "The main conductor it not set.");
+        return NULL;
+    } else
+    if (main_conductor_peer->state < PEER_KNOWN_INSECURE) {
+        if (peer_waitfor_at_least_state(main_conductor_peer, PEER_KNOWN_INSECURE, 6000)) {
+            return main_conductor_peer;
+        } else {
+            ROB_LOGE(conductor_log_prefix, "The main conductor has not reached at least PEER_KNOWN_INSECURE status.");
+            return NULL;
+        }
+    } else {
+        return main_conductor_peer;
+    }
+    
+}
+
+int robusto_conductor_client_send_when_message()
 {
     uint8_t when_msg = ROBUSTO_CONDUCTOR_MSG_WHEN;
-    return send_message_binary(peer, ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID, 0, &when_msg, 1, NULL);
+    return send_message_binary(robusto_conductor_client_get_conductor(), ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID, 0, &when_msg, 1, NULL);
 }
 
 /**
@@ -68,32 +87,32 @@ int robusto_conductor_client_send_when_message(robusto_peer_t *peer)
  * @param peer The conductor peer
  * @return int
  */
-void robusto_conductor_client_sleep_until_available(robusto_peer_t *peer, uint32_t margin_us)
+void robusto_conductor_client_sleep_until_available(uint32_t margin_us)
 {
-    if (peer->next_availability > 0)
+    if (robusto_conductor_client_get_conductor()->next_availability > 0)
     {
-        uint32_t sleep_length = peer->next_availability - r_millis() + margin_us;
+        uint32_t sleep_length = robusto_conductor_client_get_conductor()->next_availability - r_millis() + margin_us;
         ROB_LOGI(conductor_log_prefix, "Going to sleep for %" PRIu32 " milliseconds.", sleep_length);
         robusto_goto_sleep(sleep_length);
     }
 }
 
-void robusto_conductor_client_give_control(robusto_peer_t *peer)
+void robusto_conductor_client_give_control()
 {
 
-    if (peer != NULL)
+    if (robusto_conductor_client_get_conductor() != NULL)
     {
-        peer->next_availability = 0;
+        robusto_conductor_client_get_conductor()->next_availability = 0;
         // Ask for conducting
         ROB_LOGI(conductor_log_prefix, "Asking for conducting..");
         int retries = 0;
         // Waiting a while for a response.
         while (retries < 10)
         {
-            robusto_conductor_client_send_when_message(peer);
+            robusto_conductor_client_send_when_message();
             r_delay(5000);
 
-            if (peer->next_availability > 0)
+            if (robusto_conductor_client_get_conductor()->next_availability > 0)
             {
                 break;
             }
@@ -103,7 +122,7 @@ void robusto_conductor_client_give_control(robusto_peer_t *peer)
         if (retries == 10)
         {
             ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i seconds..",
-                     peer->name, availability_retry_count++, CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_S);
+                     robusto_conductor_client_get_conductor()->name, availability_retry_count++, CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_S);
 
             robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_S * 1000);
         }
@@ -113,22 +132,21 @@ void robusto_conductor_client_give_control(robusto_peer_t *peer)
             ROB_LOGI(conductor_log_prefix, "Waiting for sleep..");
             /* TODO: Add a robusto task concept instead and wait for a task count to reach zero (within ) */
             // r_delay(5000);
-            robusto_conductor_client_sleep_until_available(peer, CONFIG_ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS);
+            robusto_conductor_client_sleep_until_available(CONFIG_ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS);
         }
     }
 }
 
 void robusto_add_conductor() {
 
-    e_media_type media_type;
     #if defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_BLE)
-        media_type = robusto_mt_ble;
+        e_media_type media_type = robusto_mt_ble;
     #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_ESP_NOW)
-        media_type = robusto_mt_espnow;
+        e_media_type media_type = robusto_mt_espnow;
     #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_LORA)
-        media_type = robusto_mt_lora;
+        e_media_type media_type = robusto_mt_lora;
     #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C)
-        media_type = robusto_mt_i2c;
+        e_media_type media_type = robusto_mt_i2c;
     #else
         #error "No media type selected for initial contact with the conductor."
     #endif
@@ -152,11 +170,26 @@ void robusto_add_conductor() {
     #endif
 }
 
+void robusto_conductor_client_start()
+{
+    robusto_add_conductor();
+}
+
+void robusto_conductor_client_stop()
+{
+}
+
+
 void robusto_conductor_client_init(char *_log_prefix)
 {
     conductor_log_prefix = _log_prefix;
-    // Set the next available time.
     robusto_register_network_service(&conductor_client_service);
 }
+
+void robusto_conductor_client_register_service()
+{
+    register_service(robusto_conductor_client_init, robusto_conductor_client_start, robusto_conductor_client_stop, 4, "Conductor client service");    
+}
+
 
 #endif

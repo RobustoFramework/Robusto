@@ -97,7 +97,7 @@ uint32_t robusto_get_total_time_awake() {
 uint32_t robusto_sleep_get_time_since_start()
 {
     
-    // TODO: This should be possible to replace entirely with an actual
+    // TODO: This should be possible to replace entirely with an actual time
     if (get_last_sleep_time() > 0)
     {
         /* The time we fell asleep + the time we slept + the time since waking up = Total time*/
@@ -113,7 +113,7 @@ uint32_t robusto_sleep_get_time_since_start()
 void robusto_goto_sleep(uint32_t millisecs)
 {
 
-    ROB_LOGI(sleep_log_prefix, "---------------------------------------- S L E E P ----------------------------------------");
+    ROB_LOGI(sleep_log_prefix, "-------------------------- S L E E P --------------------------");
     ROB_LOGI(sleep_log_prefix, "At %li and going to sleep for %lu milliseconds", r_millis(), millisecs);
     /* Now we know how long we were awake this time */
     wake_time_ms+= r_millis();

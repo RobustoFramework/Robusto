@@ -50,16 +50,15 @@ void register_network_service();
 void register_server_service();
 
 /**
- * @brief Initialize the conductor client
- * @param _log_prefix The log prefix
+ * @brief Initialize the conductor client service
+
  */
-void robusto_conductor_client_init(char *_log_prefix);
+void robusto_conductor_client_register_service();
 
 /**
- * @brief Initialize the conductor server
- * @param _log_prefix The log prefix
+ * @brief Initialize the conductor server service
  */
-void robusto_conductor_server_init(char *_log_prefix);
+void robusto_conductor_server_register_service();
 
 /**
  * @brief Register the miscellaneous service

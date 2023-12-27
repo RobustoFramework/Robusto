@@ -35,6 +35,7 @@ menu "Conductor configuration"
                 
     menuconfig ROBUSTO_CONDUCTOR_CLIENT
         bool "Enable the conductor client"
+        select ROBUSTO_SLEEP
         help
             The client contacts the conductor to get to know when it is next available
         if ROBUSTO_CONDUCTOR_CLIENT

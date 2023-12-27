@@ -78,6 +78,13 @@ extern "C"
     rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_media_type exclude, e_media_type *result);
 
     void peer_stat_reset(robusto_media_t *stats);
+    /**
+     * @brief Wait for a peer to at least reach the specified state
+     * 
+     * @param state The state
+     * @param timeout Timeout in milliseconds
+     */
+    bool peer_waitfor_at_least_state(robusto_peer_t * peer, e_peer_state state, uint32_t timeout);
 
     void robusto_peer_init(char *_log_prefix);
 

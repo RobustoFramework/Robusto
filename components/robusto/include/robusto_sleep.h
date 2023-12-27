@@ -2,6 +2,8 @@
 
 #include <robconfig.h>
 
+#ifdef CONFIG_ROBUSTO_SLEEP
+
 #include "inttypes.h"
 
 #ifdef USE_NATIVE
@@ -38,5 +40,7 @@ bool robusto_sleep_init(char * _log_prefix);
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
+
 #endif
 

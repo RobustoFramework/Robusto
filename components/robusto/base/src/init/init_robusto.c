@@ -93,7 +93,7 @@ void init_services(char *_log_prefix)
     {
         if (curr_service->init_cb)
         {
-            // ROB_LOGI(robusto_log_prefix, "Initializing service %s..", curr_service->service_name);
+            ROB_LOGI(robusto_log_prefix, "Initializing service %s..", curr_service->service_name);
             curr_service->init_cb(_log_prefix);
         }
     }
@@ -151,10 +151,10 @@ void init_robusto()
     register_server_service();
 
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
-    robusto_conductor_client_init(robusto_log_prefix);
+    robusto_conductor_client_register_service();
     #endif
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
-    robusto_conductor_server_init(robusto_log_prefix);
+    robusto_conductor_server_register_service();
     #endif
 
     register_misc_service();
