@@ -70,6 +70,46 @@ rob_ret_val_t sleep_milliseconds(uint32_t millisecs)
 #endif
 }
 
+/**
+ * @brief Get the number of sleeps
+ *
+ * @return int
+ */
+int robusto_get_sleep_count()
+{
+    return sleep_count;
+}
+
+uint32_t get_last_sleep_time() {
+    return last_sleep_time;
+}
+
+uint32_t robusto_get_total_time_awake() {
+    return wake_time_ms + r_millis();
+}
+
+
+/**
+ * @brief Get total time asleep, awake and milliseconds since starting conducting
+ *
+ * @return int The number of milliseconds 
+ */
+uint32_t robusto_sleep_get_time_since_start()
+{
+    
+    // TODO: This should be possible to replace entirely with an actual
+    if (get_last_sleep_time() > 0)
+    {
+        /* The time we fell asleep + the time we slept + the time since waking up = Total time*/
+        return get_last_sleep_time() + get_last_sleep_duration() + r_millis();
+    }
+    else
+    {
+        /* Can't include the cycle delay if we haven't cycled.. */
+        return r_millis();
+    }
+}
+
 void robusto_goto_sleep(uint32_t millisecs)
 {
 
@@ -79,6 +119,8 @@ void robusto_goto_sleep(uint32_t millisecs)
     wake_time_ms+= r_millis();
     sleep_count++;
 
+    /* Set the sleep time just before going to sleep. */
+    last_sleep_time = robusto_sleep_get_time_since_start();
 
     sleep_milliseconds(millisecs);
 }
@@ -147,21 +189,4 @@ bool robusto_sleep_init(char *_log_prefix)
 #endif
 }
 
-/**
- * @brief Get the number of sleeps
- *
- * @return int
- */
-int robusto_get_sleep_count()
-{
-    return sleep_count;
-}
-
-uint32_t get_last_sleep_time() {
-    return last_sleep_time;
-}
-
-uint32_t robusto_get_total_time_awake() {
-    return wake_time_ms + r_millis();
-}
 #endif

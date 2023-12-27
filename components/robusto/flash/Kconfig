@@ -1,23 +1,21 @@
 # Kconfig file for Robusto v0.1.0
 menu "Flash"
-    config ROBUSTO_FLASH
+    menuconfig ROBUSTO_FLASH
         bool "Enable the robusto flash library"
         help
             The flash library enabled reading and writing to flash memory (both external and internal).
-    menu "SPIFFS"
-        depends on ROBUSTO_FLASH    
+        if ROBUSTO_FLASH
+            config ROBUSTO_FLASH_SPIFFS
+                bool "Mount a SPIFF path" 
+                help 
+                    On boot, mount the specified SPIFFS path in the VFS.
 
-        config ROBUSTO_FLASH_SPIFFS
-            bool "Mount a SPIFF path" 
-            help 
-                On boot, mount the specified SPIFFS path in the VFS.
-
-        config ROBUSTO_FLASH_SPIFFS_PATH
-            depends on ROBUSTO_FLASH_SPIFFS
-            string "The SPIFFS path to mount" 
-            default "/spiffs"
-            help 
-                The path to mount in the VFS            
-    endmenu                    
+            config ROBUSTO_FLASH_SPIFFS_PATH
+                depends on ROBUSTO_FLASH_SPIFFS
+                string "The SPIFFS path to mount" 
+                default "/spiffs"
+                help 
+                    The path to mount in the VFS            
+        endif                    
 
 endmenu                    

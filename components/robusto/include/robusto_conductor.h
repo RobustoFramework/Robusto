@@ -38,9 +38,9 @@
 #include <inttypes.h>
 
 /* The most amount of time the peer gives itself until it goes to sleep */
-#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS * 2
+#define ROBUSTO_AWAKE_TIMEBOX_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S * 2000
 
-#if CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS < ROBUSTO_AWAKE_TIMEBOX_MS
+#if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S * 1000) < ROBUSTO_AWAKE_TIMEBOX_MS
 #error "You cannot set the conductor cycle time to less than twice the awake time"
 #endif
 
@@ -49,9 +49,12 @@
 #define ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID 1981U
 
 
+/* Client asks server when available next (uint32_t milliseconds) */
 #define ROBUSTO_CONDUCTOR_MSG_WHEN 1U
 #define ROBUSTO_CONDUCTOR_MSG_THEN 2U
-#define ROBUSTO_CONDUCTOR_MSG_MORE 3U
+/* Client asks server about current time (64 bits time_t) */
+#define ROBUSTO_CONDUCTOR_MSG_ASK_TIME 4U
+#define ROBUSTO_CONDUCTOR_MSG_TELL_TIME 5U
 
 #ifdef __cplusplus
 extern "C"
@@ -84,17 +87,7 @@ void robusto_conductor_server_take_control();
  */
 int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
 
-
-/**
- * @brief Time since the conductor started conducting
- * 
- * @return uint32_t Time in milliseconds
- */
-
-uint32_t robusto_conductor_server_get_time_since_start();
-
 /* Client functionality*/
-
 
 /**
  * @brief Check with the peer when its available next, and goes to sleep until then.

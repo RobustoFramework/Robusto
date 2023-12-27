@@ -13,6 +13,7 @@ The implementations of the physical layers of the communitation.
 Here, much of the functionality is platform specific, it is a bit of #ifdef-city here.
 
 
+
 ## Incoming
 Here we make sure that each incoming messages is properly handled. 
 Some messages don't get here, like messages that fails checks and heartbeats.
@@ -31,3 +32,23 @@ The QoS of Service component:
 
 ## Encryption - Work in progress
 Support for the encryption schemes that is made possible by the multiple media types of Robusto.
+
+## The Robusto relation to the internet
+
+All medias above here are physical point-to-point medias, and they have very basic adressing schemes, if any at all. 
+In contrast, WiFi/UMTS/Ethernet networks:
+* have their own models for authentication and encryption
+* depend on external devices, like routers, switches and cell towers
+* are typically connected to the internet
+
+Robusto networks:
+* should not be affected by LAN or "internet" problems, if possible not share issues
+* relies partly on network isolation to not be susceptible to the common attack vectors, like wardriving for WiFi and DoS
+* does not (yet) have peers with the computing power to implement proper security for the high speed of the internet
+* needs to work with little bandwidth, processing power and current draw
+
+Instead, the Robusto approach to LAN/internet is service-oriented and more write than read.
+It sends data from sensors and monitoring to MQTT or SignalK or surveillance pictures to Google Drive. 
+If a Robusto network is to execute commands from the internet, it is be through channels itself has established.
+ 
+

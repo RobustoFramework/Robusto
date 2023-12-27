@@ -52,20 +52,25 @@ extern "C"
  *
  */
 
+/* Note: When adding a media type, update the conductor client.*/
+
 typedef enum e_media_type
 {
     robusto_mt_none = 0, 
+    
     /* Wireless */
     robusto_mt_ble = 1,
     robusto_mt_espnow = 2,
     robusto_mt_lora = 4, 
-    robusto_mt_umts = 8, // TODO: Only implemented as a service. However UTMS isn't really a thing. PPP?
 
     /* Wired */
-    robusto_mt_i2c = 16,
+    robusto_mt_i2c = 8,
+
     /* TODO: To be implemented 
-    robusto_mt_canbus = 32, 
-    robusto_mt_ttl = 64,    // TODO: Probably this should be implemented in some way. Or onewire. (perhaps testing connections)
+    robusto_mt_twai = 16, 
+    robusto_mt_umts = 32, // TODO: Only implemented as a gateway service. 
+    robusto_mt_wifi = 64,    // TODO: On what level should UMTS and wifi be implemented? Neither are direct and both use IP adressing
+    // TTL? Onewire? Probably this should be implemented in some way. Or onewire. (perhaps separate for testing connections)
     */
     /* Special types */
     robusto_mt_mock = 128

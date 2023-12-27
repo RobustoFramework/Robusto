@@ -1,74 +1,93 @@
 # Kconfig file for Robusto v0.1.0
 
 menu "Conductor configuration"
-    config ROBUSTO_CONDUCTOR_SERVER
+    menuconfig ROBUSTO_CONDUCTOR_SERVER
         bool "Enable the conductor server"
         select ROBUSTO_SLEEP
         help
             This enables the conductor service, and causes the conductor to go into deep sleep when the wake time is over. 
             The conductor enables the network to save energy by timing the sleeping of peers.
+        if ROBUSTO_CONDUCTOR_SERVER
+            config ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S
+                int "Sleep cycle length"
+                default 3600
+                help
+                    Note that this is the time between wake ups, which must be a constant cycle.
+                    It is not when it falls a sleep and how long, that depends on if it had to stay awake extra for some reason.
+                    In seconds.
 
-        config ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S
-            int "Sleep cycle length"
-            default 3600
-            depends on ROBUSTO_CONDUCTOR_SERVER
-            help
-                Note that this is the time between wake ups, which must be a constant cycle.
-                It is not when it falls a sleep and how long, that depends on if it had to stay awake extra for some reason.
-                In seconds.
+            config ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S
+                int "Seconds awake if not extended" 
+                default 40
+                help 
+                    This is how many seconds the server is awake if not asked to extend its time awake.
+                    Note that ROBUSTO_CONDUCTOR_SERVER_MARGIN_S (default 4) is subtracted from this value. 
+                    In seconds.
 
-        config ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S
-            int "Seconds awake if not extended" 
-            default 40
-            depends on ROBUSTO_CONDUCTOR_SERVER
-            help 
-                This is how many seconds the server is awake if not asked to extend its time awake.
-                Note that ROBUSTO_CONDUCTOR_SERVER_MARGIN_S (default 4) is subtracted from this value. 
-                In seconds.
-
-        config ROBUSTO_CONDUCTOR_SERVER_MARGIN_S
-            int "Server margin, to have time to start up"
-            default 4
-            depends on ROBUSTO_CONDUCTOR_SERVER
-            help
-                An MCU will need both a short time to shut down (turning stuff off, TODO: Is this here?), and booting up. 
-                This margin will be cause the MCU to wake from sleep mode earlier to have time to start up.
-                In seconds.
+            config ROBUSTO_CONDUCTOR_SERVER_MARGIN_S
+                int "Server margin, to have time to start up"
+                default 4
+                help
+                    An MCU will need both a short time to shut down (turning stuff off, TODO: Is this here?), and booting up. 
+                    This margin will be cause the MCU to wake from sleep mode earlier to have time to start up.
+                    In seconds.
+        endif
                 
-    config ROBUSTO_CONDUCTOR_CLIENT
+    menuconfig ROBUSTO_CONDUCTOR_CLIENT
         bool "Enable the conductor client"
         help
             The client contacts the conductor to get to know when it is next available
+        if ROBUSTO_CONDUCTOR_CLIENT
 
-        config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS
-            depends on ROBUSTO_CONDUCTOR_CLIENT
-            hex "The MAC-address of the conductor, a 6-byte hex value"
-            range 0x000000000000 0xFFFFFFFFFFFF
-            help
-                This is the MAC-address of the conductor
-                Write it as a large hexadecimal number, for example 0x01AB11BB12BC (6*8 bits)
+            choice ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA
+                prompt "Initial media for conductor"
 
-        config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS
-            depends on ROBUSTO_CONDUCTOR_CLIENT
-            int "The I2C-address of the conductor"
-            range 0 255
-            help
-                This is the I2C address of the conductor.
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_BLE
+                    depends on ROBUSTO_SUPPORTS_BLE
+                    bool "BLE"
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_ESP_NOW
+                    depends on ROBUSTO_SUPPORTS_ESP_NOW
+                    bool "ESP-NOW"
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_LORA
+                    depends on ROBUSTO_SUPPORTS_LORA
+                    bool "LoRa"
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_UMTS
+                    depends on ROBUSTO_SUPPORTS_UMTS
+                    bool "UMTS"
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
+                    depends on ROBUSTO_SUPPORTS_I2C
+                    bool "I2C"
+            endchoice
 
-        config ROBUSTO_CONDUCTOR_RETRY_WAIT_S
-            depends on ROBUSTO_CONDUCTOR_CLIENT
-            int "Retry delay"
-            default 30
-            help
-                How long to wait before we try to reconnect to the conductor if 
-                we fail connecting. In seconds.
-  
-        config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS
-            depends on ROBUSTO_CONDUCTOR_CLIENT
-            int "Wake-up margin" 
-            default 2
-            depends on ROBUSTO_CONDUCTOR_CLIENT
-            help
-                Wait a little extra to wake up to get into the queue when 
-                having many clients. In seconds.
+            config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS
+                int "The I2C-address of the conductor"
+                depends on ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
+                range 0 255
+                help
+                    This is the I2C address of the conductor.
+
+            config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS
+                hex "The MAC-address of the conductor, a 6-byte hex value"
+                depends on !ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
+                range 0x000000000000 0xFFFFFFFFFFFF
+                help
+                    This is the MAC-address of the conductor
+                    Write it as a large hexadecimal number, for example 0x01AB11BB12BC (6*8 bits)
+        
+            config ROBUSTO_CONDUCTOR_RETRY_WAIT_S
+                int "Retry delay"
+                default 30
+                help
+                    How long to wait before we try to reconnect to the conductor if 
+                    we fail connecting. In seconds.
+    
+            config ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS
+                int "Wake-up margin" 
+                default 2
+                depends on ROBUSTO_CONDUCTOR_CLIENT
+                help
+                    Wait a little extra to wake up to get into the queue when 
+                    having many clients. In seconds.
+        endif
+
 endmenu                    

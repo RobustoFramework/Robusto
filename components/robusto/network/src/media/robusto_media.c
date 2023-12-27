@@ -79,14 +79,15 @@ void list_media_types(robusto_media_types media_types, char *log_str)
         strcat(log_str, " I2C,");
     }
     /*
-    if (media_types & robusto_mt_canbus)
+    if (media_types & robusto_mt_twai)
     {
-        strcat(log_str, " CAN bus,");
+        strcat(log_str, "TWAI/CAN bus,");
     }*/
+    /*
     if (media_types & robusto_mt_umts)
     {
         strcat(log_str, " UMTS,");
-    }
+    }*/
     if (media_types & robusto_mt_mock)
     {
         strcat(log_str, " MOCK,");
@@ -101,11 +102,6 @@ void list_media_types(robusto_media_types media_types, char *log_str)
 char *media_type_to_str(robusto_media_types media_type)
 {
     // Assume log string is long enough
-    /*
-    if (media_type == robusto_mt_ttl)
-    {
-        return "TTL";
-    }*/
     if (media_type == robusto_mt_ble)
     {
         return "BLE";
@@ -126,11 +122,12 @@ char *media_type_to_str(robusto_media_types media_type)
     if (media_type == robusto_mt_canbus)
     {
         return "CAN bus";
-    }*/
+    
     if (media_type == robusto_mt_umts)
     {
         return "UMTS";
     }
+    */
     if (media_type == robusto_mt_mock)
     {
         return "MOCK";

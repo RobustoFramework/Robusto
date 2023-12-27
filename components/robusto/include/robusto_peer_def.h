@@ -130,7 +130,7 @@ This library assumes this and may fail using other lengths for this setting.
         /* Minimum supported protocol version*/
         uint8_t min_protocol_version;
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
-        /* Next availability (measured in microseconds from first boot)*/
+        /* Next availability (measured in milliseconds from boot)*/
         uint32_t next_availability;
 #endif
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER

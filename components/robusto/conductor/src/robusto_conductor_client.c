@@ -22,7 +22,9 @@
 
 static char *conductor_log_prefix;
 
-ROB_RTC_DATA_ATTR int availibility_retry_count;
+ROB_RTC_DATA_ATTR int availability_retry_count;
+
+robusto_peer_t * main_conductor_peer;
 
 static void on_incoming_conductor_client(robusto_message_t *message);
 static void on_shutting_down_conductor_client(robusto_message_t *message);
@@ -100,20 +102,54 @@ void robusto_conductor_client_give_control(robusto_peer_t *peer)
         }
         if (retries == 10)
         {
-            ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i microseconds..",
-                     peer->name, availibility_retry_count++, CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS);
+            ROB_LOGE(conductor_log_prefix, "Haven't gotten an availability time for peer \"%s\" ! Tried %i times. Going to sleep for %i seconds..",
+                     peer->name, availability_retry_count++, CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_S);
 
-            robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_MS);
+            robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_RETRY_WAIT_S * 1000);
         }
         else
         {
-            availibility_retry_count = 0;
+            availability_retry_count = 0;
             ROB_LOGI(conductor_log_prefix, "Waiting for sleep..");
             /* TODO: Add a robusto task concept instead and wait for a task count to reach zero (within ) */
             // r_delay(5000);
             robusto_conductor_client_sleep_until_available(peer, CONFIG_ROBUSTO_CONDUCTOR_AWAKE_MARGIN_MS);
         }
     }
+}
+
+void robusto_add_conductor() {
+
+    e_media_type media_type;
+    #if defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_BLE)
+        media_type = robusto_mt_ble;
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_ESP_NOW)
+        media_type = robusto_mt_espnow;
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_LORA)
+        media_type = robusto_mt_lora;
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C)
+        media_type = robusto_mt_i2c;
+    #else
+        #error "No media type selected for initial contact with the conductor."
+    #endif
+
+    #if defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C) && !defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS) 
+        #error "The conductor I2C address must be defined when an I2C media is selected."
+    #elif !defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS)  
+        #error "The conductor MAC address must be defined when non-I2C-media is selected."
+    #endif
+    // If we aren't in the first reset, the peer should already be there
+    #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
+        main_conductor_peer = robusto_peers_find_peer_by_i2c_address(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS)
+        if (!main_conductor_peer) {
+            main_conductor_peer = add_peer_by_i2c_address("CONDUCTOR_MAIN", CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS)
+        }
+    #else
+        main_conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS));
+        if (!main_conductor_peer) {
+            main_conductor_peer = add_peer_by_mac_address("CONDUCTOR_MAIN", kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS), media_type);
+        }
+    #endif
 }
 
 void robusto_conductor_client_init(char *_log_prefix)

@@ -9,7 +9,9 @@ This way, one can achieve redundancy, increase security and an ability to report
 * CRC32 or Fletch16 depending on MCU (Fletch16 takes much less memory)
 * Fragmentation and ressembly of large messages 
 
-# Tested boards
+#Appendix
+
+## Tested boards
 
 |Microcontroller|Framework|I2C|LoRa|WiFi|ESP-NOW|Comments|
 |----|----|----|----|----|----|----|
@@ -28,3 +30,4 @@ Restricted (i.e cannot run Robusto, but can easily send data to Robusto peers us
 |Arduino UNO|Arduino|X|
 |Atmel ATtiny85|Arduino|X|
 |STM32 F03C8|Arduino|X|
+

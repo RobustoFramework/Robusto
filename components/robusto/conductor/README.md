@@ -158,7 +158,7 @@ If we fail connecting to the Conductor, it is likely that we have lost sync.
 
 This should be significantly shorter than the awake time of the Conductor as we might not catch it when it's awake otherwise.
 
-_Note that if the sleep cycle is long, for example five hours, it will that long to do so, which may require a lot of energy, so it is important to have too narrow margins for the conductor awake time_
+_Note that if the sleep cycle is long, for example five hours, it will take long to do so, which may require a lot of energy, so it is important to not have so narrow margins for the conductor awake time that clients frequently goes out of sync_
 
 ### Wake-up margin
 _-> "Wake-up margin in seconds"_

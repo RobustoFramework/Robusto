@@ -32,9 +32,6 @@ static uint32_t wait_time = 0;
 static uint32_t requested_time = 0;
 
 
-/* How long we were awake last */
-ROB_RTC_DATA_ATTR uint32_t last_wake_time;
-
 static void on_incoming_conductor_server(robusto_message_t *message);
 static void on_shutting_down_conductor_server(robusto_message_t *message);
 
@@ -64,27 +61,6 @@ void on_incoming_conductor_server(robusto_message_t *message)
     }
 }
 
-/**
- * @brief Get total time asleep, awake and milliseconds since starting conducting
- *
- * @return int The number of milliseconds 
- */
-uint32_t robusto_conductor_server_get_time_since_start()
-{
-    
-    time_t
-    // TODO: This should be possible to replace entirely with an actual
-    if (get_last_sleep_time() > 0)
-    {
-        /* The time we fell asleep + the time we slept + the time since waking up = Total time*/
-        return get_last_sleep_time() + get_last_sleep_duration() + r_millis();
-    }
-    else
-    {
-        /* Can't include the cycle delay if we haven't cycled.. */
-        return r_millis();
-    }
-}
 
 /**
  * @brief Calculate the next time the conductor will wake up
@@ -93,7 +69,7 @@ void robusto_conductor_server_calc_next_time()
 {
     // TODO: This needs some tweaking to take in account: Short delay in reboot (~800 ms) and something else that causes some miscalculation
     /* Next time  = Time now + Cycle time - how long we've been awake */
-    next_time = robusto_conductor_server_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - r_millis();
+    next_time = robusto_sleep_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S - r_millis();
     ROB_LOGI(conductor_log_prefix, "Next time we are available is at %" PRIu32 ".", next_time);
 }
 
@@ -111,9 +87,9 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer)
     // The peer is obviously a client that will go to sleep, stop checking on it.
     peer->sleeper = true;
 
-    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_conductor_server_get_time_since_start());
+    ROB_LOGI(conductor_log_prefix, "BEFORE NEXT get_time_since_start() = %" PRIu32, robusto_sleep_get_time_since_start());
 
-    uint32_t delta_next = next_time - robusto_conductor_server_get_time_since_start() + CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_MS;
+    uint32_t delta_next = next_time - robusto_sleep_get_time_since_start() + (CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_S * 1000);
     ROB_LOGI(conductor_log_prefix, "BEFORE NEXT delta_next = %" PRIu32, delta_next);
 
     /*  Cannot send uint32_t into va_args in add_to_message */
@@ -154,8 +130,8 @@ bool robusto_conductor_server_ask_for_time(uint32_t ask)
 void robusto_conductor_server_take_control()
 {
     /* Wait for the awake period*/
-    if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS > r_millis()) {
-        wait_time = CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_MS - r_millis();
+    if (CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S > r_millis()) {
+        wait_time = CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S - r_millis();
     } else {
         wait_time = 0;
     }
@@ -194,12 +170,9 @@ void robusto_conductor_server_take_control()
             return;
         }
     }
-    /* Set the sleep time just before going to sleep. */
-    last_sleep_time = robusto_conductor_server_get_time_since_start();
-    /* remember how long we were awake */
-    // Todo: We could probably remove last_wake_time
-    last_wake_time = r_millis();
-    robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_MS - last_wake_time);
+
+
+    robusto_goto_sleep(CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S - r_millis());
 }
 
 void robusto_conductor_server_set_before_sleep(before_sleep _on_before_sleep_cb) {
@@ -209,12 +182,6 @@ void robusto_conductor_server_set_before_sleep(before_sleep _on_before_sleep_cb)
 void robusto_conductor_server_init(char *_log_prefix)
 {
     conductor_log_prefix = _log_prefix;
-    
-    // No sleep time has happened if we don't return from sleep mode.
-    if (robusto_is_first_boot())
-    {
-        last_sleep_time = 0;
-    }
 
     // Set the next available time.
     robusto_conductor_server_calc_next_time();
