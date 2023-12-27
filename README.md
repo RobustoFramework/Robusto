@@ -9,7 +9,8 @@ The easiest way is to:
 3. See if any of your MCU:s match the platform.ini ones (can also try using platform.ini.all)<br />
 4. Run the examples. <br />
 
-For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) holds everything togetether.
+For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) will hold everything together.
+_(bit of a work in progress currently)_
 
 <!-- omit from toc -->
 # Table of contents
