@@ -2,6 +2,8 @@
 <!-- omit from toc -->
 # The Robusto framework
 
+**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](paradigm.md)
+
 ## Getting started
 The easiest way is to:
 1. Clone this repository, <br />
@@ -93,10 +95,6 @@ Robusto is *not* able to provide high-speed streaming communication for high def
 
 Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4]. Not that it could not be added later.
 
-[^1]: Perhaps using a 4-pin charger connector (I2C + 5V).
-[^2]: I.e. frame rates may drop but still update, and other functionalities may be completely unaffected. Note that NMEA2000 with all its thick and expensive cabling and ability to support many devices, only transmits at 250kBits/s. It is quite possible to bridge communication to NMEA2000, should be added.
-[^3]: Sometimes that information, for example about radio interference may even help you troubleshoot other issues, like your WiFi network.
-[^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
 
 
 
@@ -148,5 +146,8 @@ Beyond that, there should be no more governing principles.
 Don't come here and point them fingers. If it works, it works.
 
 
-
+[^1]: Perhaps using a 4-pin charger connector (I2C + 5V).
+[^2]: I.e. frame rates may drop but still update, and other functionalities may be completely unaffected. Note that NMEA2000 with all its thick and expensive cabling and ability to support many devices, only transmits at 250kBits/s. It is quite possible to bridge communication to NMEA2000, should be added.
+[^3]: Sometimes that information, for example about radio interference may even help you troubleshoot other issues, like your WiFi network.
+[^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
 [^5]: As a rule, Robusto will leave the most complicated stuff to 3rd party experts or libraries.
