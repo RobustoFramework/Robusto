@@ -64,7 +64,7 @@ extern "C"
 typedef bool(before_sleep)(void);
 
 /* Server functionality*/
-
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 
 /**
  * @brief Ask to wait with sleep for a specific amount of time from now
@@ -93,9 +93,11 @@ int robusto_conductor_server_send_then_message(robusto_peer_t *peer);
  */
 void robusto_conductor_server_set_before_sleep(before_sleep *_on_before_sleep_cb);
 
-
+#endif
 
 /* Client functionality*/
+
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT
 
 /**
  * @brief Check with the peer when its available next, and goes to sleep until then.
@@ -116,6 +118,8 @@ int robusto_conductor_client_send_when_message();
  * @return The main conductor peer
  */
 robusto_peer_t *robusto_conductor_client_get_conductor();
+
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

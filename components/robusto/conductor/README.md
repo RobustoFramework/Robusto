@@ -24,7 +24,7 @@
   - [Future developments](#future-developments)
 
 # About
-Different from controlling with is about maintaining boundaries and restrictions, _conducting_ actively initiates and takes responsibility for actions. 
+Different from controlling, which is about maintaining boundaries and restrictions, _conducting_ actively initiates and takes responsibility for actions.
 
 In Robusto, it serves the following purposes:
 ## Energy conservation
