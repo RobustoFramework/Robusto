@@ -1,7 +1,10 @@
 <!-- omit from toc -->
 # Robusto Conducting
 
-- [About](#about)
+Different from controlling, which is about maintaining boundaries and restrictions, _conducting_ actively initiates and takes responsibility for actions.
+
+
+- [Purposes](#purposes)
   - [Energy conservation](#energy-conservation)
   - [Timing](#timing)
   - [Reporting](#reporting)
@@ -23,14 +26,12 @@
   - [Use cases](#use-cases)
   - [Future developments](#future-developments)
 
-# About
-Different from controlling, which is about maintaining boundaries and restrictions, _conducting_ actively initiates and takes responsibility for actions.
 
-In Robusto, it serves the following purposes:
+# Purposes
 ## Energy conservation
 For devices in a network to be able to conserve energy, they need to go down in low-energy modes and shut down.
 The conductor enables this to be synchronized so that devices wake up at the same time.
-From the perspecive of the devices of the network, a network that is usually down and asleep, will always be up and available. 
+From the perspecive of the devices of the network, a network that is usually down and asleep saving energy, will seem to be always up and available. 
 
 ## Timing
 * Sensors <br/>To make proper time series of data, we need to take measurements over time, and in regular intervals.
@@ -38,10 +39,9 @@ From the perspecive of the devices of the network, a network that is usually dow
 * Controlling<br />Lights, irrigation or whatever may have to be turned on or of at specific times.
 
 ## Reporting
-Reporting problems, as failing cameras, wired or wireless network issues to will ensure easy maintenance.
+Reporting problems, as failing cameras, wired or wireless network issues etcetera will help maintenance.
 
-Note that Robusto _verifies_ all its communication, rather than sending hundreds of messages per second, hoping 
-that some are correct. This makes it possible to notice and react to any change in the transmission environment.
+Note that Robusto _verifies_ all its communication, rather than sending hundreds of messages per second, hoping that some are correct. This makes it possible to notice and react to any change in the transmission environment.
 
 # Sleep cycle timing
 
