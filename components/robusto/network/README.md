@@ -1,5 +1,7 @@
 # Robusto Network
 
+Rather than sending hundreds of messages per second hoping that some are correct, Robusto verifies the integrity of all its communication. This makes it possible to notice and react to any change in the transmission environment. It also significantly reduces the bandwith used by the communication. 
+
 These are the components of Robusto that pertains to being part of a network of Robusto peers:
 
 ## Message

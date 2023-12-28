@@ -4,7 +4,7 @@
 Different from controlling, which is about maintaining boundaries and restrictions, _conducting_ actively initiates and takes responsibility for actions.
 
 
-- [Purposes](#purposes)
+- [Purpose](#purpose)
   - [Energy conservation](#energy-conservation)
   - [Timing](#timing)
   - [Reporting](#reporting)
@@ -27,21 +27,20 @@ Different from controlling, which is about maintaining boundaries and restrictio
   - [Future developments](#future-developments)
 
 
-# Purposes
+# Purpose
 ## Energy conservation
 For devices in a network to be able to conserve energy, they need to go down in low-energy modes and shut down.
 The conductor enables this to be synchronized so that devices wake up at the same time.
 From the perspecive of the devices of the network, a network that is usually down and asleep saving energy, will seem to be always up and available. 
 
 ## Timing
-* Sensors <br/>To make proper time series of data, we need to take measurements over time, and in regular intervals.
+* Sensors <br/>To create a proper time series of data, we need to take measurements over time, and in regular intervals.
 * Monitoring<br/>Off-site installation may have both limited energy and bandwidth available. So if a camera just snaps a photo each day or every three hours, that may be quite sufficient to keep track of things.
 * Controlling<br />Lights, irrigation or whatever may have to be turned on or of at specific times.
 
 ## Reporting
 Reporting problems, as failing cameras, wired or wireless network issues etcetera will help maintenance.
 
-Note that Robusto _verifies_ all its communication, rather than sending hundreds of messages per second, hoping that some are correct. This makes it possible to notice and react to any change in the transmission environment.
 
 # Sleep cycle timing
 
