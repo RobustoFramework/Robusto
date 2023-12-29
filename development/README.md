@@ -24,3 +24,28 @@ These files should be use as templates for source files.
     * A brief description<br/>(if you can't describe it briefly, maybe split it?)
     * Copyright, the 2-clause BSD license
 
+
+
+
+# Architecture
+
+The architecture of Robusto blends many different ideas and sometimes be a library and sometimes a framework.
+## Design principles
+
+### Easy to understand
+If the code submitted to the framework is hard to understand, it is wrong.  
+If others doesn't understand you, you are wrong[^5]. 
+
+If you don't agree, congratulations, you almost wasted your precious time here!
+
+
+### Easy to port..partially
+It should be easy to implement Robusto for another platforms. 
+Today, most MCU and computers comes with most of the same functionality,
+can talk to each other and often both with wifi and some kind wired interface.
+As they all basically have the same API:s, it should not be that hard. 
+Most of the functionality of Robusto should not be platform-specific anyway.
+
+### No more principles
+Beyond that, there should be no more governing principles. 
+Don't come here and point them fingers. If it works, it works.
