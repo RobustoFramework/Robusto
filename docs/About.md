@@ -27,9 +27,6 @@ All wireless transmissions are susceptible to interception, if we also have a wi
 
 If either connection fails, the other can keep up the information flow. If the wireless communication is interfered with, not only can the wired pick up the slack, the wireless may use the wired connection to negotiate new frequencies or simply report that it is being interfered with. [^2]
 
-### Cheaper to run
-In many ways, the scope of Robusto helps to 
-
 
 # Reasoning
 
@@ -37,7 +34,8 @@ For those interested in the thinking behind Robusto, and have some time to spare
 
 ## Nothing really works for long
 
-Even quality technology will fail eventually. Granted, when quality hardware fails, often it hasn't or couldn’t be maintained or has been damaged. And when great hardware has failed, from Voyager to JWST, brilliant engineers have often been able to work around this using software changes, made possible thanks to redundant pathways in the hardware architecture.<br />
+Even quality technology will fail eventually.<br />
+Granted, when quality hardware fails, often it hasn't or couldn’t be maintained or has been damaged. And when great hardware has failed, from Voyager to JWST, brilliant engineers have often been able to work around it using software changes, often made possible thanks to redundant pathways in the hardware architecture.<br />
 But outside aerospace applications and enterprise servers, the only truly redundant systems we normally own is the dual-circuit brake systems in cars. 
 
 Instead, the approach has been to minimize failure by increasing quality and sturdiness. <br />
@@ -56,14 +54,13 @@ It is obviously on the "server" side as well, gathering incoming messages from a
 
 For example, it is quite possible that a message will use LoRa on one way, and the the response will use I2C (_receipts_ will always be in the same media though), and the application will never know.
 
-# Making hardware problems into software problems
+## Transform hardware problems into software problems
 
 Basically, this means that Robusto takes a problem that is usually handled by hardware or specialized server software and solves it locally on both ends to increase reliability. 
 
-In general, this is a common theme in Robusto, it "softwares" itself
+In general, this is a common theme in Robusto, it "softwares" itself out of hardware-related restrictions and limitations. For example, it quickly alters between being an I2C slave and peripheral to be able to  use I2C more flexibly with multiple hosts. 
 
-
-# What does it actually do?
+# What does it actually try do?
 
 By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
 * **Make available some of the feel and functionality of "real" servers**<br/>
@@ -87,6 +84,6 @@ The ability to run at least most your code on native PC:s makes software develop
 
 [^1]: Note that specialized components are not always the solution anyway. For example, vibration has been a huge issue for even hardened microprocessors when mounted directly on some VP marine diesel engines, and in those cases moving the microprocessor off the engine has been the only solution.
 [^2]: If something external caused both wired and wireless communication to fail at the same time, we probably just experienced a direct lightning strike or war conditions. Note that Robusto will try and re-establish communications, even after a broad failure.
-[^3]: The car stops working inexplicably and has to be brought to a mechanic, or the boat's network stops working and neither the autopilot, the wind meter or the speed log works, and the nauseating crawl to find the glitching cable begins.
+[^3]: The car stops working inexplicably and has to be brought to a mechanic, or the boat's network stops working and neither the autopilot, the wind meter or the speed log works, and the nauseating crawl to try to find the glitching cable begins. Yes, they may not only glitch, but break due to their stiffness.
 [^4]: I.e. frame rates may drop but still update, and other functionalities may be completely unaffected. Note that NMEA2000 with all its thick and expensive cabling and ability to support many devices, only transmits at 250kBits/s. It is quite possible to bridge communication to NMEA2000, should be added.
 [^5]: While not currently implemented like that, there are no conceptual or technical reasons beyond making the initial implementation easier to troubleshoot, but it will probably be so that a large fragmented message will be sent on many medias, and simultaneously or in an alternating. This not only for performance, but to avoid saturating an essentially shared media for too long.
