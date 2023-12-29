@@ -40,27 +40,27 @@ The more technical documentation is in the README:s in this repository:
 
 
 # What is Robusto?
-Robusto is a framework for development of cheap and robust networks, applications and services on microcontrollers.<br /> 
+Robusto is a framework that in some ways tries to rethink IoT development to produce cheap and robust networks, applications and services on microcontrollers.<br /> 
 
 Features include:
 * Communication
+  * redundant communication
+    * central in/out queues and independent queues per media
+    * I2C, ESP-NOW, LoRa (and a little bit of UMTS/Cellular)
+    * scoring media
   * peer management
     * presentation, information exchange
     * problem solving
-  * redundant communication
-    * indepentent queues per media
-    * I2C, ESP-NOW, LoRa
-    * scoring media
-  * retryings
-  * fragmentation large message
+  * retries over multple medias
+  * fragmentation large messages
 * Management
   * energy
     * sleeping
     * synchronized sleep patterns
-  * runlevels
-  * configuration (KConfig not only for ESP-IDF, but also for Arduino, STM32)
-  * monitoring / reporting
+  * KConfig/Menuconfig (not only for ESP-IDF, but also for Arduino, STM32)
+  * monitoring / reporting / statistics
   * services
+  * runlevels
 * Technical
   * flash support
   * logging
@@ -69,33 +69,14 @@ Features include:
   * Publisher subscriber
   
   
-..and other things associated with "big" computer systems. But obviously without their memory footprint and power consumption.
+..and other things typically only associated with "big" computer systems. But obviously without their memory footprint and power consumption.
 
-By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
-* **Make available some of the feel and functionality of "real" servers**<br/>
-By bringing forth some of the most important, but perhaps not too performance-hungry, [bells and whistles](https://github.com/RobustoFramework/pub_test/blob/main/components/robusto-misc/include/robusto_pubsub.h) of "real" server development, developing using Robusto feels a bit more like developing your average off-the-shelf server.
-* **Create very energy efficient networks**<br/>
-The ability to coordinate the sleeping patterns of peers make networks able to run with extremely low average current draws (< 1 mA) and on low voltages. 
-* **Work longer when networks degrade**<br/>
-Even if wires start glitching or wireless networks are saturated or interfered with, systems can be kept functioning by changing techniques and even lowering speeds(WIP). 
-* **Help applications gracefully degrading their functionality**<br/>
-Telling applications what communication speeds are available allows them to adapt their functionality to what the circumstances allow.[^2]
-And if they don’t, they will receive helpful errors.
-* **Use cheap, replaceable components and materials**<br/>
-Fault-redundants networks with sensors and controls are made possible to construct on low-income, private budgets. 
-Components are mass produced by several manufacturers and it should be easy to find replacements. Wires can be of lower or more flexible qualities and cheaper connectors may be used.
-* **Enable agile hardware development**<br/>
-The lower cost and cheaper hardware, in conjunction with thinner and easier-to-route cabling and simpler connector makes it easier to work more iteratively. 
-* **Test much of you code on the PC**  
-The ability to run at least most your code on native PC:s makes software development easier to make test driven, as you get to run the tests on a way faster and more powerful platform, without having to wait for firmware uploads and long build times (looking at you, ESP-IDF).
 
 # What is it not? 
 
 Robusto is *not* able to provide high-speed streaming communication for high definition video or other broadband usages. 
 
 Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4]. Not that it could not be added later.
-
-
 
 
 # Tested boards
@@ -147,7 +128,6 @@ Don't come here and point them fingers. If it works, it works.
 
 
 [^1]: Perhaps using a 4-pin charger connector (I2C + 5V).
-[^2]: I.e. frame rates may drop but still update, and other functionalities may be completely unaffected. Note that NMEA2000 with all its thick and expensive cabling and ability to support many devices, only transmits at 250kBits/s. It is quite possible to bridge communication to NMEA2000, should be added.
 [^3]: Sometimes that information, for example about radio interference may even help you troubleshoot other issues, like your WiFi network.
 [^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
 [^5]: As a rule, Robusto will leave the most complicated stuff to 3rd party experts or libraries.
