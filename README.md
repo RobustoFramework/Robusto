@@ -2,7 +2,7 @@
 <!-- omit from toc -->
 # The Robusto framework
 
-**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](ABOUT.md)
+**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](/docs/About.md)
 
 ## Getting started
 The easiest way is to:
@@ -78,7 +78,7 @@ Features include:
 
 Robusto is *not* able to provide high-speed streaming communication for high definition video or other broadband usages. 
 
-Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4]. Not that it could not be added later.
+Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4].<br /> Not that it could not be added later.
 
 
 # Tested boards
