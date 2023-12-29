@@ -1,29 +1,46 @@
+<!-- omit from toc -->
 # About Robusto
 
 What is the Robusto paradigm?
 What is it really about? What is its agenda? What is its potential?
 
-## "Handling failure is cheaper than never failing"
+
+- [Handling failure is cheaper than never failing](#handling-failure-is-cheaper-than-never-failing)
+  - [Cheaper to build](#cheaper-to-build)
+  - [Cheaper to sustain](#cheaper-to-sustain)
+  - [Cheaper to monitor](#cheaper-to-monitor)
+  - [Cheaper to evolve](#cheaper-to-evolve)
+  - [Cheaper to secure](#cheaper-to-secure)
+  - [Cheaper to protect](#cheaper-to-protect)
+- [Reasoning](#reasoning)
+  - [Nothing really works for long](#nothing-really-works-for-long)
+  - [Client-side redundancy](#client-side-redundancy)
+  - [Transform hardware problems into software problems](#transform-hardware-problems-into-software-problems)
+- [What does it actually try do?](#what-does-it-actually-try-do)
+
+
+
+# Handling failure is cheaper than never failing
 
 The Robusto paradigm is the base assumption that the framework tries to prove.
 
-### Cheaper to build
+## Cheaper to build
 If we can combine wired communication with wireless, for example, we can use much cheaper cabling and connectors. We can use off-the-shelf components and controllers. Obviously, we can use expensive and specialized components, but only have to precisely where it is necessary. [^1]
 
-### Cheaper to sustain
+## Cheaper to sustain
 If failures aren’t catastrophic, we can take significantly more risks. Thus we may reduce maintenance and extend replacement cycles for cheaper components closer to, or maybe even beyond, expensive ones. If most of the functionality is in the code, the replacement component doesn’t have to be identical to the one replaced.
 
-### Cheaper to monitor
+## Cheaper to monitor
 An important part of a solution that can endure failure must be great reporting. 
 It cannot work around issues silently, that would undermine the value of the approach.
 
-### Cheaper to evolve
+## Cheaper to evolve
 A more software (firmware) and configuration-defined system can more easily maintain backwards compatibility and change much more frequently. 
 
-### Cheaper to secure
+## Cheaper to secure
 All wireless transmissions are susceptible to interception, if we also have a wired connection, we may use unbreakable one-time-pad encryption schemes. 
 
-### Cheaper to protect
+## Cheaper to protect
 
 If either connection fails, the other can keep up the information flow. If the wireless communication is interfered with, not only can the wired pick up the slack, the wireless may use the wired connection to negotiate new frequencies or simply report that it is being interfered with. [^2]
 
