@@ -49,6 +49,7 @@
 #endif
 
 // TODO: We need to get a proper fix of the environments to make proper choices; ESP-IDF, Arduino and STM32. And perhaps others.
+// TODO: Consider what needs to be done WRT Zephyr, how would USE_ZEPHYR be added?
 
 #ifdef USE_ESPIDF
 #include <sdkconfig.h>

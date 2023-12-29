@@ -32,11 +32,19 @@
 #pragma once
 
 #include <robconfig.h>
+#include <robusto_retval.h>
+#ifdef USE_ESPIDF
+#include "sys/time.h"
+#else
+#include "time.h"
+#endif
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+
 
 /* Define all the reasonable times */
 #define SECOND 1000000
@@ -49,6 +57,23 @@ unsigned long r_micros();
 void r_delay(unsigned long milliseconds);
 
 void r_delay_microseconds(unsigned long microseconds);
+/**
+ * @brief Populates structure with time information (generalization of standard gettimeofday)
+ * 
+ * @param tv Timeval structur
+ * @param tz Timezone
+ * @return rob_ret_val_t 
+ */
+rob_ret_val_t r_gettimeofday(struct timeval *tv, struct timezone *tz);
+
+/**
+ * @brief Sets system time from structure with time information (generalization of standard settimeofday)
+ * 
+ * @param tv 
+ * @param tz 
+ * @return rob_ret_val_t 
+ */
+rob_ret_val_t r_settimeofday(const struct timeval *tv, const struct timezone * tz);
 
 void r_init_time();
 

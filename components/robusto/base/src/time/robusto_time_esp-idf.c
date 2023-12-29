@@ -31,11 +31,11 @@
 
 #include <robusto_time.h>
 #ifdef USE_ESPIDF
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_timer.h>
 #include <rom/ets_sys.h>
+
 
 unsigned long r_millis() {
     return esp_timer_get_time() / 1000;
@@ -54,6 +54,15 @@ void r_delay_microseconds(unsigned long microseconds)
     ets_delay_us(microseconds);
 }
 
+rob_ret_val_t r_gettimeofday(struct timeval *tv, struct timezone *tz) {
+
+    return (gettimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
+}
+
+rob_ret_val_t r_settimeofday(const struct timeval *tv, const struct timezone * tz) {
+    return (settimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
+    
+}
 void r_init_time() {
 };
 
