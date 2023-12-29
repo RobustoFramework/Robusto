@@ -81,7 +81,7 @@ Robusto is not designed to provide high-speed streaming communications for high 
 Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4].
 It is also a matter of [positioning](/components/robusto/network/README.md#the-robusto-relation-to-the-internet).
 
-Obviously that may change, but currently, if you want to do these things using cheap MCU:s please visit the [ESP32-Camera](https://github.com/espressif/esp32-camera) project with tempered expectations. 
+Obviously that may change, but currently, if you want to do these things using cheap MCU:s please visit the [ESP32-Camera](https://github.com/espressif/esp32-camera) project, bringing tempered expectations. 
 
 
 # Tested boards
@@ -98,7 +98,7 @@ Obviously that may change, but currently, if you want to do these things using c
 |Atmel ATtiny85*|Arduino|Way too little RAM/Flash|
 |STM32 F03C8*|Arduino|Too little RAM/Flash|
 
-\* Note that these chips may till communicate with Robusto Peers via I2C using the Fletch16 checksum library.
+\* Note that these chips may still communicate with Robusto peers via I2C using the Fletch16 checksum library.
 
 # Work in progress (WIP)
 
