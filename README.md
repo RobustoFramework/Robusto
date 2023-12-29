@@ -17,13 +17,12 @@ _(bit of a work in progress currently)_
 <!-- omit from toc -->
 # Table of contents
 
-- [Documentation](#documentation)
 - [What is Robusto?](#what-is-robusto)
 - [What is it not?](#what-is-it-not)
 - [Tested boards](#tested-boards)
 - [Work in progress (WIP)](#work-in-progress-wip)
 
-# Documentation
+## Documentation
 More conceptual information:
 - [About](/docs/About.md) 
 - [Architecture](/docs/Architecture.md) 

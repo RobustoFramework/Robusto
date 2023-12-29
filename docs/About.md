@@ -16,7 +16,7 @@ What is it really about? What is its agenda? What is its potential?
   - [Nothing really works for long](#nothing-really-works-for-long)
   - [Client-side redundancy](#client-side-redundancy)
   - [Transform hardware problems into software problems](#transform-hardware-problems-into-software-problems)
-- [What does it actually try do?](#what-does-it-actually-try-do)
+- [What does it actually try to do?](#what-does-it-actually-try-to-do)
 
 
 
@@ -77,7 +77,7 @@ Basically, this means that Robusto takes a problem that is usually handled by ha
 
 In general, this is a common theme in Robusto, it "softwares" itself out of hardware-related restrictions and limitations. For example, it quickly alters between being an I2C slave and peripheral to be able to  use I2C more flexibly with multiple hosts. 
 
-# What does it actually try do?
+# What does it actually try to do?
 
 By combining different wired and wireless techniques with continuous analysis of the communication environment with the increasing abilities of MCU:s, Robusto is able to:<br/>
 * **Make available some of the feel and functionality of "real" servers**<br/>
