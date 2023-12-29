@@ -83,14 +83,16 @@ High level services started.
 The system can respond to requests.
 
 **Level 4**
-The application is running in slept mode, an energy saving mode.
+The applications own services should run in this level. 
+
+The application itself is running in slept mode, an energy saving mode.
 It wakes up occationally to do the things it needs, and then goes to sleep again.
-It might be controlled by an Conductor, to wake up in a timely mode.
+It might be controlled by an Conductor, to wake up in a timely fashion.
 In this mode, the network be available, but peers, while remembered on a relation id level, might not be presented yet.
 
 **Level 5**
 The application is running in woke mode. 
-As in life, this means that the peer is fully aware aware and informed. 
+As in life, this means that the peer is fully aware and informed. 
 Similarly, this take more effort, and therefore more energy,
 
 
