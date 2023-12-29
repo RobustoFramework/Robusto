@@ -47,7 +47,7 @@ Robusto networks:
 * should not be affected by LAN or "internet" problems, if possible not share issues
 * relies partly on network isolation to not be susceptible to the common attack vectors, like wardriving for WiFi and DoS
 * does not (yet) have peers with the computing power to implement proper security for the high speed of the internet
-* needs to work with little bandwidth, processing power and current draw
+* thus needs to manage with less bandwidth, and little processing power and current draw
 
 Instead, the Robusto approach to LAN/internet is service-oriented and more write than read.
 It sends data from sensors and monitoring to MQTT or SignalK or surveillance pictures to Google Drive. 

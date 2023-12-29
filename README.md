@@ -76,9 +76,12 @@ Features include:
 
 # What is it not? 
 
-Robusto is *not* able to provide high-speed streaming communication for high definition video or other broadband usages. 
+Robusto is not designed to provide high-speed streaming communications for high definition video.
 
-Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4].<br /> Not that it could not be added later.
+Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4].
+It is also a matter of [positioning](/components/robusto/network/README.md#the-robusto-relation-to-the-internet).
+
+Obviously that may change, but currently, if you want to do these things using cheap MCU:s please visit the [ESP32-Camera](https://github.com/espressif/esp32-camera) project with tempered expectations. 
 
 
 # Tested boards
@@ -109,5 +112,5 @@ which can be done either continuously when devices are permanently wired, or for
 
 [^1]: Perhaps using a 4-pin charger connector (I2C + 5V).
 [^3]: Sometimes that information, for example about radio interference may even help you troubleshoot other issues, like your WiFi network.
-[^4]: Netflix or other high definition streaming services provide a pleasant viewing experience by using a lot of power-consuming real-time processing. 
+[^4]: Netflix or other high definition streaming services provide a pleasant viewing experience not only by using a lot bandwidht, but power-consuming real-time processing. 
 
