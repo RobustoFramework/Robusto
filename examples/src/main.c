@@ -180,10 +180,20 @@ void main_task(void *parameters)
     };
     
     #else
+    uint32_t counter = 0;
+    struct timeval tv;
+    struct timezone tz;
+    char datebuffer[80];
+    struct tm *gm;
+
     while (1)
     {
-        ROB_LOGI(example_log_prefix, "Alive.");
-        r_delay(5000);
+        r_delay(1000);
+        r_gettimeofday(&tv, &tz);
+        gm = gmtime(&tv.tv_sec);
+        strftime(&datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
+        ROB_LOGI_STAY("Example", "Current RTC time = %s:%li", datebuffer, tv.tv_usec % 1000);
+    
     };
     #endif
 }

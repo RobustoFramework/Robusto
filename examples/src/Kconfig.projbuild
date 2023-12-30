@@ -53,7 +53,7 @@ menu "Robusto Examples"
             4. Repeat
 
     config ROBUSTO_UMTS_EXAMPLE_SMS
-        bool "The SMS example"
+        bool "The UMTS/SMS example"
         help 
             This sends an SMS to the recipient specified below.
             Note that the UMTS gateway has to be enabled and configured.
@@ -67,10 +67,11 @@ menu "Robusto Examples"
             depends on ROBUSTO_UMTS_EXAMPLE_SMS
 
     config ROBUSTO_UMTS_EXAMPLE_MQTT
-        bool "The MQTT example"
+        bool "The UMTS/MQTT example"
         help 
             This sends an MQTT message the specified MQTT server
             The server is set in the MQTT server settings, and also the main path.
+            Note that the UMTS gateway has to be enabled and configured.
 
         config ROBUSTO_UMTS_EXAMPLE_MQTT_TOPIC
             string "The MQTT topic to send the message to"
@@ -84,9 +85,15 @@ menu "Robusto Examples"
 
 
     config ROBUSTO_UMTS_EXAMPLE_GOOGLE_DRIVE
-        bool "The OAuth2 and Google drive example"
+        bool "The UMTS/OAuth2 and Google drive example"
         help 
             This posts a file to google drive
+
+    config ROBUSTO_UMTS_EXAMPLE_NTP
+        bool "The UMTS/NTP example"
+        help 
+            This syncs the time on the MCU with time from an ntp-server.
+            Note that the UMTS gateway has to be enabled and configured.
     config ROBUSTO_CAMERA_EXAMPLE
         bool "The Camera example"
         help 

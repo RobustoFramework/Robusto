@@ -33,11 +33,7 @@
 
 #include <robconfig.h>
 #include <robusto_retval.h>
-#ifdef USE_ESPIDF
 #include "sys/time.h"
-#else
-#include "time.h"
-#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -51,14 +47,35 @@ extern "C"
 #define MINUTE 60000000
 #define HOUR 3600000000
 
+/**
+ * @brief Returns the number of milliseconds since boot (generalization of Arduino millis()) 
+ * 
+ * @return unsigned long 
+ */
 unsigned long r_millis();
+
+/**
+ * @brief Returns the number of microseconds since boot (generalization of Arduino millis()) 
+ * 
+ * @return unsigned long 
+ */
 unsigned long r_micros();
 
+/**
+ * @brief Waits for a number of milliseconds, if supported, yields control to other tasks
+ * 
+ * @param milliseconds 
+ */
 void r_delay(unsigned long milliseconds);
 
+/**
+ * @brief Waits for a number of microseconds, does not yield control to other tasks
+ * 
+ * @param milliseconds 
+ */
 void r_delay_microseconds(unsigned long microseconds);
 /**
- * @brief Populates structure with time information (generalization of standard gettimeofday)
+ * @brief Populates structure with time information (generalization of clang gettimeofday)
  * 
  * @param tv Timeval structur
  * @param tz Timezone

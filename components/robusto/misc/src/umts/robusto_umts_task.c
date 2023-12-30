@@ -558,7 +558,7 @@ signal_quality:
     err = esp_modem_get_operator_name(umts_dce, operator_name, &act);
     if (err != ESP_OK)
     {
-        ROB_LOGE(umts_task_log_prefix, "esp_modem_get_operator_name(umts_dce) failed with %d", err);
+        ROB_LOGE(umts_task_log_prefix, "esp_modem_get_operator_name(umts_dce) failed with %d, is the SIM valid/paid?", err);
     }
     else
     {
@@ -568,10 +568,6 @@ signal_quality:
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(500);
     umts_abort_if_shutting_down();
-#endif
-
-
-#ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
     robusto_conductor_server_ask_for_time(10000);
 #endif
     // Change to data mode

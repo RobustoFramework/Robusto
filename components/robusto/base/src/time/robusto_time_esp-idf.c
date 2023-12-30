@@ -54,15 +54,7 @@ void r_delay_microseconds(unsigned long microseconds)
     ets_delay_us(microseconds);
 }
 
-rob_ret_val_t r_gettimeofday(struct timeval *tv, struct timezone *tz) {
 
-    return (gettimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
-}
-
-rob_ret_val_t r_settimeofday(const struct timeval *tv, const struct timezone * tz) {
-    return (settimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
-    
-}
 void r_init_time() {
 };
 

@@ -1,29 +1,13 @@
-#include <time.h>
+#include <robusto_time.h>
 
-#ifdef USE_ARDUINO
-#include <Arduino.h>
-#endif
+// TODO: Will this 
 
-#if 0
-int r_gettimeofday(struct timeval *tv, struct timezone *tz) {
-    #ifdef USE_ARDUINO
-    // Arduino implementation - using millis()
-    unsigned long millisec = millis();
-    tv->tv_sec = millisec / 1000;
-    tv->tv_usec = (millisec % 1000) * 1000;
-    return 0;
-    #elif defined(USE_ESPIDF)
-    // ESP-IDF implementation
-    return gettimeofday(tv, tz);    
-    #elif defined(USE_ZEPHYR)
-    // Zephyr implementation - using system clock
-    uint64_t millisec = k_uptime_get();
-    tv->tv_sec = millisec / 1000;
-    tv->tv_usec = (millisec % 1000) * 1000;
-    return 0;
-    #else
-    // Default implementation or error
-    return -1;
-    #endif
+rob_ret_val_t r_gettimeofday(struct timeval *tv, struct timezone *tz) {
+
+    return (gettimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
 }
-#endif
+
+rob_ret_val_t r_settimeofday(const struct timeval *tv, const struct timezone * tz) {
+    return (settimeofday(tv, tz) == 0) ? ROB_OK:ROB_FAIL;
+    
+}

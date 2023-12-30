@@ -99,6 +99,10 @@ void r_init_logging();
 #else
 #define ROB_LOG_FORMAT(letter, format) #letter " (%lu) %s: " format "\n"
 #endif
+
+#define ROB_LOG_FORMAT_NO_NL(letter, format) "\r" ROB_LOG_COLOR_##letter #letter " (%lu) %s: " format ROB_LOG_RESET_COLOR
+
+
 #if defined(USE_ARDUINO) || defined(USE_ESPIDF) || defined(STM32)|| defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_MBED)
 #define ROB_LOG_TIME_SRC r_millis()
 #else
@@ -148,6 +152,7 @@ void r_init_logging();
 #define ROB_LOGD(tag, format, ...) ROB_LOG_LEVEL_LOCAL(ROB_LOG_DEBUG, tag, format, ##__VA_ARGS__)
 #define ROB_LOGV(tag, format, ...) ROB_LOG_LEVEL_LOCAL(ROB_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
 
+#define ROB_LOGI_STAY(tag, format, ...) rob_log_write(ROB_LOG_INFO, tag, ROB_LOG_FORMAT_NO_NL(I, format), ROB_LOG_TIME_SRC, tag, ##__VA_ARGS__)
 #else
 #define ROB_LOGE(tag, format, ...) do {} while (0)
 #define ROB_LOGW(tag, format, ...) do {} while (0)
