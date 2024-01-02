@@ -78,7 +78,7 @@ uint16_t calc_deka_ms_since(uint64_t since, uint64_t curr_time)
     {
         retval = (uint16_t) (diff / 10);
     }
-    ROB_LOGI(heartbeat_log_prefix, "calc_deka_ms_since returns %02X %02X, %i (diff = %llu since = %llu, curr_time = %llu ", ((uint8_t *)&retval)[0], ((uint8_t* )&retval)[1],retval, diff, since, curr_time);
+    ROB_LOGD(heartbeat_log_prefix, "calc_deka_ms_since returns %02X %02X, %i (diff = %llu since = %llu, curr_time = %llu ", ((uint8_t *)&retval)[0], ((uint8_t* )&retval)[1],retval, diff, since, curr_time);
     return retval;
 }
 
@@ -88,7 +88,7 @@ uint64_t parse_heartbeat(uint8_t *data, uint8_t preamble_len)
     uint16_t *retval = data + preamble_len;
     uint64_t hb_time = r_millis() - (*retval * 10);
     // TODO: We need a multistage boot process that differs from initialisation and startup or whatevs. Runlevels?
-    ROB_LOGI("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
+    ROB_LOGD("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
         ((uint8_t*)retval)[0], ((uint8_t*)retval)[1], (uint16_t)(*retval * 10), hb_time, preamble_len);
     
     return hb_time;
@@ -106,7 +106,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         (info->last_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS *2)) // or we haven't heard from the peer
     )
     {
-        ROB_LOGI(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+        ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
         
         deka_ms_diff = calc_deka_ms_since(info->last_receive, curr_time);
         int hb_msg_len = robusto_make_binary_message(MSG_HEARTBEAT, 0, 0, &deka_ms_diff, 2, &hb_msg);

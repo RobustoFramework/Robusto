@@ -136,7 +136,7 @@ void monitor_memory_cb()
         first_average_memory_available = avg_mem_avail;
     }
 
-    int level = ROB_LOG_INFO;
+    int level = ROB_LOG_DEBUG;
     if ((most_memory_available - curr_mem_avail) > CONFIG_ROBUSTO_MONITOR_DANGER_USAGE)
     {
         ROB_LOGE(memory_monitor_log_prefix, "Dangerously high memory usage at %llu bytes! Will report!(CONFIG_ROBUSTO_MONITOR_DANGER_USAGE=%u)",

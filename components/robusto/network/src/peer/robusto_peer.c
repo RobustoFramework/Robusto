@@ -296,7 +296,7 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
 {
     robusto_media_t *curr_info = get_media_info(peer, media_type);
 
-    ROB_LOGI(peer_log_prefix, "Mt: %s, peer: %s ss: %"PRIu32", rs: %"PRIu32", sf: %"PRIu32", rf: %"PRIu32" ", 
+    ROB_LOGD(peer_log_prefix, "Mt: %s, peer: %s ss: %"PRIu32", rs: %"PRIu32", sf: %"PRIu32", rf: %"PRIu32" ", 
         media_type_to_str(media_type), peer->name, 
         curr_info->send_successes, curr_info->receive_successes,
         curr_info->send_failures, curr_info->receive_failures);
