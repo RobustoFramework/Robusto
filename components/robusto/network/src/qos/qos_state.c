@@ -358,7 +358,7 @@ void qos_state_cb()
 
     SLIST_FOREACH(peer, get_peer_list(), next)
     {
-        ROB_LOGI(qos_state_log_prefix, "Checking peer: %s", peer->name);
+        ROB_LOGD(qos_state_log_prefix, "Checking peer: %s", peer->name);
         check_peer(peer);
     }
 }

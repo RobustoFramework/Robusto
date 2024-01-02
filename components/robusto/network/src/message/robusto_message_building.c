@@ -143,7 +143,7 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
             message_length += strings_offset;
         }
     }
-    ROB_LOGI(message_building_log_prefix, "Allocating %lu bytes for message.", message_length);
+    ROB_LOGD(message_building_log_prefix, "Allocating %lu bytes for message.", message_length);
     *dest_message = robusto_malloc(message_length);
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);

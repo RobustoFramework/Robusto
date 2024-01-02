@@ -342,7 +342,7 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
         total_score = -100;
     }
 
-    ROB_LOGI(peer_log_prefix, " Scoring - Peer: %s, FR: %f, LSCR + SSCR - PSCR = TSCR => %f + %f - %i = %f", 
+    ROB_LOGD(peer_log_prefix, " Scoring - Peer: %s, FR: %f, LSCR + SSCR - PSCR = TSCR => %f + %f - %i = %f", 
         peer->name, curr_info->failure_rate, length_score, success_score, problem_score, total_score);
     curr_info->last_score_time = r_millis();
  
