@@ -212,7 +212,7 @@ rob_ret_val_t send_message(uint8_t *data, int message_len)
     return ROB_OK;
 }
 
-rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
 
     #if CONFIG_ROB_NETWORK_TEST_LORA_KILL_SWITCH > -1
@@ -233,7 +233,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, int data_le
     // Maximum Payload size of SX1276/77/78/79 is 255, +2 because 6 bytes is the longest addressing of LoRa, and Robusto always adds 8 bytes
     if (data_length + ROBUSTO_MAC_ADDR_LEN > 256 + 2)
     {
-        ROB_LOGE(lora_messaging_log_prefix, ">> Message too long (max 250 bytes): %i", data_length);
+        ROB_LOGE(lora_messaging_log_prefix, ">> Message too long (max 250 bytes): %lu", data_length);
         // TODO: Obviously longer messages have to be possible to send.
         // Based on settings, Kbits/sec and thus time-to-send should be possible to calculate and figure out if it is too big of a message.
         retval = ROB_ERR_MESSAGE_TOO_LONG;
@@ -266,7 +266,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, int data_le
 
     tx_count++;
 
-    ROB_LOGI(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %i, total %i bytes...", data_length - 4, data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
+    ROB_LOGI(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
     ROB_LOGI(lora_messaging_log_prefix, ">> Data (offset, and including addressing): ");
     rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)(data + data_offset), data_length - data_offset);
 

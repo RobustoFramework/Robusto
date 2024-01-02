@@ -42,7 +42,7 @@ extern "C"
 {
 #endif
 
-rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 int lora_read_data (uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *prefix_bytes);
 
 void lora_do_on_work_cb(media_queue_item_t *queue_item);

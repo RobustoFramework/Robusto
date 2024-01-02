@@ -32,6 +32,7 @@
 
 #pragma once
 #include <stdint.h>
+#include <robconfig.h>
 #ifdef __cplusplus
 extern "C"
 {
