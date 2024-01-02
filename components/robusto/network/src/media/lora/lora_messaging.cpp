@@ -266,8 +266,8 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
 
     tx_count++;
 
-    ROB_LOGI(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
-    ROB_LOGI(lora_messaging_log_prefix, ">> Data (offset, and including addressing): ");
+    ROB_LOGD(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
+    ROB_LOGD(lora_messaging_log_prefix, ">> Data (offset, and including addressing): ");
     rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)(data + data_offset), data_length - data_offset);
 
     starttime = r_millis();
@@ -425,7 +425,6 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             ROB_LOGI(lora_messaging_log_prefix, " << Failed, code %hhu", state);
         }
 
-        // 8(x08)   182(xb6) 31(x1f)  192(xc0) 214(xd6) 96(x60)
         if (message_length > 0)
         {
             ROB_LOGI(lora_messaging_log_prefix, "<< In LoRa lora_read_data;lora_received %i bytes.", message_length);

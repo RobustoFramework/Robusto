@@ -62,7 +62,8 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     rob_ret_val_t ret_val_flag;
     robusto_media_t *info = get_media_info(peer, media_type);
-    rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, true);
+    // Send presentation (no receipt as a reply requires know outgoing id, which is only available after presentation is parsed)
+    rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, false);
     if (queue_ret != ROB_OK) {
         peer->state = failstate;
         ROB_LOGE(presentation_log_prefix, "Error queueing presentation: %i %i", queue_ret, media_type);
@@ -206,7 +207,7 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     data[4] = 0;
 #endif
     // If it is the first communication (HI), we need to calculate the relationid that the peer can reach us with.
-    int32_t relation_id_incoming;
+    uint32_t relation_id_incoming;
     relation_id_incoming = calc_relation_id(&(peer->base_mac_address), &(get_host_peer()->base_mac_address));
 
     memcpy(data + 5, &relation_id_incoming, 4);
