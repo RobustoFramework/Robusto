@@ -44,6 +44,7 @@ void mock_peer_init_peer(robusto_peer_t *peer)
 {
     memset(peer->mock_info.failure_rate_history, 0, sizeof(float) * FAILURE_RATE_HISTORY_LENGTH);
     peer_stat_reset(peer);
+    set_state(peer, &peer->mock_info, robusto_mt_mock, media_state_initiating, media_problem_none);
 }
 
 void mock_peer_init(char *_log_prefix)

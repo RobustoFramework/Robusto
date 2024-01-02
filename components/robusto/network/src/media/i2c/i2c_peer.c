@@ -47,6 +47,8 @@ void i2c_peer_init_peer(robusto_peer_t *peer)
 {
     memset(peer->i2c_info.failure_rate_history, 0, sizeof(float) * FAILURE_RATE_HISTORY_LENGTH);
     peer_stat_reset(&peer->i2c_info);
+    set_state(peer, &peer->i2c_info, robusto_mt_i2c, media_state_initiating, media_problem_none);
+    
 }
 
 

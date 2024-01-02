@@ -87,8 +87,10 @@ typedef enum {
     // Robusto is actively trying to recover from a problem, the media cannot be used as that could interfere with recovery.
     media_state_recovering = 2,
     // In this state, Robusto is not actively trying to recover, but instead is just sending heart beats and listening for communication. The media cannot be used.
-    media_state_down = 3 
+    media_state_down = 3,
     // TODO: Is there any point with this state? Will a heartbeat actually help as a presentation would be the only thing to do?
+    // The media is initiating, or is 
+    media_state_initiating = 4  
 } e_media_state;
 
 /* The problem that Robusto defines on its level. 
@@ -115,6 +117,8 @@ typedef enum {
     media_problem_jammed,
     // The media has lower level, technical problems that aren't enumerated by Robusto
     media_problem_technical,    
+  
+
 } e_media_problem;
 
 typedef struct robusto_media

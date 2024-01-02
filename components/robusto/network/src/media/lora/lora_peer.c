@@ -34,6 +34,7 @@
 #include <robusto_logging.h>
 #include <robusto_peer.h>
 #include <robusto_time.h>
+#include <robusto_qos.h>
 
 #include <string.h>
 #include <inttypes.h>
@@ -45,6 +46,7 @@ void lora_peer_init_peer(robusto_peer_t *peer)
     memset(peer->lora_info.failure_rate_history, 0, sizeof(float) * FAILURE_RATE_HISTORY_LENGTH);
 
     peer_stat_reset(&peer->lora_info);
+    set_state(peer, &peer->lora_info, robusto_mt_lora, media_state_initiating, media_problem_none);
 }
 
 

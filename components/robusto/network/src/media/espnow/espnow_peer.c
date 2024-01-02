@@ -42,6 +42,8 @@
 
 #include <robusto_peer.h>
 #include <robusto_time.h>
+#include <robusto_qos.h>
+
 #include <inttypes.h>
 #include "espnow_messaging.h"
 
@@ -105,6 +107,7 @@ void espnow_peer_init_peer(robusto_peer_t *peer)
     peer->espnow_peer_added = false;
     memset(peer->espnow_info.failure_rate_history, 0, sizeof(float) * FAILURE_RATE_HISTORY_LENGTH);
     peer_stat_reset(&peer->espnow_info);
+    set_state(peer, &peer->espnow_info, robusto_mt_espnow, media_state_initiating, media_problem_none);
 }
 
 
