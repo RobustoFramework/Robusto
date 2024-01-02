@@ -179,7 +179,7 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
 }
 
 void incoming_callback(robusto_message_t *message) {
-    ROB_LOGI(pubsub_log_prefix, "Pubsub incoming from %s.", message->peer->name);
+    ROB_LOGD(pubsub_log_prefix, "Pubsub incoming from %s.", message->peer->name);
     rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, message->binary_data, message->binary_data_length);
     // Register subscription/topic, answer with topic hash
     if (*message->binary_data == PUBSUB_SUBSCRIBE) {
@@ -208,8 +208,8 @@ void incoming_callback(robusto_message_t *message) {
         robusto_free(response);
         send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
     } else if (*message->binary_data == PUBSUB_PUBLISH) {
-        ROB_LOGI(pubsub_log_prefix, "Got a publish from %s peer, publishing:", message->peer->name);
-        rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
+        ROB_LOGI(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
+        rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
         robusto_pubsub_server_publish( *(uint32_t *)(message->binary_data + 1), message->binary_data + 5, message->binary_data_length - 5);
     } else {
         ROB_LOGW(pubsub_log_prefix, "PubSub: Unknown command %hu.", *message->binary_data);
