@@ -1,5 +1,5 @@
 /**
- * @file umts_queue.c
+ * @file robusto_queue.c
  * @author Nicklas Borjesson 
  * @brief The UMTS queue maintain and monitor the UTMS work queue and uses callbacks to notify the user code
  * 
@@ -8,7 +8,7 @@
  */
 
 
-#include "robusto_umts_queue.h"
+#include "robusto_queue.h"
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 
 #include <sys/queue.h>

@@ -1,7 +1,7 @@
 #include <robusto_umts.h>
 #ifdef CONFIG_ROBUSTO_UMTS_HTTP
-#include "robusto_umts_http.h"
-#include "robusto_umts_ip.h"
+#include "robusto_http.h"
+#include "robusto_ip.h"
 #include <robusto_system.h>
 #include <robusto_logging.h>
 

@@ -1,4 +1,4 @@
-#include "robusto_umts_ip.h"
+#include "robusto_ip.h"
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -16,7 +16,7 @@
 
 #include "robusto_logging.h"
 
-#include "robusto_umts_queue.h"
+#include "robusto_queue.h"
 #include "inttypes.h"
 
 #include "robusto_umts_def.h"

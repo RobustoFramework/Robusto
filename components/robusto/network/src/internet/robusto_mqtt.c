@@ -11,7 +11,7 @@
  */
 
 
-#include "robusto_umts_mqtt.h"
+#include "robusto_mqtt.h"
 #ifdef CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY
 #include "mqtt_client.h"
 
