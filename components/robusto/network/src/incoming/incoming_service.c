@@ -59,7 +59,7 @@ rob_ret_val_t robusto_register_network_service(network_service_t * service) {
 
 rob_ret_val_t robusto_handle_service(incoming_queue_item_t *queue_item) {
     rob_ret_val_t retval = ROB_FAIL;
-    ROB_LOGI(incoming_service_log_prefix, "in robusto_handle_service, service_id: %u", queue_item->message->service_id);
+    ROB_LOGD(incoming_service_log_prefix, "in robusto_handle_service, service_id: %u", queue_item->message->service_id);
     // First byte is the request identifier
     uint16_t service_id = queue_item->message->service_id;   
     // Find the service
@@ -67,7 +67,7 @@ rob_ret_val_t robusto_handle_service(incoming_queue_item_t *queue_item) {
     while (curr_srv < services_count) {
 
         if (services[curr_srv]->service_id == service_id) {
-            ROB_LOGI(incoming_service_log_prefix, "Found a matching service"); 
+            ROB_LOGD(incoming_service_log_prefix, "Found a matching service"); 
             // Call the service
             services[curr_srv]->incoming_callback(queue_item->message);
             queue_item->service_frees_message = services[curr_srv]->service_frees_message;

@@ -49,7 +49,7 @@ rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robus
 {
     // TODO: Messages might be too large for SRAM and might need to be stored elsewhere (flash), how to handle? We might also have to *send* large files.
     // rob_log_bit_mesh(ROB_LOG_WARN, incoming_log_prefix, data + offset, data_length - offset);
-    ROB_LOGI(incoming_log_prefix, "In robusto_handle_incoming.");
+    ROB_LOGD(incoming_log_prefix, "In robusto_handle_incoming.");
     robusto_message_t *message;
 // Parse and check the message
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
