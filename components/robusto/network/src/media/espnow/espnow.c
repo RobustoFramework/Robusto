@@ -44,6 +44,7 @@
 #include "espnow_peer.h"
 #include <robusto_media.h>
 #include <esp_adc/adc_oneshot.h>
+#include "espnow_recover.h"
 
 /* The log prefix for all logging */
 static char *espnow_log_prefix;
@@ -125,12 +126,11 @@ void robusto_espnow_start() {
  * @brief Initialize ESP-NOW
  *
  * @param _log_prefix
- * @param is_controller
  */
 void robusto_espnow_init(char *_log_prefix)
 {
     espnow_log_prefix = _log_prefix;
- 
+    init_espnow_recover(_log_prefix);
 }
 
 #endif

@@ -30,7 +30,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <robusto_media.h>
 #include <robusto_peer.h>
 #include <robusto_time.h>
@@ -42,20 +41,26 @@
 #include "robusto_qos_init.h"
 
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
-    #include "../media/mock/mock_recover.h"
-#endif  
+#include "../media/mock/mock_recover.h"
+#endif
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
+#include "../media/espnow/espnow_recover.h"
+#endif
+
 static char *recovery_log_prefix;
 
-
-void create_recovery_task (robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t task_function) {
+void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t task_function)
+{
     ROB_LOGI(recovery_log_prefix, "Creating a recovery task for peer %s, media %s", peer->name, media_type_to_str(media_type));
-    recover_params_t * params = robusto_malloc(sizeof(recover_params_t));
+    recover_params_t *params = robusto_malloc(sizeof(recover_params_t));
     params->peer = peer;
     params->info = info;
     params->last_heartbeat_time = last_heartbeat_time;
-    char * task_name;
+    char *task_name;
     robusto_asprintf(&task_name, "Recovery task for peer %s, media %s", peer->name, media_type_to_str(media_type));
-    if (robusto_create_task(task_function, params, task_name, NULL, 0) != ROB_OK) {
+    if (robusto_create_task(task_function, params, task_name, NULL, 0) != ROB_OK)
+    {
         ROB_LOGE(recovery_log_prefix, "Failed creatin a recovery task for the peer %s, media %s ", peer->name, media_type_to_str(media_type));
     }
     robusto_free(task_name);
@@ -65,11 +70,10 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 {
 
     // If we have not received a response for a while.
-    // Regardless of the cause, Robusto peers completely disregard any peers that they don't know about. 
-    // Hence, it might be a good idea to just try a presentation. 
+    // Regardless of the cause, Robusto peers completely disregard any peers that they don't know about.
+    // Hence, it might be a good idea to just try a presentation.
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_TTL
-
 
     if ((media_type == robusto_mt_ttl) && (peer->ttl_info.last_send < last_heartbeat))
     {
@@ -85,19 +89,17 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
     if ((media_type == robusto_mt_espnow) && (peer->espnow_info.last_send < last_heartbeat))
     {
-
+        create_recovery_task(peer, info, last_heartbeat, media_type, &espnow_recover);
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if ((media_type == robusto_mt_lora) && (peer->lora_info.last_send < last_heartbeat))
     {
-
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     if ((media_type == robusto_mt_i2c) && (peer->i2c_info.last_send < last_heartbeat))
     {
-
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
@@ -113,31 +115,32 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
     }
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
-    if (media_type == robusto_mt_mock) {
+    if (media_type == robusto_mt_mock)
+    {
         create_recovery_task(peer, info, last_heartbeat, media_type, &mock_recover);
     }
-#endif    
+#endif
 }
 
-
-void start_qos_recovery() {
+void start_qos_recovery()
+{
     // We should not have any relations now if the boot was intentional
-    if (get_relation_count() > 0) {
-        #if defined(CONFIG_ROBUSTO_CONDUCTOR_SERVER) || defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT)
+    if (get_relation_count() > 0)
+    {
+#if defined(CONFIG_ROBUSTO_CONDUCTOR_SERVER) || defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT)
         ROB_LOGI(recovery_log_prefix, "Restarting a conductor server/client, assuming from deep sleep, re-adding relation as peers.");
-        #else
+#else
         ROB_LOGW(recovery_log_prefix, "Obviously, we are recovering from some situation, re-adding relations as peers.");
-        #endif
+#endif
         recover_relations();
-    } else {
-        ROB_LOGI(recovery_log_prefix, "Nothing to recover"); 
+    }
+    else
+    {
+        ROB_LOGI(recovery_log_prefix, "Nothing to recover");
     }
 }
-
 
 void init_qos_recovery(char *_log_prefix)
 {
     recovery_log_prefix = _log_prefix;
-
-
 }
