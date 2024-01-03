@@ -206,7 +206,7 @@ rob_ret_val_t send_message(uint8_t *data, int message_len)
     }
     else
     {
-        ROB_LOGI(lora_messaging_log_prefix, ">> Message sent, sent flag set after %i ms.", curr_wait);
+        ROB_LOGI(lora_messaging_log_prefix, ">> LoRa Message sent, sent flag set after %i ms.", curr_wait);
     }
     radio.finishTransmit();
     return ROB_OK;
@@ -233,7 +233,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
     // Maximum Payload size of SX1276/77/78/79 is 255, +2 because 6 bytes is the longest addressing of LoRa, and Robusto always adds 8 bytes
     if (data_length + ROBUSTO_MAC_ADDR_LEN > 256 + 2)
     {
-        ROB_LOGE(lora_messaging_log_prefix, ">> Message too long (max 250 bytes): %lu", data_length);
+        ROB_LOGE(lora_messaging_log_prefix, ">> LoRa Message too long (max 250 bytes): %lu bytes", data_length);
         // TODO: Obviously longer messages have to be possible to send.
         // Based on settings, Kbits/sec and thus time-to-send should be possible to calculate and figure out if it is too big of a message.
         retval = ROB_ERR_MESSAGE_TOO_LONG;
@@ -266,14 +266,14 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
 
     tx_count++;
 
-    ROB_LOGI(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
+    ROB_LOGI(lora_messaging_log_prefix, ">> LoRa sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
     ROB_LOGD(lora_messaging_log_prefix, ">> Data (offset, and including addressing): ");
     rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, (uint8_t *)(data + data_offset), data_length - data_offset);
 
     starttime = r_millis();
     if (send_message(data + data_offset, data_length - data_offset) != ROB_OK)
     {
-        ROB_LOGE(lora_messaging_log_prefix, "Failed sending..");
+        ROB_LOGE(lora_messaging_log_prefix, ">> LoRa failed sending..");
         retval = ROB_FAIL;
         goto finish;
     }
@@ -286,7 +286,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
     }
     if (startReceive() != ROB_OK)
     {
-        ROB_LOGE(lora_messaging_log_prefix, "LoRa failed receiving, state: %i.", state);
+        ROB_LOGE(lora_messaging_log_prefix, "<< LoRa failed receiving receipt, state: %i.", state);
         return ROB_FAIL;
     }
 
@@ -301,7 +301,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
             if (r_millis() > starttime + CONFIG_ROB_RECEIPT_TIMEOUT_MS + 400) // TODO: Extra timeout added longer due to excessive debugging. But is there a point with short timeouts? Should we rather report unusually slow responses?
             {
                 // TODO: Implement "just checking" or heartbeat.
-                ROB_LOGE(lora_messaging_log_prefix, "<< Timed out waiting for receipt from %s.", peer->name);
+                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa timed out waiting for receipt from %s.", peer->name);
                 r_delay(1);
                 peer->lora_info.receive_failures++;
                 retval = ROB_FAIL;
@@ -332,19 +332,19 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
             // packet was received, but is malformed
-            ROB_LOGW(lora_messaging_log_prefix, "<< CRC error!");
+            ROB_LOGW(lora_messaging_log_prefix, "<< LoRa CRC error. Peer: %s", peer->name);
         }
         else
         {
             // some other error occurred
-            ROB_LOGE(lora_messaging_log_prefix, " << Failed, code %hhu", state);
+            ROB_LOGE(lora_messaging_log_prefix, " << LoRa Failed, code %hhu", state);
         }
 
         if ((memcmp(&buf, &peer->relation_id_outgoing, 4) == 0) && (message_length >= 6))
         {
             if ((buf[4] == 0xff) && buf[5] == 0x00)
             {
-                ROB_LOGI(lora_messaging_log_prefix, "<< Success message from %s.", peer->name);
+                ROB_LOGI(lora_messaging_log_prefix, "<< LoRa success message from %s.", peer->name);
                 peer->lora_info.receive_successes++;
                 peer->lora_info.send_successes++;
                 peer->lora_info.last_receive = r_millis();
@@ -353,7 +353,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
             }
             else if (buf[4] == 0xff && buf[4] == 0x00)
             {
-                ROB_LOGW(lora_messaging_log_prefix, "<< Bad CRC message from %s.", peer->name);
+                ROB_LOGW(lora_messaging_log_prefix, "<< LoRa receipt that message fail CRC from %s.", peer->name);
                 peer->lora_info.send_failures++;
                 peer->lora_info.last_receive = r_millis();
                 retval = ROB_FAIL;
@@ -361,7 +361,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
             }
             else
             {
-                ROB_LOGE(lora_messaging_log_prefix, "<< Badly formatted CRC message from %s.", peer->name);
+                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa got a badly formatted receipt from %s.", peer->name);
                 rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)buf, message_length);
                 peer->lora_info.receive_failures++;
                 retval = ROB_FAIL;
@@ -370,12 +370,12 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
         }
         else if (message_length > 0)
         {
-            ROB_LOGW(lora_messaging_log_prefix, "<< Got a %i-byte message to someone else (not %" PRIu32 ", will keep waiting for a response):", message_length, peer->relation_id_outgoing);
+            ROB_LOGW(lora_messaging_log_prefix, "<< LoRa Got a %i-byte message to someone else (not %" PRIu32 ". Keeps waiting for a response).", message_length, peer->relation_id_outgoing);
             rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)buf, message_length);
         }
         robusto_yield();
     } while (r_millis() < starttime + (CONFIG_ROB_RECEIPT_TIMEOUT_MS));
-    ROB_LOGE(lora_messaging_log_prefix, "<< Timed out waiting for a receipt from %s.", peer->name);
+    ROB_LOGE(lora_messaging_log_prefix, "<< LoRa Timed out waiting for a receipt from %s.", peer->name);
 
     peer->lora_info.receive_failures++;
     retval = ROB_FAIL;
@@ -401,36 +401,34 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
 
         uint8_t *data = (uint8_t *)robusto_malloc(255);
 
-        ROB_LOGD(lora_messaging_log_prefix, "<< Data pointer address: %lu", (uint32_t)data);
         int message_length = 0;
 
         int state = radio.readData(data, 0);
-        ROB_LOGD(lora_messaging_log_prefix, "<< After read data");
+        ROB_LOGD(lora_messaging_log_prefix, "<< LoRa after read data");
         if (state == RADIOLIB_ERR_NONE)
         {
             message_length = radio.getPacketLength(false);
-            ROB_LOGD(lora_messaging_log_prefix, "<< Successfully read %i bytes of data.", message_length);
+            ROB_LOGD(lora_messaging_log_prefix, "<< LoRa successfully read %i bytes of data.", message_length);
         }
         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
             // packet was received, but is malformed
             message_length = radio.getPacketLength(false);
-            ROB_LOGI(lora_messaging_log_prefix, "<< CRC error! Length: %u Data:", message_length);
-
+            ROB_LOGI(lora_messaging_log_prefix, "<< LoRa CRC error! Length: %u Data:", message_length);
             rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, data, message_length);
         }
         else
         {
-            // some other error occurred
-            ROB_LOGI(lora_messaging_log_prefix, " << Failed, code %hhu", state);
+            // some other error occurred // TODO: This seems like a problem state.
+            ROB_LOGI(lora_messaging_log_prefix, " << LoRa failed reading data, code %hhu", state);
         }
 
         if (message_length > 0)
         {
-            ROB_LOGI(lora_messaging_log_prefix, "<< In LoRa lora_read_data;lora_received %i bytes.", message_length);
-            ROB_LOGD(lora_messaging_log_prefix, "<< Received data (including all) preamble): 0x%02X", *data);
+            ROB_LOGI(lora_messaging_log_prefix, "<< LoRa received %i bytes.", message_length);
+            ROB_LOGD(lora_messaging_log_prefix, "<< LoRa received data (including all) preamble): 0x%02X", *data);
             rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, data, message_length);
-            ROB_LOGD(lora_messaging_log_prefix, "<< rob_host.base_mac_address: ");
+            ROB_LOGD(lora_messaging_log_prefix, "<< LoRa rob_host.base_mac_address: ");
             rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, get_host_peer()->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         }
         // TODO: Do some kind of better non-hardcoded length check. Perhaps it just has to be longer then the mac address?
@@ -450,7 +448,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
                 {
                     // We assume that the first 6 bytes are a MAC address.
                     src_mac_addr = (rob_mac_address *)(data + ROBUSTO_MAC_ADDR_LEN);
-                    ROB_LOGI(lora_messaging_log_prefix, "<< src_mac_addr: ");
+                    ROB_LOGI(lora_messaging_log_prefix, "<< LoRa src_mac_addr: ");
                     rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, get_host_peer()->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
                     data_start = (ROBUSTO_MAC_ADDR_LEN * 2);
                     peer = robusto_peers_find_peer_by_base_mac_address(src_mac_addr);

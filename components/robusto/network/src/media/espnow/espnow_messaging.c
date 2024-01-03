@@ -127,20 +127,20 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_
     {
         robusto_yield();
     }
-
+    // TODO: There is actually no receipt handling in ESP-NOW, this must be implemented.
     if (has_receipt)
     {
         has_receipt = false;
         rc = (send_status == ESP_NOW_SEND_SUCCESS) ? ROB_OK : ROB_FAIL;
         if (rc == ROB_FAIL)
         {
-            ROB_LOGE(espnow_log_prefix, "Got a negative receipt");
+            ROB_LOGE(espnow_log_prefix, "ESP-NOW got a negative receipt. Peer: %s", peer->name);
             return ROB_FAIL;
         }
     }
     else
     {
-        ROB_LOGE(espnow_log_prefix, "Timed out waiting for receipt, timeout.");
+        ROB_LOGE(espnow_log_prefix, "ESP-NOW timed out waiting for receipt, timeout. Peer: %s", peer->name);
         return ROB_ERR_NO_RECEIPT;
     }
     return rc;
