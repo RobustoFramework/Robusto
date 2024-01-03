@@ -75,30 +75,30 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_TTL
 
-    if ((media_type == robusto_mt_ttl) && (peer->ttl_info.last_send < last_heartbeat))
+    if (media_type == robusto_mt_ttl)
     {
         // Not Implemented
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-    if ((media_type == robusto_mt_ble) && (peer->ble_info.last_send < last_heartbeat))
+    if (media_type == robusto_mt_ble)
     {
         // Not Implemented
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    if ((media_type == robusto_mt_espnow) && (peer->espnow_info.last_send < last_heartbeat))
+    if (media_type == robusto_mt_espnow)
     {
         create_recovery_task(peer, info, last_heartbeat, media_type, &espnow_recover);
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
-    if ((media_type == robusto_mt_lora) && (peer->lora_info.last_send < last_heartbeat))
+    if (media_type == robusto_mt_lora)
     {
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    if ((media_type == robusto_mt_i2c) && (peer->i2c_info.last_send < last_heartbeat))
+    if (media_type == robusto_mt_i2c)
     {
     }
 #endif
