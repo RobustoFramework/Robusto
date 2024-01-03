@@ -164,7 +164,7 @@ static void espnow_receipt_cb(const uint8_t *mac_addr, esp_now_send_status_t sta
     }
 #endif
     send_status = status;
-    has_receipt = true;
+
     if (status == ESP_NOW_SEND_SUCCESS)
     {
         ROB_LOGD(espnow_log_prefix, ">> In espnow_receipt_cb, send success.");
@@ -212,6 +212,13 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(esp_now_info->src_addr);
     if (peer != NULL)
     {
+        
+        if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
+            ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
+            has_receipt = true;
+            return;
+        }
+        
         ROB_LOGD(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
                  esp_now_info->rx_ctrl->rssi, esp_now_info->rx_ctrl->rate);
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
@@ -269,6 +276,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     }
     else
     {
+        // Send a receipt
+        uint8_t response[2];
+        response[0] = 0xff;
+        response[1] = 0x00;
+        esp_now_send_check(peer, &response,  2, false);
+        // Forward data
         uint8_t *n_data = robusto_malloc(len);
         memcpy(n_data, data, len);
         add_to_history(&peer->espnow_info, false, robusto_handle_incoming(n_data, len, peer, robusto_mt_espnow, 0));
