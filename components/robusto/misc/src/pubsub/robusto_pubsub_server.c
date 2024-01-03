@@ -173,7 +173,7 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
         curr_subscriber = curr_subscriber->next;
         pub_count++;
     }
-    ROB_LOGI(pubsub_log_prefix, "Published to the %i subscribers of %s.", pub_count, curr_topic->name);
+    ROB_LOGD(pubsub_log_prefix, "Published to the %i subscribers of %s.", pub_count, curr_topic->name);
     // If successful, return rob_ok.
     return ROB_OK;
 }

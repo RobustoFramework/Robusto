@@ -183,7 +183,7 @@ rob_ret_val_t send_message(uint8_t *data, int message_len)
     radio.clearDio0Action();
     radio.setDio0Action(setTXFlag, RISING);
 #endif
-    ROB_LOGI(lora_messaging_log_prefix, ">> LoRa - will now send message using interrupt.");
+    ROB_LOGD(lora_messaging_log_prefix, ">> LoRa - will now send message using interrupt.");
     int starttime = r_millis();
     sentFlag = false;
     int16_t transmissionState = radio.startTransmit(data, message_len);
@@ -246,7 +246,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
         uint8_t relation_size = sizeof(peer->relation_id_outgoing);
         data_offset = ROBUSTO_PREFIX_BYTES - relation_size;
         // We have an established relation, use the relation id
-        ROB_LOGI(lora_messaging_log_prefix, ">> Relation id > 0: %" PRIu32 ", size: %hhu.", peer->relation_id_outgoing, relation_size);
+        ROB_LOGD(lora_messaging_log_prefix, ">> Relation id > 0: %" PRIu32 ", size: %hhu.", peer->relation_id_outgoing, relation_size);
 
         // Add the destination address at the offset
         memcpy(data + data_offset, &(peer->relation_id_outgoing), relation_size);
@@ -266,9 +266,9 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
 
     tx_count++;
 
-    ROB_LOGD(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
+    ROB_LOGI(lora_messaging_log_prefix, ">> Sending message: \"%.*s\", data is %lu, total %lu bytes...", (int)(data_length - 4), data + 4, data_length, data_length + (ROBUSTO_MAC_ADDR_LEN * 2));
     ROB_LOGD(lora_messaging_log_prefix, ">> Data (offset, and including addressing): ");
-    rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)(data + data_offset), data_length - data_offset);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, (uint8_t *)(data + data_offset), data_length - data_offset);
 
     starttime = r_millis();
     if (send_message(data + data_offset, data_length - data_offset) != ROB_OK)
@@ -332,12 +332,12 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
             // packet was received, but is malformed
-            ROB_LOGI(lora_messaging_log_prefix, "<< CRC error!");
+            ROB_LOGW(lora_messaging_log_prefix, "<< CRC error!");
         }
         else
         {
             // some other error occurred
-            ROB_LOGI(lora_messaging_log_prefix, " << Failed, code %hhu", state);
+            ROB_LOGE(lora_messaging_log_prefix, " << Failed, code %hhu", state);
         }
 
         if ((memcmp(&buf, &peer->relation_id_outgoing, 4) == 0) && (message_length >= 6))
@@ -397,19 +397,19 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
     {
         int currRXTrigs = RXTrigs;
         RXTrigs = 0;
-        ROB_LOGI(lora_messaging_log_prefix, "<< Current RXTRigs: %i", currRXTrigs);
+        ROB_LOGD(lora_messaging_log_prefix, "<< Current RXTRigs: %i", currRXTrigs);
 
         uint8_t *data = (uint8_t *)robusto_malloc(255);
 
-        ROB_LOGI(lora_messaging_log_prefix, "<< Data pointer address: %lu", (uint32_t)data);
+        ROB_LOGD(lora_messaging_log_prefix, "<< Data pointer address: %lu", (uint32_t)data);
         int message_length = 0;
 
         int state = radio.readData(data, 0);
-        ROB_LOGI(lora_messaging_log_prefix, "<< After read data");
+        ROB_LOGD(lora_messaging_log_prefix, "<< After read data");
         if (state == RADIOLIB_ERR_NONE)
         {
             message_length = radio.getPacketLength(false);
-            ROB_LOGI(lora_messaging_log_prefix, "<< Successfully read %i bytes of data.", message_length);
+            ROB_LOGD(lora_messaging_log_prefix, "<< Successfully read %i bytes of data.", message_length);
         }
         else if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
@@ -428,10 +428,10 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
         if (message_length > 0)
         {
             ROB_LOGI(lora_messaging_log_prefix, "<< In LoRa lora_read_data;lora_received %i bytes.", message_length);
-            ROB_LOGI(lora_messaging_log_prefix, "<< Received data (including all) preamble): 0x%02X", *data);
-            rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, data, message_length);
-            ROB_LOGI(lora_messaging_log_prefix, "<< rob_host.base_mac_address: ");
-            rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, get_host_peer()->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+            ROB_LOGD(lora_messaging_log_prefix, "<< Received data (including all) preamble): 0x%02X", *data);
+            rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, data, message_length);
+            ROB_LOGD(lora_messaging_log_prefix, "<< rob_host.base_mac_address: ");
+            rob_log_bit_mesh(ROB_LOG_DEBUG, lora_messaging_log_prefix, get_host_peer()->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         }
         // TODO: Do some kind of better non-hardcoded length check. Perhaps it just has to be longer then the mac address?
         robusto_peer_t *peer = NULL;
@@ -461,7 +461,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
                 }
                 else
                 {
-                    ROB_LOGI(lora_messaging_log_prefix, "<< Matching mac but too short. Too short %d byte,:[%.*s], RSSI %i",
+                    ROB_LOGW(lora_messaging_log_prefix, "<< Matching mac but too short. Too short %d byte,:[%.*s], RSSI %i",
                              message_length, message_length, (char *)data, get_rssi());
                     retval = ROB_INFO_RECV_NO_MESSAGE;
                     robusto_free(data);
@@ -471,7 +471,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             else
             {
                 memcpy(&relation_id_outgoing, data, 4);
-                ROB_LOGI(lora_messaging_log_prefix, "Relation id in first bytes %" PRIu32 "", relation_id_outgoing);
+                ROB_LOGD(lora_messaging_log_prefix, "Relation id in first bytes %" PRIu32 "", relation_id_outgoing);
                 // TODO: Find outgoing relationid instead and perhaps a direct link to the peer.
                 peer = robusto_peers_find_peer_by_relation_id_incoming(relation_id_outgoing);
                 if (peer == NULL)
@@ -496,7 +496,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             {
                 // Is it a heartbeat? If so, just parse it, store stats and exit
                 if ((peer) && (message_ok) && (data[data_start + ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT)) {  
-                    ROB_LOGI(lora_messaging_log_prefix, "LoRa is heartbeat");
+                    ROB_LOGD(lora_messaging_log_prefix, "LoRa is heartbeat");
                     peer->lora_info.last_peer_receive = parse_heartbeat(data, data_start + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
                     peer->lora_info.last_receive = r_millis();
                     peer->lora_info.receive_successes++;
@@ -511,7 +511,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
 
                 if (message_ok)
                 {
-                    ROB_LOGI(lora_messaging_log_prefix, "<< Message CRC/checksum OK. Creating OK response.");
+                    ROB_LOGD(lora_messaging_log_prefix, "<< Message CRC/checksum OK. Creating OK response.");
                     response[4] = 0xff;
                     response[5] = 0x00;
                     retval = message_length;
@@ -520,7 +520,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
                 }
                 else
                 {
-                    ROB_LOGW(lora_messaging_log_prefix, "<< Message CRC/checksum failed. Creating Fail response.");
+                    ROB_LOGE(lora_messaging_log_prefix, "<< Message CRC/checksum failed. Creating Fail response.");
                     response[4] = 0x00;
                     response[5] = 0xff;
                     if (peer)
@@ -736,7 +736,7 @@ void lora_do_on_poll_cb(queue_context_t *q_context)
 
 void lora_do_on_work_cb(media_queue_item_t *queue_item)
 {
-    ROB_LOGI(lora_messaging_log_prefix, ">> In LoRa work callback.");
+    ROB_LOGD(lora_messaging_log_prefix, ">> In LoRa work callback.");
     send_work_item(queue_item, &(queue_item->peer->lora_info), robusto_mt_lora, &lora_send_message, &lora_do_on_poll_cb,lora_get_queue_context());
     
     lora_do_on_poll_cb(lora_get_queue_context());

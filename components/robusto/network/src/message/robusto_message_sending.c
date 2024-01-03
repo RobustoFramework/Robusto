@@ -300,7 +300,8 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
                 ROB_LOGE(message_sending_log_prefix, "Failed retrying sending presentation to %s, using mt %hhu, queue state %hhu , reason code: %hi",
                          queue_item->peer->name, next_media_type, *(uint8_t *)new_state[0], retry_retval);
                 robusto_set_queue_state_result(queue_item->state, retry_retval);
-                robusto_free(queue_item->data);
+                // Leaving this here to remind that the queue handling frees the queue when done 
+                // robusto_free(queue_item->data);
             }
             else
             {
