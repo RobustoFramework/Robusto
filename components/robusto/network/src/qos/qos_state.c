@@ -149,7 +149,8 @@ void working_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 void problem_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
 
-    if (info->last_state_change < last_heartbeat_time + 10)
+    // Has it been having a problem more than one cycle, mark it as as recovering.
+    if (info->last_state_change < last_heartbeat_time + 1000)
     {
         ROB_LOGE(qos_state_log_prefix, "%s, media type %s has had a problem for too long, going into recovery.", peer->name, media_type_to_str(media_type));
         set_state(peer, info, media_type, media_state_recovering, info->problem);
@@ -164,12 +165,11 @@ void problem_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 // Recovering state behavior
 void recovering_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
-    // Has it been recovering more than one cycle, mark it as down.
-    if (info->last_state_change < last_heartbeat_time + 10)
+    // Has it been recovering more than one cycle, set it as having problem again, it will retry recovery again later
+    if (info->last_state_change < (last_heartbeat_time * 2))
     {
-        ROB_LOGE(qos_state_log_prefix, "%s, media type %s hasn't recovered, setting to down. info->last_state_change %llu, last_heartbeat_time %llu",
+        ROB_LOGE(qos_state_log_prefix, "%s, media type %s still hasn't recovered. info->last_state_change %llu, last_heartbeat_time %llu",
                  peer->name, media_type_to_str(media_type), info->last_state_change, last_heartbeat_time);
-        set_state(peer, info, media_type, media_state_down, info->problem);
     }
 }
 
@@ -179,13 +179,6 @@ void initiating_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last
     // Perform initiating state actions
 }
 
-
-// Down state behavior
-void down_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
-{
-    ROB_LOGE(qos_state_log_prefix, "%s, media type %s is still down. info->last_state_change %llu, last_heartbeat_time %llu",
-             peer->name, media_type_to_str(media_type), info->last_state_change, last_heartbeat_time);
-}
 
 void qos_state_cb()
 {
@@ -204,18 +197,11 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
 {
     // Note: The order of these checks are important as they might hide each other
 
-    ROB_LOGW(qos_state_log_prefix, "%s and media type %s was last heard(last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
-                peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
-
     if ((last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_send < (last_heartbeat_time - HEARD_FROM_LIMIT)))
     {
         ROB_LOGE(qos_state_log_prefix, "Internal issue: We have problems sending to the peer %s using the media type %s. Last success: %llu. \n\tlast_heartbeat_time: %llu, info->last_state_change %llu.",
                  peer->name, media_type_to_str(media_type), info->last_send, last_heartbeat_time, info->last_state_change);
-
-        if (info->state != media_state_down)
-        {
-            set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
-        }
+        set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
     }
     else if ((last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
     {
@@ -223,10 +209,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
         ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
                  peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
         rob_log_bit_mesh(ROB_LOG_WARN, qos_state_log_prefix, &(peer->base_mac_address), 6);
-        if (info->state != media_state_down)
-        {
-            set_state(peer, info, media_type, media_state_problem, media_problem_silence);
-        }
+        set_state(peer, info, media_type, media_state_problem, media_problem_silence);
     }
     else
     {
@@ -255,13 +238,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
         {
             info->last_peer_receive--;
         }
-        // TODO: While this should not cause a problem state, just that it is here, can cause a problem to not resolve.
-        /*
-        if (info->state != media_state_down)
-        {
-            set_state(peer, info, media_type, media_state_problem, media_problem_cannot_reach);
-        }
-        */
+
     }
 }
 
@@ -281,20 +258,18 @@ void transition_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last
     {
     case media_state_working:
         check_media(peer, info, last_heartbeat_time, media_type);
-
         break;
+
     case media_state_problem:
         check_media(peer, info, last_heartbeat_time, media_type);
-
         break;
+
     case media_state_recovering:
-
         break;
-    case media_state_down:
-        check_media(peer, info, last_heartbeat_time, media_type);
 
     case media_state_initiating:
         check_media(peer, info, last_heartbeat_time, media_type);
+        break;
 
     default:
         break;
@@ -356,9 +331,6 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
             break;
         case media_state_recovering:
             recovering_state(peer, info, last_heartbeat_time, media_type);
-            break;
-        case media_state_down:
-            down_state(peer, info, last_heartbeat_time, media_type);
             break;
         case media_state_initiating:
             initiating_state(peer, info, last_heartbeat_time, media_type);

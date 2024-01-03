@@ -171,7 +171,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     if (retval != ROB_OK)
     {
         robusto_media_t *info = get_media_info(peer, media_type);
-        set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
+        set_state(peer, info, media_type, media_state_problem, media_problem_queue_problem);
         info->send_failures++;
         // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
         ROB_LOGE(message_sending_log_prefix, "Failed sending to %s, mt %hhu, res %hi, ", peer->name, media_type, retval);

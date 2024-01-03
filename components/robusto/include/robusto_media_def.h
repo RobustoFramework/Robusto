@@ -82,14 +82,12 @@ typedef uint8_t robusto_media_types;
 typedef enum {
     // The media works and can be used.
     media_state_working = 0,
-    // Robusto have recognized a problem, but is not actively trying to recover yet. The media can still be used.
+    // Robusto have recognized a problem, but is not actively trying to recover yet. The media can still be used, although it is voted down.
     media_state_problem = 1,
-    // Robusto is actively trying to recover from a problem, the media cannot be used as that could interfere with recovery.
+    // Robusto is trying to recover from a problem, the media cannot be used as that could interfere with recovery.
     media_state_recovering = 2,
-    // In this state, Robusto is not actively trying to recover, but instead is just sending heart beats and listening for communication. The media cannot be used.
-    media_state_down = 3,
     // The media is initiating or has just been added.
-    media_state_initiating = 4  
+    media_state_initiating = 3  
 } e_media_state;
 
 /* The problem that Robusto defines on its level. 
@@ -104,6 +102,8 @@ typedef enum {
     media_problem_cannot_reach,
     // We are not getting any transmissions from the peer
     media_problem_silence,
+    // We have a problem with adding messages to the queue of this media
+    media_problem_queue_problem,
     // We have a local problem sending, this due to either hardware failure, a bug, or misconfiguration
     media_problem_send_problem,
     // The peer doesn't reach the PEER_KNOWN_INSECURE peer state. 

@@ -118,7 +118,6 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         if (queue_ret_val != ROB_OK) {
             // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
             ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %hhu, res %hi, ", peer->name, (uint8_t)media_type, queue_ret_val);
-            set_state(peer, info, media_type, media_state_problem, media_problem_technical);
         } else         
         if (!robusto_waitfor_queue_state(q_state, 6000, &send_ret_val)) {
             set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);

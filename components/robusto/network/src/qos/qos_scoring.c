@@ -104,7 +104,13 @@ float robusto_calc_suitability(int bitrate, int min_offset, int base_offset, flo
     }
     return retval;
 }
-
+/**
+ * @brief Add the latest failure rate to history, calculate averages
+ * 
+ * @param stats 
+ * @param rate 
+ * @return float 
+ */
 float add_to_failure_rate_history(robusto_media_t *stats, float rate)
 {
     // Calc average of the current history + rate, start with summarizing

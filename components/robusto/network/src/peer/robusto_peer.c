@@ -355,10 +355,16 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     float score = -49;
     float new_score = -50;
 
+    *result = robusto_mt_none;
+
     #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_espnow) && !(exclude & robusto_mt_espnow)) {
         new_score = score_peer(peer, robusto_mt_espnow, data_length);
-        if (new_score > score) {
+        // There is a problem, better use something else if possible
+        if (peer->espnow_info.state > media_state_working) {
+            new_score = new_score - 20;
+        }
+        if (new_score > score && peer->espnow_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_espnow;
         }
@@ -367,7 +373,10 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_lora) && !(exclude & robusto_mt_lora)) {
         new_score = score_peer(peer, robusto_mt_lora, data_length);
-        if (new_score > score) {
+        if (peer->lora_info.state > media_state_working) {
+            new_score = new_score - 20;
+        }
+        if (new_score > score && peer->lora_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_lora;
         }
@@ -375,8 +384,10 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #endif    
     #if defined(CONFIG_ROBUSTO_SUPPORTS_I2C) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_i2c) && !(exclude & robusto_mt_i2c)) {
-        new_score = score_peer(peer, robusto_mt_i2c, data_length);
-        if (new_score > score) {
+        if (peer->i2c_info.state > media_state_working) {
+            new_score = new_score - 20;
+        }
+        if (new_score > score && peer->i2c_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_i2c;
         }
