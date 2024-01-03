@@ -148,12 +148,12 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_
 }
 
 /**
- * @brief Handle the receipt from the peer
+ * @brief Is called when ESP-NOW stopped sending to a peer
  *
  * @param mac_addr The macaddress of the peer
  * @param status the
  */
-static void espnow_receipt_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > -1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
@@ -167,12 +167,12 @@ static void espnow_receipt_cb(const uint8_t *mac_addr, esp_now_send_status_t sta
 
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        ROB_LOGD(espnow_log_prefix, ">> In espnow_receipt_cb, send success.");
+        ROB_LOGD(espnow_log_prefix, ">> In espnow_send_cb, send success.");
     }
 
     if (status == ESP_NOW_SEND_FAIL)
     {
-        ROB_LOGW(espnow_log_prefix, ">> In espnow_receipt_cb, send failure, mac address:");
+        ROB_LOGW(espnow_log_prefix, ">> In espnow_send_cb, send failure, mac address:");
         rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, mac_addr, ROBUSTO_MAC_ADDR_LEN);
         robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_addr);
         if (peer)
@@ -181,7 +181,7 @@ static void espnow_receipt_cb(const uint8_t *mac_addr, esp_now_send_status_t sta
         }
         else
         {
-            ROB_LOGE(espnow_log_prefix, "espnow_receipt_cb() - no peer found matching dest_mac_address.");
+            ROB_LOGE(espnow_log_prefix, "espnow_send_cb() - no peer found matching dest_mac_address.");
         }
     }
 }
@@ -363,7 +363,7 @@ static esp_err_t espnow_init(void)
 
     /* Initialize ESPNOW and register sending and receiving callback function. */
     ESP_ERROR_CHECK(esp_now_init());
-    ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_receipt_cb));
+    ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_send_cb));
     ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
 #if CONFIG_ESP_WIFI_STA_DISCONNECTED_PM_ENABLE
     ESP_ERROR_CHECK(esp_now_set_wake_window(65535));
