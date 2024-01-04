@@ -47,7 +47,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
         ROB_LOGE(presentation_log_prefix, "Will not send a presentation as that is already ongoing");
         return ROB_FAIL;
     }
-    ROB_LOGI(presentation_log_prefix, "Sending a presentation to peer %s, mt %hhu", peer->name, media_type);
+    ROB_LOGI(presentation_log_prefix, ">> Sending a presentation to peer %s using %s.", peer->name, media_type_to_str(media_type));
     // If it is a reply, us failing to present ourselves should not affect the state of the peer
     e_peer_state failstate = peer->state;
     // If it wasn't a reply, it was an unknown peer, set it back to unknown.
@@ -57,7 +57,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     }
     uint8_t *msg;
     int msg_len = robusto_make_presentation(peer, &msg, is_reply);
-    ROB_LOGD(presentation_log_prefix, "Presentation to send:");
+    ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     rob_ret_val_t ret_val_flag;
@@ -66,18 +66,19 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, false);
     if (queue_ret != ROB_OK) {
         peer->state = failstate;
-        ROB_LOGE(presentation_log_prefix, "Error queueing presentation: %i %i", queue_ret, media_type);
+        ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %i", queue_ret, media_type);
         ret_val_flag = queue_ret;
     } else
     if (!robusto_waitfor_queue_state(q_state, 6000, &ret_val_flag)) {
         peer->state = failstate;
         set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
-        ROB_LOGE(presentation_log_prefix, "Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t*)q_state[0], ret_val_flag);
+        ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t*)q_state[0], ret_val_flag);
     } else  
     // We are presenting, so wait for the state to change to PEER_KNOWN_INSECURE
-    if ((peer->state == PEER_PRESENTING) && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 10000))) {
+    if (!is_reply && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 10000))) {
         peer->state = failstate;
-        ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state. System will retry later..", peer->name);
+        ret_val_flag = ROB_ERR_TIMEOUT;
+        ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout. System will retry later..", peer->name);
     }
 
     robusto_free_queue_state(q_state);

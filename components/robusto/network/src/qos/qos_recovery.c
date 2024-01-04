@@ -47,7 +47,9 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #include "../media/espnow/espnow_recover.h"
 #endif
-
+#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
+#include "../media/lora/lora_recover.h"
+#endif
 static char *recovery_log_prefix;
 
 void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t task_function)
@@ -95,6 +97,7 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (media_type == robusto_mt_lora)
     {
+        create_recovery_task(peer, info, last_heartbeat, media_type, &lora_recover);
     }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C

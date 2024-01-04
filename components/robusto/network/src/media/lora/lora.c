@@ -43,6 +43,7 @@
 #include "lora_peer.h"
 #include <robusto_media.h>
 #include "lora_queue.h"
+#include "lora_recover.h"
 
 
 /* The log prefix for all logging */
@@ -96,7 +97,7 @@ void robusto_lora_init(char *_log_prefix)
     }
 #endif
 
-
+    init_lora_recover(lora_log_prefix);
     lora_messaging_init(lora_log_prefix);
 
     lora_peer_init(lora_log_prefix);

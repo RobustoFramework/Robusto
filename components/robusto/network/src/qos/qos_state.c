@@ -107,22 +107,6 @@ void set_state(robusto_peer_t *peer, robusto_media_t *info, e_media_type media_t
     ROB_LOGW(qos_state_log_prefix, "State change, state %u, problem %u", media_state, problem);
 }
 
-rob_ret_val_t peer_level_check(robusto_peer_t *peer)
-{
-
-    // All media types have problems for this peer, we assume that we have been forgotten
-    if (peer->supported_media_types == peer->problematic_media_types)
-    {
-        if ((peer->state != PEER_UNKNOWN) && (peer->state != PEER_PRESENTING))
-        {
-            ROB_LOGW(qos_state_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation.", peer->name);
-            // This will make the peer send another presentation
-            peer->state = PEER_UNKNOWN;
-            // TODO: Check that we haven't heard from the peer for a while.
-        }
-    }
-    return ROB_OK;
-}
 
 // Any state behavior
 void any_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
@@ -148,7 +132,6 @@ void working_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 // Problem state behavior
 void problem_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
-
     // Has it been having a problem more than one cycle, mark it as as recovering.
     if (info->last_state_change < last_heartbeat_time + 1000)
     {
@@ -338,8 +321,6 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
         default:
             break;
         }
-
-        peer_level_check(peer);
 
         any_state(peer, info, last_heartbeat_time, media_type);
     }
