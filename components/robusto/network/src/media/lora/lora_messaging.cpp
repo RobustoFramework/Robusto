@@ -369,12 +369,12 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
         }
         else if (message_length > 0)
         {
-            ROB_LOGW(lora_messaging_log_prefix, "<< Got a %i-byte message to someone else (not %" PRIu32 ", will keep waiting for a response):", message_length, peer->relation_id_outgoing);
+            ROB_LOGW(lora_messaging_log_prefix, "<< LoRa got a %i-byte message to someone else (not %" PRIu32 ", will keep waiting for a response):", message_length, peer->relation_id_outgoing);
             rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)buf, message_length);
         }
         robusto_yield();
     } while (r_millis() < starttime + (CONFIG_ROB_RECEIPT_TIMEOUT_MS));
-    ROB_LOGE(lora_messaging_log_prefix, "<< Timed out waiting for a receipt from %s.", peer->name);
+    ROB_LOGE(lora_messaging_log_prefix, "<< LoRa timed out waiting for a receipt from %s.", peer->name);
 
     peer->lora_info.receive_failures++;
     retval = ROB_FAIL;

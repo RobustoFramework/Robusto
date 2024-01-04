@@ -42,21 +42,32 @@ static char *espnow_recovery_log_prefix;
 
 void espnow_recover(recover_params_t * params)
 {
+
     params->info->postpone_qos = true;
     ROB_LOGW(espnow_recovery_log_prefix, "ESP-NOW recovery: Recovering %s.", params->peer->name);
-    
-    params->info->state = media_state_recovering;
-    params->peer->state = PEER_UNKNOWN;
-    ROB_LOGI(espnow_recovery_log_prefix, "ESP-NOW recovery: Will try sending a presentation.");
-   
-    robusto_send_presentation(params->peer, robusto_mt_espnow, false);
-    params->info->postpone_qos = true;
-    if (peer_waitfor_at_least_state(params->peer, PEER_KNOWN_INSECURE, 6000)) {
-        params->info->state = media_state_working;
-    } else {
-        params->info->state = media_state_recovering;
+    robusto_peer_t * peer = params->peer;
+    e_media_type media_type = robusto_mt_espnow;
+    set_state(peer, params->info, media_type, media_state_recovering, media_problem_none);
+    rob_ret_val_t rec_retval = ROB_FAIL;
+    // We are not presenting, the peer is not unknown, all media types have problems for this peer, we might either be out of range, or assume that we have been forgotten
+    if ((peer->state > PEER_PRESENTING) && (peer->supported_media_types == peer->problematic_media_types))
+    {
+        params->info->postpone_qos = true;
+        ROB_LOGW(espnow_recovery_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation using %s.", peer->name, media_type_to_str(media_type));
+        if (robusto_send_presentation(peer, media_type, false) == ROB_OK) {
+            set_state(peer, params->info, media_type, media_state_working, media_problem_none);
+            rec_retval = ROB_OK;
+        }
     }
+    if (rec_retval != ROB_OK) {
+        // TODO: What can we do for ESP-NOW really?
+        ROB_LOGW(espnow_recovery_log_prefix, "Cannot really do much for ESP-NOW here currently, reverts it to \"problem\" so it can return through heart beats");
+        set_state(peer, params->info, media_type, media_state_problem, media_problem_unknown);
+        
+    }
+
     robusto_delete_current_task();
+
 
 }
 
