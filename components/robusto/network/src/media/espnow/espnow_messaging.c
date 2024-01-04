@@ -123,7 +123,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_
 
     // We want to wait to make sure the transmission is done.
     int32_t start = r_millis();
-    while (!has_receipt && r_millis() < start + 2000)
+    while ((!has_receipt) && (r_millis() < start + 2000))
     {
         robusto_yield();
     }
@@ -212,13 +212,6 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(esp_now_info->src_addr);
     if (peer != NULL)
     {
-        
-        if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
-            ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
-            has_receipt = true;
-            return;
-        }
-        
         ROB_LOGD(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
                  esp_now_info->rx_ctrl->rssi, esp_now_info->rx_ctrl->rate);
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
@@ -276,6 +269,13 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     }
     else
     {
+        // It is a receipt, do nothing more, return.
+        if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
+            ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
+            has_receipt = true;
+            return;
+        } 
+        
         // Send a receipt
         uint8_t response[2];
         response[0] = 0xff;
@@ -311,7 +311,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
     }
 
     has_receipt = false;
-    int rc = esp_now_send_check(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, true);
+    int rc = esp_now_send_check(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
     if (rc != ESP_OK)
     {
         return -ROB_ERR_SEND_FAIL;
