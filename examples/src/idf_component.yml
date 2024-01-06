@@ -5,9 +5,6 @@ url: https://github.com/RobustoFramework/Examples
 dependencies:
   # Required IDF version
   idf: ">=4.1"
-  # ssd1306: "^1.0"
-    esp-idf-ssd1306:
-    git: https://github.com/nopnop2002/esp-idf-ssd1306.git
-    path: components/ssd1306
+  ssd1306: "^1.0"
   esp_modem: "^1.0.3"
   espressif/esp32-camera: "2.*"
