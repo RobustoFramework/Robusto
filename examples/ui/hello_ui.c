@@ -11,6 +11,7 @@ void start_hello_ui(char * _log_prefix)
 {
     hello_ui_log_prefix = _log_prefix;
     robusto_screen_init(hello_ui_log_prefix);
+    robusto_screen_minimal_clear();
     r_delay(1000);
     robusto_screen_minimal_write("Test One", 0, 0);
     r_delay(1000);
