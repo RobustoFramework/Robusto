@@ -27,6 +27,7 @@ void robusto_screen_minimal_init(char *_log_prefix)
 {
     minimal_log_prefix = _log_prefix;
     ROB_LOGI(minimal_log_prefix, "Start Minimal UI.");
+    #if CONFIG_ROBUSTO_UI_INIT_I2C
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_MINIMAL_GPIO_SDA;
@@ -36,13 +37,14 @@ void robusto_screen_minimal_init(char *_log_prefix)
     conf.master.clk_speed = CONFIG_ROBUSTO_UI_MINIMAL_I2C_FREQ_HZ;
     conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
     #if CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST > -1
-    robusto_gpio_set_direction(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, true);
-    robusto_gpio_set_level(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, 0);
-    r_delay(20);
-    robusto_gpio_set_level(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, 1);
+        robusto_gpio_set_direction(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, true);
+        robusto_gpio_set_level(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, 0);
+        r_delay(20);
+        robusto_gpio_set_level(CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST, 1);
     #endif
     i2c_param_config(CONFIG_ROBUSTO_UI_MINIMAL_I2C_PORT, &conf);
-    //i2c_driver_install(CONFIG_ROBUSTO_UI_MINIMAL_I2C_PORT, conf.mode, 0, 0, 0);
+    i2c_driver_install(CONFIG_ROBUSTO_UI_MINIMAL_I2C_PORT, conf.mode, 0, 0, 0);
+    #endif
 
     ssd1306_dev = ssd1306_create(CONFIG_ROBUSTO_UI_MINIMAL_I2C_PORT, SSD1306_I2C_ADDRESS);
     ssd1306_refresh_gram(ssd1306_dev);
