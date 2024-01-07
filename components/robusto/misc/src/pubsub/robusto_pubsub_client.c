@@ -17,7 +17,7 @@ static void shutdown_callback();
 static subscribed_topic_t *first_subscribed_topic;
 static subscribed_topic_t *last_subscribed_topic;
 
-topic_state_cb * on_state_change_cb;
+topic_state_cb *on_state_change_cb;
 
 network_service_t pubsub_client_service = {
     .incoming_callback = &incoming_callback,
@@ -26,12 +26,15 @@ network_service_t pubsub_client_service = {
     .shutdown_callback = &shutdown_callback,
 };
 
-void set_topic_state(subscribed_topic_t *topic, topic_state_t state) {
-    if (topic->state == state) {
+void set_topic_state(subscribed_topic_t *topic, topic_state_t state)
+{
+    if (topic->state == state)
+    {
         return;
     }
     topic->state = state;
-    if (on_state_change_cb) {
+    if (on_state_change_cb)
+    {
         on_state_change_cb(topic);
     }
 }
@@ -50,36 +53,43 @@ subscribed_topic_t *find_subscribed_topic_by_conversation_id(int16_t conversatio
     return NULL;
 }
 
-
-void robusto_pubsub_remove_topic(subscribed_topic_t * topic) {
-    if (!topic) {
+void robusto_pubsub_remove_topic(subscribed_topic_t *topic)
+{
+    if (!topic)
+    {
         return;
     }
-    if (topic == first_subscribed_topic) {
+    if (topic == first_subscribed_topic)
+    {
         set_topic_state(topic, TOPIC_STATE_REMOVING);
-        if (topic->next) {
+        if (topic->next)
+        {
             first_subscribed_topic = topic->next;
-            if (!first_subscribed_topic->next) {
+            if (!first_subscribed_topic->next)
+            {
                 last_subscribed_topic = first_subscribed_topic;
             }
-        } else {
+        }
+        else
+        {
             first_subscribed_topic = NULL;
         }
-        
+
         robusto_free(topic);
         return;
     }
 
     subscribed_topic_t *last_topic = first_subscribed_topic;
     subscribed_topic_t *curr_topic = first_subscribed_topic->next;
-   
+
     while (curr_topic)
     {
         if (curr_topic == topic)
         {
             set_topic_state(topic, TOPIC_STATE_REMOVING);
             last_topic->next = topic->next;
-            if (!last_topic->next) {
+            if (!last_topic->next)
+            {
                 last_subscribed_topic = last_topic;
             }
 
@@ -89,9 +99,8 @@ void robusto_pubsub_remove_topic(subscribed_topic_t * topic) {
         last_topic = curr_topic;
         curr_topic = curr_topic->next;
     }
-    // TODO: We might want to use a standard linked list instead of doing our own.     
+    // TODO: We might want to use a standard linked list instead of doing our own.
 }
-
 
 subscribed_topic_t *find_subscribed_topic_by_topic_hash(int32_t topic_hash)
 {
@@ -108,7 +117,7 @@ subscribed_topic_t *find_subscribed_topic_by_topic_hash(int32_t topic_hash)
     return NULL;
 }
 
-subscribed_topic_t *find_subscribed_topic_by_name(char * topic_name)
+subscribed_topic_t *find_subscribed_topic_by_name(char *topic_name)
 {
     subscribed_topic_t *curr_topic = first_subscribed_topic;
     while (curr_topic)
@@ -126,8 +135,8 @@ void incoming_callback(robusto_message_t *message)
 {
     ROB_LOGI(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
     rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
-    if ((*message->binary_data == PUBSUB_SUBSCRIBE_RESPONSE) || 
-    (*message->binary_data == PUBSUB_GET_TOPIC_RESPONSE))
+    if ((*message->binary_data == PUBSUB_SUBSCRIBE_RESPONSE) ||
+        (*message->binary_data == PUBSUB_GET_TOPIC_RESPONSE))
     {
         subscribed_topic_t *curr_topic = find_subscribed_topic_by_conversation_id(message->conversation_id);
         if (curr_topic)
@@ -143,9 +152,9 @@ void incoming_callback(robusto_message_t *message)
         }
     }
     else if (*message->binary_data == PUBSUB_DATA)
-    {   
+    {
         subscribed_topic_t *topic = find_subscribed_topic_by_topic_hash(*(uint32_t *)(message->binary_data + 1));
-        
+
         if (topic)
         {
             topic->last_data_time = r_millis();
@@ -162,7 +171,7 @@ void incoming_callback(robusto_message_t *message)
         }
         else
         {
-            ROB_LOGE(pubsub_client_log_prefix, "Invalid topic hash %lu!", *(uint32_t *)(message->binary_data +1));
+            ROB_LOGE(pubsub_client_log_prefix, "Invalid topic hash %lu!", *(uint32_t *)(message->binary_data + 1));
         }
     }
     else
@@ -207,10 +216,11 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
     new_topic->next = NULL;
     new_topic->peer = peer;
     new_topic->topic_hash = 0;
+    new_topic->restoring = false;
     new_topic->callback = callback;
     new_topic->display_offset = display_offset;
     new_topic->state = TOPIC_STATE_UNSET;
-    
+
     // TODO: Odd to not use the linked list macros here? Or anywhere else?
     if (!first_subscribed_topic)
     {
@@ -218,7 +228,7 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
     }
     else
     {
-       last_subscribed_topic->next = new_topic; 
+        last_subscribed_topic->next = new_topic;
     }
     last_subscribed_topic = new_topic;
 
@@ -229,11 +239,14 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
 {
     subscribed_topic_t *new_topic = find_subscribed_topic_by_name(topic_name);
     // We want to call the server even if we have the topic locally as it might have crashed.
-    if (new_topic) {
+    if (new_topic)
+    {
         // Update the existing callback if needed.
         new_topic->callback = subscription_callback;
         new_topic->display_offset = display_offset;
-    } else {
+    }
+    else
+    {
         // The topic didn't exist, add it.
         new_topic = _add_topic_and_conv(peer, topic_name, subscription_callback, display_offset);
     }
@@ -252,16 +265,69 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
 
     ROB_LOGE(pubsub_client_log_prefix, "Sending subscription for %s conversation_id %u!", topic_name, new_topic->conversation_id);
     send_message_binary(peer, PUBSUB_SERVER_ID, new_topic->conversation_id, (uint8_t *)msg, data_length, NULL);
-    if (!new_topic->topic_hash && !robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 4000))
+    if (!new_topic->topic_hash && !robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 1000))
     {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, no response with topic hash for %s.", new_topic->topic_name);
         set_topic_state(new_topic, TOPIC_STATE_PROBLEM);
-        
-    } else {
+    }
+    else
+    {
         set_topic_state(new_topic, TOPIC_STATE_INACTIVE);
     }
-    
+
     return new_topic;
+}
+
+void recover_topic(subscribed_topic_t *topic)
+{
+    robusto_pubsub_client_get_topic(topic->peer, topic->topic_name, topic->callback, topic->display_offset);
+    if (topic->state == TOPIC_STATE_PROBLEM && !robusto_waitfor_byte_change(&topic->state, 1000) != ROB_OK)
+    {
+        ROB_LOGE(pubsub_client_log_prefix, "Failed to recover %s using the %s peer", topic->topic_name, topic->peer->name);
+    }
+    else
+    {
+        // A successful incoming call will set the state to inactive or active elsewhere
+        ROB_LOGI(pubsub_client_log_prefix, "Recovered %s using the %s peer!", topic->topic_name, topic->peer->name);
+    }
+    topic->restoring = false;
+    // Ok, that didn't work, so what can we try next?
+    robusto_delete_current_task();
+}
+
+void create_topic_recovery_task(subscribed_topic_t *topic)
+{
+    ROB_LOGW(pubsub_client_log_prefix, "Creating a topic recovery task for %s topic, peer %s",
+             topic->topic_name, topic->peer->name);
+    char *task_name;
+    robusto_asprintf(&task_name, "Recovery task task for %s topic, peer %s", topic->topic_name, topic->peer->name);
+    if (robusto_create_task(&recover_topic, topic, task_name, NULL, 0) != ROB_OK)
+    {
+        ROB_LOGE(pubsub_client_log_prefix, "Failed creating a recovery task for %s topic, peer %s", topic->topic_name, topic->peer->name);
+    }
+    robusto_free(task_name);
+}
+
+void robusto_pubsub_check_topics()
+{
+    subscribed_topic_t *curr_topic = first_subscribed_topic;
+    while (curr_topic)
+    {
+        if (curr_topic->restoring)
+        {
+            // Do nothing regardless of state to not disturb any existing recovery processes
+        }
+        else if (curr_topic->state == TOPIC_STATE_PROBLEM)
+        {
+            // Don't try to recover if we have broader issues with the peer.
+            if (curr_topic->peer->problematic_media_types != curr_topic->peer->supported_media_types)
+            {
+                create_topic_recovery_task(curr_topic);
+            }
+        }
+
+        curr_topic = curr_topic->next;
+    }
 }
 
 rob_ret_val_t robusto_pubsub_client_start()
@@ -271,7 +337,7 @@ rob_ret_val_t robusto_pubsub_client_start()
     return ROB_OK;
 };
 
-rob_ret_val_t robusto_pubsub_client_init(char *_log_prefix, topic_state_cb * _on_state_change)
+rob_ret_val_t robusto_pubsub_client_init(char *_log_prefix, topic_state_cb *_on_state_change)
 {
     pubsub_client_log_prefix = _log_prefix;
     on_state_change_cb = _on_state_change;

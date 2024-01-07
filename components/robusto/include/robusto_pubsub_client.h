@@ -45,6 +45,8 @@ struct subscribed_topic
     uint32_t stale_time_ms;
     /* Calculated hash used for referencing the topic */
     uint32_t topic_hash;
+    /* Is being restored*/
+    bool restoring;
     /* The peer */
     robusto_peer_t *peer;
     /* A conversation ID for communication */
@@ -85,6 +87,11 @@ rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t * topic, uint8_t 
  * @return rob_ret_val_t Success of operation
  */
 rob_ret_val_t robusto_pubsub_client_start();
+/**
+ * @brief Run a check of all topics, recover those that have problems
+ * 
+ */
+void robusto_pubsub_check_topics();
 /**
  * @brief Initialize client (not start)
  * 
