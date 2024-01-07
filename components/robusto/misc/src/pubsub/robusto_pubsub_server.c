@@ -140,7 +140,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         ROB_LOGI(pubsub_log_prefix, "Publishing %s to callback", topic->name);
         subscriber->local_callback(data, data_length);
     } else if (subscriber->peer) {
-        ROB_LOGI(pubsub_log_prefix, "Publishing %s to peer %s.", subscriber->peer->name, topic->name);
+        ROB_LOGI(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
         uint8_t *msg = robusto_malloc(data_length + 5);
         msg[0] = PUBSUB_DATA;
         memcpy(msg + 1, &topic->hash, 4);

@@ -63,7 +63,7 @@ void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t 
     robusto_asprintf(&task_name, "Recovery task for peer %s, media %s", peer->name, media_type_to_str(media_type));
     if (robusto_create_task(task_function, params, task_name, NULL, 0) != ROB_OK)
     {
-        ROB_LOGE(recovery_log_prefix, "Failed creatin a recovery task for the peer %s, media %s ", peer->name, media_type_to_str(media_type));
+        ROB_LOGE(recovery_log_prefix, "Failed creating a recovery task for the peer %s, media %s ", peer->name, media_type_to_str(media_type));
     }
     robusto_free(task_name);
 }
