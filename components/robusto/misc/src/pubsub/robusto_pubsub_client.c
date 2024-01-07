@@ -17,12 +17,24 @@ static void shutdown_callback();
 static subscribed_topic_t *first_subscribed_topic;
 static subscribed_topic_t *last_subscribed_topic;
 
+topic_state_cb * on_state_change_cb;
+
 network_service_t pubsub_client_service = {
     .incoming_callback = &incoming_callback,
     .service_name = "Pub-Sub service",
     .service_id = PUBSUB_CLIENT_ID,
     .shutdown_callback = &shutdown_callback,
 };
+
+void set_topic_state(subscribed_topic_t *topic, topic_state_t state) {
+    if (topic->state == state) {
+        return;
+    }
+    topic->state = state;
+    if (on_state_change_cb) {
+        on_state_change_cb(topic);
+    }
+}
 
 subscribed_topic_t *find_subscribed_topic_by_conversation_id(int16_t conversation_id)
 {
@@ -44,6 +56,7 @@ void robusto_pubsub_remove_topic(subscribed_topic_t * topic) {
         return;
     }
     if (topic == first_subscribed_topic) {
+        set_topic_state(topic, TOPIC_STATE_REMOVING);
         if (topic->next) {
             first_subscribed_topic = topic->next;
             if (!first_subscribed_topic->next) {
@@ -52,7 +65,7 @@ void robusto_pubsub_remove_topic(subscribed_topic_t * topic) {
         } else {
             first_subscribed_topic = NULL;
         }
-
+        
         robusto_free(topic);
         return;
     }
@@ -64,6 +77,7 @@ void robusto_pubsub_remove_topic(subscribed_topic_t * topic) {
     {
         if (curr_topic == topic)
         {
+            set_topic_state(topic, TOPIC_STATE_REMOVING);
             last_topic->next = topic->next;
             if (!last_topic->next) {
                 last_subscribed_topic = last_topic;
@@ -120,6 +134,8 @@ void incoming_callback(robusto_message_t *message)
         {
             memcpy(&curr_topic->topic_hash, message->binary_data + 1, 4);
             ROB_LOGI(pubsub_client_log_prefix, "Topic hash for %s set to %lu", curr_topic->topic_name, curr_topic->topic_hash);
+            curr_topic->last_data_time = r_millis();
+            set_topic_state(curr_topic, TOPIC_STATE_INACTIVE);
         }
         else
         {
@@ -132,6 +148,8 @@ void incoming_callback(robusto_message_t *message)
         
         if (topic)
         {
+            topic->last_data_time = r_millis();
+            set_topic_state(topic, TOPIC_STATE_ACTIVE);
             if (topic->callback)
             {
 
@@ -168,16 +186,18 @@ rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t *topic, uint8_t *
         memcpy(request + 1, &topic->topic_hash, sizeof(topic->topic_hash));
         memcpy(request + 5, data, data_length);
         send_message_binary(topic->peer, PUBSUB_SERVER_ID, 0, request, data_length + 5, NULL);
+        set_topic_state(topic, TOPIC_STATE_PUBLISHED);
         return ROB_OK;
     }
     else
     {
-        ROB_LOGW(pubsub_client_log_prefix, "Could not send to NMEA gateway, not initiated or peer still unknown.");
+        ROB_LOGE(pubsub_client_log_prefix, "Could not publish %s to %s, not initiated or peer still unknown.", topic->topic_name, topic->peer->name);
+        set_topic_state(topic, TOPIC_STATE_PROBLEM);
         return ROB_FAIL;
     }
 }
 
-subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, subscription_cb *callback)
+subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, subscription_cb *callback, uint8_t display_offset)
 {
 
     subscribed_topic_t *new_topic = robusto_malloc(sizeof(subscribed_topic_t));
@@ -188,6 +208,10 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
     new_topic->peer = peer;
     new_topic->topic_hash = 0;
     new_topic->callback = callback;
+    new_topic->display_offset = display_offset;
+    new_topic->state = TOPIC_STATE_UNSET;
+    
+    // TODO: Odd to not use the linked list macros here? Or anywhere else?
     if (!first_subscribed_topic)
     {
         first_subscribed_topic = new_topic;
@@ -197,20 +221,21 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
        last_subscribed_topic->next = new_topic; 
     }
     last_subscribed_topic = new_topic;
-    
+
     return new_topic;
 }
 
-subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *topic_name, subscription_cb *subscription_callback)
+subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *topic_name, subscription_cb *subscription_callback, uint8_t display_offset)
 {
     subscribed_topic_t *new_topic = find_subscribed_topic_by_name(topic_name);
     // We want to call the server even if we have the topic locally as it might have crashed.
     if (new_topic) {
-        // Update the callback if needed.
+        // Update the existing callback if needed.
         new_topic->callback = subscription_callback;
+        new_topic->display_offset = display_offset;
     } else {
         // The topic didn't exist, add it.
-        new_topic = _add_topic_and_conv(peer, topic_name, subscription_callback);
+        new_topic = _add_topic_and_conv(peer, topic_name, subscription_callback, display_offset);
     }
     uint16_t conversation_id = pubsub_conversation_id++;
     new_topic->conversation_id = conversation_id;
@@ -227,15 +252,16 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
 
     ROB_LOGE(pubsub_client_log_prefix, "Sending subscription for %s conversation_id %u!", topic_name, new_topic->conversation_id);
     send_message_binary(peer, PUBSUB_SERVER_ID, new_topic->conversation_id, (uint8_t *)msg, data_length, NULL);
-    if (!robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 4000))
+    if (!new_topic->topic_hash && !robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 4000))
     {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, no response with topic hash for %s.", new_topic->topic_name);
-        return NULL;
+        set_topic_state(new_topic, TOPIC_STATE_PROBLEM);
+        
+    } else {
+        set_topic_state(new_topic, TOPIC_STATE_INACTIVE);
     }
-    else
-    {
-        return new_topic;
-    }
+    
+    return new_topic;
 }
 
 rob_ret_val_t robusto_pubsub_client_start()
@@ -245,9 +271,10 @@ rob_ret_val_t robusto_pubsub_client_start()
     return ROB_OK;
 };
 
-rob_ret_val_t robusto_pubsub_client_init(char *_log_prefix)
+rob_ret_val_t robusto_pubsub_client_init(char *_log_prefix, topic_state_cb * _on_state_change)
 {
     pubsub_client_log_prefix = _log_prefix;
+    on_state_change_cb = _on_state_change;
     return ROB_OK;
 };
 #endif
