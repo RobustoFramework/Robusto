@@ -23,7 +23,7 @@ void start_hello_ui(char *_log_prefix)
         lv_obj_t *scr = lv_disp_get_scr_act(screen);
         lv_obj_t *label = lv_label_create(scr);
         lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
-        lv_label_set_text(label, "Hello Espressif, Hello LVGL.");
+        lv_label_set_text(label, "Robusto framework example. This should look good on the screen...");
         /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
         lv_obj_set_width(label, screen->driver->hor_res);
         lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
