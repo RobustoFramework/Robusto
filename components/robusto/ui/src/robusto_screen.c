@@ -42,14 +42,14 @@ void init_i2c()
 
 #ifdef USE_ESPIDF
 #ifdef CONFIG_ROBUSTO_UI_INIT_I2C
-    ROB_LOGI(minimal_log_prefix, "Init UI I2C.");
+    ROB_LOGI(ui_log_prefix, "Init UI I2C.");
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
     conf.sda_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SDA;
     conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
     conf.scl_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SCL;
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = CONFIG_ROBUSTO_UI_MINIMAL_I2C_FREQ_HZ;
+    conf.master.clk_speed = CONFIG_ROBUSTO_UI_I2C_FREQ_HZ;
     conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
 #if CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST > -1
     robusto_gpio_set_direction(CONFIG_ROBUSTO_UI_GPIO_RST, true);
@@ -58,7 +58,7 @@ void init_i2c()
     robusto_gpio_set_level(CONFIG_ROBUSTO_UI_GPIO_RST, 1);
 #endif
     i2c_param_config(CONFIG_ROBUSTO_UI_I2C_PORT, &conf);
-    i2c_driver_install(CONFIG_ROBUSTO_UI_MINIMAL_I2C_PORT, conf.mode, 0, 0, 0);
+    i2c_driver_install(CONFIG_ROBUSTO_UI_I2C_FREQ_HZ, conf.mode, 0, 0, 0);
 #endif
 #endif
 }
