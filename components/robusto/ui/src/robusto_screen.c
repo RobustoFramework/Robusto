@@ -59,7 +59,7 @@ void init_i2c()
     conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
     conf.master.clk_speed = CONFIG_ROBUSTO_UI_I2C_FREQ_HZ;
     conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
-#if CONFIG_ROBUSTO_UI_MINIMAL_GPIO_RST > -1
+#if CONFIG_ROBUSTO_UI_GPIO_RST > -1
     robusto_gpio_set_direction(CONFIG_ROBUSTO_UI_GPIO_RST, true);
     robusto_gpio_set_level(CONFIG_ROBUSTO_UI_GPIO_RST, 0);
     r_delay(20);
