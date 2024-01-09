@@ -2,7 +2,7 @@
 #ifdef CONFIG_ROBUSTO_UI
 
 #include <robusto_logging.h>
-
+#include <robusto_system.h>
 #ifdef USE_ESPIDF
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -58,7 +58,7 @@ void init_i2c()
     robusto_gpio_set_level(CONFIG_ROBUSTO_UI_GPIO_RST, 1);
 #endif
     i2c_param_config(CONFIG_ROBUSTO_UI_I2C_PORT, &conf);
-    i2c_driver_install(CONFIG_ROBUSTO_UI_I2C_FREQ_HZ, conf.mode, 0, 0, 0);
+    i2c_driver_install(CONFIG_ROBUSTO_UI_I2C_PORT, conf.mode, 0, 0, 0);
 #endif
 #endif
 }
