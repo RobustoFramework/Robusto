@@ -5,9 +5,7 @@
 #include <robusto_time.h>
 
 #include <lvgl.h>
-#ifdef USE_ESPIDF
-#include "esp_lvgl_port.h"
-#endif
+
 
 static char *hello_ui_log_prefix;
 
@@ -17,7 +15,7 @@ void start_hello_ui(char *_log_prefix)
     robusto_screen_init(hello_ui_log_prefix);
 
     lv_disp_t *screen = robusto_screen_lvgl_get_active_display();
-    if (lvgl_port_lock(0))
+    if (robusto_screen_lvgl_port_lock(0))
     {
 
         lv_obj_t *scr = lv_disp_get_scr_act(screen);
@@ -28,7 +26,7 @@ void start_hello_ui(char *_log_prefix)
         lv_obj_set_width(label, screen->driver->hor_res);
         lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
 
-        lvgl_port_unlock();
+        robusto_screen_lvgl_port_unlock();
     }
     /*
     r_delay(1000);

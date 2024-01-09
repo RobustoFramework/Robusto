@@ -37,6 +37,14 @@ lv_disp_t *disp;
 
 static char *ui_log_prefix;
 
+bool robusto_screen_lvgl_port_lock(int i) {
+    return lvgl_port_lock(i);
+}
+void robusto_screen_lvgl_port_unlock() {
+    lvgl_port_unlock();
+}
+
+
 void init_i2c()
 {
 
@@ -67,6 +75,8 @@ lv_disp_t *robusto_screen_lvgl_get_active_display()
 {
     return disp;
 }
+
+
 
 void robusto_screen_init(char *_log_prefix)
 {
