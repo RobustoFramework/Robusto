@@ -57,7 +57,7 @@ idf_component_register(
         # ESP-NOW dependencies    
         esp_wifi esp_adc 
         # Screen
-        ssd1306
+        esp_lcd
         # UMTS (note the esp_modem dependency)
         mqtt esp_netif esp_modem esp_http_client esp-tls json 
                                                                       

@@ -5,7 +5,9 @@ url: https://github.com/RobustoFramework
 dependencies:
   # Required IDF version
   idf: ">=4.1"
-  ssd1306: "^1.0"
   esp_modem: "^1.0.3"
   RadioLib:
     git: https://github.com/jgromes/RadioLib.git
+  # Screen support
+  lvgl/lvgl: "~8.3.0"
+  esp_lvgl_port: "^1"

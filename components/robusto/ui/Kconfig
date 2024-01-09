@@ -8,17 +8,37 @@ menu "UI"
             default "-=ROBUSTO=-"
             help
                 The text that appears.
-        config ROBUSTO_UI_MINIMAL
-            bool "Minimal UI support"
+        choice ROBUSTO_UI_LVGL_LCD_CONTROLLER
+            bool "Display controller"
             help
-                Support a minimal UI (like SSD1306 etcetera)
-        config ROBUSTO_UI_MINIMAL_I2C_PORT
+                Choose a display controller
+            config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
+                bool "SSD1306"
+            config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
+                bool "SH1107"
+        endchoice
+
+        config ROBUSTO_UI_LCD_H_RES
+            int "Horizontal resolution"
+            default 128
+        config ROBUSTO_UI_LCD_V_RES
+            int "Vertical resolution"
+            default 64
+    
+        config ROBUSTO_UI_I2C_PORT
             int "Minimal UI I2C port"
             default 1
-            depends on ROBUSTO_UI_MINIMAL
+
             help
                 The I2C reset GPIO of the screen
-
+        config ROBUSTO_UI_GPIO_RST
+            int "Minimal UI SDA Reset GPIO"
+            default -1
+            help
+                The I2C reset GPIO of the screen
+        config ROBUSTO_UI_I2C_HW_ADDR
+            hex "I2C address of screen"
+            default 0x3c
         config ROBUSTO_UI_INIT_I2C
             bool "Initialize I2C"
             help 
@@ -26,35 +46,22 @@ menu "UI"
                 So to not break functionality (and avoid errors here), we may want to avoid doing that.
             default true   
         if ROBUSTO_UI_INIT_I2C
-            config ROBUSTO_UI_MINIMAL_GPIO_SDA
+            config ROBUSTO_UI_GPIO_SDA
                 int "Minimal UI SDA GPIO"
                 default 4
-                depends on ROBUSTO_UI_MINIMAL
                 help
                     The I2C SDA GPIO of the screen
-            config ROBUSTO_UI_MINIMAL_GPIO_SCL
+            config ROBUSTO_UI_GPIO_SCL
                 int "Minimal UI SCL GPIO"
                 default 15
-                depends on ROBUSTO_UI_MINIMAL
                 help
                     The I2C SCL GPIO of the screen
-            config ROBUSTO_UI_MINIMAL_I2C_FREQ_HZ 
+            config ROBUSTO_UI_I2C_FREQ_HZ 
                 int "Minimal UI I2C frequency"
                 default 400000
                 help
                     The I2C frequency of the screen
-            config ROBUSTO_UI_MINIMAL_GPIO_RST
-                int "Minimal UI SDA Reset GPIO"
-                default -1
-                depends on ROBUSTO_UI_MINIMAL
-                help
-                    The I2C reset GPIO of the screen
-        endif
 
-        config ROBUSTO_UI_MINIMAL_INTRO             
-            bool "Show an intro on boot"
-        
-            help
-                Shows an animation on initialization
+        endif
     endif
 endmenu
