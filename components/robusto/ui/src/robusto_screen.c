@@ -33,6 +33,16 @@
 #define LCD_CMD_BITS 8
 #define LCD_PARAM_BITS 8
 
+#if defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_NONE)
+    #define ROTATE_LVGL LV_DISP_ROT_NONE
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_90)
+    #define ROTATE_LVGL LV_DISP_ROT_90
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_180)
+    #define ROTATE_LVGL LV_DISP_ROT_180
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_270)
+    #define ROTATE_LVGL LV_DISP_ROT_270
+#endif
+
 lv_disp_t *disp;
 
 static char *ui_log_prefix;
@@ -163,7 +173,7 @@ void robusto_screen_init(char *_log_prefix)
     disp = lvgl_port_add_disp(&disp_cfg);
 
     /* Rotation of the screen */
-    lv_disp_set_rotation(disp, LV_DISP_ROT_NONE);
+    lv_disp_set_rotation(disp, ROTATE_LVGL);
 
     ROB_LOGI(ui_log_prefix, "LVGL initiated");
 }

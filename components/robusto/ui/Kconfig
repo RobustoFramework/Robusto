@@ -10,6 +10,7 @@ menu "UI"
                 The text that appears.
         choice ROBUSTO_UI_LVGL_LCD_CONTROLLER
             bool "Display controller"
+            default ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
             help
                 Choose a display controller
             config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
@@ -17,6 +18,23 @@ menu "UI"
             config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
                 bool "SH1107"
         endchoice
+        choice ROBUSTO_UI_LVGL_ROTATION
+            bool "Rotation"
+            default ROBUSTO_UI_LVGL_ROTATION_NONE
+            help
+                Choose a display controller
+            config ROBUSTO_UI_LVGL_ROTATION_NONE
+                bool "No rotation"
+            config ROBUSTO_UI_LVGL_ROTATION_90
+                bool "Rotate 90 degrees"
+            config ROBUSTO_UI_LVGL_ROTATION_180
+                bool "Rotate 180 degrees"
+            config ROBUSTO_UI_LVGL_ROTATION_270
+                bool "Rotate 270 degrees"
+        endchoice
+        config CONFIG_ROBUSTO_UI_LVGL_ROTATION
+            int "Horizontal resolution"
+            default 128
 
         config ROBUSTO_UI_LCD_H_RES
             int "Horizontal resolution"
