@@ -32,9 +32,6 @@ menu "UI"
             config ROBUSTO_UI_LVGL_ROTATION_270
                 bool "Rotate 270 degrees"
         endchoice
-        config CONFIG_ROBUSTO_UI_LVGL_ROTATION
-            int "Horizontal resolution"
-            default 128
 
         config ROBUSTO_UI_LCD_H_RES
             int "Horizontal resolution"
