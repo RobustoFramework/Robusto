@@ -148,6 +148,15 @@ void init_supported_media_types(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (peer->supported_media_types & robusto_mt_lora)
     {
+        lora_peer_init_peer(peer);
+        // TODO: We probably won't need to do something for LoRa here.
+    }
+#endif
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    if (peer->supported_media_types & robusto_mt_i2c)
+    {
+        i2c_peer_init_peer(peer);
         // TODO: We probably won't need to do something for LoRa here.
     }
 #endif

@@ -101,12 +101,21 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
     robusto_media_t *info = get_media_info(peer, media_type);
     uint8_t *hb_msg;
     uint16_t deka_ms_diff;
+
+    if (info->postpone_qos) {
+        ROB_LOGW(heartbeat_log_prefix, "Postponing heartbeat to %s using %s", peer->name, media_type_to_str(media_type));
+        return;
+    }
     if ((info->last_send < curr_time - HEARTBEAT_PROBLEM_MARGIN_MS) || // Either we have a problem
         (info->last_send < curr_time - HEARTBEAT_IDLE_MARGIN_MS) || // or we are idle
         (info->last_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS *2)) // or we haven't heard from the peer
     )
     {
-        ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+        if (info->problem == media_problem_none) {
+            ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+        } else {
+            ROB_LOGW(heartbeat_log_prefix, "Sending heartbeat to problematic peer %s using %s", peer->name, media_type_to_str(media_type));
+        }
         
         deka_ms_diff = calc_deka_ms_since(info->last_receive, curr_time);
         int hb_msg_len = robusto_make_binary_message(MSG_HEARTBEAT, 0, 0, &deka_ms_diff, 2, &hb_msg);
@@ -115,7 +124,8 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         if (queue_ret_val != ROB_OK) {
             // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
             ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %hhu, res %hi, ", peer->name, (uint8_t)media_type, queue_ret_val);
-        } 
+            set_state(peer, info, media_type, media_state_problem, media_problem_technical);
+        }
     }
 }
 
@@ -201,7 +211,11 @@ void heartbeat_cb()
  
     SLIST_FOREACH(peer, get_peer_list(), next)
     {
-        peer_heartbeat(peer);
+        // Do not disturb the presentation
+        if (peer->state != PEER_PRESENTING) {
+            peer_heartbeat(peer);
+        }
+        
     }
     
 }

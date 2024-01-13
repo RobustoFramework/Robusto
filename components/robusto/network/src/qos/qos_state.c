@@ -56,15 +56,17 @@ static char qos_state_name[19] = "QoS\x00";
 
 rob_ret_val_t check_peer(robusto_peer_t *peer);
 
+// We want to do this check quite often, 10 times more often than sending heartbeats
+#define CHECK_SKIP_COUNT (int)(CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT > 10 ? CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT / 10 : 1)
+
 on_state_change_t *cb_on_state_change = NULL;
 recurrence_t qos_state = {
     recurrence_name : &qos_state_name,
-    skip_count : CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT,
+    skip_count : CHECK_SKIP_COUNT,
     skips_left : 0,
     recurrence_callback : &qos_state_cb,
     shutdown_callback : &qos_state_shutdown_cb
 };
-
 
 void robusto_qos_register_on_state_change(on_state_change_t *_cb_on_state_change)
 {
@@ -106,7 +108,6 @@ void set_state(robusto_peer_t *peer, robusto_media_t *info, e_media_type media_t
     }
     ROB_LOGW(qos_state_log_prefix, "State change for %s, %s, state %u, problem %u", peer->name, media_type_to_str(media_type), media_state, problem);
 }
-
 
 // Any state behavior
 void any_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
@@ -162,68 +163,78 @@ void initiating_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last
     // Perform initiating state actions
 }
 
-
 void qos_state_cb()
 {
-    ROB_LOGD(qos_state_log_prefix, "In qos_state_cb()");
+    ROB_LOGV(qos_state_log_prefix, "Running state checks");
     robusto_peer_t *peer;
 
     SLIST_FOREACH(peer, get_peer_list(), next)
     {
-        ROB_LOGD(qos_state_log_prefix, "Checking peer: %s", peer->name);
-        check_peer(peer);
+        // No use to do any checks during presentation
+        if (peer->state != PEER_PRESENTING) {
+            ROB_LOGD(qos_state_log_prefix, "Checking peer: %s", peer->name);
+            check_peer(peer);
+        }
+        
     }
 }
-
 
 void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
     // Note: The order of these checks are important as they might hide each other
 
-    if ((last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_send < (last_heartbeat_time - HEARD_FROM_LIMIT)))
+    if (
+        // Do we have problems sending (note that this is usually set when the problem occurr)
+        (last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_send < (last_heartbeat_time - HEARD_FROM_LIMIT)))
     {
-        ROB_LOGE(qos_state_log_prefix, "Internal issue: We have problems sending to the peer %s using the media type %s. Last success: %llu. \n\tlast_heartbeat_time: %llu, info->last_state_change %llu.",
-                 peer->name, media_type_to_str(media_type), info->last_send, last_heartbeat_time, info->last_state_change);
-        set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
-    }
-    else if ((last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
-    {
-
-        ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
-                 peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
-        rob_log_bit_mesh(ROB_LOG_WARN, qos_state_log_prefix, &(peer->base_mac_address), 6);
-        set_state(peer, info, media_type, media_state_problem, media_problem_silence);
-    }
-    else
-    {
-        /*
-        if ((peer->state != PEER_UNKNOWN) && (info->state != media_state_working))
+        if (info->problem != media_problem_send_problem)
         {
+            ROB_LOGE(qos_state_log_prefix, "Internal issue: We have problems sending to the peer %s using the media type %s. Last success: %llu. \n\tlast_heartbeat_time: %llu, info->last_state_change %llu.",
+                     peer->name, media_type_to_str(media_type), info->last_send, last_heartbeat_time, info->last_state_change);
 
-            ROB_LOGW(qos_state_log_prefix, "The peer %s, media type %s, state %u problem %u seem to be fixed now => changing state to working, info->last_state_change %llu.",
-                     peer->name, media_type_to_str(media_type), info->state, info->problem, info->last_state_change);
-            set_state(peer, info, media_type, media_state_working, media_problem_none);
+            set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
         }
-        */
     }
-
-    if ((last_heartbeat_time > 100) && (info->last_peer_receive > 0) &&
+    else if (
+        // Do we have problem receiving from the peer?
+        (last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
+    {
+        if (info->problem != media_problem_silence)
+        {
+            ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
+                     peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
+            rob_log_bit_mesh(ROB_LOG_WARN, qos_state_log_prefix, &(peer->base_mac_address), 6);
+            set_state(peer, info, media_type, media_state_problem, media_problem_silence);
+        }
+    }
+    else if (
+        // Did the peer hear from us at about the penultimate heartbeat time we tried to reach them?
+        (last_heartbeat_time > 100) && (info->last_peer_receive > 0) &&
         (last_heartbeat_time > HEARD_FROM_LIMIT) &&
         (info->last_peer_receive < (last_heartbeat_time - HEARD_FROM_LIMIT)))
     {
-
-        ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not heard from us since (info->last_peer_receive): %llu. \n\t, last_heartbeat_time: %llu, info->last_receive %llu info->last_state_change %llu.%llu",
-                 peer->name, media_type_to_str(media_type), info->last_peer_receive, last_heartbeat_time, info->last_receive, info->last_state_change, (int64_t)(last_heartbeat_time - (HEARTBEAT_DELAY * 4)));
-        // This is not always sent, so we also use it as a counter
-        if (info->last_peer_receive > LAST_PEER_RECEIVED_LIFESPAN)
+        if (info->problem != media_problem_cannot_reach)
         {
-            info->last_peer_receive = LAST_PEER_RECEIVED_LIFESPAN;
+            ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not heard from us since (info->last_peer_receive): %llu. \n\t, last_heartbeat_time: %llu, info->last_receive %llu info->last_state_change %llu.%llu",
+                     peer->name, media_type_to_str(media_type), info->last_peer_receive, last_heartbeat_time, info->last_receive, info->last_state_change, (int64_t)(last_heartbeat_time - (HEARTBEAT_DELAY * 4)));
+            // This is not always sent, so we also use it as a counter
+            if (info->last_peer_receive > LAST_PEER_RECEIVED_LIFESPAN)
+            {
+                info->last_peer_receive = LAST_PEER_RECEIVED_LIFESPAN;
+            }
+            else
+            {
+                info->last_peer_receive--;
+            }
+            set_state(peer, info, media_type, media_state_problem, media_problem_cannot_reach);
         }
-        else
-        {
-            info->last_peer_receive--;
-        }
-
+    }
+    // We are receiving from, sending to and reaching the peer, and it is known. So if not before, it is now working.
+    else if (info->state != media_state_working && (peer->state != PEER_UNKNOWN) && (info->state != media_state_recovering))
+    {
+        ROB_LOGW(qos_state_log_prefix, "The peer %s, media type %s, state %u problem %u seem to be fixed now => changing state to working, info->last_state_change %llu.",
+                    peer->name, media_type_to_str(media_type), info->state, info->problem, info->last_state_change);
+        set_state(peer, info, media_type, media_state_working, media_problem_none);
     }
 }
 
@@ -329,7 +340,6 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
 
     return 0;
 }
-
 
 void qos_state_shutdown_cb()
 {
