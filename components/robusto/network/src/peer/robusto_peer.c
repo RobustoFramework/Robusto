@@ -131,7 +131,6 @@ void robusto_peer_init_peer(robusto_peer_t *peer)
     lora_peer_init_peer(peer);
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    peer->espnow_peer_added = false;
     espnow_peer_init_peer(peer);
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING

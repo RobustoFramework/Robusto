@@ -144,7 +144,6 @@ This library assumes this and may fail using other lengths for this setting.
 #endif
 #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t espnow_info;
-        bool espnow_peer_added;
 #endif
 
 #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)

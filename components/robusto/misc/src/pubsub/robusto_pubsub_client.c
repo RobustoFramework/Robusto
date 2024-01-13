@@ -334,6 +334,7 @@ void robusto_pubsub_check_topics()
             if (curr_topic->peer->problematic_media_types != curr_topic->peer->supported_media_types)
             {
                 create_topic_recovery_task(curr_topic);
+                r_delay(1000);
             }
         }
 

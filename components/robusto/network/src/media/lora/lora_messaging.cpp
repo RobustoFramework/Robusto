@@ -359,7 +359,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
             }
             else
             {
-                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa Badly formatted CRC message from %s.", peer->name);
+                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa Badly formatted or not a receipt from %s.", peer->name);
                 rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)buf, message_length);
                 peer->lora_info.receive_failures++;
                 retval = ROB_FAIL;

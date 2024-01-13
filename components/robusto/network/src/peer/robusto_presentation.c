@@ -124,7 +124,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 #endif
     // Store the relation id
     memcpy(&message->peer->relation_id_outgoing, message->binary_data + 5, 4);
-
+    // This is called here as the peer is being populate after created.
     init_supported_media_types(message->peer);
     ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
 

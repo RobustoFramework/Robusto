@@ -291,12 +291,12 @@ void init_supported_media_types(robusto_peer_t *peer)
 #endif
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    if ((peer->supported_media_types & robusto_mt_espnow) && (!peer->espnow_peer_added))
+    if (peer->supported_media_types & robusto_mt_espnow)
     {
-        ROB_LOGI(peers_log_prefix, "Adding espnow peer at:");
+        ROB_LOGI(peers_log_prefix, "Initializing espnow peer at:");
         rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
-        int rc = espnow_add_peer(&peer->base_mac_address);
-        peer->espnow_peer_added = true;
+        espnow_peer_init_peer(peer);
+        int rc = ROB_OK;
     }
 #endif
 
