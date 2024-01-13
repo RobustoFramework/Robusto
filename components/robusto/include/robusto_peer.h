@@ -52,31 +52,63 @@ extern "C"
 #endif
 
 
-    /**
-     * @brief Sets a callback that will be called when a peer presentation has been received
-     *
-     * @param _on_inform_peer_cb A pointer to the function to call
-     */
-    void robusto_register_on_new_peer(callback_new_peer_t *_on_new_peer_cb);
 
+    /*
+    *               Peer level functionality 
+    */
     /**
-     * @brief Sends a notification that a new peer has been added
-     *
-     * @param peer The new peer
-     * @return true If the peer should be added or no callback has beend register
-     * @return false If the peer should not be added
+     * @brief Init the supported media types of the peer
+     * 
+     * @param peer 
      */
-    bool notify_on_new_peer(robusto_peer_t *peer);
-    void robusto_peer_init_peer(robusto_peer_t *peer);
-    void robusto_print_peers();
     void init_supported_media_types(robusto_peer_t *peer);
-
+    /**
+     * @brief Print a list of the current peers to logging (ROB_LOG_INFO)
+     * 
+     */
+    void robusto_print_peers();
+    /**
+     * @brief Output the available information on a peer to logging (ROB_LOG_INFO)
+     * 
+     * @param _log_prefix 
+     * @param peer 
+     */
     void log_peer_info(char *_log_prefix, robusto_peer_t *peer);
 
+    /**
+     * @brief Get the related media info object of the peer
+     * 
+     * @param peer 
+     * @param media_type 
+     * @return robusto_media_t* 
+     */
     robusto_media_t *get_media_info(robusto_peer_t *peer, e_media_type media_type);
+
+    /**
+     * @brief Return a score for a peer, used to calculate if it should be used
+     * 
+     * @param peer 
+     * @param media_type 
+     * @param data_length 
+     * @return float 
+     */
     float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length);
+    /**
+     * @brief Find a suitable media for the proposed message base on its length
+     * 
+     * @param peer The peer to send to
+     * @param data_length The length of the data to send
+     * @param exclude Do not chose any of these medias
+     * @param result A pointer to an e_media_type that receives the result
+     * @return rob_ret_val_t Returns ROB_OK if successful
+     */
     rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_media_type exclude, e_media_type *result);
 
+    /**
+     * @brief Reset a media's statistics
+     * 
+     * @param stats A pointer to the statistics
+     */
     void peer_stat_reset(robusto_media_t *stats);
     /**
      * @brief Wait for a peer to at least reach the specified state
@@ -86,9 +118,16 @@ extern "C"
      */
     bool peer_waitfor_at_least_state(robusto_peer_t * peer, e_peer_state state, uint32_t timeout);
 
+    /**
+     * @brief Initialize the peer management (not a peer)
+     * 
+     * @param _log_prefix 
+     */
     void robusto_peer_init(char *_log_prefix);
 
-    /* -------------------------- The peer list ---------------------------------------- */
+    /*
+    *               Peer management
+    */
 
     /**
      * @brief Construct the peer list
@@ -99,7 +138,6 @@ extern "C"
     SLIST_HEAD(robusto_peers, robusto_peer);
 
     int robusto_peers_delete_peer(uint16_t peer_handle);
-    rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t **new_peer);
 
     /* Initialization */
 
@@ -132,6 +170,32 @@ extern "C"
      * @return robusto_peer_t* The matching peer
      */
     robusto_peer_t *robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address);
+    
+
+    /**
+     * @brief Sets a callback that will be called when a peer presentation has been received
+     *
+     * @param _on_inform_peer_cb A pointer to the function to call
+     */
+    void robusto_register_on_new_peer(callback_new_peer_t *_on_new_peer_cb);
+
+    // TODO: Clarify difference here
+
+    /**
+     * @brief Sends a notification that a new peer has been added
+     *
+     * @param peer The new peer
+     * @return true If the peer should be added or no callback has beend register
+     * @return false If the peer should not be added
+     */
+    bool notify_on_new_peer(robusto_peer_t *peer);
+
+
+    /*
+    * Relation management
+    */
+
+
     /**
      * @brief Find peer by its incoming relation id
      *

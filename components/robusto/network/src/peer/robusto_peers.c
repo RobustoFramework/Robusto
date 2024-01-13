@@ -215,11 +215,19 @@ int robusto_peers_delete_peer(uint16_t peer_handle)
 #endif
 
     SLIST_REMOVE(&robusto_peers, peer, robusto_peer, next);
+
+    // TODO: This needs to do more for stats and some of the media types
     robusto_free(peer);
 
     return 0;
 }
-
+/**
+ * @brief Add the peer and set all things on a peer level (not media)
+ * 
+ * @param name 
+ * @param new_peer 
+ * @return rob_ret_val_t 
+ */
 rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_peer)
 {
     if (name != NULL) {
@@ -269,7 +277,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
         }
         
     }
-    robusto_peer_init_peer(peer);
+
 
     SLIST_INSERT_HEAD(&robusto_peers, peer, next);
     *new_peer = peer;
@@ -278,35 +286,6 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     return ROB_OK;
 }
 
-void init_supported_media_types(robusto_peer_t *peer)
-{
-
-#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-    if (peer->supported_media_types & ROB_MT_BLE)
-    {
-        //(mac_address);
-        // TODO: Usually BLE peers sort of finds each other, however we might wan't to do something here
-    }
-
-#endif
-
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    if (peer->supported_media_types & robusto_mt_espnow)
-    {
-        ROB_LOGI(peers_log_prefix, "Initializing espnow peer at:");
-        rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
-        espnow_peer_init_peer(peer);
-        int rc = ROB_OK;
-    }
-#endif
-
-#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
-    if (peer->supported_media_types & robusto_mt_lora)
-    {
-        // TODO: We probably won't need to do something for LoRa here.
-    }
-#endif
-}
 
 /**
  * @brief Add and initialize a new peer (does not contact it, see add_peer for that)
@@ -332,7 +311,6 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
         init_supported_media_types(peer);
         ROB_LOGD(peers_log_prefix, "Peer added: %s", peer->name);
 
-        
     }
     else
     {

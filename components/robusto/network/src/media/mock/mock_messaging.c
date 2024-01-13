@@ -135,7 +135,8 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     else if (message_expectation == MMI_HI)
     {
         // Create a peer just to have a recipient
-        robusto_peers_peer_add("TEST_EXTERNAL_PEER", peer);
+        uint8_t fake_mac[6] = 0x00;
+        robusto_add_init_new_peer("TEST_EXTERNAL_PEER", &fake_mac_peer);
         (*peer)->base_mac_address[0] = 0xFF;
         (*peer)->mock_info.last_receive = r_millis();    
        

@@ -103,7 +103,7 @@ robusto_peer_t *get_host_peer() {
 
 
 /**
- * @brief Reset stats count.
+ * @brief Reset stats count on the peer level.
  *
  * @param peer
  */
@@ -119,22 +119,37 @@ void peer_stat_reset(robusto_media_t *stats)
     stats->last_peer_receive = stats->last_send;
     stats->last_receive = stats->last_send;
     stats->postpone_qos = false;
-    
+   
 }
 
-void robusto_peer_init_peer(robusto_peer_t *peer)
+
+void init_supported_media_types(robusto_peer_t *peer)
 {
-#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    i2c_peer_init_peer(peer);
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+    if (peer->supported_media_types & ROB_MT_BLE)
+    {
+        //(mac_address);
+        // TODO: Usually BLE peers sort of finds each other, however we might wan't to do something here
+    }
+
 #endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
-    lora_peer_init_peer(peer);
-#endif
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    espnow_peer_init_peer(peer);
+    if (peer->supported_media_types & robusto_mt_espnow)
+    {
+        ROB_LOGI(peer_log_prefix, "Initializing espnow peer at:");
+        rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        espnow_peer_init_peer(peer);
+        int rc = ROB_OK;
+    }
 #endif
-#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
-    mock_peer_init_peer(peer);
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
+    if (peer->supported_media_types & robusto_mt_lora)
+    {
+        // TODO: We probably won't need to do something for LoRa here.
+    }
 #endif
 }
 
