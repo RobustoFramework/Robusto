@@ -273,8 +273,9 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         // Add current media type to excluded media
         queue_item->exclude_media = queue_item->exclude_media | media_type;
         ROB_LOGW(message_sending_log_prefix, "Failed sending using %s, will try some other media.", media_type_to_str(media_type));
-        // Find another media to try
+        // Check suitability again to find another media to try
         rob_ret_val_t suitability_res = set_suitable_media(queue_item->peer, queue_item->data_length, queue_item->exclude_media, &next_media_type);
+        
         if (suitability_res != ROB_OK)
         {
             ROB_LOGW(message_sending_log_prefix, "Couldn't find another media to try.");

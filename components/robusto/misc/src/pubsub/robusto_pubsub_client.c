@@ -148,7 +148,18 @@ void incoming_callback(robusto_message_t *message)
         }
         else
         {
-            ROB_LOGE(pubsub_client_log_prefix, "Could not find matching topic for conversation_id %u!", message->conversation_id);
+            uint32_t hash;
+            memcpy(&hash, message->binary_data + 1, 4);
+            curr_topic = find_subscribed_topic_by_topic_hash(hash);
+            if (curr_topic)
+            {
+                curr_topic->last_data_time = r_millis();
+                set_topic_state(curr_topic, TOPIC_STATE_INACTIVE);
+            }
+            else
+            {
+                ROB_LOGE(pubsub_client_log_prefix, "Could not find matching topic for conversation_id %u!", message->conversation_id);
+            }
         }
     }
     else if (*message->binary_data == PUBSUB_DATA)

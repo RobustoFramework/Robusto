@@ -104,7 +104,7 @@ void set_state(robusto_peer_t *peer, robusto_media_t *info, e_media_type media_t
     {
         cb_on_state_change(peer, info, media_type, media_state, problem);
     }
-    ROB_LOGW(qos_state_log_prefix, "State change, state %u, problem %u", media_state, problem);
+    ROB_LOGW(qos_state_log_prefix, "State change for %s, %s, state %u, problem %u", peer->name, media_type_to_str(media_type), media_state, problem);
 }
 
 
@@ -196,6 +196,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
     }
     else
     {
+        /*
         if ((peer->state != PEER_UNKNOWN) && (info->state != media_state_working))
         {
 
@@ -203,6 +204,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
                      peer->name, media_type_to_str(media_type), info->state, info->problem, info->last_state_change);
             set_state(peer, info, media_type, media_state_working, media_problem_none);
         }
+        */
     }
 
     if ((last_heartbeat_time > 100) && (info->last_peer_receive > 0) &&

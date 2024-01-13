@@ -297,8 +297,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
 
         while (RXTrigs == 0)
         {
-            // TODO: Extra timeout added longer due to excessive debugging. But is there a point with short timeouts? Should we rather report unusually slow responses?
-            if (r_millis() > starttime + CONFIG_ROB_RECEIPT_TIMEOUT_MS + 400) 
+            if (r_millis() > starttime + CONFIG_ROB_RECEIPT_TIMEOUT_MS) 
             {
                 ROB_LOGE(lora_messaging_log_prefix, "<< LoRa timed out waiting for receipt from %s.", peer->name);
                 r_delay(1);
