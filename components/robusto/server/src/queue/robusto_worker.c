@@ -50,7 +50,7 @@ static char *robusto_worker_log_prefix;
 
 void *safe_get_head_work_item(queue_context_t *q_context)
 {
-    if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, 10000))
+    if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, 30))
     {
         /* Pull the first item from the work queue */
         void *curr_work = q_context->first_queue_item_cb();

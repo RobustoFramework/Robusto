@@ -73,7 +73,7 @@ rob_ret_val_t robusto_mutex_take(mutex_ref_t mutex, int timeout) {
         if (ROB_OK == pthread_mutex_trylock(mutex)) {
             return ROB_OK;
         }
-        r_delay(10);
+        r_delay(1);
     }
     return ROB_ERR_MUTEX;
 }
