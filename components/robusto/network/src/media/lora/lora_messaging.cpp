@@ -359,7 +359,7 @@ rob_ret_val_t lora_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t da
             }
             else
             {
-                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa Badly formatted or not a receipt from %s.", peer->name);
+                ROB_LOGE(lora_messaging_log_prefix, "<< LoRa Badly formatted CRC message from %s.", peer->name);
                 rob_log_bit_mesh(ROB_LOG_INFO, lora_messaging_log_prefix, (uint8_t *)buf, message_length);
                 peer->lora_info.receive_failures++;
                 retval = ROB_FAIL;
@@ -496,8 +496,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
                 if ((peer) && (message_ok) && (data[data_start + ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT)) {  
                     ROB_LOGD(lora_messaging_log_prefix, "LoRa is heartbeat");
                     peer->lora_info.last_peer_receive = parse_heartbeat(data, data_start + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
-                    peer->lora_info.last_receive = r_millis();
-                    peer->lora_info.receive_successes++;
+                    add_to_history(&peer->lora_info, false, ROB_OK);
                     startReceive();
                     robusto_free(data);
                     retval = ROB_OK; 
@@ -566,7 +565,6 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             asprintf(&new_name, "UNKNOWN_%i", lora_unknown_counter++);
             peer = robusto_add_init_new_peer(new_name, src_mac_addr, robusto_mt_lora);
             peer->lora_info.last_receive = r_millis();        
-            peer->lora_info.receive_successes++;
             // TODO: Is it the *last* media type that should be used when responding when using the same is important?
         } 
         if (!peer) {
@@ -578,7 +576,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             // TODO: Should this thing also work without a queue?
             // uint8_t *data = *rcv_data;
 
-            robusto_handle_incoming(data, message_length, peer, robusto_mt_lora, data_start);
+            add_to_history(&peer->lora_info, false, robusto_handle_incoming(data, message_length, peer, robusto_mt_lora, data_start));
         }
         
     }
