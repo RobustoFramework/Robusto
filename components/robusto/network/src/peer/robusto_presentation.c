@@ -97,8 +97,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     }
     ROB_LOGW(presentation_log_prefix, "<< Got a HI or HIR-message through %s with information, length %lu.", 
         media_type_to_str(message->media_type), message->binary_data_length);
-
+    // Set peer to presenting mode so that it will not be involved in any QoS meanwhile
     message->peer->state = PEER_PRESENTING;
+
     /* Parse the base MAC address*/
     if (memcmp(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN) != 0)
     {
@@ -130,13 +131,12 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
     /* Set the name of the peer (the rest of the message) */
     memcpy(&(message->peer->name), message->binary_data + 9 + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 9 - ROBUSTO_MAC_ADDR_LEN);
-    message->peer->state = PEER_KNOWN_INSECURE;
+    
 
     // There might be a previous situation where there was a problem, set this media type to working
     robusto_media_t *info = get_media_info(message->peer, message->media_type);
     set_state(message->peer, info, message->media_type, media_state_working, media_problem_none);
     
-
     add_relation(&message->peer->base_mac_address, message->peer->relation_id_incoming, 
     message->peer->relation_id_outgoing, message->peer->supported_media_types
     #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
@@ -158,6 +158,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
             ROB_LOGW(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
         }
     } else if (message->binary_data[0] == NET_HIR) {
+        message->peer->state = PEER_KNOWN_INSECURE;
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");
     }
     else
