@@ -97,8 +97,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     }
     ROB_LOGW(presentation_log_prefix, "<< Got a HI or HIR-message through %s with information, length %lu.", 
         media_type_to_str(message->media_type), message->binary_data_length);
-    // Set peer to presenting mode so that it will not be involved in any QoS meanwhile
-    message->peer->state = PEER_PRESENTING;
+
 
     /* Parse the base MAC address*/
     if (memcmp(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN) != 0)
