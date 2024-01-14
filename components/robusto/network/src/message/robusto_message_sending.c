@@ -57,7 +57,7 @@
 #include <string.h>
 
 static char *message_sending_log_prefix;
-
+static on_send_activity_t *on_send_activity;
 /**
  * @brief  Calculate a reasonable wait time in milliseconds
  * based on I2C frequency and expected response timeout
@@ -236,22 +236,34 @@ rob_ret_val_t send_message_binary(robusto_peer_t *peer, uint16_t service_id, uin
     return send_message_multi(peer, service_id, conversation_id, NULL, 0, binary_data, binary_length, state, robusto_mt_none);
 }
 
+void robusto_message_sending_register_on_activity(on_send_activity_t *_on_send_activity)
+{
+    on_send_activity = _on_send_activity;
+}
 
 
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context) {
     
     int retval = ROB_FAIL;
     int send_retries = 0;
+    if (on_send_activity) {
+        on_send_activity(queue_item, media_type);
+    }
+
     robusto_set_queue_state_running(queue_item->state);
     do
     {
         retval = send_callback(queue_item->peer, queue_item->data, queue_item->data_length, queue_item->receipt);
         if ((retval != ROB_OK) && (send_retries < 3))
         {
+            info->send_failures++;
             ROB_LOGI(message_sending_log_prefix, ">> Retry %i failed.", send_retries + 1);
             // Call the poll function do not spam the network
             poll_callback(queue_context);
             robusto_yield();
+        } else {
+            info->send_successes++;
+            
         }
 
         send_retries++;

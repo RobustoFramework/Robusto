@@ -279,7 +279,9 @@ typedef void(poll_callback_cb)(queue_context_t * queue_context);
  */
 void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_media_type media_type, send_callback_cb *send_callback, poll_callback_cb *poll_callback, queue_context_t *queue_context);
 
+typedef void (on_send_activity_t)(media_queue_item_t * queue_item, e_media_type media_type);
 
+void robusto_message_sending_register_on_activity(on_send_activity_t *_on_send_activity);
 
 // TODO: If this works, centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
 typedef struct fragmented_message
