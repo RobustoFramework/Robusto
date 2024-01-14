@@ -232,15 +232,6 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             return;
         }
 
-        /* Remember peer. */
-
-        esp_now_peer_info_t *espnow_peer = malloc(sizeof(esp_now_peer_info_t));
-
-        espnow_peer->channel = 0;     // Use the current channel
-        espnow_peer->encrypt = false; // TODO: No encryption currently, should we only use our own?
-        espnow_peer->ifidx = ESP_IF_WIFI_STA;
-        memcpy(espnow_peer->peer_addr, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
-
         peer = robusto_add_init_new_peer(NULL, esp_now_info->src_addr, robusto_mt_espnow);
     }
 

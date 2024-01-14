@@ -294,7 +294,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
  * @param mac_address The mac adress
  * @return robusto_peer* An initialized peer
  */
-robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, e_media_type media_type)
+robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, robusto_media_types media_types)
 {
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_address);
     if (peer) {
@@ -303,11 +303,13 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
     robusto_peers_peer_add(peer_name, &peer);
     if (peer != NULL)
     {
-        ROB_LOGI(peers_log_prefix, "Mac:");
-        rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
         // TODO: Note that we have a potentially pointless 6-byte leak here, trust that the mac_address pointer perseveres?
         memcpy(peer->base_mac_address, mac_address, ROBUSTO_MAC_ADDR_LEN);
-        peer->supported_media_types = media_type;
+        peer->supported_media_types = media_types;
+        
+        ROB_LOGE(peers_log_prefix, "Supported media types %hu, Mac:", peer->supported_media_types);
+        rob_log_bit_mesh(ROB_LOG_ERROR, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
+
         init_supported_media_types(peer);
         ROB_LOGD(peers_log_prefix, "Peer added: %s", peer->name);
 
@@ -332,13 +334,13 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
  * @param media_type The way we want to contact the peer
  * @return Returns a pointer to the peer
  */
-robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, e_media_type media_type)
+robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, robusto_media_types media_types)
 {
-    robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_type);
+    robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_types);
     
     if (peer->state < PEER_KNOWN_INSECURE) {
         // TODO: This should be able to handle trying with several media types
-        robusto_send_presentation(peer, media_type, false);
+        robusto_send_presentation(peer, media_types, false);
     }
 
     return peer;

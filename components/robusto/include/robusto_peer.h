@@ -143,12 +143,12 @@ extern "C"
 
     int robusto_peers_init(char *_log_prefix);
     void robusto_presentation_init(char *_log_prefix);
-    robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, e_media_type media_type);
+    robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, robusto_media_types media_types);
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_address);
     robusto_peer_t *robusto_add_init_new_peer_i2c(const char *peer_name, const uint8_t i2c_address);
 #endif
-    robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, e_media_type media_type);
+    robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, robusto_media_types media_types);
 
     struct robusto_peers *get_peer_list();
 

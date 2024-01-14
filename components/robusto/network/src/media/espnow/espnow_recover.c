@@ -63,9 +63,9 @@ void espnow_recover(recover_params_t * params)
         // TODO: What can we do for ESP-NOW really?
         ROB_LOGW(espnow_recovery_log_prefix, "Cannot really do much for ESP-NOW here currently, reverts it to \"problem\" so it can return through heart beats");
         set_state(peer, params->info, media_type, media_state_problem, media_problem_unknown);
-        
+        params->info->postpone_qos = false;
     }
-
+    
     robusto_delete_current_task();
 
 

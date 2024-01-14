@@ -62,7 +62,7 @@ void lora_recover(recover_params_t * params)
         // TODO: Go down to a lower LoRa speed setting. Can we have unique settings for a peer in a network? Does it take very little time to reconfigure?
         ROB_LOGW(lora_recovery_log_prefix, "Cannot really do much for LoRa here currently, reverts it to \"problem\" so it can return through heart beats");
         set_state(peer, params->info, media_type, media_state_problem, media_problem_unknown);
-        
+        params->info->postpone_qos = false;
     }
 
     robusto_delete_current_task();

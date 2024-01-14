@@ -246,7 +246,7 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
     
     int retval = ROB_FAIL;
     int send_retries = 0;
-    if (on_send_activity) {
+    if (on_send_activity && !queue_item->heartbeat) {
         on_send_activity(queue_item, media_type);
     }
 

@@ -133,7 +133,7 @@ char *media_type_to_str(robusto_media_types media_type)
         return "MOCK";
     } else
     {
-        return "UNKNOWN";
+        return "Unknown/multiple";
     }
 }
 

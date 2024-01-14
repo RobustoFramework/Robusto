@@ -99,7 +99,6 @@ volatile bool sentFlag = false;
 // disable interrupt when it's not needed
 volatile bool enableInterrupt = true;
 
-int lora_unknown_counter = 0;
 int lora_unknown_failures = 0;
 int lora_crc_failures = 0;
 
@@ -561,9 +560,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
         startReceive();
         if ((!peer) && (retval > 0))
         {
-            char *new_name;
-            asprintf(&new_name, "UNKNOWN_%i", lora_unknown_counter++);
-            peer = robusto_add_init_new_peer(new_name, src_mac_addr, robusto_mt_lora);
+            peer = robusto_add_init_new_peer(NULL, src_mac_addr, robusto_mt_lora);
             peer->lora_info.last_receive = r_millis();        
             // TODO: Is it the *last* media type that should be used when responding when using the same is important?
         } 

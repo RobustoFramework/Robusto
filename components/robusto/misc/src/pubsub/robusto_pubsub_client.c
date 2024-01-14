@@ -133,7 +133,7 @@ subscribed_topic_t *find_subscribed_topic_by_name(char *topic_name)
 }
 void incoming_callback(robusto_message_t *message)
 {
-    ROB_LOGI(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
+    ROB_LOGW(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
     rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
     if ((*message->binary_data == PUBSUB_SUBSCRIBE_RESPONSE) ||
         (*message->binary_data == PUBSUB_GET_TOPIC_RESPONSE))

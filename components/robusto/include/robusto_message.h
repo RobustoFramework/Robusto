@@ -449,7 +449,7 @@ bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes);
  */
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message);
 int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply);
-rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media_type, bool is_reply);
+rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply);
 
 
 

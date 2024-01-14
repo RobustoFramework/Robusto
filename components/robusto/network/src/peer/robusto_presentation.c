@@ -38,20 +38,21 @@
 #include "robusto_qos.h"
 #include "string.h"
 
-static char * presentation_log_prefix;
+static char *presentation_log_prefix;
 
-
-
-rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media_type, bool is_reply) {
-    if (peer->state == PEER_PRESENTING) {
+rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply)
+{
+    if (peer->state == PEER_PRESENTING)
+    {
         ROB_LOGE(presentation_log_prefix, "Will not send a presentation as that is already ongoing");
         return ROB_FAIL;
     }
-    ROB_LOGI(presentation_log_prefix, ">> Sending a presentation to peer %s using %s.", peer->name, media_type_to_str(media_type));
+    ROB_LOGI(presentation_log_prefix, ">> Sending a presentation to peer %s using %s.", peer->name, media_type_to_str(media_types));
     // If it is a reply, us failing to present ourselves should not affect the state of the peer
     e_peer_state failstate = peer->state;
     // If it wasn't a reply, it was an unknown peer, set it back to unknown.
-    if (!is_reply) {
+    if (!is_reply)
+    {
         peer->state = PEER_PRESENTING;
         failstate = PEER_UNKNOWN;
     }
@@ -61,33 +62,54 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, e_media_type media
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     rob_ret_val_t ret_val_flag;
-    robusto_media_t *info = get_media_info(peer, media_type);
-    // Send presentation (no receipt as a reply requires know outgoing id, which is only available after presentation is parsed)
-    rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, false);
-    if (queue_ret != ROB_OK) {
-        peer->state = failstate;
-        ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %i", queue_ret, media_type);
-        ret_val_flag = queue_ret;
-    } else
-    if (!robusto_waitfor_queue_state(q_state, 6000, &ret_val_flag)) {
-        peer->state = failstate;
-        set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
-        ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t*)q_state[0], ret_val_flag);
-    } else  
-    // We are presenting, so wait for the state to change to PEER_KNOWN_INSECURE
-    if (!is_reply && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 10000))) {
-        peer->state = failstate;
-        ret_val_flag = ROB_ERR_TIMEOUT;
-        ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout. System will retry later..", peer->name);
-    }
+    for (e_media_type media_type = 1; media_type < 256; media_type = media_type * 2)
+    {
+        if ((media_types & media_type) != media_type)
+        {
+            continue;
+        }
 
+        robusto_media_t *info = get_media_info(peer, media_type);
+        // Send presentation (no receipt as a reply requires know outgoing id, which is only available after presentation is parsed)
+        rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, false);
+        if (queue_ret != ROB_OK)
+        {
+
+            ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %i", queue_ret, media_type);
+            ret_val_flag = queue_ret;
+        }
+        else if (!robusto_waitfor_queue_state(q_state, 1000, &ret_val_flag))
+        {
+            peer->state = failstate;
+            set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
+            ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t *)q_state[0], ret_val_flag);
+        }
+        else
+        // We are presenting, so wait for the state to change to PEER_KNOWN_INSECURE
+        if (!is_reply && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 1500)))
+        {
+            peer->state = failstate;
+            ret_val_flag = ROB_ERR_TIMEOUT;
+            ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout. System will retry later..", peer->name);
+            r_delay(1000);
+        } 
+        if (peer->state > PEER_PRESENTING)
+        {
+            break;
+        }
+    }
+    if (peer->state < PEER_KNOWN_INSECURE)
+    {
+        peer->state = failstate;;
+    }   
+    
     robusto_free_queue_state(q_state);
     return ret_val_flag;
 }
 
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 {
-    
+
     // TODO: Here, or before/later, we need to detect if this is fraudulent or spam.
 
     if (message->peer == NULL)
@@ -95,9 +117,8 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         ROB_LOGE(presentation_log_prefix, "<< Got a HI or HIR-message with information but message->peer is NULL, internal error!");
         return ROB_FAIL;
     }
-    ROB_LOGW(presentation_log_prefix, "<< Got a HI or HIR-message through %s with information, length %lu.", 
-        media_type_to_str(message->media_type), message->binary_data_length);
-
+    ROB_LOGW(presentation_log_prefix, "<< Got a HI or HIR-message through %s with information, length %lu.",
+             media_type_to_str(message->media_type), message->binary_data_length);
 
     /* Parse the base MAC address*/
     if (memcmp(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN) != 0)
@@ -105,8 +126,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         memcpy(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN);
     }
     // Check if there is already an existing peer, if so, populate that instead.
-    robusto_peer_t * existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
-    if (existing_peer) {
+    robusto_peer_t *existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
+    if (existing_peer)
+    {
         ROB_LOGW(presentation_log_prefix, "We already had a peer (%s) with the same base_mac_address, removing the new one", existing_peer->name);
         robusto_peers_delete_peer(message->peer->peer_handle);
         message->peer = existing_peer;
@@ -130,24 +152,24 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
     /* Set the name of the peer (the rest of the message) */
     memcpy(&(message->peer->name), message->binary_data + 9 + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 9 - ROBUSTO_MAC_ADDR_LEN);
-    
 
     // There might be a previous situation where there was a problem, set this media type to working
     robusto_media_t *info = get_media_info(message->peer, message->media_type);
     set_state(message->peer, info, message->media_type, media_state_working, media_problem_none);
-    
-    add_relation(&message->peer->base_mac_address, message->peer->relation_id_incoming, 
-    message->peer->relation_id_outgoing, message->peer->supported_media_types
-    #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-        , message->peer->i2c_address
-    #endif
-        );
+
+    add_relation(&message->peer->base_mac_address, message->peer->relation_id_incoming,
+                 message->peer->relation_id_outgoing, message->peer->supported_media_types
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+                 ,
+                 message->peer->i2c_address
+#endif
+    );
     ROB_LOGI(presentation_log_prefix, "<< Peer %s now more informed.", message->peer->name);
     log_peer_info(presentation_log_prefix, message->peer);
 
     // If its not a response, we need to respond.
     if (message->binary_data[0] == NET_HI)
-    {   
+    {
         if (notify_on_new_peer(message->peer))
         {
             robusto_send_presentation(message->peer, message->media_type, true);
@@ -156,7 +178,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         {
             ROB_LOGW(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
         }
-    } else if (message->binary_data[0] == NET_HIR) {
+    }
+    else if (message->binary_data[0] == NET_HIR)
+    {
         message->peer->state = PEER_KNOWN_INSECURE;
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");
     }
@@ -172,16 +196,16 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
 /**
  * @brief Compile a presentation message telling a peer about our abilities
- *  
+ *
  * @param peer The peer
  * @param msg The message
  * @param is_reply This is a reply, send a HIR-message
 
- * @return int 
+ * @return int
  */
 int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply)
 {
-    ROB_LOGI(presentation_log_prefix, ">> Create a %s-message with information.", is_reply ? "HIR (reply)": "HI");
+    ROB_LOGI(presentation_log_prefix, ">> Create a %s-message with information.", is_reply ? "HIR (reply)" : "HI");
 
     /**
      * TODO: Use this doc
@@ -193,9 +217,9 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
      * adresses: A list of addresses in the order of the bits in the media types byte.
      */
     uint32_t name_len = strlen(&(get_host_peer()->name));
-    
-    uint16_t data_len = 9 + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination. 
-    //TODO: Null termination should be done at reception instead.
+
+    uint16_t data_len = 9 + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination.
+    // TODO: Null termination should be done at reception instead.
     uint8_t *data = robusto_malloc(data_len);
     data[0] = is_reply ? NET_HIR : NET_HI;
     /* Set the protocol versions*/
@@ -213,7 +237,7 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     relation_id_incoming = calc_relation_id(&(peer->base_mac_address), &(get_host_peer()->base_mac_address));
 
     memcpy(data + 5, &relation_id_incoming, 4);
-    
+
     peer->relation_id_incoming = relation_id_incoming;
     memcpy(data + 9, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
     strcpy((char *)data + 9 + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
@@ -223,5 +247,4 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
 void robusto_presentation_init(char *_log_prefix)
 {
     presentation_log_prefix = _log_prefix;
-
 }
