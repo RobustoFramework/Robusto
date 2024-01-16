@@ -419,7 +419,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
         else
         {
             // some other error occurred
-            ROB_LOGI(lora_messaging_log_prefix, " << Failed, code %hhu", state);
+            ROB_LOGW(lora_messaging_log_prefix, " << Lora failed, code %hhu", state);
         }
 
         if (message_length > 0)
@@ -493,7 +493,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             {
                 // Is it a heartbeat? If so, just parse it, store stats and exit
                 if ((peer) && (message_ok) && (data[data_start + ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT)) {  
-                    ROB_LOGD(lora_messaging_log_prefix, "LoRa is heartbeat");
+                    ROB_LOGD(lora_messaging_log_prefix, "<< LoRa is heartbeat");
                     peer->lora_info.last_peer_receive = parse_heartbeat(data, data_start + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
                     add_to_history(&peer->lora_info, false, ROB_OK);
                     startReceive();
@@ -541,7 +541,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
 
                 if (send_message((uint8_t *)&response, 6) != ROB_OK)
                 {
-                    ROB_LOGE(lora_messaging_log_prefix, "LoRa failed started sending message.");
+                    ROB_LOGE(lora_messaging_log_prefix, ">> LoRa failed started sending receipt.");
                     retval = ROB_FAIL;
                     robusto_free(data);
                     goto finish;
@@ -549,8 +549,10 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             }
             else
             {
+                ROB_LOGW(lora_messaging_log_prefix, "<< LoRa peer is not identified.");
                 if (!message_ok)
                 {
+                    ROB_LOGW(lora_messaging_log_prefix, "<< LoRa peer, message failed CRC check.");
                     retval = ROB_FAIL;
                     robusto_free(data);
                     goto finish;
@@ -565,7 +567,7 @@ int lora_read_data(uint8_t **rcv_data_out, robusto_peer_t **peer_out, uint8_t *p
             // TODO: Is it the *last* media type that should be used when responding when using the same is important?
         } 
         if (!peer) {
-            ROB_LOGW(lora_messaging_log_prefix, "We have no peer recognition and retval %i.", retval);
+            ROB_LOGW(lora_messaging_log_prefix, "<< LoRa :We have no peer recognition and retval %i.", retval);
             retval = ROB_INFO_RECV_NO_MESSAGE;
             robusto_free(data);
         } else {

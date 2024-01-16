@@ -35,6 +35,7 @@
 
 #include <robusto_time.h>
 #include <robusto_peer.h>
+#include <robusto_qos.h>
 #include <string.h>
 #include <inttypes.h>
 

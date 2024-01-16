@@ -110,8 +110,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 {
 
-    // TODO: Here, or before/later, we need to detect if this is fraudulent or spam.
-
+    // TODO: Here, or before/later, we need to detect if this is fraudulent or spam to prevent hijacking of peers.
     if (message->peer == NULL)
     {
         ROB_LOGE(presentation_log_prefix, "<< Got a HI or HIR-message with information but message->peer is NULL, internal error!");
@@ -146,9 +145,16 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 #endif
     // Store the relation id
     memcpy(&message->peer->relation_id_outgoing, message->binary_data + 5, 4);
-    // This is called here as the peer is being populate after created.
-    init_supported_media_types(message->peer);
-    ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
+    
+    if (!existing_peer) {
+        // This is called here as a new peer is being populated after created.
+        // Otherwise creating peers is done using add_peer_by_mac_address/i2c_address.
+        init_supported_media_types(message->peer);
+        ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
+    }
+    
+    
+    
 
     /* Set the name of the peer (the rest of the message) */
     memcpy(&(message->peer->name), message->binary_data + 9 + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 9 - ROBUSTO_MAC_ADDR_LEN);

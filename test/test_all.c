@@ -206,6 +206,8 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_async_mock_service);
     robusto_yield();
     
+    init_defs_mock();
+
     RUN_TEST(tst_fragmentation_complete);
     robusto_yield();
     RUN_TEST(tst_fragmentation_resending);

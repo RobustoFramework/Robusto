@@ -62,7 +62,7 @@ void fake_message() {
 
     robusto_register_handler(&cb_incoming);
     peer = robusto_peers_find_peer_by_name("TEST_MOCK");
-    TEST_ASSERT_MESSAGE(peer != NULL, "tst_fragmentation_complete TEST_MOCK is not set");
+    TEST_ASSERT_MESSAGE(peer, "tst_fragmentation_complete TEST_MOCK peer is not set");
 
     // Build a 10K message
     test_data = robusto_malloc(TST_DATA_SIZE);

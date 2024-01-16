@@ -135,16 +135,15 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     else if (message_expectation == MMI_HI)
     {
         // Create a peer just to have a recipient
-        uint8_t fake_mac[6] = 0x00;
-        robusto_add_init_new_peer("TEST_EXTERNAL_PEER", &fake_mac_peer);
+        uint8_t fake_mac[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+        robusto_add_init_new_peer("TEST_EXTERNAL_PEER", &fake_mac, robusto_mt_mock);
+        *peer = robusto_peers_find_peer_by_name("TEST_MOCK");
         (*peer)->base_mac_address[0] = 0xFF;
         (*peer)->mock_info.last_receive = r_millis();    
        
         length = robusto_make_presentation(*peer, rcv_data, false);
         ROB_LOGI("MOCK", "Generated presentation");
         rob_log_bit_mesh(ROB_LOG_INFO, "MOCK", *rcv_data, length);
-
-
     }
     else if (message_expectation == MMI_HEARTBEAT)
     {

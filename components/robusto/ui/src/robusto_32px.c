@@ -1,4 +1,5 @@
 #include "robusto_32px.h"
+#ifdef CONFIG_ROBUSTO_UI
 #include <driver/i2c.h>
 #include <string.h>
 
@@ -67,3 +68,5 @@ void ssd1306_init(i2c_port_t bus, uint16_t dev_addr)
     ssd1306__init((ssd1306_handle_t) dev);
 
 }
+
+#endif
