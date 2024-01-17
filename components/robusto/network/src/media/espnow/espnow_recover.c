@@ -54,7 +54,7 @@ void espnow_recover(recover_params_t * params)
     {
         params->info->postpone_qos = true;
         ROB_LOGW(espnow_recovery_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation using %s.", peer->name, media_type_to_str(media_type));
-        if (robusto_send_presentation(peer, media_type, false) == ROB_OK) {
+        if (robusto_send_presentation(peer, media_type, false, presentation_recover) == ROB_OK) {
             set_state(peer, params->info, media_type, media_state_working, media_problem_none);
             rec_retval = ROB_OK;
         }

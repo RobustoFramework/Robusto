@@ -33,7 +33,6 @@
 
 #include <robconfig.h>
 
-
 #ifndef USE_ARDUINO
 #include "sys/queue.h"
 #else
@@ -51,51 +50,49 @@ extern "C"
 {
 #endif
 
-
-
     /*
-    *               Peer level functionality 
-    */
+     *               Peer level functionality
+     */
     /**
      * @brief Init the supported media types of the peer
-     * 
-     * @param peer 
+     *
+     * @param peer
      */
     void init_supported_media_types(robusto_peer_t *peer);
     /**
      * @brief Print a list of the current peers to logging (ROB_LOG_INFO)
-     * 
+     *
      */
     void robusto_print_peers();
     /**
      * @brief Output the available information on a peer to logging (ROB_LOG_INFO)
-     * 
-     * @param _log_prefix 
-     * @param peer 
+     *
+     * @param _log_prefix
+     * @param peer
      */
     void log_peer_info(char *_log_prefix, robusto_peer_t *peer);
 
     /**
      * @brief Get the related media info object of the peer
-     * 
-     * @param peer 
-     * @param media_type 
-     * @return robusto_media_t* 
+     *
+     * @param peer
+     * @param media_type
+     * @return robusto_media_t*
      */
     robusto_media_t *get_media_info(robusto_peer_t *peer, e_media_type media_type);
 
     /**
      * @brief Return a score for a peer, used to calculate if it should be used
-     * 
-     * @param peer 
-     * @param media_type 
-     * @param data_length 
-     * @return float 
+     *
+     * @param peer
+     * @param media_type
+     * @param data_length
+     * @return float
      */
     float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length);
     /**
      * @brief Find a suitable media for the proposed message base on its length
-     * 
+     *
      * @param peer The peer to send to
      * @param data_length The length of the data to send
      * @param exclude Do not chose any of these medias
@@ -106,28 +103,28 @@ extern "C"
 
     /**
      * @brief Reset a media's statistics
-     * 
+     *
      * @param stats A pointer to the statistics
      */
     void peer_stat_reset(robusto_media_t *stats);
     /**
      * @brief Wait for a peer to at least reach the specified state
-     * 
+     *
      * @param state The state
      * @param timeout Timeout in milliseconds
      */
-    bool peer_waitfor_at_least_state(robusto_peer_t * peer, e_peer_state state, uint32_t timeout);
+    bool peer_waitfor_at_least_state(robusto_peer_t *peer, e_peer_state state, uint32_t timeout);
 
     /**
      * @brief Initialize the peer management (not a peer)
-     * 
-     * @param _log_prefix 
+     *
+     * @param _log_prefix
      */
     void robusto_peer_init(char *_log_prefix);
 
     /*
-    *               Peer management
-    */
+     *               Peer management
+     */
 
     /**
      * @brief Construct the peer list
@@ -170,7 +167,6 @@ extern "C"
      * @return robusto_peer_t* The matching peer
      */
     robusto_peer_t *robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address);
-    
 
     /**
      * @brief Sets a callback that will be called when a peer presentation has been received
@@ -190,11 +186,9 @@ extern "C"
      */
     bool notify_on_new_peer(robusto_peer_t *peer);
 
-
     /*
-    * Relation management
-    */
-
+     * Relation management
+     */
 
     /**
      * @brief Find peer by its incoming relation id
@@ -251,7 +245,7 @@ extern "C"
     /**
      * @brief Add a relation to the list of relations.
      * @note There is a hard limit to the number of relations set in ROBUSTO_MAX_PEERS.
-     * 
+     *
      */
     bool add_relation(uint8_t *mac_address, uint32_t relation_id_incoming, uint32_t relation_id_outgoing, uint8_t supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C

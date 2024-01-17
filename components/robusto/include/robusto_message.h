@@ -442,14 +442,31 @@ bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes);
 
 
 /* Presentation */
+
+typedef enum {
+    /* We added this peer */
+    presentation_add = 0x00,
+    /* We just awoke from sleep */
+    presentation_wake = 0x01,
+    /* We just rebooted */
+    presentation_reboot = 0x02,
+    /* We are trying to recover the connection */
+    presentation_recover = 0x03,
+    /* We want to update some details */
+    presentation_update = 0x04,
+    /* We are replying to your presentation */
+    presentation_reply = 0x05,
+
+} e_presentation_reason;
+
 // TODO: Should these really be here? And not in peer?
 /**
  * @brief Handle hi-messages
  * 
  */
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message);
-int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply);
-rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply);
+int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply, e_presentation_reason reason);
+rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason);
 
 
 

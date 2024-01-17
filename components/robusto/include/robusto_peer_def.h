@@ -63,9 +63,10 @@ extern "C"
 // TODO: This should be called security state or something else instead.
 typedef enum e_peer_state
 {
+    
     /* The peer is unknown; we are yet to present us to them */
     PEER_UNKNOWN = 0,
-    /* We are presenting us to a peer, awaiting response */
+    /* We are presenting us to a peer, awaiting response. Do not send another presentation. */
     PEER_PRESENTING = 1,    
     /* The peer has presented itself, but isn't encrypted*/
     PEER_KNOWN_INSECURE = 2,
@@ -76,6 +77,7 @@ typedef enum e_peer_state
     PEER_KNOWN_SUSPECT = 4,
     /* The peer has been banned. */
     PEER_BANNED = 5,
+    
 } e_peer_state;
 
 /* MAC-addresses should always be 6-byte values on ESP32. TODO: Probably at all times? */
@@ -124,7 +126,6 @@ This library assumes this and may fail using other lengths for this setting.
         uint16_t peer_handle;
         /* The peer state, if unknown, it cannot be used in many situations*/
         e_peer_state state;
-
         /* Protocol version*/
         uint8_t protocol_version;
         /* Minimum supported protocol version*/

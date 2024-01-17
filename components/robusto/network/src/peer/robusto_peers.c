@@ -337,10 +337,11 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
 robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, robusto_media_types media_types)
 {
     robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_types);
-    
-    if (peer->state < PEER_KNOWN_INSECURE) {
+    if (peer->state < PEER_PRESENTING) {
         // TODO: This should be able to handle trying with several media types
-        robusto_send_presentation(peer, media_types, false);
+        robusto_send_presentation(peer, media_types, false, presentation_add);
+    } else {
+        ROB_LOGE(peers_log_prefix, "add_peer_by_mac_address: Will not present %s as we are already presenting", peer_name);
     }
 
     return peer;
@@ -384,7 +385,13 @@ robusto_peer_t *robusto_add_init_new_peer_i2c(const char *peer_name, const uint8
 robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_address)
 {
     robusto_peer_t *peer = robusto_add_init_new_peer_i2c(peer_name, i2c_address);
-    robusto_send_presentation(peer, robusto_mt_i2c, false);
+    if (peer->state < PEER_PRESENTING) {
+        // TODO: This should be able to handle trying with several media types
+        robusto_send_presentation(peer, robusto_mt_i2c, false, presentation_add);
+    } else {
+        ROB_LOGE(peers_log_prefix, "add_peer_by_i2c_address: Will not present %s as we are already presenting", peer_name);
+    }
+
     return peer;
 }
 

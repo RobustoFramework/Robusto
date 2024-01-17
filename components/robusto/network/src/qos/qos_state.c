@@ -119,7 +119,7 @@ void any_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartb
     {
         ROB_LOGE(qos_state_log_prefix, "The peer %s is UNKNOWN, will send a presentation using %s.",
                  peer->name, media_type_to_str(media_type));
-        robusto_send_presentation(peer, media_type, false);
+        robusto_send_presentation(peer, media_type, false, presentation_recover);
     }
     // TODO: react on PEER_KNOWN_SUSPECT and PEER_BANNED
 }

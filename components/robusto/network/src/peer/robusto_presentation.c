@@ -40,7 +40,16 @@
 
 static char *presentation_log_prefix;
 
-rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply)
+#define HI_POS 0
+#define PROT_VER_POS 1
+#define PROT_VER_MIN_POS 2
+#define MEDIA_T_POS 3
+#define I2C_ADDR_POS 4
+#define REASON_POS 5
+#define REL_ID_IN_POS 6
+#define MAC_ADDR_POS 6
+
+rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason)
 {
     if (peer->state == PEER_PRESENTING)
     {
@@ -57,7 +66,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         failstate = PEER_UNKNOWN;
     }
     uint8_t *msg;
-    int msg_len = robusto_make_presentation(peer, &msg, is_reply);
+    int msg_len = robusto_make_presentation(peer, &msg, is_reply, reason);
     ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
@@ -110,6 +119,8 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 {
 
+
+
     // TODO: Here, or before/later, we need to detect if this is fraudulent or spam to prevent hijacking of peers.
     if (message->peer == NULL)
     {
@@ -120,9 +131,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
              media_type_to_str(message->media_type), message->binary_data_length);
 
     /* Parse the base MAC address*/
-    if (memcmp(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN) != 0)
+    if (memcmp(&message->peer->base_mac_address, message->binary_data + MAC_ADDR_POS, ROBUSTO_MAC_ADDR_LEN) != 0)
     {
-        memcpy(&message->peer->base_mac_address, message->binary_data + 9, ROBUSTO_MAC_ADDR_LEN);
+        memcpy(&message->peer->base_mac_address, message->binary_data + MAC_ADDR_POS, ROBUSTO_MAC_ADDR_LEN);
     }
     // Check if there is already an existing peer, if so, populate that instead.
     robusto_peer_t *existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
@@ -133,18 +144,23 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         message->peer = existing_peer;
     }
     /* Set the protocol versions*/
-    message->peer->protocol_version = message->binary_data[1];
+    message->peer->protocol_version = message->binary_data[PROT_VER_POS];
     // TODO: Check protocol version for highest matching protocol version.
-    message->peer->min_protocol_version = message->binary_data[2];
+    message->peer->min_protocol_version = message->binary_data[PROT_VER_MIN_POS];
 
     /* Set supported media types*/
-    message->peer->supported_media_types = message->binary_data[3];
+    message->peer->supported_media_types = message->binary_data[MEDIA_T_POS];
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    message->peer->i2c_address = message->binary_data[4];
+    message->peer->i2c_address = message->binary_data[I2C_ADDR_POS];
 #endif
+    message->peer->base_mac_address
+    peer->data  message->binary_data[REASON_POS]
+    
+
+
     // Store the relation id
-    memcpy(&message->peer->relation_id_outgoing, message->binary_data + 5, 4);
+    memcpy(&message->peer->relation_id_outgoing, message->binary_data + REL_ID_IN_POS, ROBUSTO_RELATION_LEN);
     
     if (!existing_peer) {
         // This is called here as a new peer is being populated after created.
@@ -157,7 +173,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     
 
     /* Set the name of the peer (the rest of the message) */
-    memcpy(&(message->peer->name), message->binary_data + 9 + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 9 - ROBUSTO_MAC_ADDR_LEN);
+    memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 10 - ROBUSTO_MAC_ADDR_LEN);
 
     // There might be a previous situation where there was a problem, set this media type to working
     robusto_media_t *info = get_media_info(message->peer, message->media_type);
@@ -178,7 +194,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     {
         if (notify_on_new_peer(message->peer))
         {
-            robusto_send_presentation(message->peer, message->media_type, true);
+            robusto_send_presentation(message->peer, message->media_type, true, presentation_reply);
         }
         else
         {
@@ -200,6 +216,8 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     return ROB_OK;
 }
 
+// TODO: Add positional defines for all
+
 /**
  * @brief Compile a presentation message telling a peer about our abilities
  *
@@ -209,7 +227,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
  * @return int
  */
-int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply)
+int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply, e_presentation_reason reason)
 {
     ROB_LOGI(presentation_log_prefix, ">> Create a %s-message with information.", is_reply ? "HIR (reply)" : "HI");
 
@@ -223,30 +241,32 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
      * adresses: A list of addresses in the order of the bits in the media types byte.
      */
     uint32_t name_len = strlen(&(get_host_peer()->name));
-
-    uint16_t data_len = 9 + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination.
+    uint16_t data_len = MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination.
     // TODO: Null termination should be done at reception instead.
     uint8_t *data = robusto_malloc(data_len);
-    data[0] = is_reply ? NET_HIR : NET_HI;
+    data[HI_POS] = is_reply ? NET_HIR : NET_HI;
     /* Set the protocol versions*/
-    data[1] = ROBUSTO_PROTOCOL_VERSION;
-    data[2] = ROBUSTO_PROTOCOL_VERSION_MIN;
+    data[PROT_VER_POS] = ROBUSTO_PROTOCOL_VERSION;
+    data[PROT_VER_MIN_POS] = ROBUSTO_PROTOCOL_VERSION_MIN;
     /* Set supported media types*/
-    data[3] = get_host_supported_media_types();
+    data[MEDIA_T_POS] = get_host_supported_media_types();
+    /* Send I2c address */
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    data[4] = CONFIG_I2C_ADDR;
+    data[I2C_ADDR_POS] = CONFIG_I2C_ADDR;
 #else
-    data[4] = 0;
+    data[I2C_ADDR_POS] = 0;
 #endif
+    /* Provide a reason*/
+    data[REASON_POS] = reason;
     // If it is the first communication (HI), we need to calculate the relationid that the peer can reach us with.
     uint32_t relation_id_incoming;
     relation_id_incoming = calc_relation_id(&(peer->base_mac_address), &(get_host_peer()->base_mac_address));
 
-    memcpy(data + 5, &relation_id_incoming, 4);
+    memcpy(data + REL_ID_IN_POS, &relation_id_incoming, ROBUSTO_RELATION_LEN);
 
     peer->relation_id_incoming = relation_id_incoming;
-    memcpy(data + 9, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
-    strcpy((char *)data + 9 + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
+    memcpy(data + MAC_ADDR_POS, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
+    strcpy((char *)data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
     return robusto_make_binary_message(MSG_NETWORK, 0, 0, data, data_len, msg);
 }
 
