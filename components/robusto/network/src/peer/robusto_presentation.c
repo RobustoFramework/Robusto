@@ -154,8 +154,10 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     message->peer->i2c_address = message->binary_data[I2C_ADDR_POS];
 #endif
-    message->peer->base_mac_address
-    peer->data  message->binary_data[REASON_POS]
+    if (message->peer->on_presentation) {
+        message->peer->on_presentation(message->peer, message->binary_data[REASON_POS]);
+    }
+    
     
 
 

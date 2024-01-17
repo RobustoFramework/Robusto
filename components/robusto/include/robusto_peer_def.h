@@ -33,8 +33,6 @@
 
 #include <robconfig.h>
 
-
-
 #ifndef USE_ARDUINO
 #include "sys/queue.h"
 #else
@@ -59,26 +57,26 @@ extern "C"
 #define CONFIG_ROBUSTO_PEER_NAME "TEST"
 #endif
 
-/* Robusto peer state, the security state */
-// TODO: This should be called security state or something else instead.
-typedef enum e_peer_state
-{
-    
-    /* The peer is unknown; we are yet to present us to them */
-    PEER_UNKNOWN = 0,
-    /* We are presenting us to a peer, awaiting response. Do not send another presentation. */
-    PEER_PRESENTING = 1,    
-    /* The peer has presented itself, but isn't encrypted*/
-    PEER_KNOWN_INSECURE = 2,
-    /* The peer is both known and encrypted */
-    PEER_KNOWN_SECURE = 3,
-    /* The peer has behaved in a suspect manner */
-    /* TODO: This is not probably not correct to have here, this is a connection level problem */
-    PEER_KNOWN_SUSPECT = 4,
-    /* The peer has been banned. */
-    PEER_BANNED = 5,
-    
-} e_peer_state;
+    /* Robusto peer state, the security state */
+    // TODO: This should be called security state or something else instead.
+    typedef enum e_peer_state
+    {
+
+        /* The peer is unknown; we are yet to present us to them */
+        PEER_UNKNOWN = 0,
+        /* We are presenting us to a peer, awaiting response. Do not send another presentation. */
+        PEER_PRESENTING = 1,
+        /* The peer has presented itself, but isn't encrypted*/
+        PEER_KNOWN_INSECURE = 2,
+        /* The peer is both known and encrypted */
+        PEER_KNOWN_SECURE = 3,
+        /* The peer has behaved in a suspect manner */
+        /* TODO: This is not probably not correct to have here, this is a connection level problem */
+        PEER_KNOWN_SUSPECT = 4,
+        /* The peer has been banned. */
+        PEER_BANNED = 5,
+
+    } e_peer_state;
 
 /* MAC-addresses should always be 6-byte values on ESP32. TODO: Probably at all times? */
 #ifdef USE_ESPIDF
@@ -91,11 +89,35 @@ This library assumes this and may fail using other lengths for this setting.
 
 /* This is the maximum number of peers */
 /* NOTE: A list of relations, it relations+mac_addresses (4 + 6 * ROBUSTO_MAX_PEERS) is stored
-* in RTC memory, so 32 peers mean 320 bytes of the 8K RTC memory
-*/
+ * in RTC memory, so 32 peers mean 320 bytes of the 8K RTC memory
+ */
 #define ROBUSTO_MAX_PEERS 32
+
+    /* Presentation */
+
+    typedef enum
+    {
+        /* We added this peer */
+        presentation_add = 0x00,
+        /* We just awoke from sleep */
+        presentation_wake = 0x01,
+        /* We just rebooted */
+        presentation_reboot = 0x02,
+        /* We are trying to recover the connection */
+        presentation_recover = 0x03,
+        /* We want to update some details */
+        presentation_update = 0x04,
+        /* We are replying to your presentation */
+        presentation_reply = 0x05,
+
+    } e_presentation_reason;
+
     /* The SD MAC-address type */
     typedef uint8_t rob_mac_address[ROBUSTO_MAC_ADDR_LEN];
+
+    typedef struct robusto_peer robusto_peer_t;
+    /* Callback used when peers */
+    typedef void(on_presentation_cb_t)(robusto_peer_t *peer, e_presentation_reason reason);
 
     /* A peer name in Robusto */
     typedef char rob_peer_name[CONFIG_ROBUSTO_PEER_NAME_LENGTH];
@@ -111,6 +133,12 @@ This library assumes this and may fail using other lengths for this setting.
          * https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html#mac-address
          */
         rob_mac_address base_mac_address;
+
+        /**
+         * @brief  If set, called when a peer is re-presenting itself to us.
+         * @note As sending a presentation is a common action by a peer, basically done in most cases when there is a problem, the cause of the contact can be quite important to know.
+         */
+        on_presentation_cb_t *on_presentation;
 
         /* Supported media types, one bits for each */
         robusto_media_types supported_media_types;
@@ -167,13 +195,18 @@ This library assumes this and may fail using other lengths for this setting.
 
     } robusto_peer_t;
 
+
+
+
+    int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply, e_presentation_reason reason);
+    rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason);
+
     robusto_media_types get_host_supported_media_types();
     void add_host_supported_media_type(e_media_type supported_media_type);
-    
+
     robusto_peer_t *get_host_peer();
 
     typedef bool(callback_new_peer_t)(robusto_peer_t *peer);
-
 
 #ifdef __cplusplus
 } /* extern "C" */

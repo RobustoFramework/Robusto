@@ -141,7 +141,7 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
         (*peer)->base_mac_address[0] = 0xFF;
         (*peer)->mock_info.last_receive = r_millis();    
        
-        length = robusto_make_presentation(*peer, rcv_data, false);
+        length = robusto_make_presentation(*peer, rcv_data, false, presentation_add);
         ROB_LOGI("MOCK", "Generated presentation");
         rob_log_bit_mesh(ROB_LOG_INFO, "MOCK", *rcv_data, length);
     }
