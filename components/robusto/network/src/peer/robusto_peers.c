@@ -263,6 +263,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
     peer->relation_id_incoming = 0;
     peer->relation_id_outgoing = 0;
     peer->state = PEER_UNKNOWN;
+    peer->on_presentation = NULL;
     if (name == NULL)
     {
         sprintf(peer->name, "UNKNOWN_%" PRIu16 "", peer->peer_handle);

@@ -47,7 +47,15 @@ static char *presentation_log_prefix;
 #define I2C_ADDR_POS 4
 #define REASON_POS 5
 #define REL_ID_IN_POS 6
-#define MAC_ADDR_POS 6
+#define MAC_ADDR_POS 10
+
+void do_presentation_callback(robusto_message_t * message) {
+    if (message->peer->on_presentation) {
+        message->peer->on_presentation(message->peer, message->binary_data[REASON_POS]);
+    }
+    robusto_delete_current_task();
+}
+
 
 rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason)
 {
@@ -150,16 +158,15 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
     /* Set supported media types*/
     message->peer->supported_media_types = message->binary_data[MEDIA_T_POS];
-
+    
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    /* Set I2C address */
     message->peer->i2c_address = message->binary_data[I2C_ADDR_POS];
 #endif
+    /* If assigned, call callback with presentation reason*/
     if (message->peer->on_presentation) {
-        message->peer->on_presentation(message->peer, message->binary_data[REASON_POS]);
+        robusto_create_task(&do_presentation_callback, message, "on_presentation_callback", NULL, 0);
     }
-    
-    
-
 
     // Store the relation id
     memcpy(&message->peer->relation_id_outgoing, message->binary_data + REL_ID_IN_POS, ROBUSTO_RELATION_LEN);
@@ -171,11 +178,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
     }
     
-    
-    
 
     /* Set the name of the peer (the rest of the message) */
-    memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - 10 - ROBUSTO_MAC_ADDR_LEN);
+    memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - MAC_ADDR_POS - ROBUSTO_MAC_ADDR_LEN);
 
     // There might be a previous situation where there was a problem, set this media type to working
     robusto_media_t *info = get_media_info(message->peer, message->media_type);
@@ -192,7 +197,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     log_peer_info(presentation_log_prefix, message->peer);
 
     // If its not a response, we need to respond.
-    if (message->binary_data[0] == NET_HI)
+    if (message->binary_data[HI_POS] == NET_HI)
     {
         if (notify_on_new_peer(message->peer))
         {
@@ -203,7 +208,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
             ROB_LOGW(presentation_log_prefix, "Not replying to a peer due to a negative on_new_peer_cb return value.");
         }
     }
-    else if (message->binary_data[0] == NET_HIR)
+    else if (message->binary_data[HI_POS] == NET_HIR)
     {
         message->peer->state = PEER_KNOWN_INSECURE;
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");
