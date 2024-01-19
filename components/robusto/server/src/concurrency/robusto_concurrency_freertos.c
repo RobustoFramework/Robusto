@@ -46,7 +46,7 @@
 #endif
 
 // TODO: This interface has to be finalized, the handle for example, and affinity
-rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char task_name[30], rob_task_handle_t **handle, int affinity) 
+rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity)  
 {
     #ifdef USE_ARDUINO // Arduino seems to only support one core
     int rc = xTaskCreate(task_function, task_name, 8192, parameter, 8, handle);
