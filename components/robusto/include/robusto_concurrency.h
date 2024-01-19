@@ -78,7 +78,7 @@ extern "C"
      * @return uint32_t A handle to the task, 0 if failed
      */
 
-    rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char task_name[30], rob_task_handle_t **handle, int affinity);
+    rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity);
 
     /**
      * @brief Delete the current task

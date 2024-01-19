@@ -39,7 +39,7 @@
 #include <time.h>
 #include <stdlib.h> 
 
-rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char task_name[30], rob_task_handle_t **handle, int affinity) {
+rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity) {
     pthread_t new_thread;
     int rc = pthread_create(&new_thread, NULL, (void *)task_function, parameter);
     if (rc == ROB_OK) {
