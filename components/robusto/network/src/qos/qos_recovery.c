@@ -66,6 +66,9 @@ void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t 
         ROB_LOGE(recovery_log_prefix, "Failed creating a recovery task for the peer %s, media %s ", peer->name, media_type_to_str(media_type));
     }
     robusto_free(task_name);
+    // Always wait a while before returning to avoid other tasks being missing the PEER_PRESENTING state.
+    r_delay(300);
+
 }
 
 void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat, e_media_type media_type)
@@ -123,6 +126,7 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
         create_recovery_task(peer, info, last_heartbeat, media_type, &mock_recover);
     }
 #endif
+
 }
 
 void start_qos_recovery()
