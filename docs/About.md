@@ -38,11 +38,12 @@ It cannot work around issues silently, that would undermine the value of the app
 A more software (firmware) and configuration-defined system can more easily maintain backwards compatibility and change much more frequently. 
 
 ## Cheaper to secure
-All wireless transmissions are susceptible to interception, if we also have a wired connection, we may use unbreakable one-time-pad encryption schemes. 
+All wireless transmissions are susceptible to interception, if we also have a wired connection, we may exchange, and then use, unbreakable one-time-pad encryption schemes. 
 
 ## Cheaper to protect
 
-If either connection fails, the other can keep up the information flow. If the wireless communication is interfered with, not only can the wired pick up the slack, the wireless may use the wired connection to negotiate new frequencies or simply report that it is being interfered with. [^2]
+If either connection fails, the other can keep up the information flow. If the wireless communication is interfered with, not only can the wired pick up the slack, the wireless may use the wired connection to negotiate new frequencies or simply report that it is being interfered with. [^2] 
+It may also combine different wireless technologies, LoRa and ESP-NOW are currently implemented.
 
 
 # Reasoning
