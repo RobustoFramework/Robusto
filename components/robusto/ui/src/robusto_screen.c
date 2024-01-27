@@ -24,7 +24,7 @@
 #endif
 #endif
 
-#ifdef CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
 #include "esp_lcd_sh1107.h"
 #else
 #include "esp_lcd_panel_vendor.h"
@@ -105,11 +105,15 @@ void robusto_screen_init(char *_log_prefix)
         .control_phase_bytes = 1,         // According to SSD1306 datasheet
         .lcd_cmd_bits = LCD_CMD_BITS,     // According to SSD1306 datasheet
         .lcd_param_bits = LCD_PARAM_BITS, // According to SSD1306 datasheet
-#if CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306)
         .dc_bit_offset = 6, // According to SSD1306 datasheet
-#elif CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
         .dc_bit_offset = 0, // According to SH1106 datasheet
-#elif CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
+        .flags =
+            {
+                .disable_control_phase = 1,
+            }
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107)
         .dc_bit_offset = 0, // According to SH1107 datasheet
         .flags =
             {
@@ -134,9 +138,9 @@ void robusto_screen_init(char *_log_prefix)
         panel_config.vendor_config = &ssd1306_config;
     */
 
-#if CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306)
     ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(io_handle, &panel_config, &panel_handle));
-#elif CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
+#elif defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
     ESP_ERROR_CHECK(esp_lcd_new_panel_sh1107(io_handle, &panel_config, &panel_handle));
 #endif
 
@@ -150,7 +154,7 @@ void robusto_screen_init(char *_log_prefix)
 #endif
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-#if CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
     ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_handle, true));
 #endif
 
@@ -164,7 +168,11 @@ void robusto_screen_init(char *_log_prefix)
         .io_handle = io_handle,
         .panel_handle = panel_handle,
         .buffer_size = CONFIG_ROBUSTO_UI_LCD_H_RES * CONFIG_ROBUSTO_UI_LCD_V_RES,
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
+        .double_buffer = false,
+#else
         .double_buffer = true,
+#endif
         .hres = CONFIG_ROBUSTO_UI_LCD_H_RES,
         .vres = CONFIG_ROBUSTO_UI_LCD_V_RES,
         .monochrome = true,
