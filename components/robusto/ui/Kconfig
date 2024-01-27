@@ -15,6 +15,8 @@ menu "UI"
                 Choose a display controller
             config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
                 bool "SSD1306"
+            config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106
+                bool "SH1106"
             config ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
                 bool "SH1107"
         endchoice

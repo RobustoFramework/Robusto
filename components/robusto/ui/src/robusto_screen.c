@@ -107,12 +107,15 @@ void robusto_screen_init(char *_log_prefix)
         .lcd_param_bits = LCD_PARAM_BITS, // According to SSD1306 datasheet
 #if CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
         .dc_bit_offset = 6, // According to SSD1306 datasheet
+#elif CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106
+        .dc_bit_offset = 0, // According to SH1106 datasheet
 #elif CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107
         .dc_bit_offset = 0, // According to SH1107 datasheet
         .flags =
             {
                 .disable_control_phase = 1,
             }
+        
 #endif
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(CONFIG_ROBUSTO_UI_I2C_PORT, &io_config, &io_handle));
