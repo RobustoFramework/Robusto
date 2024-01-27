@@ -54,6 +54,29 @@ void robusto_screen_lvgl_port_unlock() {
     lvgl_port_unlock();
 }
 
+void set_x_offset(int offset) {
+	int _seg = offset;
+	uint8_t columLow = _seg & 0x0F;
+	uint8_t columHigh = (_seg >> 4) & 0x0F;
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+	i2c_master_start(cmd);
+	i2c_master_write_byte(cmd, (0x3c << 1) | I2C_MASTER_WRITE, true);
+
+	i2c_master_write_byte(cmd, 0, true);
+	// Set Lower Column Start Address for Page Addressing Mode
+	i2c_master_write_byte(cmd, (0x00 + columLow), true);
+	// Set Higher Column Start Address for Page Addressing Mode
+	i2c_master_write_byte(cmd, (0x10 + columHigh), true);
+	// Set Page Start Address for Page Addressing Mode
+	i2c_master_write_byte(cmd, 0xB0 | 0, true);
+
+	i2c_master_stop(cmd);
+	i2c_master_cmd_begin(CONFIG_ROBUSTO_UI_I2C_PORT, cmd, 10/portTICK_PERIOD_MS);
+	i2c_cmd_link_delete(cmd);
+
+
+}
 
 void init_i2c()
 {
@@ -159,6 +182,9 @@ void robusto_screen_init(char *_log_prefix)
 #endif
 
     const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
+#endif
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
+    set_x_offset(2);
 #endif
 
     ROB_LOGI(ui_log_prefix, "Initialize LVGL");
