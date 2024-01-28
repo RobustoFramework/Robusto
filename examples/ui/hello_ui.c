@@ -26,8 +26,8 @@ void start_hello_ui(char *_log_prefix)
     
         lv_obj_t *label = lv_label_create(scr);
         
-        //lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
-        lv_label_set_text(label, "1234567890123456789abcdefghijklmnopqrstuvxyz");
+        lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR); /* Circular scroll */
+        lv_label_set_text(label, "Robusto framework example. This should look good on the screen...");
         /* Size of the screen (if you use rotation 90 or 270, please set disp->driver->ver_res) */
         #if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
         // The sh1106 is often put on 128px screens, but is internally 132 px
