@@ -183,9 +183,7 @@ void robusto_screen_init(char *_log_prefix)
 
     const lvgl_port_cfg_t lvgl_cfg = ESP_LVGL_PORT_INIT_CONFIG();
 #endif
-#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
-    set_x_offset(2);
-#endif
+
 
     ROB_LOGI(ui_log_prefix, "Initialize LVGL");
     lvgl_port_init(&lvgl_cfg);
@@ -207,10 +205,16 @@ void robusto_screen_init(char *_log_prefix)
             .mirror_x = false,
             .mirror_y = false,
         }};
+
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
+    set_x_offset(2);
+#endif
     disp = lvgl_port_add_disp(&disp_cfg);
 
     /* Rotation of the screen */
     lv_disp_set_rotation(disp, ROTATE_LVGL);
+
+
 
     ROB_LOGI(ui_log_prefix, "LVGL initiated");
 }
