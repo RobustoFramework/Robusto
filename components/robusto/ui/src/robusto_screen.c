@@ -10,6 +10,7 @@
 #include "esp_timer.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
+#include "esp_lcd_panel_interface.h"
 #include "driver/i2c.h"
 #endif
 
@@ -28,6 +29,10 @@
 #include "esp_lcd_sh1107.h"
 #else
 #include "esp_lcd_panel_vendor.h"
+#endif
+
+#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
+#include "robusto_sh1106.h"
 #endif
 // Bit number used to represent command and parameter
 #define LCD_CMD_BITS 8
@@ -54,29 +59,6 @@ void robusto_screen_lvgl_port_unlock() {
     lvgl_port_unlock();
 }
 
-void set_x_offset(int offset) {
-	int _seg = offset;
-	uint8_t columLow = _seg & 0x0F;
-	uint8_t columHigh = (_seg >> 4) & 0x0F;
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-	i2c_master_start(cmd);
-	i2c_master_write_byte(cmd, (0x3c << 1) | I2C_MASTER_WRITE, true);
-
-	i2c_master_write_byte(cmd, 0, true);
-	// Set Lower Column Start Address for Page Addressing Mode
-	i2c_master_write_byte(cmd, (0x00 + columLow), true);
-	// Set Higher Column Start Address for Page Addressing Mode
-	i2c_master_write_byte(cmd, (0x10 + columHigh), true);
-	// Set Page Start Address for Page Addressing Mode
-	i2c_master_write_byte(cmd, 0xB0 | 0, true);
-
-	i2c_master_stop(cmd);
-	i2c_master_cmd_begin(CONFIG_ROBUSTO_UI_I2C_PORT, cmd, 10/portTICK_PERIOD_MS);
-	i2c_cmd_link_delete(cmd);
-
-
-}
 
 void init_i2c()
 {
@@ -152,6 +134,7 @@ void robusto_screen_init(char *_log_prefix)
     esp_lcd_panel_dev_config_t panel_config = {
         .bits_per_pixel = 1,
         .reset_gpio_num = CONFIG_ROBUSTO_UI_GPIO_RST,
+        
     };
     /* TODO: Re-add this when the 32 px height support is released
     #if CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
@@ -165,8 +148,10 @@ void robusto_screen_init(char *_log_prefix)
     ESP_ERROR_CHECK(esp_lcd_new_panel_ssd1306(io_handle, &panel_config, &panel_handle));
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
     ESP_ERROR_CHECK(esp_lcd_new_panel_sh1107(io_handle, &panel_config, &panel_handle));
+    panel_handle->init = &panel_sh1106_init;
+    esp_lcd_panel_set_gap(panel_handle, 0,0);
 #endif
-
+    
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 #ifdef CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SSD1306
@@ -192,11 +177,7 @@ void robusto_screen_init(char *_log_prefix)
         .io_handle = io_handle,
         .panel_handle = panel_handle,
         .buffer_size = CONFIG_ROBUSTO_UI_LCD_H_RES * CONFIG_ROBUSTO_UI_LCD_V_RES,
-#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107) || defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
-        .double_buffer = false,
-#else
         .double_buffer = true,
-#endif
         .hres = CONFIG_ROBUSTO_UI_LCD_H_RES,
         .vres = CONFIG_ROBUSTO_UI_LCD_V_RES,
         .monochrome = true,
@@ -206,15 +187,10 @@ void robusto_screen_init(char *_log_prefix)
             .mirror_y = false,
         }};
 
-#if defined(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106)
-    set_x_offset(2);
-#endif
     disp = lvgl_port_add_disp(&disp_cfg);
 
     /* Rotation of the screen */
     lv_disp_set_rotation(disp, ROTATE_LVGL);
-
-
 
     ROB_LOGI(ui_log_prefix, "LVGL initiated");
 }

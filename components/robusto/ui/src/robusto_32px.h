@@ -1,4 +1,5 @@
 #pragma once
+#include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_UI
 #include "driver/i2c.h"
 
