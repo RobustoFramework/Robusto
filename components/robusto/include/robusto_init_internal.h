@@ -64,13 +64,19 @@ void robusto_conductor_server_register_service();
  * @brief Register the miscellaneous service
  */
 void register_misc_service();
+/**
+ * @brief Initialize the input service
+ * 
+ */
+void register_input_service();
 
 /**
  * @brief Initialize the flash and mount any SPIFFs
- * @note This is done very early in the process as others may depend on this
+ * @note This is done very early in the process as others may depend on this, thus not a service
  * 
  */
 void robusto_flash_init(char * _log_prefix);
+
 
 #ifdef __cplusplus
 } /* extern "C" */

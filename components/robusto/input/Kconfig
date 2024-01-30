@@ -1,0 +1,28 @@
+menu "Input"
+    config ROBUSTO_INPUT
+		bool "Enables the robusto input service"
+		default 0
+		help
+            The Robusto input service is responsible for handling and distributing information about inputs.
+            Inputs are gpios, buttons, and similar.
+            
+
+    config ROBUSTO_INPUT_ADC_MONITOR
+		bool "Monitors and ADC and prints a resistance map"
+		default 0
+        depends on ROBUSTO_INPUT
+		help
+            Enables a tool that monitors a GPIO and prints out adc values in a resistance map format.
+            Will check the map to ensure that it can be used as a binary ladder for button handling.
+
+    config ROBUSTO_INPUT_ADC_MONITOR_GPIO
+        int "The GPIO to monitor"
+        depends on ROBUSTO_INPUT_ADC_MONITOR
+        default 0
+
+    config ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT
+        int "The number of resistances to monitor"
+        depends on ROBUSTO_INPUT_ADC_MONITOR
+        default 0
+    
+endmenu

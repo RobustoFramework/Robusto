@@ -1,4 +1,5 @@
 #include "robusto_sh1106.h"
+#ifdef CONFIG_ROBUSTO_UI
 #include <sys/cdefs.h>
 #include <esp_lcd_panel_io.h>
 #include <robusto_logging.h>
@@ -22,3 +23,5 @@ esp_err_t panel_sh1106_init(esp_lcd_panel_t *panel)
 
     return ESP_OK;
 }
+
+#endif

@@ -57,7 +57,7 @@ static char *memory_monitor_log_prefix;
 void monitor_memory_cb();
 void monitor_memory_shutdown_cb();
 
-char _monitor_name[16] = "Memory monitor\x00";
+static char _monitor_name[16] = "Memory monitor\x00";
 
 recurrence_t memory_monitor = {
     recurrence_name : &_monitor_name,

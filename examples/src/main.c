@@ -51,9 +51,7 @@
 #include <robusto_logging.h>
 #include <robusto_time.h>
 #include <robusto_init.h>
-#include <robusto_network_init.h>
-#include <robusto_server_init.h>
-#include <robusto_misc_init.h>
+
 #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_SERVER
 #include "../hello/hello_service.h"
 #endif
@@ -78,6 +76,11 @@
 #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
 #include "../camera/camera.h"
 #endif
+
+#ifndef CONFIG_ROBUSTO_EXAMPLE_HELLO_CLIENT
+#include <time.h>
+#endif
+
 
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"

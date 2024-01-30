@@ -29,48 +29,36 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include <robusto_init_internal.h>
+#ifdef CONFIG_ROBUSTO_INPUT
+#include "robusto_input_init.h"
 #include <robusto_init.h>
-#ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-#include <robusto_pubsub_server.h>
-#endif
-#ifdef CONFIG_ROBUSTO_UMTS_SERVER
-#include <robusto_umts.h>
-#endif
 
-void robusto_misc_stop() {
+#include <robusto_input.h>
+
+
+void robusto_input_stop() {
    
 }
 
-void robusto_misc_start() {
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_start();
-    #endif
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_start();
+void robusto_input_start() {
+    #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
+    robusto_input_start_adc_monitoring();
     #endif
 }
 
 
-void robusto_misc_init(char * _log_prefix) {
-
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_init(_log_prefix);
-    #endif
-    
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_init();
-    #endif   
-    #ifdef CONFIG_ROBUSTO_UMTS_SERVER
-    robusto_umts_init(_log_prefix);
+void robusto_input_init(char * _log_prefix) {
+    #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
+    robusto_input_init_adc_monitoring(_log_prefix);
     #endif
 }
 
 
 
-void register_misc_service() {
-    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_UMTS_SERVER) 
-    register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
+void register_input_service() {
+    #if defined(CONFIG_ROBUSTO_INPUT)
+    register_service(robusto_input_init, robusto_input_start, robusto_input_stop, 2, "Input");    
     #endif
 }
+#endif

@@ -159,6 +159,7 @@ void init_robusto()
 
     register_misc_service();
 
+    register_input_service();
 
     init_services(robusto_log_prefix);
 

@@ -1,13 +1,13 @@
 
 /**
- * @file robusto_misc_init.c
+ * @file robusto_input.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief Robusto misc initialization
+ * @brief User input management
  * @version 0.1
  * @date 2023-02-19
  *
  * @copyright
- * Copyright (c) 2022, Nicklas Börjesson <nicklasb at gmail dot com>
+ * Copyright (c) 2023, Nicklas Börjesson <nicklasb at gmail dot com>
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -30,18 +30,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* TODO: We *should* be able to not have all these init.h-files */
-
 #pragma once
 #include <robconfig.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-void register_misc_service();
-void robusto_misc_init(char * _log_prefix);
+#include <robusto_retval.h>
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+/**
+ * @brief Callback for 
+ * 
+ */
+typedef void(cb_buttons_press)(uint32_t buttons);
+
+typedef struct button_mapping {
+    /* An index that identifies the button*/
+    uint8_t button_index;
+    /* The value of the resistor */
+    uint32_t resistance;
+    /* The value of the adc */
+    uint16_t adc_value;
+    /* The acceptable width */
+    uint16_t adc_spread;
+} button_mapping_t;
+
+/**
+ * @brief The button map collects buttons connected to resistors
+ */
+typedef struct resistance_button {
+    /* The mappings*/
+    button_mapping_t **mappings;
+    /* Normal voltage, used to make the solution insensitive to voltage fluctuations */
+    float vcc_normal;
+    /* The GPIO to monitor */
+    uint8_t gpio_num;
+    /* Callback */
+    cb_buttons_press * callback;
+    /* Voltage divider R1 - needed to keep voltage down into ADC range */
+    uint32_t R1_resistance;
+} button_map_t;
+
+rob_ret_val_t robusto_add_bit_ladder_button(button_map_t * map);
+
