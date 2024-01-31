@@ -8,17 +8,41 @@ menu "Input"
             
 
     config ROBUSTO_INPUT_ADC_MONITOR
-		bool "Monitors and ADC and prints a resistance map"
+		bool "Enable the Robusto ADC monitor and mapper"
 		default 0
         depends on ROBUSTO_INPUT
 		help
-            Enables a tool that monitors a GPIO and prints out adc values in a resistance map format.
+            Enables a tool that monitors a GPIO and prints out voltage and adc values in a resistance map format.
             Will check the map to ensure that it can be used as a binary ladder for button handling.
+        
 
-    config ROBUSTO_INPUT_ADC_MONITOR_GPIO
-        int "The GPIO to monitor"
+    if !IDF_TARGET_ESP32S2
+        config ROBUSTO_INPUT_ADC_MONITOR_ADC
+            int "Select ADC"
+            depends on ROBUSTO_INPUT_ADC_MONITOR
+            range 1 2 if IDF_TARGET_ESP32 
+            range 0 99 
+            default 0
+    endif
+
+    config ROBUSTO_INPUT_ADC_MONITOR_ADC_CHANNEL
+        int "Select ADC channel"
         depends on ROBUSTO_INPUT_ADC_MONITOR
-        default 0
+        range 0 7 if IDF_TARGET_ESP32 && ROBUSTO_INPUT_ADC_MONITOR_ADC = 1
+        range 0 9 if IDF_TARGET_ESP32 && ROBUSTO_INPUT_ADC_MONITOR_ADC = 2
+        range 0 19 if IDF_TARGET_ESP32S2
+        range 0 99 
+        default 4
+    # TODO: Handle different ADCs on different platforms
+
+    config ROBUSTO_INPUT_ADC_MONITOR_ADC_R1
+        int "The value of the R1 resistance in your voltage divider"
+        depends on ROBUSTO_INPUT_ADC_MONITOR
+        range 0 10000000
+        default 41200
+        help
+          See recommendations in the Robusto docs for information on how
+          you optimize your binary ladder for your ADC.
 
     config ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT
         int "The number of resistances to monitor"
