@@ -41,23 +41,21 @@
  */
 typedef void(cb_buttons_press)(uint32_t buttons);
 
-typedef struct button_mapping {
-    /* An index that identifies the button*/
-    uint8_t button_index;
+typedef struct resistance_mapping {
     /* The value of the resistor */
     uint32_t resistance;
     /* The value of the adc */
     uint16_t adc_value;
     /* The acceptable width */
     uint16_t adc_spread;
-} button_mapping_t;
+} resistance_mapping_t;
 
 /**
  * @brief The button map collects buttons connected to resistors
  */
 typedef struct resistance_button {
     /* The mappings*/
-    button_mapping_t **mappings;
+    resistance_mapping_t **mappings;
     /* Normal voltage, used to make the solution insensitive to voltage fluctuations */
     float vcc_normal;
     /* The GPIO to monitor */
