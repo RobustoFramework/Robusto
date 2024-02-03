@@ -20,7 +20,7 @@ static char _monitor_name[16] = "Adc monitor\x00";
 
 recurrence_t memory_monitor = {
     recurrence_name : &_monitor_name,
-    skip_count : 2,
+    skip_count : 0,
     skips_left : 0,
     recurrence_callback : &monitor_adc_cb,
     shutdown_callback : &monitor_adc_shutdown_cb
@@ -55,11 +55,12 @@ typedef enum monitor_state
     ms_sampling,
     ms_calculating,
     ms_printing,
+    ms_done,
 
 } monitor_state_t;
 
 static monitor_state_t curr_state = ms_waiting;
-resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT];
+resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT + 1];
 uint8_t curr_mapping = 0;
 uint16_t v1 = 0;
 
@@ -68,7 +69,7 @@ void monitor_adc_cb()
     uint32_t voltage = 0;
     if (curr_state == ms_waiting)
     {
-        if (r_millis() > 4000)
+        if (r_millis() > 3000)
         {
             curr_state = ms_sampling;
             samples_collected = 0;
@@ -78,7 +79,8 @@ void monitor_adc_cb()
     else if (curr_state == ms_sampling)
     {
 #ifdef USE_ESPIDF
-        samples[samples_collected] = adc1_get_raw(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_CHANNEL);
+        // Take two samples, quick succession, average
+        samples[samples_collected] = (adc1_get_raw(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_CHANNEL) + adc1_get_raw(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_CHANNEL)) / 2;
 #endif
         samples_collected++;
         if (samples_collected > SAMPLE_COUNT - 1)
@@ -131,49 +133,70 @@ void monitor_adc_cb()
         // Discard the lowest and highest values
         uint16_t average = (total - lowest - highest) / (SAMPLE_COUNT - 2);
         v1 = 3300;
-        uint32_t resistance =  0;
+        uint32_t resistance = 0;
         if (cali_enabled)
         {
             voltage = esp_adc_cal_raw_to_voltage(average, &adc1_chars);
+            /*
             for (uint8_t curr_sample2 = 0; curr_sample2 < SAMPLE_COUNT; curr_sample2++)
             {
                 ROB_LOGI(adc_monitor_log_prefix, "Data point: %" PRIu16, samples[curr_sample2]);
             }
-            resistance =  (voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_R1)/(v1-voltage);
-            ROB_LOGI(adc_monitor_log_prefix, 
-            "cali average data: %" PRIu32 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", spread: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
-                     voltage, lowest, highest, average, 
-                     highest_limit - lowest_limit,highest_limit, lowest_limit);
+            */
+            resistance = (voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_R1) / (v1 - voltage);
+            ROB_LOGI(adc_monitor_log_prefix,
+                     "cali average data: %" PRIu32 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", spread: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
+                     voltage, lowest, highest, average,
+                     highest_limit - lowest_limit, highest_limit, lowest_limit);
             ROB_LOGI(adc_monitor_log_prefix, "v1: %" PRIu16 " mV, Resistance: %" PRIu32, v1, resistance);
         }
-        
+
         resistance_mappings[curr_mapping].adc_spread = highest_limit - lowest_limit;
         resistance_mappings[curr_mapping].adc_value = average;
-        resistance_mappings[curr_mapping].resistance =  resistance;
-
-        curr_state = ms_printing;
-        ROB_LOGI(adc_monitor_log_prefix, "ADC Done calculating, starts printing.");
+        resistance_mappings[curr_mapping].resistance = resistance;
+        curr_mapping++;
+        if (curr_mapping > CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT)
+        {
+            curr_state = ms_printing;
+            ROB_LOGI(adc_monitor_log_prefix, "ADC Done calculating, starts printing.");
+            return;
+        }
+        ROB_LOGI(adc_monitor_log_prefix, "Please hold button %hu.", curr_mapping);
+        r_delay(2000);
+        ROB_LOGI(adc_monitor_log_prefix, "Starts collecting in 1 second.");
+        r_delay(1000);
+        ROB_LOGI(adc_monitor_log_prefix, "Collecting.");
+        samples_collected = 0;
+        curr_state = ms_sampling;
     }
     else if (curr_state == ms_printing)
     {
-        /*
+        
         char * buffer = robusto_malloc(1000);
-        for (uint8_t curr_mapping = 0; curr_sample < CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT; curr_sample++)
+        char * data = robusto_malloc(1000);
+        
+        uint16_t buffer_pos = sprintf(buffer, "C-code:\nresistance_mapping_t bm[%i] = {\n", CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT + 1);
+        uint16_t data_pos = sprintf(data, "Data:\nresistance, adc_value, adc_spread\n");
+        for (uint8_t curr_sample = 0; curr_sample < CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT + 1; curr_sample++)
         {
-            
+            buffer_pos+= sprintf(buffer + buffer_pos, "    {.resistance = %" PRIu32 ", .adc_value = %" PRIu16 ", .adc_spread = %" PRIu16 "},%s\n",
+                     resistance_mappings[curr_sample].resistance, 
+                     resistance_mappings[curr_sample].adc_value, 
+                     resistance_mappings[curr_sample].adc_spread, 
+                     curr_sample == 0 ? " //This is the total resistance, or base voltage value": "");
+            data_pos+= sprintf(data + data_pos, "%" PRIu32 ",%" PRIu16 ",%" PRIu16 "\n",
+                     resistance_mappings[curr_sample].resistance, 
+                     resistance_mappings[curr_sample].adc_value, 
+                     resistance_mappings[curr_sample].adc_spread);
+
         }
-ROB_LOGI, "{.button_index = 0, .resistance = 0, .adc_value = 2, .adc_spread = 10},
-*/
-        resistance_mapping_t bm[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT] = {
-            { .resistance = 0, .adc_value = 2, .adc_spread = 10},
-            { .resistance = 0, .adc_value = 1, .adc_spread = 10}
-            };
-        // "resistor = {"
-        // ROB_LOGI(adc_monitor_log_prefix, "Stop!!");
-        //
-        r_delay(1000);
-        curr_state = ms_sampling;
-        samples_collected = 0;
+        sprintf(buffer + buffer_pos,"}");
+        ROB_LOGI(adc_monitor_log_prefix, "\n%.*s\n", buffer_pos+1, buffer);
+        ROB_LOGI(adc_monitor_log_prefix, "\n%.*s\n", data_pos+1, data);
+        robusto_free(buffer);
+        robusto_free(data);
+        curr_state = ms_done;
+        ROB_LOGW(adc_monitor_log_prefix, "Done printing. To restart, reset.");
     }
 }
 

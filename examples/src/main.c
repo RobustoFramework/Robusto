@@ -192,11 +192,12 @@ void main_task(void *parameters)
     while (1)
     {
         r_delay(1000);
+        #ifndef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
         r_gettimeofday(&tv, &tz);
         gm = gmtime(&tv.tv_sec);
         strftime(&datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
         ROB_LOGI_STAY("Example", "Current RTC time = %s:%li", datebuffer, tv.tv_usec % 1000);
-    
+        #endif
     };
     #endif
 }

@@ -10,5 +10,5 @@ dependencies:
     git: https://github.com/jgromes/RadioLib.git
   # Screen support
   lvgl/lvgl: "~8.3.0"
-  esp_lvgl_port: "^1"
+  esp_lvgl_port: "1.4.0"
   esp_lcd_sh1107: "^1.1.0"
