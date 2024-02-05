@@ -8,19 +8,29 @@
 
 #include <robusto_logging.h>
 #include <robusto_input.h>
+#include <robusto_concurrency.h>
 
-resistance_mapping_t bm;
+bool pushed_2_6;
+
+resistance_mapping_t bm[6] = {
+    {.resistance = 189565, .adc_value = 3201, .adc_spread = 6}, //This is the total resistance, or base voltage value
+    {.resistance = 86436, .adc_value = 2559, .adc_spread = 0},
+    {.resistance = 142825, .adc_value = 2971, .adc_spread = 5},
+    {.resistance = 168860, .adc_value = 3109, .adc_spread = 6},
+    {.resistance = 180000, .adc_value = 3160, .adc_spread = 5},
+    {.resistance = 185641, .adc_value = 3184, .adc_spread = 3},
+}
+
+void cb_buttons_press(uint32_t buttons)
+{
+    // Button 2 and 4 are pressed simultaneously
+    pushed_2_6 = buttons == 6;
+
+};
 
 void init_resistance_mappings()
 {
-    bm[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTANCE_COUNT + 1] = {
-        {.resistance = 189166, .adc_value = 3199, .adc_spread = 5},
-        {.resistance = 86436, .adc_value = 2559, .adc_spread = 0},
-        {.resistance = 142068, .adc_value = 2967, .adc_spread = 7},
-        {.resistance = 184872, .adc_value = 3182, .adc_spread = 4},
-        {.resistance = 178905, .adc_value = 3156, .adc_spread = 7},
-        {.resistance = 167547, .adc_value = 3103, .adc_spread = 5},
-    }
+
 }
 
 /**
@@ -29,8 +39,11 @@ void init_resistance_mappings()
 void tst_fragmentation_complete(void)
 {
     ROB_LOGI("fragmentation", "in tst_fragmentation_complete");
-    skip_fragments = false;
-    fake_message();
+    robusto_input_analyze_adc(uint8_t)
+    if (!robusto_waitfor_bool(&pushed_2_6, 1000)) {
+        TEST_ASSERT_BOO
+    }
+    
 }
 
 /**

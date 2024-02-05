@@ -34,6 +34,14 @@
 #include <robconfig.h>
 
 #include <robusto_retval.h>
+#include <stdbool.h>
+
+#ifndef USE_ARDUINO
+#include "sys/queue.h"
+#else
+#include <compat/arduino_sys_queue.h>
+#endif
+
 
 /**
  * @brief Callback for 
@@ -45,26 +53,36 @@ typedef struct resistance_mapping {
     /* The value of the resistor */
     uint32_t resistance;
     /* The value of the adc */
-    uint16_t adc_value;
+    uint16_t adc_voltage;
     /* The acceptable width */
     uint16_t adc_spread;
 } resistance_mapping_t;
 
+
+
 /**
  * @brief The button map collects buttons connected to resistors
+ * @note The first resistance map is without buttons/connections per convention
  */
-typedef struct resistance_button {
-    /* The mappings*/
+typedef struct resistor_ladder {
+    /* Mappings of resistances (first is without connections) */
     resistance_mapping_t **mappings;
-    /* Normal voltage, used to make the solution insensitive to voltage fluctuations */
-    float vcc_normal;
-    /* The GPIO to monitor */
-    uint8_t gpio_num;
+    /* The ADC channel to monitor */
+    uint8_t ADC_channel;
     /* Callback */
     cb_buttons_press * callback;
     /* Voltage divider R1 - needed to keep voltage down into ADC range */
     uint32_t R1_resistance;
-} button_map_t;
+    /* If it is a serial or parallell, default false */
+    bool parallel;
 
-rob_ret_val_t robusto_add_bit_ladder_button(button_map_t * map);
+    SLIST_ENTRY(resistor_ladder) resistor_ladders; /* Singly linked list */
+} resistor_ladder_t;
+
+
+
+
+rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * map);
+
+rob_ret_val_t robusto_input_test_resistor_ladder(uint32_t adc_val, resistor_ladder_t * map);
 
