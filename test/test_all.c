@@ -149,7 +149,10 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
 
-    RUN_TEST(tst_input_adc_resolve);
+    RUN_TEST(tst_input_adc_single_resolve);
+    robusto_yield();
+
+    RUN_TEST(tst_input_adc_multiple_resolve);
     robusto_yield();
 
 

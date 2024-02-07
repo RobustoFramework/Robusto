@@ -55,7 +55,7 @@ typedef struct resistance_mapping {
     /* The value of the adc */
     uint16_t adc_voltage;
     /* The acceptable width */
-    uint16_t adc_spread;
+    uint16_t adc_stdev;
 } resistance_mapping_t;
 
 
@@ -89,5 +89,5 @@ void robusto_input_resistance_ladder_init(char * _input_log_prefix);
 
 rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * map);
 
-rob_ret_val_t robusto_input_test_resistor_ladder(uint32_t adc_val, resistor_ladder_t * map);
+rob_ret_val_t robusto_input_test_resistor_ladder(double adc_val, resistor_ladder_t * map);
 
