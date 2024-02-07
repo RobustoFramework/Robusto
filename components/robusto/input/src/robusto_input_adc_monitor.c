@@ -64,7 +64,8 @@ resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESIST
 uint8_t curr_mapping = 0;
 uint16_t v1 = 0;
 
-SLIST_HEAD(resistor_ladders, resistor_ladder) resistor_ladders_t;
+SLIST_HEAD(resistor_ladders, resistor_ladder)
+resistor_ladders_t;
 
 void monitor_adc_cb()
 {
@@ -85,7 +86,7 @@ void monitor_adc_cb()
         int new_value1, new_value2;
         adc_oneshot_get_calibrated_result(adc_handle, cali_handle, adc_channel, &new_value1);
         adc_oneshot_get_calibrated_result(adc_handle, cali_handle, adc_channel, &new_value2);
-        samples[samples_collected]  = (new_value1 + new_value2) / 2;
+        samples[samples_collected] = (new_value1 + new_value2) / 2;
 #endif
         samples_collected++;
         if (samples_collected > SAMPLE_COUNT - 1)
@@ -140,9 +141,9 @@ void monitor_adc_cb()
         v1 = 3300;
         uint32_t resistance = (voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_R1) / (v1 - voltage);
         ROB_LOGI(adc_monitor_log_prefix,
-                    "cali average data: %" PRIu16 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", spread: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
-                    voltage, lowest, highest, voltage,
-                    highest_limit - lowest_limit, highest_limit, lowest_limit);
+                 "cali average data: %" PRIu16 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", spread: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
+                 voltage, lowest, highest, voltage,
+                 highest_limit - lowest_limit, highest_limit, lowest_limit);
         ROB_LOGI(adc_monitor_log_prefix, "v1: %" PRIu16 " mV, Resistance: %" PRIu32, v1, resistance);
 
         resistance_mappings[curr_mapping].adc_spread = highest_limit - lowest_limit;
@@ -204,49 +205,55 @@ void monitor_adc_shutdown_cb()
  */
 void robusto_input_start_adc_monitoring()
 {
-
+#ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
     ROB_LOGI(adc_monitor_log_prefix, "Starting ADC logging on Channel %i", CONFIG_ROBUSTO_INPUT_ADC_MONITOR_GPIO);
     robusto_register_recurrence(&memory_monitor);
+#endif
 }
 
 #ifdef USE_ESPIDF
 
 void adc_calibration_init(void)
 {
-    
+
     adc_cali_scheme_ver_t scheme_mask;
 
+    if (adc_oneshot_io_to_channel(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_GPIO, &adc_unit, &adc_channel) == ESP_OK)
+    {
 
-    if (adc_oneshot_io_to_channel(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_GPIO, &adc_unit, &adc_channel) == ESP_OK) {
-    
         ROB_LOGI(adc_monitor_log_prefix, "Create ADC calibrations.");
         adc_cali_check_scheme(&scheme_mask);
-        if (scheme_mask == ADC_CALI_SCHEME_VER_LINE_FITTING) {
-            adc_cali_line_fitting_config_t line_fitting_config ={
-            .unit_id = adc_unit,
-            .atten = ADC_ATTEN_DB_11,
-            .bitwidth = ADC_BITWIDTH_DEFAULT
-            };  
+        if (scheme_mask == ADC_CALI_SCHEME_VER_LINE_FITTING)
+        {
+            adc_cali_line_fitting_config_t line_fitting_config = {
+                .unit_id = adc_unit,
+                .atten = ADC_ATTEN_DB_11,
+                .bitwidth = ADC_BITWIDTH_DEFAULT};
             adc_cali_create_scheme_line_fitting(&line_fitting_config, &cali_handle);
-        } else if (scheme_mask == ADC_CALI_SCHEME_VER_CURVE_FITTING) {  
-            #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
-            adc_cali_curve_fitting_config_t curve_fitting_config ={
-            .unit_id = adc_unit,            
-            .chan = adc_channel,
-            .atten = ADC_ATTEN_DB_11,
-            .bitwidth = ADC_BITWIDTH_DEFAULT
-            };                
+        }
+        else if (scheme_mask == ADC_CALI_SCHEME_VER_CURVE_FITTING)
+        {
+#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+            adc_cali_curve_fitting_config_t curve_fitting_config = {
+                .unit_id = adc_unit,
+                .chan = adc_channel,
+                .atten = ADC_ATTEN_DB_11,
+                .bitwidth = ADC_BITWIDTH_DEFAULT};
             adc_cali_create_scheme_curve_fitting(&curve_fitting_config, &cali_handle);
-            #else 
-                ROB_LOGE(adc_monitor_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %s",  
-                scheme_mask == 0? "Line":"Curve");
-            #endif
-        } else {
+#else
+            ROB_LOGE(adc_monitor_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %s",
+                     scheme_mask == 0 ? "Line" : "Curve");
+#endif
+        }
+        else
+        {
             ROB_LOGE(adc_monitor_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %u", scheme_mask);
             return;
         }
-    } else {
-        ROB_LOGE(adc_monitor_log_prefix, "Failed resolving GPIO channel"); 
+    }
+    else
+    {
+        ROB_LOGE(adc_monitor_log_prefix, "Failed resolving GPIO channel");
         return;
     }
     esp_err_t ret;
@@ -264,11 +271,11 @@ void adc_calibration_init(void)
     adc_oneshot_new_unit(&adc_init_cfg, &adc_handle);
 
     adc_oneshot_chan_cfg_t adc_cfg = {
-          .atten = ADC_ATTEN_DB_11,              ///< ADC attenuation
-          .bitwidth = ADC_BITWIDTH_DEFAULT,        ///< ADC conversion result bits  
+        .atten = ADC_ATTEN_DB_11,         ///< ADC attenuation
+        .bitwidth = ADC_BITWIDTH_DEFAULT, ///< ADC conversion result bits
     };
 
-    adc_oneshot_config_channel(adc_handle, adc_channel , &adc_cfg);
+    adc_oneshot_config_channel(adc_handle, adc_channel, &adc_cfg);
 
 #else
     // ADC2 config if applicable

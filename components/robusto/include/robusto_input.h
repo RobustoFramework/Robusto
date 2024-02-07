@@ -66,13 +66,18 @@ typedef struct resistance_mapping {
  */
 typedef struct resistor_ladder {
     /* Mappings of resistances (first is without connections) */
-    resistance_mapping_t **mappings;
+    resistance_mapping_t *mappings;
+
+    /* Number of mappings */
+    uint8_t mapping_count;
     /* The ADC channel to monitor */
     uint8_t ADC_channel;
     /* Callback */
     cb_buttons_press * callback;
     /* Voltage divider R1 - needed to keep voltage down into ADC range */
     uint32_t R1_resistance;
+    /* Voltage */
+    uint32_t voltage;
     /* If it is a serial or parallell, default false */
     bool parallel;
 
@@ -80,7 +85,7 @@ typedef struct resistor_ladder {
 } resistor_ladder_t;
 
 
-
+void robusto_input_resistance_ladder_init(char * _input_log_prefix);
 
 rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * map);
 
