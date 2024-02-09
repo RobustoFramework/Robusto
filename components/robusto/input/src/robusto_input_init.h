@@ -33,6 +33,43 @@
 #pragma once
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_INPUT
+
+#ifdef USE_ESPIDF
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_adc/adc_oneshot.h"
+#include "hal/adc_types.h"
+
+// ADC Calibration
+#if CONFIG_IDF_TARGET_ESP32
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_VREF
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
+#endif
+
+void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
+#endif
+
+/**
+ * @brief Start monitoring resistance ladder
+ * 
+ */
+void robusto_input_resistance_ladder_start_monitoring();
+
+
+
+/**
+ * @brief Initialize the resistance ladder monitoring
+ * 
+ * @param _input_log_prefix 
+ */
+void robusto_input_resistance_ladder_init(char * _input_log_prefix);
+
 /**
  * @brief Start monitoring an ADC and print out data
  * 

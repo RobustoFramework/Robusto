@@ -42,6 +42,9 @@ void robusto_input_stop() {
 }
 
 void robusto_input_start() {
+    #ifdef CONFIG_ROBUSTO_INPUT
+    robusto_input_resistance_ladder_start_monitoring();
+    #endif
     #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
     robusto_input_start_adc_monitoring();
     #endif

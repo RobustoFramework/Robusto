@@ -175,11 +175,29 @@ void monitor_ladder_cb()
     resistor_ladder_t *ladder;
     SLIST_FOREACH(ladder, &ladder_head, resistor_ladders)
     {
-
+        #ifdef USE_ESPIDF
+        // Take two samples, quick succession, average
+        int new_value1, new_value2;
+        adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value1);
+        adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value2);
+        robusto_input_test_resistor_ladder((double)(new_value1 + new_value2) / 2, ladder);
+#endif
     }
 }
 void monitor_ladder_shutdown_cb()
 {
+}
+
+/**
+ * @brief Start monitoring
+ *
+ */
+void robusto_input_resistance_ladder_start_monitoring()
+{
+#ifdef CONFIG_ROBUSTO_INPUT
+    ROB_LOGI(input_log_prefix, "Starting ADC monitoring.");
+    robusto_register_recurrence(&ladder_monitor);
+#endif
 }
 
 /**

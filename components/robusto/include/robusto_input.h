@@ -43,23 +43,10 @@
 #endif
 
 #ifdef USE_ESPIDF
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_adc/adc_oneshot.h"
 #include "hal/adc_types.h"
-
-// ADC Calibration
-#if CONFIG_IDF_TARGET_ESP32
-#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_VREF
-#elif CONFIG_IDF_TARGET_ESP32S2
-#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
-#elif CONFIG_IDF_TARGET_ESP32C3
-#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
-#elif CONFIG_IDF_TARGET_ESP32S3
-#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
-#endif
-
 #endif
 
 /**
@@ -111,8 +98,6 @@ typedef struct resistor_ladder {
     SLIST_ENTRY(resistor_ladder) resistor_ladders; /* Singly linked list */
 } resistor_ladder_t;
 
-
-void robusto_input_resistance_ladder_init(char * _input_log_prefix);
 /**
  * @brief Add a resistor ladder to the list of ladders to monitor
  * 
@@ -123,6 +108,3 @@ rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * ladder);
 
 rob_ret_val_t robusto_input_test_resistor_ladder(double adc_val, resistor_ladder_t * ladder);
 
-#ifdef USE_ESPIDF
-void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
-#endif
