@@ -34,13 +34,16 @@ void callback_buttons_press(uint32_t buttons)
 
 void init_resistance_mappings()
 {
-
+    if (ladder) {
+        return;
+    }
     ladder = robusto_malloc(sizeof(resistor_ladder_t));
     ladder->mappings = &resistances;
     ladder->mapping_count = 6;
     ladder->callback = &callback_buttons_press;
     ladder->R1_resistance = 41200;
     ladder->voltage = 3300;
+    ladder->GPIO = 32; // Usually OK.
     robusto_input_add_resistor_ladder(ladder);
 }
 
@@ -61,6 +64,9 @@ void tst_input_adc_single_resolve(void)
 
 void tst_input_adc_multiple_resolve(void)
 {
+    #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR 
+    #warning "The ADC monitor should be enabled for these tests to work, it may cause an ADC conflict"
+    #endif
     ROB_LOGI("adc", "in tst_input_adc_multiple_resolve, button 2 and 5");
     init_resistance_mappings();
     uint32_t resistance = (resistances[2].resistance + resistances[5].resistance);
@@ -71,4 +77,7 @@ void tst_input_adc_multiple_resolve(void)
     {
         TEST_ASSERT_TRUE_MESSAGE(pushed_2_6, "Didn't get the correct response");
     }
+    
 }
+
+

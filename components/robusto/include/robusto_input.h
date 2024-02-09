@@ -42,6 +42,25 @@
 #include <compat/arduino_sys_queue.h>
 #endif
 
+#ifdef USE_ESPIDF
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_adc/adc_oneshot.h"
+#include "hal/adc_types.h"
+
+// ADC Calibration
+#if CONFIG_IDF_TARGET_ESP32
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_VREF
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
+#endif
+
+#endif
 
 /**
  * @brief Callback for 
@@ -56,13 +75,14 @@ typedef struct resistance_mapping {
     uint16_t adc_voltage;
     /* The acceptable width */
     uint16_t adc_stdev;
+
 } resistance_mapping_t;
 
 
 
 /**
- * @brief The button map collects buttons connected to resistors
- * @note The first resistance map is without buttons/connections per convention
+ * @brief The button ladder collects buttons connected to resistors
+ * @note The first resistance ladder is without buttons/connections per convention
  */
 typedef struct resistor_ladder {
     /* Mappings of resistances (first is without connections) */
@@ -70,8 +90,8 @@ typedef struct resistor_ladder {
 
     /* Number of mappings */
     uint8_t mapping_count;
-    /* The ADC channel to monitor */
-    uint8_t ADC_channel;
+    /* The GPIO to monitor */
+    uint8_t GPIO;
     /* Callback */
     cb_buttons_press * callback;
     /* Voltage divider R1 - needed to keep voltage down into ADC range */
@@ -81,13 +101,28 @@ typedef struct resistor_ladder {
     /* If it is a serial or parallell, default false */
     bool parallel;
 
+    #ifdef USE_ESPIDF
+    adc_unit_t adc_unit;
+    adc_channel_t adc_channel;
+    adc_cali_handle_t cali_handle;
+    adc_oneshot_unit_handle_t adc_handle;
+    #endif
+
     SLIST_ENTRY(resistor_ladder) resistor_ladders; /* Singly linked list */
 } resistor_ladder_t;
 
 
 void robusto_input_resistance_ladder_init(char * _input_log_prefix);
+/**
+ * @brief Add a resistor ladder to the list of ladders to monitor
+ * 
+ * @param ladder 
+ * @return rob_ret_val_t 
+ */
+rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * ladder);
 
-rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * map);
+rob_ret_val_t robusto_input_test_resistor_ladder(double adc_val, resistor_ladder_t * ladder);
 
-rob_ret_val_t robusto_input_test_resistor_ladder(double adc_val, resistor_ladder_t * map);
-
+#ifdef USE_ESPIDF
+void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
+#endif
