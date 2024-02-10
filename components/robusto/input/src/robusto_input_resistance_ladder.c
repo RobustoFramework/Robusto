@@ -33,9 +33,9 @@ static char *input_log_prefix;
 rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle)
 {
 
-    adc_cali_scheme_ver_t scheme_mask;
 
-    ROB_LOGI(input_log_prefix, "Create ADC calibrations.");
+    ROB_LOGI(input_log_prefix, "Create ADC calibrations for ADC unit %i and channel %i.", _adc_unit, _adc_channel);
+    adc_cali_scheme_ver_t scheme_mask;
     esp_err_t sch_res = adc_cali_check_scheme(&scheme_mask);
     if (sch_res != ESP_OK) {
         ROB_LOGE(input_log_prefix, "adc_cali_check_scheme failed with the %i error code.", sch_res);
@@ -95,7 +95,7 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
         .bitwidth = ADC_BITWIDTH_DEFAULT, ///< ADC conversion result bits
     };
 
-    esp_err_t ch_res = adc_oneshot_config_channel(_adc_handle, _adc_channel, &adc_cfg);
+    esp_err_t ch_res = adc_oneshot_config_channel(*_adc_handle, _adc_channel, &adc_cfg);
     if (ch_res != ESP_OK) {
         ROB_LOGE(input_log_prefix, "adc_oneshot_new_unit failed with the %i error code.", ch_res);
         return ROB_FAIL;
@@ -131,7 +131,12 @@ rob_ret_val_t robusto_input_test_resistor_ladder(double adc_voltage, resistor_la
         return ROB_FAIL;
     }
     ROB_LOGI(input_log_prefix, "Looping %hu resistances, voltage %.1f", ladder->mapping_count, adc_voltage);
-
+    if (match_single_resistor(adc_voltage, ladder->mappings[0]))
+    {
+        ROB_LOGI(input_log_prefix, "At reference voltage, no match.");
+        // TODO: Update V1 if needed.
+        return ROB_OK;
+    }
     for (uint8_t curr_map = 1; curr_map < ladder->mapping_count; curr_map++)
     {
 
@@ -184,7 +189,8 @@ rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t *ladder)
             return ROB_FAIL;
         } else {
             SLIST_INSERT_HEAD(&ladder_head, ladder, resistor_ladders);
-            ROB_LOGI(input_log_prefix, "The ladder on GPIO %hu got initiated and added", ladder->GPIO);
+            ROB_LOGI(input_log_prefix, "The ladder on GPIO %hu, ADC unit %i, channel %i, cali handle %p, adc_handle %p got initiated and added", 
+            ladder->GPIO, ladder->adc_unit, ladder->adc_channel, ladder->cali_handle, ladder->adc_handle);
             return ROB_OK;
         }
     } else {
@@ -202,9 +208,11 @@ void monitor_ladder_cb()
         #ifdef USE_ESPIDF
 
         // Take two samples, quick succession, average
-        int new_value1, new_value2;
+        int new_value1, new_value2, raw;
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value1);
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value2);
+        adc_oneshot_read(ladder->adc_handle, ladder->adc_channel, &raw);
+        ROB_LOGI(input_log_prefix, "Raw : %i", raw);
         robusto_input_test_resistor_ladder((double)(new_value1 + new_value2) / 2.0, ladder);
 #endif
     }
