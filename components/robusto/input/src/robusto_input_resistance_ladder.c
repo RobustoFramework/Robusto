@@ -172,10 +172,12 @@ rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t *ladder)
 
 void monitor_ladder_cb()
 {
+
     resistor_ladder_t *ladder;
     SLIST_FOREACH(ladder, &ladder_head, resistor_ladders)
     {
         #ifdef USE_ESPIDF
+
         // Take two samples, quick succession, average
         int new_value1, new_value2;
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value1);
@@ -207,5 +209,6 @@ void robusto_input_resistance_ladder_start_monitoring()
 void robusto_input_resistance_ladder_init(char *_input_log_prefix)
 {
     input_log_prefix = _input_log_prefix;
+    SLIST_INIT(&ladder_head);      
     ROB_LOGI(input_log_prefix, "Input resistance ladder initiated.");
 }

@@ -81,7 +81,7 @@
 #include <time.h>
 #endif
 
-#ifdef ROBUSTO_EXAMPLE_INPUT_LADDER
+#ifdef CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER
 #include <../input/ladder_buttons.h>
 #endif
 
@@ -103,8 +103,8 @@ void setup_examples() {
 
     r_delay(100);   
 
-    #ifdef ROBUSTO_EXAMPLE_INPUT_LADDER
-    ladder_buttons_init()
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER
+    ladder_buttons_init();
     #endif
 
     #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI

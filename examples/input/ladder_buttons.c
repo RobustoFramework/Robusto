@@ -24,6 +24,7 @@ resistor_ladder_t *ladder;
 
 void callback_buttons_press(uint32_t buttons)
 {
+    ROB_LOGI("LADDER BUTTONS","B");
     uint8_t b = 1;
     for (uint8_t i = 1; i < 129; i = i * 2) {
         if (buttons & i) {
