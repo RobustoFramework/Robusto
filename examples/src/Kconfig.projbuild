@@ -15,20 +15,12 @@ menu "Robusto Examples"
             This is the client of the server, it means that it is will contact the server.
             To configure the way to connect, look at the networking testing settings.
 
-    config ROBUSTO_EXAMPLE_BUTTONS
-        bool "This will make enable two GPIOs as buttons"
+    config ROBUSTO_EXAMPLE_INPUT_LADDER
+        bool "The resistor ladder button example"
         default false
         help
-            This will enable two GPIOs as buttons, and will output information to serial out when
-            a button is pushed. If the OLED example is enabled, it will be updated as well.
-    config ROBUSTO_EXAMPLE_BUTTONS_GPIO_A
-        int "The GPIO of button A"
-        depends on ROBUSTO_EXAMPLE_BUTTONS
-        default -1
-    config ROBUSTO_EXAMPLE_BUTTONS_GPIO_B
-        int "The GPIO of button B"
-        depends on ROBUSTO_EXAMPLE_BUTTONS
-        default -1
+            See the README.md in the source for more information.
+
         
     config ROBUSTO_EXAMPLE_HELLO_UI
         bool "Run the hello ui"

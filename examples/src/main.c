@@ -81,6 +81,9 @@
 #include <time.h>
 #endif
 
+#ifdef ROBUSTO_EXAMPLE_INPUT_LADDER
+#include <../input/ladder_buttons.h>
+#endif
 
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
@@ -99,6 +102,10 @@ void setup_examples() {
     init_robusto();
 
     r_delay(100);   
+
+    #ifdef ROBUSTO_EXAMPLE_INPUT_LADDER
+    ladder_buttons_init()
+    #endif
 
     #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI
     ROB_LOGI(example_log_prefix, "Start hello UI");
