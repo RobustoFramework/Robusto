@@ -76,8 +76,6 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
         return ROB_FAIL;
     }
 
-    esp_err_t ret;
-
     ROB_LOGI(input_log_prefix, "Done Calibrating ADCs");
 // TODO
 // ADC1 config
