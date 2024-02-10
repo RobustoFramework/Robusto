@@ -33,7 +33,7 @@
 #pragma once
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_INPUT
-
+#include <robusto_retval.h>
 #ifdef USE_ESPIDF
 
 #include "freertos/FreeRTOS.h"
@@ -52,7 +52,7 @@
 #define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
 #endif
 
-void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
+rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
 #endif
 
 /**

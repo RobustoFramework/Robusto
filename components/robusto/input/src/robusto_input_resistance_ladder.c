@@ -30,20 +30,28 @@ static char *input_log_prefix;
 
 #ifdef USE_ESPIDF
 
-void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle)
+rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle)
 {
 
     adc_cali_scheme_ver_t scheme_mask;
 
     ROB_LOGI(input_log_prefix, "Create ADC calibrations.");
-    adc_cali_check_scheme(&scheme_mask);
+    esp_err_t sch_res = adc_cali_check_scheme(&scheme_mask);
+    if (sch_res != ESP_OK) {
+        ROB_LOGE(input_log_prefix, "adc_cali_check_scheme failed with the %i error code.", sch_res);
+        return ROB_FAIL;
+    }
     if (scheme_mask == ADC_CALI_SCHEME_VER_LINE_FITTING)
     {
         adc_cali_line_fitting_config_t line_fitting_config = {
             .unit_id = _adc_unit,
             .atten = ADC_ATTEN_DB_11,
             .bitwidth = ADC_BITWIDTH_DEFAULT};
-        adc_cali_create_scheme_line_fitting(&line_fitting_config, _cali_handle);
+        esp_err_t lf_res = adc_cali_create_scheme_line_fitting(&line_fitting_config, _cali_handle);
+        if (lf_res != ESP_OK) {
+            ROB_LOGE(input_log_prefix, "adc_cali_create_scheme_line_fitting failed with the %i error code.", lf_res);
+            return ROB_FAIL;
+        }
     }
     else if (scheme_mask == ADC_CALI_SCHEME_VER_CURVE_FITTING)
     {
@@ -53,7 +61,10 @@ void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_
             .chan = adc_channel,
             .atten = ADC_ATTEN_DB_11,
             .bitwidth = ADC_BITWIDTH_DEFAULT};
-        adc_cali_create_scheme_curve_fitting(&curve_fitting_config, cali_handle);
+        esp_err_t cf_res = adc_cali_create_scheme_curve_fitting(&curve_fitting_config, cali_handle);
+        if (cf_res != ESP_OK) {
+            ROB_LOGE(input_log_prefix, "adc_cali_create_scheme_curve_fitting failed with the %i error code.", cf_res);
+        }
 #else
         ROB_LOGE(input_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %s",
                  scheme_mask == 0 ? "Line" : "Curve");
@@ -62,7 +73,7 @@ void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_
     else
     {
         ROB_LOGE(input_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %u", scheme_mask);
-        return;
+        return ROB_FAIL;
     }
 
     esp_err_t ret;
@@ -77,20 +88,26 @@ void adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_
         .ulp_mode = ADC_ULP_MODE_DISABLE, ///< ADC controlled by ULP, see `adc_ulp_mode_t`
     };
 
-    adc_oneshot_new_unit(&adc_init_cfg, _adc_handle);
-
+    esp_err_t new_res = adc_oneshot_new_unit(&adc_init_cfg, _adc_handle);
+    if (new_res != ESP_OK) {
+        ROB_LOGE(input_log_prefix, "adc_oneshot_new_unit failed with the %i error code.", new_res);
+    }
     adc_oneshot_chan_cfg_t adc_cfg = {
         .atten = ADC_ATTEN_DB_11,         ///< ADC attenuation
         .bitwidth = ADC_BITWIDTH_DEFAULT, ///< ADC conversion result bits
     };
 
-    adc_oneshot_config_channel(_adc_handle, _adc_channel, &adc_cfg);
-
+    esp_err_t ch_res = adc_oneshot_config_channel(_adc_handle, _adc_channel, &adc_cfg);
+    if (ch_res != ESP_OK) {
+        ROB_LOGE(input_log_prefix, "adc_oneshot_new_unit failed with the %i error code.", ch_res);
+        return ROB_FAIL;
+    }
 #else
     // ADC2 config if applicable
     ESP_ERROR_CHECK(adc2_config_width(ADC_WIDTH_BIT_DEFAULT));
     ESP_ERROR_CHECK(adc2_config_channel_atten(CONFIG_ROBUSTO_INPUT_ADC_MONITOR_ADC_CHANNEL, ADC_ATTEN_DB_11));
 #endif
+    return ROB_OK;
 }
 #endif
 
@@ -115,7 +132,7 @@ rob_ret_val_t robusto_input_test_resistor_ladder(double adc_voltage, resistor_la
     {
         return ROB_FAIL;
     }
-    ROB_LOGI(input_log_prefix, "Looping %hu resistances", ladder->mapping_count);
+    ROB_LOGI(input_log_prefix, "Looping %hu resistances, voltage %.1f", ladder->mapping_count, adc_voltage);
 
     for (uint8_t curr_map = 1; curr_map < ladder->mapping_count; curr_map++)
     {
@@ -162,12 +179,20 @@ rob_ret_val_t robusto_input_test_resistor_ladder(double adc_voltage, resistor_la
 rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t *ladder)
 {
     // TODO: Add checks on structure
-    SLIST_INSERT_HEAD(&ladder_head, ladder, resistor_ladders);
     if (adc_oneshot_io_to_channel(ladder->GPIO, &ladder->adc_unit, &ladder->adc_channel) == ESP_OK)
     {
-        adc_calibration_init(ladder->adc_unit, ladder->adc_channel, &ladder->cali_handle, &ladder->adc_handle);
+        if (adc_calibration_init(ladder->adc_unit, ladder->adc_channel, &ladder->cali_handle, &ladder->adc_handle) != ESP_OK) {
+            ROB_LOGE(input_log_prefix, "adc_oneshot_new_unit failed, will not add monitor.");
+            return ROB_FAIL;
+        } else {
+            SLIST_INSERT_HEAD(&ladder_head, ladder, resistor_ladders);
+            ROB_LOGI(input_log_prefix, "The ladder on GPIO %hu got initiated and added", ladder->GPIO);
+            return ROB_OK;
+        }
+    } else {
+        ROB_LOGE(input_log_prefix, "The ladder GPIO %hu could not be translated into an ADC unit and channel.", ladder->GPIO);
+        return ROB_FAIL;
     }
-    return ROB_OK;
 };
 
 void monitor_ladder_cb()
@@ -182,7 +207,7 @@ void monitor_ladder_cb()
         int new_value1, new_value2;
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value1);
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value2);
-        robusto_input_test_resistor_ladder((double)(new_value1 + new_value2) / 2, ladder);
+        robusto_input_test_resistor_ladder((double)(new_value1 + new_value2) / 2.0, ladder);
 #endif
     }
 }

@@ -47,7 +47,9 @@ void init_resistance_mappings()
     ladder->R1_resistance = 41200;
     ladder->voltage = 3300;
     ladder->GPIO = 32; // Usually OK.
-    robusto_input_add_resistor_ladder(ladder);
+    if (robusto_input_add_resistor_ladder(ladder) != ROB_OK) {
+        ROB_LOGE("LADDER BUTTONS", "Failed to initialize!");
+    }
 }
 
 void ladder_buttons_init(void)
