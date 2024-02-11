@@ -145,7 +145,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
         ROB_LOGE(input_log_prefix, "robusto_input_check_resistor_monitor - monitor is NULL!");
         return ROB_FAIL;
     }
-    if (adc_voltage < 150)
+    if ((monitor->R2_check_resistor > 0) && (adc_voltage < 150))
     {
         ROB_LOGE(input_log_prefix, "Voltage beneath 150 mV, possible short or disconnect!");
         return ROB_FAIL;
