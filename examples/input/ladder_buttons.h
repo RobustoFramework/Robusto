@@ -1,13 +1,13 @@
 /**
- * @file robusto_misc_init.c
+ * @file ladder_buttons.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
- * @note This is for the most normal cases, for more advanced variants, look into using the platform specific variants
+ * @brief An example of the Robusto input library.
+ * @note This file is not supposed to be executed, but a part of the development functionality.
  * @version 0.1
- * @date 2023-02-19
+ * @date 2024-02-10
  *
  * @copyright
- * Copyright (c) 2023, Nicklas Börjesson <nicklasb at gmail dot com>
+ * Copyright (c) 2024, Nicklas Börjesson <nicklasb at gmail dot com>
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -30,47 +30,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robusto_init_internal.h>
-#include <robusto_init.h>
-#ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-#include <robusto_pubsub_server.h>
+#pragma once
+
+#include <robconfig.h>
+
+
+#ifdef __cplusplus
+extern "C"
+{
 #endif
-#ifdef CONFIG_ROBUSTO_UMTS_SERVER
-#include <robusto_umts.h>
+
+
+/**
+ * @brief Initialize ladder buttons example
+ */
+void ladder_buttons_init(void);
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
-
-void robusto_misc_stop() {
-   
-}
-
-void robusto_misc_start() {
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_start();
-    #endif
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_start();
-    #endif
-}
-
-
-void robusto_misc_init(char * _log_prefix) {
-
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_init(_log_prefix);
-    #endif
-    
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_init();
-    #endif   
-    #ifdef CONFIG_ROBUSTO_UMTS_SERVER
-    robusto_umts_init(_log_prefix);
-    #endif
-}
-
-
-
-void register_misc_service() {
-    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_UMTS_SERVER) 
-    register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
-    #endif
-}

@@ -1,5 +1,5 @@
 #include <robconfig.h>
-
+#ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
 /* This is to make the camera library configurable */
 #define XCLK_FREQ_MHZ CONFIG_XCLK_FREQ_MHZ
 #define OV7670_SUPPORT CONFIG_OV7670_SUPPORT
@@ -47,4 +47,5 @@ void init_camera_example(char * _log_prefix);
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
 #endif

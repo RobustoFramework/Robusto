@@ -1,8 +1,8 @@
+
 /**
- * @file robusto_misc_init.c
+ * @file robusto_adc_monitoring.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
- * @note This is for the most normal cases, for more advanced variants, look into using the platform specific variants
+ * @brief ADC monitoring
  * @version 0.1
  * @date 2023-02-19
  *
@@ -30,47 +30,56 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <robusto_init_internal.h>
-#include <robusto_init.h>
-#ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-#include <robusto_pubsub_server.h>
+#pragma once
+#include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_INPUT
+#include <robusto_retval.h>
+#ifdef USE_ESPIDF
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_adc/adc_oneshot.h"
+#include "hal/adc_types.h"
+
+// ADC Calibration
+#if CONFIG_IDF_TARGET_ESP32
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_VREF
+#elif CONFIG_IDF_TARGET_ESP32S2
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define ADC_MONITOR_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
 #endif
-#ifdef CONFIG_ROBUSTO_UMTS_SERVER
-#include <robusto_umts.h>
+
+rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_channel, adc_cali_handle_t *_cali_handle, adc_oneshot_unit_handle_t *_adc_handle);
 #endif
 
-void robusto_misc_stop() {
-   
-}
-
-void robusto_misc_start() {
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_start();
-    #endif
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_start();
-    #endif
-}
-
-
-void robusto_misc_init(char * _log_prefix) {
-
-    #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
-    robusto_pubsub_server_init(_log_prefix);
-    #endif
-    
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_init();
-    #endif   
-    #ifdef CONFIG_ROBUSTO_UMTS_SERVER
-    robusto_umts_init(_log_prefix);
-    #endif
-}
+/**
+ * @brief Start monitoring resistance ladder
+ * 
+ */
+void robusto_input_resistance_monitor_start();
 
 
 
-void register_misc_service() {
-    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_UMTS_SERVER) 
-    register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
-    #endif
-}
+/**
+ * @brief Initialize the resistance ladder monitoring
+ * 
+ * @param _input_log_prefix 
+ */
+void robusto_input_resistance_monitor_init(char * _input_log_prefix);
+
+/**
+ * @brief Start monitoring an ADC and print out data
+ * 
+ */
+void robusto_input_start_adc_monitoring();
+
+/**
+ * @brief Start monitoring an ADC and print out data
+ * 
+ */
+void robusto_input_init_adc_monitoring(char * _log_prefix);
+
+#endif

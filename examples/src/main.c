@@ -51,9 +51,7 @@
 #include <robusto_logging.h>
 #include <robusto_time.h>
 #include <robusto_init.h>
-#include <robusto_network_init.h>
-#include <robusto_server_init.h>
-#include <robusto_misc_init.h>
+
 #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_SERVER
 #include "../hello/hello_service.h"
 #endif
@@ -79,6 +77,14 @@
 #include "../camera/camera.h"
 #endif
 
+#ifndef CONFIG_ROBUSTO_EXAMPLE_HELLO_CLIENT
+#include <time.h>
+#endif
+
+#ifdef CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER
+#include <../input/ladder_buttons.h>
+#endif
+
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #define NUM_RECORDS 100
@@ -96,6 +102,10 @@ void setup_examples() {
     init_robusto();
 
     r_delay(100);   
+
+    #ifdef CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER
+    ladder_buttons_init();
+    #endif
 
     #ifdef CONFIG_ROBUSTO_EXAMPLE_HELLO_UI
     ROB_LOGI(example_log_prefix, "Start hello UI");
@@ -189,11 +199,12 @@ void main_task(void *parameters)
     while (1)
     {
         r_delay(1000);
+        #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
         r_gettimeofday(&tv, &tz);
         gm = gmtime(&tv.tv_sec);
         strftime(&datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
         ROB_LOGI_STAY("Example", "Current RTC time = %s:%li", datebuffer, tv.tv_usec % 1000);
-    
+        #endif
     };
     #endif
 }

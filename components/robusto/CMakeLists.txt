@@ -41,6 +41,8 @@ FILE(GLOB rob_sources
 "server/src/repeater/*.*" 
 
 "ui/src/*.c"
+
+"input/src/*.c"
 )
 
 idf_component_register(

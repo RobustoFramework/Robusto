@@ -1,13 +1,13 @@
-
 /**
  * @file robusto_misc_init.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief Robusto misc initialization
+ * @brief Functionality for generic handling of concurrency; tasks/threads and their synchronization.
+ * @note This is for the most normal cases, for more advanced variants, look into using the platform specific variants
  * @version 0.1
  * @date 2023-02-19
  *
  * @copyright
- * Copyright (c) 2022, Nicklas Börjesson <nicklasb at gmail dot com>
+ * Copyright (c) 2023, Nicklas Börjesson <nicklasb at gmail dot com>
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -29,19 +29,43 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+#include <robusto_init_internal.h>
+#ifdef CONFIG_ROBUSTO_INPUT
+#include "robusto_input_init.h"
+#include <robusto_init.h>
 
-/* TODO: We *should* be able to not have all these init.h-files */
+#include <robusto_input.h>
 
-#pragma once
-#include <robconfig.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-void register_misc_service();
-void robusto_misc_init(char * _log_prefix);
+void robusto_input_stop() {
+   
+}
 
-#ifdef __cplusplus
-} /* extern "C" */
+void robusto_input_start() {
+    #ifdef CONFIG_ROBUSTO_INPUT
+    robusto_input_resistance_monitor_start();
+    #endif
+    #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
+    robusto_input_start_adc_monitoring();
+    #endif
+}
+
+
+void robusto_input_init(char * _log_prefix) {
+    #ifdef CONFIG_ROBUSTO_INPUT
+    robusto_input_resistance_monitor_init(_log_prefix);
+    #endif
+    #if defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR)
+    robusto_input_init_adc_monitoring(_log_prefix);
+    #endif
+
+}
+
+
+
+void register_input_service() {
+    #if defined(CONFIG_ROBUSTO_INPUT)
+    register_service(robusto_input_init, robusto_input_start, robusto_input_stop, 2, "Input");    
+    #endif
+}
 #endif

@@ -7,7 +7,6 @@
 #include <robusto_logging.h>
 #include <robusto_network_init.h>
 #include <robusto_server_init.h>
-#include <robusto_misc_init.h>
 #include <robusto_concurrency.h>
 /* Test */
 
@@ -18,9 +17,12 @@
 #include "tst_message_building.h"
 #include "tst_system.h"
 #include "tst_media.h"
+#include "tst_input.h"
+
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
 #include "tst_pubsub.h"
 #endif
+
 
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 #include "tst_message_sending_mock.h"
@@ -146,6 +148,13 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
+
+    RUN_TEST(tst_input_adc_single_resolve);
+    robusto_yield();
+
+    RUN_TEST(tst_input_adc_multiple_resolve);
+    robusto_yield();
+
 
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     RUN_TEST(tst_pubsub); 
