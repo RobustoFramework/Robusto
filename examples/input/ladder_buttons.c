@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 #include <string.h>
-
+#include <stdio.h>
 #include <robusto_logging.h>
 #include <robusto_input.h>
 #include <robusto_concurrency.h>
@@ -12,7 +12,7 @@ bool pushed_5 = false;
 bool pushed_2_6 = false;
 
 resistance_mapping_t resistances[6] = {
-    {.resistance = 194432, .adc_voltage = 2723, .adc_stdev = 3}, //This is the total resistance, or base voltage value
+    {.resistance = 194432, .adc_voltage = 2723, .adc_stdev = 4}, //This is the total resistance, or base voltage value
     {.resistance = 105527, .adc_voltage = 2255, .adc_stdev = 2},
     {.resistance = 48101, .adc_voltage = 2575, .adc_stdev = 4},
     {.resistance = 22195, .adc_voltage = 2663, .adc_stdev = 3},
@@ -24,7 +24,17 @@ resistor_ladder_t *ladder;
 
 void callback_buttons_press(uint32_t buttons)
 {
-    ROB_LOGI("LADDER BUTTONS","B %lu", buttons);
+
+      char bitString[33]; // 8 bits + null terminator
+    for (int i = 0; i < 33; i++) {
+        bitString[i] = (buttons & (1 << i)) ? '0' + i : ' ';
+    }
+    bitString[32] = '\0'; // Null-terminate the string
+
+
+ 
+    ROB_LOGI("LADDER BUTTONS","Value: %lu Buttons pressed: %s", buttons, bitString);
+
     /*
     uint8_t b = 1;
     for (uint8_t i = 1; i < 129; i = i * 2) {
