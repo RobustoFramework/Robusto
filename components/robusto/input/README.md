@@ -2,7 +2,7 @@
 # Robusto Input
 
 The purpose of this library is to provide some means to control a microcontroller. 
-* Resistors - using voltage dividers and [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter)s for buttons
+* Resistors - using voltage dividers and [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter)s for buttons. [Example here.](../../../examples/input/).
 * Touch devices - (Not implemented)
 
 - [Resistance input monitor](#resistance-input-monitor)
