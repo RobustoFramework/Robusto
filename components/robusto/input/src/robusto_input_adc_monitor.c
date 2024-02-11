@@ -56,7 +56,7 @@ uint16_t v1 = 0;
 
 void monitor_adc_cb()
 {
-    uint32_t voltage = 0;
+    uint32_t source_voltage = 0;
     if (curr_state == ms_waiting)
     {
         if (r_millis() > 3000)
@@ -180,7 +180,7 @@ void monitor_adc_cb()
                                   resistance_mappings[curr_sample].resistance,
                                   resistance_mappings[curr_sample].adc_voltage,
                                   resistance_mappings[curr_sample].adc_stdev,
-                                  curr_sample == 0 ? " //This is the total resistance, or base voltage value" : "");
+                                  curr_sample == 0 ? " //This is the total resistance, or base source_voltage value" : "");
             data_pos += sprintf(data + data_pos, "%" PRIu32 ",%" PRIu16 ",%" PRIu16 "\n",
                                 resistance_mappings[curr_sample].resistance,
                                 resistance_mappings[curr_sample].adc_voltage,

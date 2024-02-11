@@ -49,6 +49,9 @@
 #include "hal/adc_types.h"
 #endif
 
+/** Resistance detection - */
+
+
 /**
  * @brief Callback for 
  * 
@@ -68,43 +71,53 @@ typedef struct resistance_mapping {
 
 
 /**
- * @brief The button ladder collects buttons connected to resistors
- * @note The first resistance ladder is without buttons/connections per convention
+ * @brief The resistor monitor analyzes voltages to discern resistances. Used for button detection.
  */
-typedef struct resistor_ladder {
+typedef struct resistor_monitor {
+    /* Monitor name */
+    char * name;
     /* Mappings of resistances (first is without connections) */
     resistance_mapping_t *mappings;
-
     /* Number of mappings */
     uint8_t mapping_count;
     /* The GPIO to monitor */
     uint8_t GPIO;
     /* Callback */
     cb_buttons_press * callback;
-    /* Voltage divider R1 - needed to keep voltage down into ADC range */
-    uint32_t R1_resistance;
-    /* Voltage */
-    uint32_t voltage;
-    /* If it is a serial or parallell, default false */
-    bool parallel;
+
+    /* Voltage divider R1 value - Used to push voltage down into ADC range */
+    uint32_t R1;
+    /* Check resistor R2 value - Differenciates bypassing all resistors from a short */
+    uint32_t R2_check_resistor;
+    
+    /* The overall voltage (Vs) */
+    uint32_t source_voltage;
+    /* Decode this as a ladder when we might have multiple hits. See documentation. */
+    bool ladder_decode;
+    /* The smallest resistor(s) may not be able to detect safely when pressing multiple buttons*/
+    bool ladder_exclude_count;
+
+    /* Current matches */
+    uint32_t matches;
 
     #ifdef USE_ESPIDF
+    // ADC Settings
     adc_unit_t adc_unit;
     adc_channel_t adc_channel;
     adc_cali_handle_t cali_handle;
     adc_oneshot_unit_handle_t adc_handle;
     #endif
 
-    SLIST_ENTRY(resistor_ladder) resistor_ladders; /* Singly linked list */
-} resistor_ladder_t;
+    SLIST_ENTRY(resistor_monitor) resistor_monitors; /* Singly linked list */
+} resistor_monitor_t;
 
 /**
- * @brief Add a resistor ladder to the list of ladders to monitor
+ * @brief Add a resistor monitor to the list 
  * 
- * @param ladder 
+ * @param monitor 
  * @return rob_ret_val_t 
  */
-rob_ret_val_t robusto_input_add_resistor_ladder(resistor_ladder_t * ladder);
+rob_ret_val_t robusto_input_add_resistor_monitor(resistor_monitor_t * monitor);
 
-rob_ret_val_t robusto_input_test_resistor_ladder(double adc_val, resistor_ladder_t * ladder);
+rob_ret_val_t robusto_input_check_resistor_monitor(double adc_val, resistor_monitor_t * monitor);
 

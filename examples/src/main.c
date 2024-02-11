@@ -199,7 +199,7 @@ void main_task(void *parameters)
     while (1)
     {
         r_delay(1000);
-        #ifndef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
+        #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
         r_gettimeofday(&tv, &tz);
         gm = gmtime(&tv.tv_sec);
         strftime(&datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
