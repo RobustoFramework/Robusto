@@ -43,7 +43,7 @@ void robusto_input_stop() {
 
 void robusto_input_start() {
     #ifdef CONFIG_ROBUSTO_INPUT
-    robusto_input_resistance_ladder_start_monitoring();
+    robusto_input_resistance_monitor_start();
     #endif
     #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR
     robusto_input_start_adc_monitoring();
@@ -53,7 +53,7 @@ void robusto_input_start() {
 
 void robusto_input_init(char * _log_prefix) {
     #ifdef CONFIG_ROBUSTO_INPUT
-    robusto_input_resistance_ladder_init(_log_prefix);
+    robusto_input_resistance_monitor_init(_log_prefix);
     #endif
     #if defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR)
     robusto_input_init_adc_monitoring(_log_prefix);

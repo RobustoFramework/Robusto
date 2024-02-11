@@ -59,7 +59,7 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
  * @brief Start monitoring resistance ladder
  * 
  */
-void robusto_input_resistance_ladder_start_monitoring();
+void robusto_input_resistance_monitor_start();
 
 
 
@@ -68,7 +68,7 @@ void robusto_input_resistance_ladder_start_monitoring();
  * 
  * @param _input_log_prefix 
  */
-void robusto_input_resistance_ladder_init(char * _input_log_prefix);
+void robusto_input_resistance_monitor_init(char * _input_log_prefix);
 
 /**
  * @brief Start monitoring an ADC and print out data

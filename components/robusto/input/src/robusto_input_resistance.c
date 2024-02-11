@@ -266,7 +266,7 @@ void resistance_monitor_shutdown_cb()
  * @brief Start monitoring
  *
  */
-void robusto_input_resistance_ladder_start_monitoring()
+void robusto_input_resistance_monitor_start()
 {
 #ifdef CONFIG_ROBUSTO_INPUT
     ROB_LOGI(input_log_prefix, "Starting ADC monitoring.");
@@ -278,7 +278,7 @@ void robusto_input_resistance_ladder_start_monitoring()
  * @brief Start resistance
  *
  */
-void robusto_input_resistance_ladder_init(char *_input_log_prefix)
+void robusto_input_resistance_monitor_init(char *_input_log_prefix)
 {
     input_log_prefix = _input_log_prefix;
     SLIST_INIT(&monitors_head);

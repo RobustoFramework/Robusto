@@ -23,14 +23,14 @@ uint32_t change_count = 0;
 void callback_buttons_press(uint32_t buttons)
 {
 
-    char bitString[33]; // 32 bits + null terminator
+    char bit_string[33]; // 32 bits + null terminator
     for (int i = 0; i < 33; i++)
     {
-        bitString[i] = (buttons & (1 << i)) ? '0' + i : ' ';
+        bit_string[i] = (buttons & (1 << i)) ? '0' + i : '_';
     }
-    bitString[32] = '\0'; // Null-terminate the string
+    bit_string[32] = '\0'; // Null-terminate the string
 
-    ROB_LOGI("LADDER BUTTONS", "Change count: %lu , Value: %lu Buttons pressed: %s", change_count++, buttons, bitString);
+    ROB_LOGI("LADDER BUTTONS", "Change: %3.lu - Buttons: %s - Value: %lu.", change_count++,bit_string, buttons);
 };
 
 void init_resistance_mappings()

@@ -50,7 +50,7 @@ typedef enum monitor_state
 } monitor_state_t;
 
 static monitor_state_t curr_state = ms_waiting;
-resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_COUNT + 1];
+resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT + 1];
 uint8_t curr_mapping = 0;
 uint16_t v1 = 0;
 
@@ -136,7 +136,7 @@ void monitor_adc_cb()
         double variance = sum_of_squared_diff / SAMPLE_COUNT;      
         double stdev = sqrt(variance);
         v1 = 3300;
-        uint32_t resistance = (mean_voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_R1) / (v1 - mean_voltage);
+        uint32_t resistance = (mean_voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_R1) / (v1 - mean_voltage);
         ROB_LOGI(adc_monitor_log_prefix,
                  "cali average data: %" PRIu16 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", stdev: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
                  mean_voltage, lowest, highest, mean_voltage,
@@ -152,7 +152,7 @@ void monitor_adc_cb()
         }
         
         curr_mapping++;
-        if (curr_mapping > CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_COUNT)
+        if (curr_mapping > CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT)
         {
             curr_state = ms_printing;
             ROB_LOGI(adc_monitor_log_prefix, "ADC Done calculating, starts printing.");
@@ -172,9 +172,9 @@ void monitor_adc_cb()
         char *buffer = robusto_malloc(1000);
         char *data = robusto_malloc(1000);
 
-        uint16_t buffer_pos = sprintf(buffer, "C-code:\nresistance_mapping_t bm[%i] = {\n", CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_COUNT + 1);
+        uint16_t buffer_pos = sprintf(buffer, "C-code:\nresistance_mapping_t bm[%i] = {\n", CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT + 1);
         uint16_t data_pos = sprintf(data, "Data:\nresistance, adc_voltage, adc_stdev\n");
-        for (uint8_t curr_sample = 0; curr_sample < CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_LADDER_COUNT + 1; curr_sample++)
+        for (uint8_t curr_sample = 0; curr_sample < CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT + 1; curr_sample++)
         {
             buffer_pos += sprintf(buffer + buffer_pos, "    {.resistance = %" PRIu32 ", .adc_voltage = %" PRIu16 ", .adc_stdev = %" PRIu16 "},%s\n",
                                   resistance_mappings[curr_sample].resistance,
