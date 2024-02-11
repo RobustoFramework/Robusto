@@ -19,7 +19,7 @@ void monitor_ladder_shutdown_cb();
 
 static recurrence_t ladder_monitor = {
     recurrence_name : "Ladder monitor",
-    skip_count : 0,
+    skip_count : 4,
     skips_left : 0,
     recurrence_callback : &monitor_ladder_cb,
     shutdown_callback : &monitor_ladder_shutdown_cb
@@ -137,30 +137,33 @@ rob_ret_val_t robusto_input_test_resistor_ladder(double adc_voltage, resistor_la
         // TODO: Update V1 if needed.
         return ROB_OK;
     }
+    double resistance = ladder->mappings[0].resistance - (-(double)adc_voltage * (double)ladder->R1_resistance) / ((double)adc_voltage - (double)ladder->voltage);
+    ROB_LOGI(input_log_prefix, "Calculated resistance : %.1f.", resistance);
+    
+    uint8_t matches = 0;
     for (uint8_t curr_map = 1; curr_map < ladder->mapping_count; curr_map++)
     {
 
         if (match_single_resistor(adc_voltage, ladder->mappings[curr_map]))
         {
             ROB_LOGI(input_log_prefix, "Matched number %hu on %.1f to %u.", curr_map, adc_voltage, ladder->mappings[curr_map].adc_voltage);
-            ladder->callback(curr_map);
+            matches |= 1 << (curr_map - 1);
+            ladder->callback(matches);
             return ROB_OK;
         }
     }
-    double resistance = (-(double)adc_voltage * (double)ladder->R1_resistance) / ((double)adc_voltage - (double)ladder->voltage);
-    ROB_LOGD(input_log_prefix, "Not single press, calculated resistance : %.1f.", resistance);
-    uint32_t curr_resistance;
-    uint8_t matches = 0;
-
+    uint32_t curr_resistance, acc_resistance = 0;
+    ROB_LOGI(input_log_prefix, "Not single press");
     for (uint8_t curr_map = 1; curr_map < ladder->mapping_count; curr_map++)
     {
         curr_resistance = ladder->mappings[curr_map].resistance;
-        ROB_LOGD(input_log_prefix, "Resistance left %.1f curr res %lu curr stdev %u", resistance, curr_resistance, ladder->mappings[curr_map].adc_stdev);
+        ROB_LOGI(input_log_prefix, "Resistance left %.1f curr res %lu curr stdev %u", resistance, curr_resistance, ladder->mappings[curr_map].adc_stdev);
         if (resistance >= (curr_resistance - ladder->mappings[curr_map].adc_stdev))
         {
             matches |= 1 << (curr_map - 1);
             resistance -= curr_resistance;
-            ROB_LOGI(input_log_prefix, "Resistance included and subtracted %lu", curr_resistance);
+            acc_resistance += curr_resistance;
+            ROB_LOGI(input_log_prefix, "Match. accu %lu, left %.1f, curr %lu", acc_resistance, resistance, curr_resistance);
         }
     }
     if (matches > 0)
@@ -211,8 +214,8 @@ void monitor_ladder_cb()
         int new_value1, new_value2, raw;
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value1);
         adc_oneshot_get_calibrated_result(ladder->adc_handle, ladder->cali_handle, ladder->adc_channel, &new_value2);
-        adc_oneshot_read(ladder->adc_handle, ladder->adc_channel, &raw);
-        ROB_LOGI(input_log_prefix, "Raw : %i", raw);
+
+
         robusto_input_test_resistor_ladder((double)(new_value1 + new_value2) / 2.0, ladder);
 #endif
     }
