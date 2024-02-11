@@ -2,7 +2,7 @@
 # Robusto Input
 
 The purpose of this library is to provide some means to control a microcontroller. 
-* Resistors - using voltage dividers and [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter)s for buttons. [Example here.](../../../examples/input/).
+* Resistors - using voltage dividers and [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter)s for buttons. [Example here](../../../examples/input/).
 * Touch devices - (Not implemented)
 
 - [Resistance input monitor](#resistance-input-monitor)
@@ -57,7 +57,7 @@ The Button ladder example shows how it works.
 
 # Problems and mitigations
 
-When we, as in the button ladder example, try to cram as many buttons as possible into the same ADC, and also want to be both able to detect if they are pressed in combination, or if we have a short, we become quite sensitive. 
+When we, as in the [button ladder example](../../../examples/input/), try to cram as many buttons as possible into the same ADC, and also want to be both able to detect if they are pressed in combination, or if we have a short, we become quite sensitive. 
 
 The main reason for this is that when the last button is pressed, that button is only 4700 &#x2126; which is only 2.5% of the total resistance 185 900 &#x2126;. As that result in a voltage of 2711&pm;4 mV, which is only 12 mV (0.4%) away from the 2723&pm;2 mV reference voltage, interference will be a problem.
 Sure, the ADC is pretty precise with proper calibration, but obviously this can make the solution error-prone.
@@ -79,7 +79,7 @@ Using that, you can easily create a ladder config based on the *actual* readings
 The only thing it cannot calculate is R1 and the main voltage of the voltage divider
 
 ## Voltage stability
-The ESP32, as is used in this example, has a quite stable voltage regulator, it actually outputs a stable voltage that is very near 3.3 V on the 3V3 pin. And it only stops working then the input voltage drops significantly, which causes instability anyway.
+The ESP32, as is [used in the example](../../../examples/input/), has a quite stable voltage regulator, it actually outputs a stable voltage that is very near 3.3 V on the 3V3 pin. And it only stops working then the input voltage drops significantly, which causes instability anyway.
 
 However, as other consumers may use the same output, we might ge voltage drops that may incorrectly be interpreted as button presses. 
 
@@ -94,7 +94,7 @@ This does not protect from slowly shifting differences, that may happen for ther
 This one is actually handled by the resistor ladder library by doing two measurements and averaging them. It also considers the provided standard deviation.
 
 # Recommendations
-The button ladder example setup with 5 buttons, which also has an extra 2200 &#x2126; resistor on R2 (value specified in resistor_monitor.R2_check_resistor) that makes it possible to detect if it has been shorted out, is probably a bit close to the limit for many cases, Especially given the limited voltage range of built-in ADCs in microcontrollers.
+The [button ladder example](../../../examples/input/) setup with 5 buttons, which also has an extra 2200 &#x2126; resistor on R2 (value specified in resistor_monitor.R2_check_resistor) that makes it possible to detect if it has been shorted out, is probably a bit close to the limit for many cases, Especially given the limited voltage range of built-in ADCs in microcontrollers.
 
 So just having 4 buttons per ADC would be recommended if you expect the device to work in a very [EMI](https://en.wikipedia.org/wiki/Electromagnetic_interference)-rich environment or have military grade-like requirements. Then you will have larger resistance differences making it easier to identify each button.
  
@@ -106,7 +106,7 @@ However, this is not great either, as many buttons being pressed at once is also
 
 # ADC monitor and mapper utility
 
-This utility simplifies generation and calibration of your setup. It can be enabled in menuconfig (input->Enable the Robusto ADC monitor and mapper).
+This utility simplifies generation and calibration of your setup. It can be enabled in menuconfig (input->Enable the Robusto ADC monitor and mapper). There you can set the number of values you want it to collect.
 
 It collects voltages and configuration, and create codes for use in your project. 
-An example of the output can be seen in the ladder buttons mapping configuration example. 
+An example of the output can be seen in the ladder buttons configuration [example](../../../examples/input/ladder_buttons.c). 
