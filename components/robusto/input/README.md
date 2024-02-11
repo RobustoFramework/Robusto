@@ -5,6 +5,19 @@ The purpose of this library is to provide some means to control a microcontrolle
 * Resistors - using voltage dividers and [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter)s for buttons
 * Touch devices - (Not implemented)
 
+- [Resistance input monitor](#resistance-input-monitor)
+  - [Series of resistors](#series-of-resistors)
+    - [How?](#how)
+  - [Binary ladder](#binary-ladder)
+- [Problems and mitigations](#problems-and-mitigations)
+  - [Resistor inaccuracy and build quality](#resistor-inaccuracy-and-build-quality)
+  - [Voltage stability](#voltage-stability)
+  - [Thermal and drifting](#thermal-and-drifting)
+  - [Measurement inaccuracy](#measurement-inaccuracy)
+- [Recommendations](#recommendations)
+- [ADC monitor and mapper utility](#adc-monitor-and-mapper-utility)
+
+
 # Resistance input monitor
 
 To be able to detect more buttons and switches with less wiring it is popular way to use ADCs to detect changes in voltage incurred by resistors being bypassed by buttons.
