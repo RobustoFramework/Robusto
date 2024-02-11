@@ -33,6 +33,7 @@ The more technical documentation on features are in their README:s:
  - [Networking](/components/robusto/network/README.md)
  - [Conductor](/components/robusto/conductor/README.md)
  - [Flash](/components/robusto/flash/README.md)
+ - [Input](/components/robusto/input/README.md)
  - [Server](/components/robusto/server/README.md)
  - [Sensor](/components/robusto/sensor/README.md)
  - [Misc](/components/robusto/misc/README.md)
@@ -63,6 +64,10 @@ Features include:
   * monitoring / reporting / statistics
   * services
   * runlevels
+* Input handling
+  * Resistor array
+  * Binary ladder decoder
+  * ADC monitor and code generator utility
 * Technical
   * flash support
   * logging
