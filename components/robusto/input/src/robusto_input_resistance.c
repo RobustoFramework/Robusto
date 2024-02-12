@@ -268,7 +268,7 @@ void resistance_monitor_shutdown_cb()
  */
 void robusto_input_resistance_monitor_start()
 {
-#ifdef CONFIG_ROBUSTO_INPUT
+#if defined(CONFIG_ROBUSTO_INPUT) && !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR)
     ROB_LOGI(input_log_prefix, "Starting ADC monitoring.");
     robusto_register_recurrence(&resistance_monitor);
 #endif
