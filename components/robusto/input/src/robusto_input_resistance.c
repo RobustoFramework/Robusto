@@ -126,14 +126,14 @@ bool match_single_resistor(uint32_t adc_voltage, resistance_mapping_t mapping)
     }
 }
 
-void handle_matches(uint32_t matches, resistor_monitor_t *monitor)
+void handle_matches(uint32_t matches, float voltage,  resistor_monitor_t *monitor)
 {
     if (matches != monitor->matches)
     {
         monitor->matches = matches;
         if (monitor->callback)
         {
-            monitor->callback(matches);
+            monitor->callback(matches, voltage);
         }
     }
 }
@@ -154,7 +154,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
     double R2 = (-(double)adc_voltage * (double)monitor->R1) / ((double)adc_voltage - (double)monitor->source_voltage);
     if (match_single_resistor(adc_voltage, monitor->mappings[0]))
     {
-        handle_matches(0, monitor);
+        handle_matches(0, adc_voltage, monitor);
         ROB_LOGD(input_log_prefix, "At reference voltage %.1f and R2 %.1f, no match.", adc_voltage, R2);
         // TODO: Update V1 if needed.
         return ROB_OK;
@@ -170,7 +170,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
         {
             ROB_LOGD(input_log_prefix, "Matched number %hu on %.1f to %u.", curr_map, adc_voltage, monitor->mappings[curr_map].adc_voltage);
             matches |= 1 << (curr_map - 1);
-            handle_matches(matches, monitor);
+            handle_matches(matches, adc_voltage, monitor);
             return ROB_OK;
         }
     }
@@ -204,7 +204,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
     if (matches > 0)
     {
         ROB_LOGD(input_log_prefix, "Multiple resistors bypassed(buttons pressed), value: %hu", matches);
-        handle_matches(matches, monitor);
+        handle_matches(matches, adc_voltage, monitor);
     }
 
     // TODO: Add the check on nothing pressed and if needed and the voltage is within resistance[0] range,

@@ -20,7 +20,7 @@ resistance_mapping_t resistances[6] = {
 resistor_monitor_t *monitor;
 uint32_t change_count = 0;
 
-void callback_buttons_press(uint32_t buttons)
+void callback_buttons_press(uint32_t buttons, float voltage)
 {
 
     char bit_string[33]; // 32 bits + null terminator

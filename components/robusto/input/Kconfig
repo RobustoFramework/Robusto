@@ -28,6 +28,18 @@ menu "Input"
             See recommendations in the Robusto docs for information on how
             you optimize resistance-based inputs (like binary ladders) for your ADC.
 
+    config ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_V_IN
+        int "The value of the Voltage in (Vin) to your voltage divider"
+        depends on ROBUSTO_INPUT_ADC_MONITOR
+        range 0 10000000
+        default 3300
+        help
+            This is usually the voltage of the system, like 3v3 (3300, 3.3 volts) for an ESP32.
+            Older MCUs, may be 5 volts (like the Arduino UNO). 
+            Note that if you have issues with strange values, you might want to measure with a voltmeter to get the right values and tweak this a little. 
+
+            
+            
     config ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT
         int "The number of resistances to monitor"
         depends on ROBUSTO_INPUT_ADC_MONITOR

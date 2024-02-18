@@ -135,7 +135,7 @@ void monitor_adc_cb()
         }
         double variance = sum_of_squared_diff / SAMPLE_COUNT;      
         double stdev = sqrt(variance);
-        v1 = 3300;
+        v1 = CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_V_IN;
         uint32_t resistance = (mean_voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_R1) / (v1 - mean_voltage);
         ROB_LOGI(adc_monitor_log_prefix,
                  "cali average data: %" PRIu16 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", stdev: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,

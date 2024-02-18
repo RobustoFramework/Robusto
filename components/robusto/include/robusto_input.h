@@ -56,7 +56,7 @@
  * @brief Callback for 
  * 
  */
-typedef void(cb_buttons_press)(uint32_t buttons);
+typedef void(cb_buttons_press)(uint32_t buttons, float voltage);
 
 typedef struct resistance_mapping {
     /* The value of the resistor */
