@@ -126,7 +126,7 @@ bool match_single_resistor(uint32_t adc_voltage, resistance_mapping_t mapping)
     }
 }
 
-void handle_matches(uint32_t matches, float voltage,  resistor_monitor_t *monitor)
+void handle_matches(uint32_t matches, float voltage, resistor_monitor_t *monitor)
 {
     if (matches != monitor->matches)
     {
@@ -138,26 +138,50 @@ void handle_matches(uint32_t matches, float voltage,  resistor_monitor_t *monito
     }
 }
 
-rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_monitor_t *monitor)
+rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
 {
+
     if (!monitor)
     {
         ROB_LOGE(input_log_prefix, "robusto_input_check_resistor_monitor - monitor is NULL!");
         return ROB_FAIL;
     }
-    if ((monitor->R2_check_resistor > 0) && (adc_voltage < 150))
+    float adc_voltage = 0;
+    double R2 = 0;
+    // We do this check twice to avoid reacting to dips 
+    for (int count = 0; count < 2; count++)
     {
-        ROB_LOGE(input_log_prefix, "Voltage beneath 150 mV, possible short or disconnect!");
-        return ROB_FAIL;
-    }
+#ifdef USE_ESPIDF
 
-    double R2 = (-(double)adc_voltage * (double)monitor->R1) / ((double)adc_voltage - (double)monitor->source_voltage);
-    if (match_single_resistor(adc_voltage, monitor->mappings[0]))
-    {
-        handle_matches(0, adc_voltage, monitor);
-        ROB_LOGD(input_log_prefix, "At reference voltage %.1f and R2 %.1f, no match.", adc_voltage, R2);
-        // TODO: Update V1 if needed.
-        return ROB_OK;
+        // Take two samples, quick succession, average
+        int value1, value2;
+        adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &value1);
+        adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &value2);
+        if (value2 < value1 - 5 || value2 > value1 + 5) {
+            // Filter large movements
+            ROB_LOGD(input_log_prefix, "Filter out large movements %i", (int)value1 - (int)value2);
+            return ROB_OK;            
+        }
+        adc_voltage = (double)(value1 + value2) / 2.0;
+
+#endif
+        if ((monitor->R2_check_resistor > 0) && (adc_voltage < 150))
+        {
+            ROB_LOGE(input_log_prefix, "Voltage beneath 150 mV, possible short or disconnect!");
+            return ROB_FAIL;
+        }
+
+        R2 = (-(double)adc_voltage * (double)monitor->R1) / ((double)adc_voltage - (double)monitor->source_voltage);
+        if (match_single_resistor(adc_voltage, monitor->mappings[0]))
+        {
+            handle_matches(0, adc_voltage, monitor);
+
+            ROB_LOGD(input_log_prefix, "At reference voltage %.1f and R2 %.1f, no match.", adc_voltage, R2);
+            // TODO: Update V1 if needed.
+            return ROB_OK;
+        } else {
+            r_delay(5);
+        }
     }
 
     ROB_LOGD(input_log_prefix, "Looping %hu resistances, ADC voltage: %.1f, calculated R2: %.1f.", monitor->mapping_count, adc_voltage, monitor->mappings[0].resistance - R2);
@@ -168,7 +192,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
 
         if (match_single_resistor(adc_voltage, monitor->mappings[curr_map]))
         {
-            ROB_LOGD(input_log_prefix, "Matched number %hu on %.1f to %u.", curr_map, adc_voltage, monitor->mappings[curr_map].adc_voltage);
+            ROB_LOGI(input_log_prefix, "Matched number %hu on %.1f to %u.", curr_map, adc_voltage, monitor->mappings[curr_map].adc_voltage);
             matches |= 1 << (curr_map - 1);
             handle_matches(matches, adc_voltage, monitor);
             return ROB_OK;
@@ -181,9 +205,10 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
 
     double calc_voltage = 0;
     uint32_t curr_resistance = 0;
+    uint8_t last_match, match_count = 0;
     // We start from top, we begin by assuming that no button has been pressed, We also discount the check resistor.
     uint32_t subtr_resistance = monitor->mappings[0].resistance + monitor->R2_check_resistor;
-
+    
     for (uint8_t curr_map = 1; curr_map < monitor->mapping_count - monitor->ladder_exclude_count; curr_map++)
     {
         curr_resistance = monitor->mappings[curr_map].resistance;
@@ -193,14 +218,26 @@ rob_ret_val_t robusto_input_check_resistor_monitor(double adc_voltage, resistor_
         ROB_LOGD(input_log_prefix, "Testing for resistor %hu, curr accu %lu res %lu curr stdev %u, adc_voltage %.1f, calc_voltage %.1f",
                  curr_map - 1, subtr_resistance, curr_resistance, monitor->mappings[curr_map].adc_stdev, adc_voltage, calc_voltage);
 
-        if ((double)adc_voltage < (calc_voltage + monitor->mappings[curr_map].adc_stdev))
+        if ((double)adc_voltage <= (calc_voltage + monitor->mappings[curr_map].adc_stdev))
         {
             matches |= 1 << (curr_map - 1);
-
+            last_match = curr_map;
+            match_count++;
             subtr_resistance -= curr_resistance;
             ROB_LOGD(input_log_prefix, "Match. accu %lu, curr %lu", subtr_resistance, curr_resistance);
         }
     }
+    // Check the lower bound so that the last wasn't included erroneously
+    if ((matches > 0) && ((double)adc_voltage <= (calc_voltage - (monitor->mappings[last_match].adc_stdev * 2)))) {
+        matches &= ~(1 << (last_match - 1));
+        match_count++;
+    }
+
+    // If there is only one match, it should have been identified in the single check, it is likely a spike
+    if (match_count < 2) {
+        return ROB_OK;
+    }
+
     if (matches > 0)
     {
         ROB_LOGD(input_log_prefix, "Multiple resistors bypassed(buttons pressed), value: %hu", matches);
@@ -248,14 +285,7 @@ void resistance_monitor_cb()
     resistor_monitor_t *monitor;
     SLIST_FOREACH(monitor, &monitors_head, resistor_monitors)
     {
-#ifdef USE_ESPIDF
-
-        // Take two samples, quick succession, average
-        int new_value1, new_value2;
-        adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &new_value1);
-        adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &new_value2);
-        robusto_input_check_resistor_monitor((double)(new_value1 + new_value2) / 2.0, monitor);
-#endif
+        robusto_input_check_resistor_monitor(monitor);
     }
 }
 void resistance_monitor_shutdown_cb()

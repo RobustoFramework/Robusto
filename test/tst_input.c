@@ -23,7 +23,7 @@ resistance_mapping_t resistances[6] = {
     {.resistance = 4801, .adc_voltage = 2711, .adc_stdev = 4},
 };
 
-resistor_ladder_t *ladder;
+resistor_monitor_t *ladder;
 
 void callback_buttons_press(uint32_t buttons)
 {
@@ -37,12 +37,12 @@ void init_resistance_mappings()
     if (ladder) {
         return;
     }
-    ladder = robusto_malloc(sizeof(resistor_ladder_t));
+    ladder = robusto_malloc(sizeof(resistor_monitor_t));
     ladder->mappings = &resistances;
     ladder->mapping_count = 6;
     ladder->callback = &callback_buttons_press;
-    ladder->R1_resistance = 41200;
-    ladder->voltage = 3300;
+    ladder->R1 = 41200;
+    ladder->source_voltage = 3300;
     ladder->GPIO = 32; // Usually OK.
     robusto_input_add_resistor_ladder(ladder);
 }
@@ -54,7 +54,7 @@ void tst_input_adc_single_resolve(void)
 {
     ROB_LOGI("adc", "in tst_input_adc_single_resolve");
     init_resistance_mappings();
-    robusto_input_test_resistor_ladder(2714, ladder);
+    robusto_input_check_resistor_monitor(2714, ladder);
 
     if (!robusto_waitfor_bool(&pushed_5, 1000))
     {
@@ -70,9 +70,9 @@ void tst_input_adc_multiple_resolve(void)
     ROB_LOGI("adc", "in tst_input_adc_multiple_resolve, button 2 and 5");
     init_resistance_mappings();
     uint32_t resistance = (resistances[2].resistance + resistances[5].resistance);
-    double voltage = ((double)ladder->voltage * (double)resistance)/((double)ladder->R1_resistance + (double)resistance);
+    double voltage = ((double)ladder->source_voltage * (double)resistance)/((double)ladder->R1 + (double)resistance);
     ROB_LOGI("adc", "Calculated voltage: %f vs: %lu, from resistance %lu", voltage, ladder->voltage, resistance);
-    robusto_input_test_resistor_ladder(voltage, ladder);
+    robusto_input_check_resistor_monitor(voltage, ladder);
     if (!robusto_waitfor_bool(&pushed_2_6, 1000))
     {
         TEST_ASSERT_TRUE_MESSAGE(pushed_2_6, "Didn't get the correct response");
