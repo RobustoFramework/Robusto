@@ -128,10 +128,10 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_
     {
         robusto_yield();
     }
-    // TODO: There is actually no receipt handling in ESP-NOW, this must be implemented.
     if (has_receipt)
     {
         has_receipt = false;
+        
         rc = (send_status == ESP_NOW_SEND_SUCCESS) ? ROB_OK : ROB_FAIL;
         if (rc == ROB_FAIL)
         {
@@ -265,6 +265,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         // It is a receipt, do nothing more, return.
         if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
             ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
+            peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
             add_to_history(&peer->espnow_info, false, ROB_OK);
             has_receipt = true;
             return;
