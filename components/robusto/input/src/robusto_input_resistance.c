@@ -1,5 +1,6 @@
 
 #include <robusto_input.h>
+#ifdef CONFIG_ROBUSTO_INPUT
 #include <robusto_logging.h>
 #include <robusto_repeater.h>
 #include <robusto_logging.h>
@@ -314,3 +315,4 @@ void robusto_input_resistance_monitor_init(char *_input_log_prefix)
     SLIST_INIT(&monitors_head);
     ROB_LOGI(input_log_prefix, "Input resistance monitor initiated.");
 }
+#endif

@@ -32,7 +32,7 @@
 
 #pragma once
 #include <robconfig.h>
-
+#ifdef CONFIG_ROBUSTO_INPUT
 #include <robusto_retval.h>
 #include <stdbool.h>
 
@@ -121,3 +121,4 @@ rob_ret_val_t robusto_input_add_resistor_monitor(resistor_monitor_t * monitor);
 
 rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t * monitor);
 
+#endif

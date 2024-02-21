@@ -158,9 +158,9 @@ void init_robusto()
     #endif
 
     register_misc_service();
-
+    #ifdef CONFIG_ROBUSTO_INPUT
     register_input_service();
-
+    #endif
     init_services(robusto_log_prefix);
 
     for (uint8_t runlevel = 2; runlevel < 6; runlevel++)
