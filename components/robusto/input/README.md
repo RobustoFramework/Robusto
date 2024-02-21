@@ -6,29 +6,34 @@ The purpose of this library is to provide some means to control a microcontrolle
 * Touch devices - (Not implemented)
 
 - [Resistance input monitor](#resistance-input-monitor)
+  - [Calibration](#calibration)
   - [Series of resistors](#series-of-resistors)
     - [How?](#how)
   - [Binary ladder](#binary-ladder)
 - [Problems and mitigations](#problems-and-mitigations)
   - [Resistor inaccuracy and build quality](#resistor-inaccuracy-and-build-quality)
+  - [Noise reduction and measurement procedure](#noise-reduction-and-measurement-procedure)
   - [Voltage stability](#voltage-stability)
   - [Thermal and drifting](#thermal-and-drifting)
-  - [Measurement inaccuracy](#measurement-inaccuracy)
 - [Recommendations](#recommendations)
 - [ADC monitor and mapper utility](#adc-monitor-and-mapper-utility)
 
 
 # Resistance input monitor
 
-To be able to detect more buttons and switches with less wiring it is popular way to use ADCs to detect changes in voltage incurred by resistors being bypassed by buttons.
+To be able to detect more buttons and switches with much less wiring (one wire), a popular is way to use ADCs to detect changes in voltage incurred by resistors being bypassed by buttons. However, this can be a bit complex to get to work well, if you want to have many buttons, you need to start filter the data to not get false button presses.
 
-Robusto is currently ably to analyse and detects buttons from two variants:
-1. A simple list of resistors that by themselves, or in combinations, represents one or more buttons. This is able to support a large amount of buttons.
+To help with this, Robusto Input is currently able to filter & analyse signals and detect buttons from these two variants:
+1. A simple array of resistors that by themselves, or in combinations, represents one or more buttons. This is able to support a large amount of buttons.
 2. Binary ladder. Here Robusto can automatically support all combinations of button presses, but as the range of ADC:s is limited, fewer buttons can be handled.
 
-If one use many buttons, it is possible that you want to combined different approaches. 
+If one use many buttons, it is possible that you want to combine different approaches, for example an array of resistors for some buttons and a binary ladder for modifier or other buttons you want to combine.
+If you need less than 6 buttons, it is quite easy to just use a binary ladder using normal resistors, see the [button ladder example](../../../examples/input/).
 
-To make it (much) easier for you to generate and calibrate your setup, there is a utility that can be enabled in menuconfig that can collect this information and create code for use in your project, see ADC monitor utility.
+
+## Calibration 
+
+To make it (much) easier for you to generate and calibrate your setup, there is a utility that can be enabled in menuconfig that can collect this information and create code for use in your project, see [ADC monitor and mapper utility](#adc-monitor-and-mapper-utility) below.
 
 ## Series of resistors
 
@@ -78,20 +83,35 @@ This is because they were. That code was generated and sent to serial out by a u
 Using that, you can easily create a ladder config based on the *actual* readings the ADC does. Just push and hold the buttons in the right order and it makes several readings and calculate the standard deviations for use in the code that identifies the buttons.
 The only thing it cannot calculate is R1 and the main voltage of the voltage divider
 
+## Noise reduction and measurement procedure
+
+The library is quite picky about the measurements it will accept for matching to a button press. A false positive is way less acceptable than a false negative, the user will barely notice the delay until the MCU tries again, the library runs as a [repeater](../server/src/repeater/) and checks many times per second as per default.
+
+For each chech, it follows the following procedure:
+1. It does two measurements.
+   * If they differ too much, it considers the measurements unsettled and exits
+2. Creates an average of the measurements.
+   * If the voltage is within 1 standard deviation of the no-button pressed, it exits.
+3. If no match, waits 5 milliseconds
+4. Does step 1 one more time to ensure that it was just not a spike
+5. Checks for voltages within 1 standard deviation of each defined resistance
+   * If it gets a match, and it is a change, it calls the defined callback, then exits.
+6. If there are no matches for exact single button presses, it continues by checking for multiple key presses
+7. Beginning with the largest resistance, it predicts the each combined voltage and matches each possible combination that is less than the value plus 1 standard deviation.
+8.  For the last matched, it checks so the value is also over the predicted resistance minus 2 standard deviations, if not, it removes that match
+9.  If there are less than two matches it is discarded, as that should have beem caught in the single check which is a little bit more exact (no combined deviations). 
+
+
 ## Voltage stability
 The ESP32, as is [used in the example](../../../examples/input/), has a quite stable voltage regulator, it actually outputs a stable voltage that is very near 3.3 V on the 3V3 pin. And it only stops working then the input voltage drops significantly, which causes instability anyway.
 
 However, as other consumers may use the same output, we might ge voltage drops that may incorrectly be interpreted as button presses. 
 
-Thus it is a good idea to add capacitors between 3v3 and ground near the ladder. One to protect from voltage drops, and another to handle smaller and faster fluctuations. 
+Thus it might be a good idea to add capacitors between the source voltage and ground near the ladder. One to protect from voltage drops, and another to handle smaller and faster fluctuations. Note that voltage regulators may become a bit overwhelmed if you have too much capacitance in the circuit.  
 
 ## Thermal and drifting
 
-This does not protect from slowly shifting differences, that may happen for thermal and other reasons. This is handled by the library following changes in the reference voltage.
-
-
-## Measurement inaccuracy
-This one is actually handled by the resistor ladder library by doing two measurements and averaging them. It also considers the provided standard deviation.
+This does not protect from slowly shifting differences, that may happen for thermal and other reasons. This may be handled in the future handled by the library following changes in the reference voltage.
 
 # Recommendations
 The [button ladder example](../../../examples/input/) setup with 5 buttons, which also has an extra 2200 &#x2126; resistor on R2 (value specified in resistor_monitor.R2_check_resistor) that makes it possible to detect if it has been shorted out, is probably a bit close to the limit for many cases, Especially given the limited voltage range of built-in ADCs in microcontrollers.

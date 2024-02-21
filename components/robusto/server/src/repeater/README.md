@@ -1,0 +1,2 @@
+# Robusto Repeater
+The repeater service does what it says, it repeats things you want it to repeat for you. It is used by many of the other Robusto service, like the [Quality of Service functionality](../../../network/src/qos/).
