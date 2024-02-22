@@ -2,6 +2,7 @@
 /**
  * @file robusto_input.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
+ * @note The general use of floating point is due to accumulating errors and eventually giving up conserving those few bytes.
  * @brief User input management
  * @version 0.1
  * @date 2023-02-19
@@ -60,11 +61,11 @@ typedef void(cb_buttons_press)(uint32_t buttons, float voltage);
 
 typedef struct resistance_mapping {
     /* The value of the resistor */
-    uint32_t resistance;
+    double resistance;
     /* The value of the adc */
-    uint16_t adc_voltage;
+    double adc_voltage;
     /* The acceptable width */
-    uint16_t adc_stdev;
+    double adc_stdev;
 
 } resistance_mapping_t;
 
@@ -86,12 +87,12 @@ typedef struct resistor_monitor {
     cb_buttons_press * callback;
 
     /* Voltage divider R1 value - Used to push voltage down into ADC range */
-    uint32_t R1;
+    double R1;
     /* Check resistor R2 value - Differenciates bypassing all resistors from a short */
-    uint32_t R2_check_resistor;
+    double R2_check_resistor;
     
     /* The overall voltage (Vs) */
-    uint32_t source_voltage;
+    double source_voltage;
     /* Decode this as a ladder when we might have multiple hits. See documentation. */
     bool ladder_decode;
     /* The smallest resistor(s) may not be able to detect safely when pressing multiple buttons*/

@@ -112,12 +112,12 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
 }
 #endif
 
-bool match_single_resistor(uint32_t adc_voltage, resistance_mapping_t mapping)
+bool match_single_resistor(double adc_voltage, resistance_mapping_t mapping)
 {
 
-    ROB_LOGD(input_log_prefix, "Comparing %lu to %u +/- %u", adc_voltage, mapping.adc_voltage, mapping.adc_stdev);
-    if ((adc_voltage <= (mapping.adc_voltage + mapping.adc_stdev)) &&
-        (adc_voltage >= (mapping.adc_voltage - mapping.adc_stdev)))
+    ROB_LOGD(input_log_prefix, "Comparing %.1f to %.1f +/- %.1f", adc_voltage, mapping.adc_voltage, mapping.adc_stdev);
+    if ((adc_voltage <= (mapping.adc_voltage + (mapping.adc_stdev * 2))) &&
+        (adc_voltage >= (mapping.adc_voltage - (mapping.adc_stdev * 2))))
     {
         return true;
     }
@@ -147,7 +147,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
         ROB_LOGE(input_log_prefix, "robusto_input_check_resistor_monitor - monitor is NULL!");
         return ROB_FAIL;
     }
-    float adc_voltage = 0;
+    double adc_voltage = 0;
     double R2 = 0;
     // We do this check twice to avoid reacting to dips 
     for (int count = 0; count < 2; count++)
@@ -193,7 +193,7 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
 
         if (match_single_resistor(adc_voltage, monitor->mappings[curr_map]))
         {
-            ROB_LOGI(input_log_prefix, "Matched number %hu on %.1f to %u.", curr_map, adc_voltage, monitor->mappings[curr_map].adc_voltage);
+            ROB_LOGI(input_log_prefix, "Matched number %hu on %.1f to %.1f.", curr_map, adc_voltage, monitor->mappings[curr_map].adc_voltage);
             matches |= 1 << (curr_map - 1);
             handle_matches(matches, adc_voltage, monitor);
             return ROB_OK;
@@ -205,10 +205,10 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
     }
 
     double calc_voltage = 0;
-    uint32_t curr_resistance = 0;
+    double curr_resistance = 0;
     uint8_t last_match, match_count = 0;
     // We start from top, we begin by assuming that no button has been pressed, We also discount the check resistor.
-    uint32_t subtr_resistance = monitor->mappings[0].resistance + monitor->R2_check_resistor;
+    double subtr_resistance = monitor->mappings[0].resistance + monitor->R2_check_resistor;
     
     for (uint8_t curr_map = 1; curr_map < monitor->mapping_count - monitor->ladder_exclude_count; curr_map++)
     {
@@ -216,20 +216,20 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
 
         calc_voltage = (double)(monitor->source_voltage * (double)(subtr_resistance - curr_resistance)) /
                        (double)(monitor->R1 + subtr_resistance - curr_resistance);
-        ROB_LOGD(input_log_prefix, "Testing for resistor %hu, curr accu %lu res %lu curr stdev %u, adc_voltage %.1f, calc_voltage %.1f",
+        ROB_LOGD(input_log_prefix, "Testing for resistor %hu, curr accu %1.f res %1.f curr stdev %.1f, adc_voltage %.1f, calc_voltage %.1f",
                  curr_map - 1, subtr_resistance, curr_resistance, monitor->mappings[curr_map].adc_stdev, adc_voltage, calc_voltage);
 
-        if ((double)adc_voltage <= (calc_voltage + monitor->mappings[curr_map].adc_stdev))
+        if ((double)adc_voltage <= (calc_voltage + (monitor->mappings[curr_map].adc_stdev * 2)))
         {
             matches |= 1 << (curr_map - 1);
             last_match = curr_map;
             match_count++;
             subtr_resistance -= curr_resistance;
-            ROB_LOGD(input_log_prefix, "Match. accu %lu, curr %lu", subtr_resistance, curr_resistance);
+            ROB_LOGD(input_log_prefix, "Match. accu %1.f, curr %1.f", subtr_resistance, curr_resistance);
         }
     }
     // Check the lower bound so that the last wasn't included erroneously
-    if ((matches > 0) && ((double)adc_voltage <= (calc_voltage - (monitor->mappings[last_match].adc_stdev * 2)))) {
+    if ((matches > 0) && ((double)adc_voltage <= (calc_voltage - (monitor->mappings[last_match].adc_stdev * 4)))) {
         matches &= ~(1 << (last_match - 1));
         match_count++;
     }

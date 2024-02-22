@@ -1,4 +1,3 @@
-
 #include <robusto_input.h>
 #ifdef CONFIG_ROBUSTO_INPUT_ADC_MONITOR 
 #include "robusto_input_init.h"
@@ -37,7 +36,7 @@ static adc_oneshot_unit_handle_t adc_handle;
 
 bool cali_enabled = false;
 uint8_t samples_collected = 0;
-uint16_t samples[SAMPLE_COUNT];
+double samples[SAMPLE_COUNT];
 
 typedef enum monitor_state
 {
@@ -52,11 +51,10 @@ typedef enum monitor_state
 static monitor_state_t curr_state = ms_waiting;
 resistance_mapping_t resistance_mappings[CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT + 1];
 uint8_t curr_mapping = 0;
-uint16_t v1 = 0;
+double v1 = 0;
 
 void monitor_adc_cb()
 {
-    uint32_t source_voltage = 0;
     if (curr_state == ms_waiting)
     {
         if (r_millis() > 3000)
@@ -73,7 +71,8 @@ void monitor_adc_cb()
         int new_value1, new_value2;
         adc_oneshot_get_calibrated_result(adc_handle, cali_handle, adc_channel, &new_value1);
         adc_oneshot_get_calibrated_result(adc_handle, cali_handle, adc_channel, &new_value2);
-        samples[samples_collected] = (new_value1 + new_value2) / 2;
+        samples[samples_collected] = (double)(new_value1 + new_value2) / 2.0;
+        // ROB_LOGI(adc_monitor_log_prefix, "%i%i", new_value1, new_value2);
 #endif
         samples_collected++;
         if (samples_collected > SAMPLE_COUNT - 1)
@@ -84,12 +83,12 @@ void monitor_adc_cb()
     }
     else if (curr_state == ms_calculating)
     {
-        uint16_t highest = 0;
-        uint16_t highest_pos = 0;
-        uint16_t lowest = 4096;
-        uint16_t lowest_pos = 0;
-        uint16_t curr_value = 0;
-        uint32_t total = 0;
+        double highest = 0;
+        double highest_pos = 0;
+        double lowest = 4096;
+        double lowest_pos = 0;
+        double curr_value = 0;
+        double total = 0;
         for (uint8_t curr_sample = 0; curr_sample < SAMPLE_COUNT; curr_sample++)
         {
             curr_value = samples[curr_sample];
@@ -108,8 +107,8 @@ void monitor_adc_cb()
             total += curr_value;
         }
         // Find limits to produce the spread of the filtered data
-        uint16_t highest_limit = 0;
-        uint16_t lowest_limit = 4096;
+        double highest_limit = 0;
+        double lowest_limit = 4096;
         // TODO: Calculate the standard deviation instead and use that later instead.
         for (uint8_t curr_sample = 0; curr_sample < SAMPLE_COUNT; curr_sample++)
         {
@@ -124,26 +123,26 @@ void monitor_adc_cb()
             }
         }
         // Discard the lowest and highest values
-        uint16_t mean_voltage = (total - lowest - highest) / (SAMPLE_COUNT - 2);
+        double mean_voltage = (double)(total - lowest - highest) / (double)(SAMPLE_COUNT - 2);
         double sum_of_squared_diff = 0.0;
         for (uint8_t curr_sample = 0; curr_sample < SAMPLE_COUNT; curr_sample++)
         {
             curr_value = samples[curr_sample];
             if (curr_sample != lowest_pos && curr_sample != highest_pos) {
-                sum_of_squared_diff += pow(curr_value - mean_voltage, 2);
+                sum_of_squared_diff += (curr_value - mean_voltage) * (curr_value - mean_voltage);
             }
         }
-        double variance = sum_of_squared_diff / SAMPLE_COUNT;      
+        double variance = (double)sum_of_squared_diff / (double)SAMPLE_COUNT;      
         double stdev = sqrt(variance);
         v1 = CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_V_IN;
-        uint32_t resistance = (mean_voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_R1) / (v1 - mean_voltage);
+        double resistance = (double)(mean_voltage * CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_R1) / (double)(v1 - mean_voltage);
         ROB_LOGI(adc_monitor_log_prefix,
-                 "cali average data: %" PRIu16 " mV, ADC - lowest: %" PRIu16 ", highest: %" PRIu16 ", average: %" PRIu16 ", stdev: %" PRIu16 ", highest_limit: %" PRIu16 ", lowest_limit: %" PRIu16,
-                 mean_voltage, lowest, highest, mean_voltage,
-                 highest_limit - lowest_limit, highest_limit, lowest_limit);
-        ROB_LOGI(adc_monitor_log_prefix, "v1: %" PRIu16 " mV, Resistance: %" PRIu32, v1, resistance);
+                 "cali average data: %1.f mV, ADC - lowest: %1.f, highest: %1.f, variance: %1.f stdev: %1.f, highest_limit: %1.f, lowest_limit: %1.f",
+                 mean_voltage, lowest, highest,
+                 variance, stdev, highest_limit, lowest_limit);
+        ROB_LOGI(adc_monitor_log_prefix, "v1: %.1f mV, Resistance: %1.f", v1, resistance);
 
-        resistance_mappings[curr_mapping].adc_stdev = highest_limit - lowest_limit;
+        resistance_mappings[curr_mapping].adc_stdev = stdev;
         resistance_mappings[curr_mapping].adc_voltage = mean_voltage;
         if (curr_mapping > 0) {
             resistance_mappings[curr_mapping].resistance = resistance_mappings[0].resistance - resistance;
@@ -176,12 +175,12 @@ void monitor_adc_cb()
         uint16_t data_pos = sprintf(data, "Data:\nresistance, adc_voltage, adc_stdev\n");
         for (uint8_t curr_sample = 0; curr_sample < CONFIG_ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_COUNT + 1; curr_sample++)
         {
-            buffer_pos += sprintf(buffer + buffer_pos, "    {.resistance = %" PRIu32 ", .adc_voltage = %" PRIu16 ", .adc_stdev = %" PRIu16 "},%s\n",
+            buffer_pos += sprintf(buffer + buffer_pos, "    {.resistance = %.1f, .adc_voltage = %.1f, .adc_stdev = %.1f},%s\n",
                                   resistance_mappings[curr_sample].resistance,
                                   resistance_mappings[curr_sample].adc_voltage,
                                   resistance_mappings[curr_sample].adc_stdev,
                                   curr_sample == 0 ? " //This is the total resistance, or base source_voltage value" : "");
-            data_pos += sprintf(data + data_pos, "%" PRIu32 ",%" PRIu16 ",%" PRIu16 "\n",
+            data_pos += sprintf(data + data_pos, "%.1f, %.1f, %.1f\n",
                                 resistance_mappings[curr_sample].resistance,
                                 resistance_mappings[curr_sample].adc_voltage,
                                 resistance_mappings[curr_sample].adc_stdev);
