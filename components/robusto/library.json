@@ -1,7 +1,7 @@
 {
-    "name": "Robusto framework",
+    "name": "robusto/robusto",
     "version": "0.1.0-alpha",
-    "description": "The Robusto framework. Note that some ESP-IDF components aren't available on platform IO, so some functionality may be lacking on the ESP32 side.",
+    "description": "The Robusto framework.",
     "keywords": "framework, microcontrollers",
     "repository":
     {
@@ -17,12 +17,13 @@
         "maintainer": true
       }
     ],
-    "license": "Copyright, 2-clause BSD license",
+    "license": "BSD-2-Clause",
     "homepage": "https://opensource.org/license/bsd-2-clause",
     "dependencies": {
-        "esp_modem": "https://github.com/espressif/esp-protocols/tree/master/components/esp_modem#1.1.0",
+        "esp_modem": "https://github.com/espressif/esp-protocols/tree/master/components/esp_modem",
         "RadioLib": "https://github.com/jgromes/RadioLib.git#6.4.2",
-        "lvgl/lvgl": "~8.3.0"
+        "lvgl/lvgl": "~8.3.0",
+        "esp_lvgl_port": "https://github.com/espressif/esp-bsp/tree/master/components/esp_lvgl_port"
     },
     "frameworks": "*",
     "platforms": "*"
