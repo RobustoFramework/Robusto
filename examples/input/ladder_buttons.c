@@ -1,5 +1,5 @@
 #include "ladder_buttons.h"
-
+#ifdef CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -62,3 +62,5 @@ void ladder_buttons_init(void)
     ROB_LOGI("LADDER BUTTONS", "In ladder_buttons_init");
     init_resistance_mappings();
 }
+
+#endif
