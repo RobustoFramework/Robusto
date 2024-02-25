@@ -1,7 +1,7 @@
-version: "0.1.0"
+version: "0.1.0-alpha"
 description: "Robusto framework"
-url: https://github.com/RobustoFramework
-
+url: "https://github.com/RobustoFramework"
+license: "Copyright, 2-clause BSD license"
 dependencies:
   # Required IDF version
   idf: ">=4.1"
