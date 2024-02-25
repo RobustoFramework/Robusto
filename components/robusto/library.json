@@ -1,6 +1,6 @@
 {
     "name": "robusto",
-    "version": "0.1.0-alpha",
+    "version": "0.1.1-alpha",
     "description": "The Robusto framework.",
     "keywords": "framework, microcontrollers",
     "repository":
@@ -23,7 +23,7 @@
         "esp_modem": "https://github.com/espressif/esp-protocols/tree/master/components/esp_modem",
         "RadioLib": "https://github.com/jgromes/RadioLib.git#6.4.2",
         "lvgl/lvgl": "~8.3.0",
-        "esp_lvgl_port": "https://github.com/espressif/esp-bsp/tree/master/components/esp_lvgl_port"
+        "esp_lvgl_port": "git://github.com/espressif/esp-bsp.git/components/esp_lvgl_port"
     },
     "frameworks": "*",
     "platforms": "*"
