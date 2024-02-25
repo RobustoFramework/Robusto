@@ -81,7 +81,7 @@ void run_repeaters() {
         curr_recurrence = recurrences[i];
         if (curr_recurrence->skips_left == 0) {
             ROB_LOGD(repeater_log_prefix, "Repeating: %s", curr_recurrence->recurrence_name);
-            r_delay(1);
+            robusto_yield();
             curr_recurrence->recurrence_callback();
             ROB_LOGD(repeater_log_prefix, "Done %s", curr_recurrence->recurrence_name);
             curr_recurrence->skips_left = curr_recurrence->skip_count;
@@ -102,7 +102,7 @@ void run_repeaters() {
 
 void repeater_task(void *arg)
 {  
-    ROB_LOGI(repeater_log_prefix, "Monitor task running..");
+    ROB_LOGI(repeater_log_prefix, "Repeater task running..");
     while (!recurrence_shutdown) {
         // Call different repeaters
         run_repeaters();
