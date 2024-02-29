@@ -55,7 +55,7 @@ idf_component_register(
         # Flash
         spiffs vfs
         # Networking dependecies
-        RadioLib
+        radiolib
         # ESP-NOW dependencies    
         esp_wifi esp_adc 
         # Screen
