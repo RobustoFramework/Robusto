@@ -11,8 +11,7 @@
 #include <robusto_concurrency.h>
 #include <robusto_system.h>
 
-bool pushed_5 = false;
-bool pushed_2_6 = false;
+bool pushed_2_5 = false;
 
 resistance_mapping_t resistances[6] = {
     {.resistance = 194432, .adc_voltage = 2723, .adc_stdev = 3}, //This is the total resistance, or base voltage value
@@ -23,28 +22,31 @@ resistance_mapping_t resistances[6] = {
     {.resistance = 4801, .adc_voltage = 2711, .adc_stdev = 4},
 };
 
-resistor_monitor_t *ladder;
+resistor_monitor_t *monitor = NULL;
 
 void callback_buttons_press(uint32_t buttons)
 {
     // Button 2 and 4 are pressed simultaneously
-    pushed_5 = buttons == 5;
-    pushed_2_6 = buttons == 2 + 16;
+
+    pushed_2_5 = buttons == 2 + 16;
+    ROB_LOGI("adc", "test: Got a button event %lu", buttons);
 };
 
 void init_resistance_mappings()
 {
-    if (ladder) {
+    if (monitor) {
         return;
     }
-    ladder = robusto_malloc(sizeof(resistor_monitor_t));
-    ladder->mappings = &resistances;
-    ladder->mapping_count = 6;
-    ladder->callback = &callback_buttons_press;
-    ladder->R1 = 41200;
-    ladder->source_voltage = 3300;
-    ladder->GPIO = 32; // Usually OK.
-    robusto_input_add_resistor_ladder(ladder);
+    monitor = robusto_malloc(sizeof(resistor_monitor_t));
+    monitor->mappings = &resistances;
+    monitor->mapping_count = 6;
+    monitor->ladder_exclude_count = 0;
+    monitor->callback = &callback_buttons_press;
+    monitor->R1 = 41200;
+    monitor->R2_check_resistor = 0;
+    monitor->source_voltage = 3300;
+    monitor->GPIO = 32; // Usually OK.
+ //   robusto_input_add_resistor_monitor(monitor);    
 }
 
 /**
@@ -54,12 +56,9 @@ void tst_input_adc_single_resolve(void)
 {
     ROB_LOGI("adc", "in tst_input_adc_single_resolve");
     init_resistance_mappings();
-    robusto_input_check_resistor_monitor(2714, ladder);
-
-    if (!robusto_waitfor_bool(&pushed_5, 1000))
-    {
-        TEST_ASSERT_TRUE_MESSAGE(pushed_5, "Didn't get the correct response");
-    }
+    
+    TEST_ASSERT_TRUE_MESSAGE(match_single_resistor(2714, monitor->mappings[5]), "Didn't match the resistance");
+    
 }
 
 void tst_input_adc_multiple_resolve(void)
@@ -69,13 +68,13 @@ void tst_input_adc_multiple_resolve(void)
     #endif
     ROB_LOGI("adc", "in tst_input_adc_multiple_resolve, button 2 and 5");
     init_resistance_mappings();
-    uint32_t resistance = (resistances[2].resistance + resistances[5].resistance);
-    double voltage = ((double)ladder->source_voltage * (double)resistance)/((double)ladder->R1 + (double)resistance);
-    ROB_LOGI("adc", "Calculated voltage: %f vs: %lu, from resistance %lu", voltage, ladder->voltage, resistance);
-    robusto_input_check_resistor_monitor(voltage, ladder);
-    if (!robusto_waitfor_bool(&pushed_2_6, 1000))
+    double resistance = resistances[0].resistance - (resistances[2].resistance + resistances[5].resistance);
+    double voltage = ((double)monitor->source_voltage * (double)resistance)/((double)monitor->R1 + (double)resistance);
+    ROB_LOGI("adc", "Calculated voltage: %1.f vs:  %1.f, from resistance %0.f", voltage, monitor->source_voltage, resistance);
+    match_multiple_resistors(voltage, monitor);
+    if (!robusto_waitfor_bool(&pushed_2_5, 1000))
     {
-        TEST_ASSERT_TRUE_MESSAGE(pushed_2_6, "Didn't get the correct response");
+        TEST_ASSERT_TRUE_MESSAGE(pushed_2_5, "Didn't get the correct response");
     }
     
 }

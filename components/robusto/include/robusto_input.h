@@ -122,4 +122,7 @@ rob_ret_val_t robusto_input_add_resistor_monitor(resistor_monitor_t * monitor);
 
 rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t * monitor);
 
+bool match_single_resistor(double adc_voltage, resistance_mapping_t mapping);
+rob_ret_val_t match_multiple_resistors(double adc_voltage, resistor_monitor_t *monitor);
+
 #endif
