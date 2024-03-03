@@ -21,8 +21,16 @@ menu "Networking"
 			Set this option to tell Robusto to load the LoRa library
 			https://en.wikipedia.org/wiki/LoRa
 	
-	orsource "src/media/lora/Kconfig"             
+	orsource "src/media/lora/Kconfig"   
+
+	config ROBUSTO_SUPPORTS_CANBUS
+		bool "Load CAN bus libraries"
+		help
+			Set this option to tell Robusto to load the CAN bus library
+			https://en.wikipedia.org/wiki/CAN_bus
 	
+	orsource "src/media/canbus/Kconfig"             
+		
 	config ROBUSTO_SUPPORTS_I2C
 		bool "Load I2C libraries"
 		help

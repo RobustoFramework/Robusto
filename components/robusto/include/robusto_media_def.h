@@ -66,8 +66,9 @@ typedef enum e_media_type
     /* Wired */
     robusto_mt_i2c = 8,
 
+    robusto_mt_canbus = 16, 
     /* TODO: To be implemented 
-    robusto_mt_twai = 16, 
+    
     robusto_mt_umts = 32, // TODO: Only implemented as a gateway service. 
     robusto_mt_wifi = 64,    // TODO: On what level should UMTS and wifi be implemented? Neither are direct and both use IP adressing
     // TTL? Onewire? Probably this should be implemented in some way. Or onewire. (perhaps separate for testing connections)

@@ -1,0 +1,111 @@
+menu "CAN busConfiguration"
+    depends on ROBUSTO_SUPPORTS_CANBUS
+    
+    config CANBUS_SDA_IO
+        int "SDA GPIO Pin"
+        default 4
+        range 0 60
+        help
+            Pin number of the SDA (data) line.
+    config CANBUS_SCL_IO
+        int "SCL GPIO Pin"
+        default 22
+        range 0 60
+        help
+            Pin number of the SCL (clock) line.
+    config CANBUS_CONTROLLER_NUM
+        int "SCL Controller to use"
+        default 0
+        range 0 1
+        help
+            The ESP32 have two CAN buscontrollers (sometimes called ports), choose which to use for Robusto.
+            Note: You probably want to use one for communication with peripherals (like sensors, screens).
+            If you mix them, they will interfere with each others' function. 
+
+    choice  ROBUSTO_CANBUS_BIT_RATE  
+        prompt "Bit rate - the speed of the bus"
+        config ROBUSTO_CANBUS_BIT_RATE_1MBITS
+            bool "1 Mbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_800KBITS
+            bool "800 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_500KBITS
+            bool "500 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_250KBITS
+            bool "250 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_125KBITS
+            bool "125 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_100KBITS
+            bool "100 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_50KBITS
+            bool "50 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_25KBITS
+            bool "25 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_20KBITS
+            bool "20 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_16KBITS
+            bool "16 Kbit/s"
+        config ROBUSTO_CANBUS_BIT_RATE_12_5KBITS
+            bool "12.5 Kbit/s"
+    endchoice
+    config CANBUS_ACKNOWLEGMENT_TIMEOUT_MS
+        int "CAN busacknowlegement timeout (milliseconds)"
+        default 50
+        range 0 10000
+        help
+            The extra time Robusto will wait for a acknowledgement (not to confuse with CAN busack/nack).
+            To minimize the time it hogs the line to optimize throughput, Robusto
+            predict the time a transmission will take and adjust timeouts to this. 
+            However, it has to wait a short while for the slave to respond with the receipt. 
+            This it usually a very short time, but if the slave has enabled heavy logging for example, 
+            it might take hundreds of milliseconds. Here this can be taken into account.
+
+    config CANBUS_ADDR
+        int "CAN bus address"
+        default -1
+        range -1 256
+        help
+            TODO: This should rather be a filter
+    config CANBUS_RESEND_COUNT
+        int "CAN busResend count"
+        default 2
+        range 0 256
+        help
+            Number of times the library tries to re-send through CAN busbefore it considers it a failure.
+    config SDP_SIM_CANBUS_BAD_CRC
+        int "| SIM | The number of times CAN buswill get a bad CRC32 on all requests"
+        default 0
+        depends on SDP_SIM   
+        range 0 256
+        help
+            When a peer returns with a CRC32 on the message, this will intervene and set the wrong
+            value, causing all crc checks to fail SDP_SIM_CANBUS_BAD_CRC number of times.
+    menu "Testing"
+        
+            config ROB_NETWORK_TEST_CANBUS_LOOP_INITIATOR
+            bool "This device begins and ends a test loop"
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING            
+            help
+                When testing the communication of several devices, a test loop is often constructed to test both sending and receiving of the same communication.
+
+                The loop starts with all devices except from the initiator starts listening. 
+                The first call is done by the initiator, that sends to the next and then starts listening. 
+                The next, in turn sends to the next. 
+                The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
+
+        config ROB_NETWORK_TEST_CANBUS_CALL_ADDR
+            depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT || ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
+            int "The CAN busaddress to test"
+            default -1
+            help
+                When doing physical testing of CAN busnetworks, this is the address one will call upon when testing
+
+
+        config ROB_NETWORK_TEST_CANBUS_KILL_SWITCH
+            int "Kill switch GPIO - Makes CAN busstop working when low"
+            default -1
+            help
+                Used for testing scoring.
+        
+    endmenu  
+
+endmenu

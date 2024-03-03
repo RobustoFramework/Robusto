@@ -39,6 +39,11 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 #include "i2c/i2c_control.h"
 #endif
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+#include "canbus/canbus_control.h"
+#endif
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #include "espnow/espnow_control.h"
 #endif
@@ -78,11 +83,11 @@ void list_media_types(robusto_media_types media_types, char *log_str)
     {
         strcat(log_str, " I2C,");
     }
-    /*
-    if (media_types & robusto_mt_twai)
+    
+    if (media_types & robusto_mt_canbus)
     {
-        strcat(log_str, "TWAI/CAN bus,");
-    }*/
+        strcat(log_str, "CAN bus,");
+    }
     /*
     if (media_types & robusto_mt_umts)
     {
@@ -118,11 +123,12 @@ char *media_type_to_str(robusto_media_types media_type)
     {
         return "I2C";
     }
-    /*
+    
     if (media_type == robusto_mt_canbus)
     {
         return "CAN bus";
-    
+    }
+    /*
     if (media_type == robusto_mt_umts)
     {
         return "UMTS";
@@ -144,6 +150,10 @@ void robusto_media_stop() {
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     robusto_i2c_stop();
+    #endif
+    
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    robusto_canbus_stop();
     #endif
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
@@ -184,6 +194,21 @@ void robusto_media_start() {
     
     #endif
 
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+
+
+    ROB_LOGW("mem", "Starting robusto_canbus_start");
+
+    mem_before = get_free_mem();
+    time_before = r_millis();
+    robusto_canbus_start();
+
+    ROB_LOGW("mem", "Started, took robusto_canbus_start %llu ms and %llu bytes.", r_millis() - time_before, mem_before - get_free_mem());
+
+    
+    #endif
+
+
     #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 
     ROB_LOGW("mem", "Starting robusto_espnow_start");
@@ -209,9 +234,12 @@ void robusto_media_init(char * _log_prefix) {
     #endif
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    robusto_i2c_init(media_log_prefix);
+    robusto_canbus_init(media_log_prefix);
     #endif
 
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    robusto_i2c_init(media_log_prefix);
+    #endif
     #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
     robusto_espnow_init(media_log_prefix);
     #endif
