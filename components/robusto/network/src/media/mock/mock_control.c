@@ -1,5 +1,5 @@
 /**
- * @file mock.c
+ * @file mock_control.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto mocking implementation
  * @version 0.1
@@ -32,7 +32,7 @@
 #include "robconfig.h"
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 #include "robusto_logging.h"
-#include "mock.h"
+#include "mock_control.h"
 
 #include "mock_queue.h"
 #include "mock_messaging.h"

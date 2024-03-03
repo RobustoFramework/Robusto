@@ -37,17 +37,17 @@
 #include <string.h>
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-#include "i2c/i2c_init.h"
+#include "i2c/i2c_control.h"
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-#include "espnow/espnow.h"
+#include "espnow/espnow_control.h"
 #endif
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
-#include "lora/lora.h"
+#include "lora/lora_control.h"
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
-#include "mock/mock.h"
+#include "mock/mock_control.h"
 #endif
 
 

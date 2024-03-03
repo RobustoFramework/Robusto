@@ -1,7 +1,7 @@
 /**
- * @file espnow.h
+ * @file i2c_control.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief The ESP-NOW media implements the proprietary ESP-NOW protocol by Espressif
+ * @brief I2C initialization and deinitialization
  * @version 0.1
  * @date 2023-02-19
  *
@@ -31,18 +31,19 @@
 
 #pragma once
 #include <robconfig.h>
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 
-#if CONFIG_ESPNOW_WIFI_MODE_STATION
-#define ESPNOW_WIFI_MODE WIFI_MODE_STA
-#define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
-#else
-#define ESPNOW_WIFI_MODE WIFI_MODE_AP
+#ifdef __cplusplus
+extern "C"
+{
 #endif
 
-void robusto_espnow_stop();
-void robusto_espnow_start();
-void robusto_espnow_init(char * _log_prefix);
+void robusto_i2c_stop();
+void robusto_i2c_start();
+void robusto_i2c_init(char * _log_prefix);
 
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 #endif

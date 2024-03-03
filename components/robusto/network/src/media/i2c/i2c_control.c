@@ -1,5 +1,5 @@
 /**
- * @file i2c_init.c
+ * @file i2c_control.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief I2C initialization and deinitialization
  * @version 0.1
@@ -31,7 +31,7 @@
 #include "robconfig.h"
 #if CONFIG_ROBUSTO_SUPPORTS_I2C
 
-#include "i2c_init.h"
+#include "i2c_control.h"
 #include "robusto_logging.h"
 
 #include "i2c_queue.h"
@@ -62,7 +62,7 @@ const char * i2c_log_prefix;
 void robusto_i2c_stop() {
     ROB_LOGI(i2c_log_prefix, "Shutting down i2c:");
     //TODO: Something needed here?
-    ROB_LOGI(i2c_log_prefix, "ESP-NOW shut down.");
+    ROB_LOGI(i2c_log_prefix, "i2c shut down.");
 }
 
 

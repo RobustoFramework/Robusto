@@ -1,7 +1,7 @@
 /**
- * @file i2c_init.h
+ * @file mock_control.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief I2C initialization and deinitialization
+ * @brief Robusto mocking implementation
  * @version 0.1
  * @date 2023-02-19
  *
@@ -31,17 +31,15 @@
 
 #pragma once
 #include <robconfig.h>
-#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+void ROBUSTO_NETWORK_MOCK_TESTING_init(char * _log_prefix);
 
-void robusto_i2c_stop();
-void robusto_i2c_start();
-void robusto_i2c_init(char * _log_prefix);
-
+void ROBUSTO_NETWORK_MOCK_TESTING_shutdown();
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -1,7 +1,7 @@
 /**
- * @file mock.h
+ * @file espnow_control.h
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief Robusto mocking implementation
+ * @brief The ESP-NOW media implements the proprietary ESP-NOW protocol by Espressif
  * @version 0.1
  * @date 2023-02-19
  *
@@ -31,17 +31,18 @@
 
 #pragma once
 #include <robconfig.h>
-#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
+#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 
-#ifdef __cplusplus
-extern "C"
-{
+#if CONFIG_ESPNOW_WIFI_MODE_STATION
+#define ESPNOW_WIFI_MODE WIFI_MODE_STA
+#define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
+#else
+#define ESPNOW_WIFI_MODE WIFI_MODE_AP
 #endif
-void ROBUSTO_NETWORK_MOCK_TESTING_init(char * _log_prefix);
 
-void ROBUSTO_NETWORK_MOCK_TESTING_shutdown();
+void robusto_espnow_stop();
+void robusto_espnow_start();
+void robusto_espnow_init(char * _log_prefix);
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+
 #endif

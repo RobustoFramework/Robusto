@@ -1,5 +1,5 @@
 /**
- * @file lora.c
+ * @file lora_control.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief LoRa (from "long range") is a physical proprietary radio communication technique.
  * See wikipedia: https://en.wikipedia.org/wiki/LoRa
@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "lora.h"
+#include "lora_control.h"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 
 #include "lora_messaging.hpp"

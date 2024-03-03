@@ -1,5 +1,5 @@
 /**
- * @file espnow.c
+ * @file espnow_control.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief The ESP-NOW media implements the proprietary ESP-NOW protocol by Espressif
  * @version 0.1
@@ -31,7 +31,7 @@
 
 #include "robconfig.h"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-#include "espnow.h"
+#include "espnow_control.h"
 
 // #include "../secret/local_settings.h"
 
