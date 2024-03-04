@@ -68,8 +68,6 @@ extern "C"
 
 #define CANBUS_FRAGMENT_SIZE (CANBUS_TX_BUF - 10)
 
-int canbus_heartbeat(robusto_peer_t *peer);
-rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
 
 /**
  * @brief CAN bus mode setting initialization
@@ -84,13 +82,20 @@ rob_ret_val_t canbus_after_comms(bool first_param, bool second_param);
 
 void canbus_handle_incoming(uint8_t * data, uint32_t data_length);
 
-rob_ret_val_t canbus_read_receipt(robusto_peer_t * peer);
-int canbus_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
-rob_ret_val_t canbus_send_receipt(robusto_peer_t *peer, bool success, bool unknown);
 
 void canbus_do_on_work_cb(media_queue_item_t *queue_item);
 void canbus_do_on_poll_cb(queue_context_t *q_context);
 void canbus_messaging_init(char * _log_prefix);
+
+/* Implemented in compatibility layers */
+
+rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+int canbus_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
+
+rob_ret_val_t canbus_read_receipt(robusto_peer_t * peer);
+rob_ret_val_t canbus_send_receipt(robusto_peer_t *peer, bool success, bool unknown);
+
+int canbus_heartbeat(robusto_peer_t *peer);
 
 void canbus_compat_messaging_start(void);
 void canbus_compat_messaging_init(char * _log_prefix);

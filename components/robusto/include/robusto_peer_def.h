@@ -177,6 +177,7 @@ This library assumes this and may fail using other lengths for this setting.
 
 #if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t canbus_info;
+        uint32_t canbus_address;
 #endif
 
 #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)

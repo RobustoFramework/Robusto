@@ -195,6 +195,27 @@ robusto_peers_find_peer_by_i2c_address(uint8_t i2c_address)
     return NULL;
 }
 #endif
+
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+robusto_peer_t *
+robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address)
+{
+    robusto_peer_t *peer;
+    ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: %lu", canbus_address);
+
+    SLIST_FOREACH(peer, &robusto_peers, next)
+    {
+        if (peer->canbus_address == canbus_address)
+        {
+            return peer;
+        }
+    }
+    ROB_LOGW(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: CAN bus peer not found: %lu", canbus_address);
+    return NULL;
+}
+#endif
+
 int robusto_peers_delete_peer(uint16_t peer_handle)
 {
     robusto_peer_t *peer;
@@ -397,6 +418,58 @@ robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_addre
 }
 
 #endif
+
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+
+/**
+ * @brief Add and initialize a new peer (does not contact it, see add_peer for that)
+ *
+ * @param peer_name The peer name
+ * @param canbus_address The CAN bus adress
+ * @return robusto_peer* An initialized peer
+ */
+robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const uint32_t canbus_address)
+{
+    
+    robusto_peer_t *peer = NULL;
+    robusto_peers_peer_add(peer_name, &peer);
+    if (peer != NULL)
+    {
+        peer->canbus_address = canbus_address;
+        peer->supported_media_types = robusto_mt_canbus;
+    }
+    else
+    {
+        ROB_LOGE(peers_log_prefix, "Failed to add the %s", peer_name);
+        return NULL;
+    }
+
+    return peer;
+}
+/**
+ * @brief Adds a new peer, contacts it using CAN bus and its CAN bus address it and exchanges information
+ * @note To find CAN bus peers, one has to either loop all 256 addresses or *know* the address, therefor one cannot go by macaddres.
+ * Howerver, it could be done, and here is a question on how the network should work in general. As it is also routing..
+ * @param peer_name The name of the peer, if we want to call it something
+ * @param canbus_address The CAN bus address of the peer
+ * @return Returns a pointer to the peer
+ */
+robusto_peer_t *add_peer_by_canbus_address(const char *peer_name, uint32_t canbus_address)
+{
+    robusto_peer_t *peer = robusto_add_init_new_peer_canbus(peer_name, canbus_address);
+    if (peer->state < PEER_PRESENTING) {
+        // TODO: This should be able to handle trying with several media types
+        robusto_send_presentation(peer, robusto_mt_canbus, false, presentation_add);
+    } else {
+        ROB_LOGE(peers_log_prefix, "add_peer_by_canbus_address: Will not present %s as we are already presenting", peer_name);
+    }
+
+    return peer;
+}
+
+#endif
+
 
 struct robusto_peers *get_peer_list()
 {

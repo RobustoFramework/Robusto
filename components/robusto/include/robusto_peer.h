@@ -145,14 +145,59 @@ extern "C"
     robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_address);
     robusto_peer_t *robusto_add_init_new_peer_i2c(const char *peer_name, const uint8_t i2c_address);
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    robusto_peer_t *add_peer_by_canbus_address(const char *peer_name, uint32_t canbus_address);
+    robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const uint32_t canbus_address);
+#endif
+
     robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, robusto_media_types media_types);
 
     struct robusto_peers *get_peer_list();
 
-    /* Lookups*/
+    /* Different peer lookups*/
+
+    /**
+     * @brief Lookup a peer by name
+     * 
+     * @param name The per to look for
+     * @return robusto_peer_t* 
+     */
     robusto_peer_t *robusto_peers_find_peer_by_name(const char *name);
+    /**
+     * @brief Lookup a peer by its handle
+     * 
+     * @param peer_handle The handle of the peer we are looking for
+     * @return robusto_peer_t* 
+     */
     robusto_peer_t *robusto_peers_find_peer_by_handle(int16_t peer_handle);
+    /**
+     * @brief Lookup a peer by its base MAC address
+     *
+     * @param mac_address The MAC address of the peer we are looking for
+     * @return robusto_peer_t* The matching peer
+     */
+    robusto_peer_t *robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address);
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    /**
+     * @brief Lookup a peer by its I2C address
+     * 
+     * @param i2c_address The I2C address we are looking for
+     * @return robusto_peer_t* 
+     */
     robusto_peer_t *robusto_peers_find_peer_by_i2c_address(uint8_t i2c_address);
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    /**
+     * @brief Lookup a peer by its CAN bus address
+     * 
+     * @param canbus_address The CAN bus address we are looking for
+     * @return robusto_peer_t* 
+     */
+    robusto_peer_t *robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address);
+#endif 
+
+
     /**
      * @brief Return any duplicate peers (excluding the peer itself)
      *
@@ -160,13 +205,6 @@ extern "C"
      * @return robusto_peer_t* The matching peer
      */
     robusto_peer_t *robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t *check_peer);
-    /**
-     * @brief Find peer by base MAC address
-     *
-     * @param mac_address The MAC address
-     * @return robusto_peer_t* The matching peer
-     */
-    robusto_peer_t *robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address);
 
     /**
      * @brief Sets a callback that will be called when a peer presentation has been received

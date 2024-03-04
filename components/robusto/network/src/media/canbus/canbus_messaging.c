@@ -42,16 +42,15 @@
 #include <string.h>
 #include <inttypes.h>
 
-
 #if !(defined(USE_ESPIDF) && defined(USE_ARDUINO))
 #include "stddef.h"
 #endif
 
-
 /* The log prefix for all logging */
 static char *canbus_messaging_log_prefix;
 
-void canbus_handle_incoming(uint8_t * data, uint32_t data_length){
+void canbus_handle_incoming(uint8_t *data, uint32_t data_length)
+{
     robusto_peer_t *peer = robusto_peers_find_peer_by_canbus_address(data[0]);
     if (peer != NULL)
     {
@@ -85,15 +84,15 @@ void canbus_handle_incoming(uint8_t * data, uint32_t data_length){
 
     if ((data[ROBUSTO_CRC_LENGTH + 1] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
     {
-        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length -1);
-        memcpy(n_data, data +1 , data_length - 1);
+        uint8_t *n_data = (uint8_t *)robusto_malloc(data_length - 1);
+        memcpy(n_data, data + 1, data_length - 1);
         handle_fragmented(peer, robusto_mt_canbus, n_data, data_length - 1, CANBUS_FRAGMENT_SIZE, &canbus_send_message);
         robusto_free(data);
         return;
     }
 
     peer->canbus_info.last_receive = r_millis();
-    
+
     if (is_heartbeat)
     {
         add_to_history(&peer->canbus_info, false, ROB_OK);
@@ -104,11 +103,9 @@ void canbus_handle_incoming(uint8_t * data, uint32_t data_length){
         memcpy(n_data, data, data_length);
         ROB_LOGI(canbus_messaging_log_prefix, "Got a message");
         add_to_history(&peer->canbus_info, false, robusto_handle_incoming(n_data, data_length - 1, peer, robusto_mt_canbus, 1));
-        //robusto_free(data);
+        // robusto_free(data);
     }
 }
-
-
 
 void canbus_do_on_poll_cb(queue_context_t *q_context)
 {
@@ -117,8 +114,6 @@ void canbus_do_on_poll_cb(queue_context_t *q_context)
     robusto_peer_t *peer = NULL;
     uint8_t prefix_bytes = NULL;
     canbus_read_data(&rcv_data, &peer, &prefix_bytes);
-
-
 }
 
 void canbus_do_on_work_cb(media_queue_item_t *queue_item)
@@ -126,7 +121,6 @@ void canbus_do_on_work_cb(media_queue_item_t *queue_item)
     ROB_LOGD(canbus_messaging_log_prefix, ">> In CAN bus work callback.");
     send_work_item(queue_item, &(queue_item->peer->canbus_info), robusto_mt_canbus, &canbus_send_message, &canbus_do_on_poll_cb, canbus_get_queue_context());
 }
-
 
 void canbus_messaging_init(char *_log_prefix)
 {
