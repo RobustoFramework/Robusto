@@ -1,27 +1,26 @@
 menu "CAN busConfiguration"
     depends on ROBUSTO_SUPPORTS_CANBUS
     
-    config CANBUS_SDA_IO
-        int "SDA GPIO Pin"
+    config ROBUSTO_CANBUS_TX_IO
+        int "TX GPIO Pin"
         default 4
         range 0 60
         help
-            Pin number of the SDA (data) line.
-    config CANBUS_SCL_IO
-        int "SCL GPIO Pin"
+            Pin number of the TX line.
+    config ROBUSTO_CANBUS_RX_IO
+        int "RX GPIO Pin"
         default 22
         range 0 60
         help
-            Pin number of the SCL (clock) line.
-    config CANBUS_CONTROLLER_NUM
-        int "SCL Controller to use"
-        default 0
-        range 0 1
-        help
-            The ESP32 have two CAN buscontrollers (sometimes called ports), choose which to use for Robusto.
-            Note: You probably want to use one for communication with peripherals (like sensors, screens).
-            If you mix them, they will interfere with each others' function. 
+            Pin number of the RX (clock) line.
 
+    config ROBUSTO_CANBUS_ADDRESS
+        int "CAN bus address"
+        default -1
+        range -1 256
+        help
+            TODO: This should rather be a filter
+            
     choice  ROBUSTO_CANBUS_BIT_RATE  
         prompt "Bit rate - the speed of the bus"
         config ROBUSTO_CANBUS_BIT_RATE_1MBITS
@@ -59,12 +58,6 @@ menu "CAN busConfiguration"
             This it usually a very short time, but if the slave has enabled heavy logging for example, 
             it might take hundreds of milliseconds. Here this can be taken into account.
 
-    config CANBUS_ADDR
-        int "CAN bus address"
-        default -1
-        range -1 256
-        help
-            TODO: This should rather be a filter
     config CANBUS_RESEND_COUNT
         int "CAN busResend count"
         default 2

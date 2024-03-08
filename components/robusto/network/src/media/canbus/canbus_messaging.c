@@ -30,7 +30,7 @@
  */
 
 #include "canbus_messaging.h"
-#if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS)
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 #include <robusto_logging.h>
 #include <robusto_time.h>
 #include <robusto_peer.h>

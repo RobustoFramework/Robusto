@@ -95,7 +95,6 @@ void robusto_canbus_start(char * _log_prefix) {
 void robusto_canbus_init(char * _log_prefix) {
     canbus_log_prefix = _log_prefix;
     ROB_LOGI(canbus_log_prefix, "Initializing CAN bus");
-    canbus_compat_messaging_init(_log_prefix); 
 
     #if CONFIG_ROB_NETWORK_TEST_CANBUS_KILL_SWITCH > -1
         ROB_LOGE("----", "CANBUS KILL SWITCH ENABLED - GPIO %i", CONFIG_ROB_NETWORK_TEST_CANBUS_KILL_SWITCH);
