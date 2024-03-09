@@ -233,7 +233,7 @@ void robusto_media_init(char * _log_prefix) {
     robusto_lora_init(media_log_prefix);
     #endif
 
-    #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
     robusto_canbus_init(media_log_prefix);
     #endif
 
