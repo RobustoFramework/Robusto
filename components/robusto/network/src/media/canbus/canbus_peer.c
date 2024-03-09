@@ -30,7 +30,7 @@
  */
 
 #include "canbus_peer.h"
-#if defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS)
 
 #include <robusto_logging.h>
 #include <robusto_time.h>

@@ -31,7 +31,7 @@
 
 #pragma once
 #include <robconfig.h>
-#if defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING) || defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
+#if defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING) || defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS)
 #include <robusto_peer.h>
 
 void canbus_peer_init_peer(robusto_peer_t *peer);
