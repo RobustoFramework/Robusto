@@ -117,7 +117,8 @@ typedef enum {
     media_problem_jammed,
     // The media has lower level, technical problems that aren't enumerated by Robusto
     media_problem_technical,    
-  
+    // The media does something it shouldn't, something happened that can not happen, or it is nog being used the way it is supposed to.
+    media_problem_bug,  
 
 } e_media_problem;
 

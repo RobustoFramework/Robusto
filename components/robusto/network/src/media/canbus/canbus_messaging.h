@@ -57,8 +57,7 @@ extern "C"
 
 
 #define CANBUS_TIMEOUT_MS 1000
-
-#define CANBUS_MAX_PACKETS 4096
+#define CANBUS_MAX_PACKETS 2048 // Makes the maximum message length 16 384 bytes
 
 /**
  * @brief CAN bus mode setting initialization

@@ -86,7 +86,7 @@ void canbus_handle_incoming(uint8_t *data, uint32_t data_length)
     {
         uint8_t *n_data = (uint8_t *)robusto_malloc(data_length - 1);
         memcpy(n_data, data + 1, data_length - 1);
-        handle_fragmented(peer, robusto_mt_canbus, n_data, data_length - 1, CANBUS_FRAGMENT_SIZE, &canbus_send_message);
+        handle_fragmented(peer, robusto_mt_canbus, n_data, data_length - 1, CANBUS_MAX_PACKETS * 8, &canbus_send_message);
         robusto_free(data);
         return;
     }
