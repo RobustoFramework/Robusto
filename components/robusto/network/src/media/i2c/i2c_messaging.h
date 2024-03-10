@@ -87,7 +87,7 @@ void i2c_messaging_init(char * _log_prefix);
 
 /* Implemented in compatibility layers */
 
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 int i2c_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
 
 int i2c_heartbeat(robusto_peer_t *peer);

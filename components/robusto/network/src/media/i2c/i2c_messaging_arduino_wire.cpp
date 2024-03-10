@@ -53,7 +53,7 @@ static uint8_t incoming_data[I2C_RX_BUF];
 static uint32_t incoming_data_length;
 static uint8_t i2c_arduino_receipt[2];
 
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
 void i2c_incoming_cb(int howMany)
 {
@@ -219,7 +219,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     return read_ret;
 }
 
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
     int64_t starttime = r_millis();
     int send_retries = 0;

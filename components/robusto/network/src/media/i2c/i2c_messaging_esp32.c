@@ -212,7 +212,7 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     //i2c_cmd_link_delete(cmd);
     return read_ret;
 }
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
     #if CONFIG_ROB_NETWORK_TEST_I2C_KILL_SWITCH > -1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_I2C_KILL_SWITCH) == true)

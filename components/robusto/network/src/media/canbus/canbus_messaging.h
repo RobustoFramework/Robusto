@@ -55,19 +55,10 @@ extern "C"
 #error "CAN bus - A CAN bus address must be set in menuconfig!"
 #endif
 
-#define ACK_CHECK_EN 0x1  /*!< CANBUS master will check ack from slave*/
-#define ACK_CHECK_DIS 0x0 /*!< CANBUS master will not check ack from slave */
-#define ACK_VAL 0x0       /*!< CANBUS ack value */
-#define NACK_VAL 0x1      /*!< CANBUS nack value */
 
 #define CANBUS_TIMEOUT_MS 1000
 
-
-#define CANBUS_TX_BUF 1000 /*!< CANBUS master doesn't need buffer */
-#define CANBUS_RX_BUF 1000 /*!< CANBUS master doesn't need buffer */
-
-#define CANBUS_FRAGMENT_SIZE (CANBUS_TX_BUF - 10)
-
+#define CANBUS_MAX_PACKETS 4096
 
 /**
  * @brief CAN bus mode setting initialization
@@ -89,7 +80,7 @@ void canbus_messaging_init(char * _log_prefix);
 
 /* Implemented in compatibility layers */
 
-rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 int canbus_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
 
 rob_ret_val_t canbus_read_receipt(robusto_peer_t * peer);

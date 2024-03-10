@@ -193,7 +193,7 @@ rob_ret_val_t i2c_after_comms(bool first_param, bool second_param)
     return ret;
 }
 
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
     int64_t starttime = r_millis();
     int send_retries = 0;

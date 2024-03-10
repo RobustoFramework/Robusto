@@ -66,7 +66,7 @@ static int synchro_data_len = 0;
 static robusto_peer_t *synchro_peer = NULL;
 
 
-rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, int data_length, bool receipt)
+rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
 
     // TODO: Recommend more wifi TX buffers and add warning if not enabled

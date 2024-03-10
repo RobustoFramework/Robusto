@@ -52,7 +52,7 @@ int mock_heartbeat(robusto_peer_t *peer);
 rob_ret_val_t mock_before_comms(bool first_param, bool second_param);
 rob_ret_val_t mock_after_comms(bool first_param, bool second_param);
 
-rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, int data_length, bool receipt);
+rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, uint32_t data_length, bool receipt);
 rob_ret_val_t mock_read_receipt(robusto_peer_t * peer, uint8_t **dest_data);
 int mock_read_data (uint8_t **rcv_data, robusto_peer_t **peer);
 rob_ret_val_t mock_send_receipt(robusto_peer_t *peer, bool receipt);

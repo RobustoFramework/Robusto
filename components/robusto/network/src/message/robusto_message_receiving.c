@@ -45,7 +45,7 @@
 #endif
 
 static char *message_receiving_log_prefix;
-// TODO: Either this should go or be explained. This vs incoming and if used in testing.
+// TODO: This should probably go, for example LoRa and CAN does not set the data parameter this should go or be explained. This vs incoming and if used in testing. 
 rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robusto_message_t **dest_msg)
 {
     robusto_media_types host_supported_media_types = get_host_supported_media_types();
