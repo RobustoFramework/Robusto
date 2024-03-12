@@ -29,9 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <robconfig.h>
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-
-
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 
 #pragma once
 /*********************

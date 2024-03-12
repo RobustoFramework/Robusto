@@ -296,6 +296,11 @@ robusto_media_t * get_media_info(robusto_peer_t * peer, e_media_type media_type)
     if (media_type == robusto_mt_i2c) {
         return &peer->i2c_info;
     }
+    #endif  
+    #if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+    if (media_type == robusto_mt_canbus) {
+        return &peer->canbus_info;
+    }
     #endif       
     #if defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if (media_type == robusto_mt_mock) {

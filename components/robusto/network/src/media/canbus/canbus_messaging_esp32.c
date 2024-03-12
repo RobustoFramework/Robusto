@@ -48,7 +48,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
 
     uint16_t number_of_packets = (bytes_to_send + TWAI_FRAME_MAX_DLC - 1) / TWAI_FRAME_MAX_DLC;
     if (number_of_packets > CANBUS_MAX_PACKETS) {
-        ROB_LOGE(canbus_messaging_log_prefix, "Bug: The message is longer (%lu bytes) than the max length of the Robusto CAN bus implementation (%lu bytes)", bytes_to_send, CANBUS_MAX_PACKETS * TWAI_FRAME_MAX_DLC);
+        ROB_LOGE(canbus_messaging_log_prefix, "Bug: The message is longer (%lu bytes) than the max length of the Robusto CAN bus implementation (%i bytes)", bytes_to_send, CANBUS_MAX_PACKETS * TWAI_FRAME_MAX_DLC);
         set_state(peer, &peer->canbus_info, robusto_mt_canbus, media_state_problem, media_problem_bug);
         return ROB_FAIL;
     }
@@ -113,7 +113,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         {
             ROB_LOGI(canbus_messaging_log_prefix, "CAN bus is heartbeat");
             rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, &message.data + 1, message.data_length_code - 1);
-            *peer->canbus_info.last_peer_receive = parse_heartbeat(&message.data + 1, ROBUSTO_CONTEXT_BYTE_LEN);
+            (*peer)->canbus_info.last_peer_receive = parse_heartbeat(&message.data + 1, ROBUSTO_CONTEXT_BYTE_LEN);
         }
     }
     // We have more data than what fits into a frame

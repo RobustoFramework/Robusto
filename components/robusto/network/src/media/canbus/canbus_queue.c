@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "canbus_queue.h"
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 
 
 #include <sys/queue.h>

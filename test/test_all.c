@@ -43,6 +43,11 @@
 #include "tst_i2c_message_receiving.h"
 #endif
 
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+#include "tst_canbus_message_sending.h"
+#include "tst_canbus_message_receiving.h"
+#endif
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #include "tst_esp_now_message_sending.h"
 #include "tst_esp_now_message_receiving.h"
@@ -149,12 +154,13 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
 
+#ifdef CONFIG_ROBUSTO_INPUT
     RUN_TEST(tst_input_adc_single_resolve);
     robusto_yield();
 
     RUN_TEST(tst_input_adc_multiple_resolve);
     robusto_yield();
-
+#endif
 
 #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) ||  defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     RUN_TEST(tst_pubsub); 
@@ -297,6 +303,42 @@ void runUnityTests(void *pvParameters)
 #endif
 
 #endif
+
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+
+    /* Asynchronous testing*/
+#if CONFIG_ROB_NETWORK_TEST_CANBUS_CALL_ADDR != 0xFFFFFFFFFFFF - 1 && defined(CONFIG_ROB_NETWORK_TEST_CANBUS_LOOP_INITIATOR)
+
+    RUN_TEST(tst_canbus_message_send_presentation, "TEST DEST");
+    robusto_yield();
+
+#endif
+
+    RUN_TEST(tst_canbus_message_receive_presentation);
+    robusto_yield();
+
+#if CONFIG_ROB_NETWORK_TEST_CANBUS_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_CANBUS_LOOP_INITIATOR)
+    RUN_TEST(tst_canbus_message_send_presentation, "TEST NEXT");
+    robusto_yield();
+
+#endif
+
+#if CONFIG_ROB_NETWORK_TEST_CANBUS_CALL_ADDR != 0xFFFFFFFFFFFF - 1 && defined(CONFIG_ROB_NETWORK_TEST_CANBUS_LOOP_INITIATOR)
+    RUN_TEST(tst_canbus_message_send_message);
+    robusto_yield();
+#endif
+
+    RUN_TEST(tst_canbus_message_receive_string_message);
+    robusto_yield();
+
+#if CONFIG_ROB_NETWORK_TEST_CANBUS_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_I2C_LOOP_INITIATOR)
+    RUN_TEST(tst_canbus_message_send_message);
+    robusto_yield();
+#endif
+
+#endif
+
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 

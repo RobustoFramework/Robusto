@@ -1,4 +1,5 @@
 #include "tst_input.h"
+#ifdef CONFIG_ROBUSTO_INPUT
 
 // TODO: Add copyrights on all these files
 #include <unity.h>
@@ -79,4 +80,4 @@ void tst_input_adc_multiple_resolve(void)
     
 }
 
-
+#endif
