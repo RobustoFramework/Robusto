@@ -199,10 +199,10 @@ robusto_peers_find_peer_by_i2c_address(uint8_t i2c_address)
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 robusto_peer_t *
-robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address)
+robusto_peers_find_peer_by_canbus_address(uint8_t canbus_address)
 {
     robusto_peer_t *peer;
-    ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: %lu", canbus_address);
+    ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: %hu", canbus_address);
 
     SLIST_FOREACH(peer, &robusto_peers, next)
     {
@@ -211,7 +211,7 @@ robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address)
             return peer;
         }
     }
-    ROB_LOGW(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: CAN bus peer not found: %lu", canbus_address);
+    ROB_LOGW(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: CAN bus peer not found: %hu", canbus_address);
     return NULL;
 }
 #endif

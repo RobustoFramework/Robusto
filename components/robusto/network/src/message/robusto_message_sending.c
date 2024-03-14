@@ -43,8 +43,8 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #include <network/src/media/espnow/espnow_messaging.h>
 #endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-#include "../media/i2c/i2c_messaging.h"
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+#include <network/src/media/canbus/canbus_messaging.h>
 #endif
 #endif // Include differently for ESP-IDF
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
@@ -88,6 +88,14 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
         // ESP-NOW has external address handling
     if (media_type == robusto_mt_espnow)
+    {
+        prefix_length = 0;
+    }
+    else
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+        // CAN bus has external address handling
+    if (media_type == robusto_mt_canbus)
     {
         prefix_length = 0;
     }
@@ -138,8 +146,16 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         queue_ctx = i2c_get_queue_context();
         //retval = i2c_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
-
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    if (media_type == robusto_mt_canbus)
+    {
+        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using CAN bus..", data_length);
+        queue_ctx = canbus_get_queue_context();
+        //retval = canbus_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
+    }
+#endif
+
 
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 

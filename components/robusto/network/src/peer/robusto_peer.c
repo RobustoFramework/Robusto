@@ -479,6 +479,12 @@ void robusto_peer_init(char *_log_prefix)
     } else {
         strcpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME "\00");
     }
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+    robusto_host.i2c_address = CONFIG_I2C_ADDR;
+    #endif
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    robusto_host.canbus_address = CONFIG_ROBUSTO_CANBUS_ADDRESS;
+    #endif
     robusto_host.supported_media_types = get_host_supported_media_types();  
  
 }

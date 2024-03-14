@@ -194,7 +194,7 @@ extern "C"
      * @param canbus_address The CAN bus address we are looking for
      * @return robusto_peer_t* 
      */
-    robusto_peer_t *robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address);
+    robusto_peer_t *robusto_peers_find_peer_by_canbus_address(uint8_t canbus_address);
 #endif 
 
 
