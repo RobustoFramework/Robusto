@@ -1,4 +1,4 @@
-menu "CAN busConfiguration"
+menu "CAN bus configuration"
     depends on ROBUSTO_SUPPORTS_CANBUS
     
     config ROBUSTO_CANBUS_TX_IO
@@ -19,7 +19,7 @@ menu "CAN busConfiguration"
         default -1
         range -1 256
         help
-            TODO: This should rather be a filter
+            This is the 
             
     choice  ROBUSTO_CANBUS_BIT_RATE  
         prompt "Bit rate - the speed of the bus"

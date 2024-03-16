@@ -217,8 +217,15 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         ROB_LOGW(canbus_messaging_log_prefix, "Failed to receive message, result code: %i", rec_result);
         return ROB_FAIL;
     } 
+    uint8_t source = (uint8_t)(message.identifier);
+    uint8_t dest = (uint8_t)(message.identifier >> 8);
 
-
+    if (message.identifier & 1 << 28) {
+        // It is the first package (filter away the leftmost four bits)
+        uint16_t packet_count = (message.identifier >> 16) & ~(0xF << 12);
+        ROB_LOGW(canbus_messaging_log_prefix, "Parsed packet count %u", packet_count);
+    }
+    ROB_LOGE(canbus_messaging_log_prefix, "Source: %hu, Dest: %hu", source, dest);
     ROB_LOGE(canbus_messaging_log_prefix, "Identifier (%" PRIx32 "): ", message.identifier);
     rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, &message.identifier, 4);
     ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %hu): ", message.data_length_code);
