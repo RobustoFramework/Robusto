@@ -45,17 +45,19 @@ static char *presentation_log_prefix;
 #define PROT_VER_MIN_POS 2
 #define MEDIA_T_POS 3
 #define I2C_ADDR_POS 4
-#define REASON_POS 5
-#define REL_ID_IN_POS 6
-#define MAC_ADDR_POS 10
+#define CANBUS_ADDR_POS 5
+#define REASON_POS 6
+#define REL_ID_IN_POS 7
+#define MAC_ADDR_POS 11
 
-void do_presentation_callback(robusto_message_t * message) {
-    if (message->peer->on_presentation) {
+void do_presentation_callback(robusto_message_t *message)
+{
+    if (message->peer->on_presentation)
+    {
         message->peer->on_presentation(message->peer, message->binary_data[REASON_POS]);
     }
     robusto_delete_current_task();
 }
-
 
 rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason)
 {
@@ -101,15 +103,26 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
             set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
             ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t *)q_state[0], ret_val_flag);
         }
-        else
-        // We are presenting, so wait for the state to change to PEER_KNOWN_INSECURE
-        if (!is_reply && (!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 1500)))
-        {
-            peer->state = failstate;
-            ret_val_flag = ROB_ERR_TIMEOUT;
-            ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout. System will retry later..", peer->name);
-            r_delay(1000);
-        } 
+        else {
+            
+            if (is_reply)
+            {
+                // We are replying, so we are done, just go back to the previous state.
+                peer->state = failstate;
+
+            } else {
+                // We are not replying, so wait for the state to change to PEER_KNOWN_INSECURE
+                if ((!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 1500)))
+                {
+                    peer->state = failstate;
+                    ret_val_flag = ROB_ERR_TIMEOUT;
+                    ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout (state = %u). System will retry later..", peer->name, peer->state);
+                    r_delay(1000);
+                }
+
+            } 
+        }
+    
         if (peer->state > PEER_PRESENTING)
         {
             break;
@@ -117,17 +130,16 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
     }
     if (peer->state < PEER_KNOWN_INSECURE)
     {
-        peer->state = failstate;;
-    }   
-    
+        // This is kind of odd, we are in here while presenting or unknown.
+        peer->state = failstate;
+    }
+
     robusto_free_queue_state(q_state);
     return ret_val_flag;
 }
 
 rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 {
-
-
 
     // TODO: Here, or before/later, we need to detect if this is fraudulent or spam to prevent hijacking of peers.
     if (message->peer == NULL)
@@ -158,26 +170,31 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
     /* Set supported media types*/
     message->peer->supported_media_types = message->binary_data[MEDIA_T_POS];
-    
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     /* Set I2C address */
     message->peer->i2c_address = message->binary_data[I2C_ADDR_POS];
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    /* Set CANBUS address */
+    message->peer->canbus_address = message->binary_data[CANBUS_ADDR_POS];
+#endif
     /* If assigned, call callback with presentation reason*/
-    if (message->peer->on_presentation) {
+    if (message->peer->on_presentation)
+    {
         robusto_create_task(&do_presentation_callback, message, "on_presentation_callback", NULL, 0);
     }
 
     // Store the relation id
     memcpy(&message->peer->relation_id_outgoing, message->binary_data + REL_ID_IN_POS, ROBUSTO_RELATION_LEN);
-    
-    if (!existing_peer) {
+
+    if (!existing_peer)
+    {
         // This is called here as a new peer is being populated after created.
         // Otherwise creating peers is done using add_peer_by_mac_address/i2c_address.
         init_supported_media_types(message->peer);
         ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
     }
-    
 
     /* Set the name of the peer (the rest of the message) */
     memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - MAC_ADDR_POS - ROBUSTO_MAC_ADDR_LEN);
@@ -192,10 +209,18 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
                  ,
                  message->peer->i2c_address
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+                 ,
+                 message->peer->canbus_address
+#endif
+
     );
+    // We now know this peer.
+    message->peer->state = PEER_KNOWN_INSECURE;
+    
     ROB_LOGI(presentation_log_prefix, "<< Peer %s now more informed.", message->peer->name);
     log_peer_info(presentation_log_prefix, message->peer);
-
+    
     // If its not a response, we need to respond.
     if (message->binary_data[HI_POS] == NET_HI)
     {
@@ -210,7 +235,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     }
     else if (message->binary_data[HI_POS] == NET_HIR)
     {
-        message->peer->state = PEER_KNOWN_INSECURE;
+        
         ROB_LOGD(presentation_log_prefix, "Not replying to a presentation reply.");
     }
     else
@@ -262,6 +287,11 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     data[I2C_ADDR_POS] = CONFIG_I2C_ADDR;
 #else
     data[I2C_ADDR_POS] = 0;
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    data[CANBUS_ADDR_POS] = CONFIG_ROBUSTO_CANBUS_ADDRESS;
+#else
+    data[CANBUS_ADDR_POS] = 0;
 #endif
     /* Provide a reason*/
     data[REASON_POS] = reason;

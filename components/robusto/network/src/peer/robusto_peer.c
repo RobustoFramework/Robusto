@@ -242,6 +242,9 @@ uint32_t relation_id_outgoing, uint8_t supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
                   , uint8_t i2c_address
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+                  , uint8_t canbus_address
+#endif
 )
 {
     /* Is it already there? */
@@ -271,6 +274,10 @@ uint32_t relation_id_outgoing, uint8_t supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
         relations[relation_count].i2c_address = i2c_address;
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+        relations[relation_count].canbus_address = canbus_address;
+#endif
+
         ROB_LOGI(peer_log_prefix, "Relation added at %hhu", relation_count);
         relation_count++;
         has_relations_indicator = HAS_RELATIONS_POLYNOMIAL;

@@ -63,18 +63,18 @@ extern "C"
     {
 
         /* The peer is unknown; we are yet to present us to them */
-        PEER_UNKNOWN = 0,
+        PEER_UNKNOWN = 0U,
         /* We are presenting us to a peer, awaiting response. Do not send another presentation. */
-        PEER_PRESENTING = 1,
+        PEER_PRESENTING = 1U,
         /* The peer has presented itself, but isn't encrypted*/
-        PEER_KNOWN_INSECURE = 2,
+        PEER_KNOWN_INSECURE = 2U,
         /* The peer is both known and encrypted */
-        PEER_KNOWN_SECURE = 3,
+        PEER_KNOWN_SECURE = 3U,
         /* The peer has behaved in a suspect manner */
         /* TODO: This is not probably not correct to have here, this is a connection level problem */
-        PEER_KNOWN_SUSPECT = 4,
+        PEER_KNOWN_SUSPECT = 4U,
         /* The peer has been banned. */
-        PEER_BANNED = 5,
+        PEER_BANNED = 5U,
 
     } e_peer_state;
 

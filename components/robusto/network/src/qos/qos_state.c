@@ -154,6 +154,7 @@ void recovering_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last
     {
         ROB_LOGE(qos_state_log_prefix, "%s, media type %s still hasn't recovered. info->last_state_change %llu, last_heartbeat_time %llu",
                  peer->name, media_type_to_str(media_type), info->last_state_change, last_heartbeat_time);
+        set_state(peer, info, media_type, media_state_problem, info->problem);
     }
 }
 

@@ -251,6 +251,9 @@ extern "C"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
         uint8_t i2c_address;
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+        uint8_t canbus_address;
+#endif
     } relation_t;
 
     /**
@@ -289,6 +292,10 @@ extern "C"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
                       ,
                       uint8_t i2c_address
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+                      ,
+                      uint8_t canbus_address
 #endif
     );
 

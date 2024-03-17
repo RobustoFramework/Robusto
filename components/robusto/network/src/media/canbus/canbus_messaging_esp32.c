@@ -181,10 +181,11 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         set_state(peer, &peer->canbus_info, robusto_mt_canbus, media_state_problem, media_problem_bug);
         return ROB_FAIL;
     }
-    ROB_LOGW(canbus_messaging_log_prefix, "Sending: number_of_packets %" PRIx16 "): ", number_of_packets);
+    ROB_LOGI(canbus_messaging_log_prefix, "Sending: number_of_packets %" PRIx16 "): ", number_of_packets);
+  /*
     ROB_LOGE(canbus_messaging_log_prefix, "Data that will be sent are CRC32, will be excluded(actually sending: %lu bytes): ", offset_data_length);
     rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, offset_data, offset_data_length);
-
+*/
 
     twai_message_t message;
     message.extd = 1;             // Extended frame format
@@ -200,41 +201,20 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     message.identifier |= 1 << 28;    // Set bit 29, first message
     message.identifier &= ~(1 << 27); // Unset bit 28, reserved
 
-    //    message.identifier = 0xBCDDEEFF;
-    /*
-
-    message.identifier = 0xBCDDEEFF;
-    E (66063) UNNAMEDPEER: Identifier (1cddeeff):
-    W (66063) UNNAMEDPEER: 255(xff) 238(xee) 221(xdd) 28(x1c)
-    W (66067) UNNAMEDPEER: 11111111 01110111 10111011 00111000
-    1100 1101
-
-    message.identifier = 0xCCDDEEFF;
-    W (228823) UNNAMEDPEER: 255(xff) 238(xee) 221(xdd) 12(x0c)
-    W (228827) UNNAMEDPEER: 11111111 01110111 10111011 00110000
-
-    message.identifier = 0xAAAAAAAA;
-    E (186923) UNNAMEDPEER: Identifier (aaaaaaa):
-    W (186924) UNNAMEDPEER: 170(xaa) 170(xaa) 170(xaa) 10(x0a)
-    W (186927) UNNAMEDPEER: 01010101 01010101 01010101 01010000
-    message.identifier = 0xFFFFFFFF;
-    E (111943) UNNAMEDPEER: Identifier (1fffffff):
-    W (111943) UNNAMEDPEER: 255(xff) 255(xff) 255(xff) 31(x1f)
-    W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
-
-    */
     uint32_t bytes_sent = 0;
     uint32_t package_index = 0;
     while (offset_data_length - bytes_sent > TWAI_FRAME_MAX_DLC)
     {
         memcpy(&message.data, offset_data + bytes_sent, TWAI_FRAME_MAX_DLC);
         message.data_length_code = TWAI_FRAME_MAX_DLC;
-        ROB_LOGE(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
-        rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
+        ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
+        rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
         esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
         if (tr_result == ESP_OK)
         {
             ROB_LOGI(canbus_messaging_log_prefix, "Message queued for transmission");
+            add_to_history(&peer->canbus_info, true, tr_result);
+        
         }
         else
         {
@@ -247,14 +227,13 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         message.identifier |= get_host_peer()->canbus_address << 8;
         message.identifier |= peer->canbus_address;
         message.identifier &= ~(1 << 28); // Unset bit 29. Not the first packet from now on. Faster to do than check, probably.
-
         bytes_sent += TWAI_FRAME_MAX_DLC;
     }
 
     memcpy(&message.data, offset_data + bytes_sent, offset_data_length - bytes_sent);
     message.data_length_code = offset_data_length - bytes_sent;
-    ROB_LOGE(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
-    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
+    ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
     esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
     if (tr_result == ESP_OK)
     {
@@ -283,7 +262,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
     esp_err_t rec_result = twai_receive(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
     if (rec_result == ESP_ERR_TIMEOUT)
     {
-        ROB_LOGI(canbus_messaging_log_prefix, "Timed out waiting");
+        ROB_LOGD(canbus_messaging_log_prefix, "Timed out waiting");
         return ROB_FAIL;
     }
     else if (rec_result != ESP_OK)
@@ -298,13 +277,13 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
     }
 
     uint8_t source = (uint8_t)(message.identifier >> 8);
-
+    /*
     ROB_LOGE(canbus_messaging_log_prefix, "Source: %hu, Dest: %hu", source, dest);
     ROB_LOGE(canbus_messaging_log_prefix, "Identifier (%" PRIx32 "): ", message.identifier);
     rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, &message.identifier, 4);
     ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %hu): ", message.data_length_code);
     rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, message.data, message.data_length_code);
-
+*/
     uint8_t *data = NULL;
     uint32_t data_length = NULL;
     if (message.identifier & 1 << 28)
@@ -356,13 +335,10 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
     *peer = robusto_peers_find_peer_by_canbus_address(source);
     if (*peer == NULL)
     {
-        ROB_LOGI(canbus_messaging_log_prefix, "1 %hx", data[ROBUSTO_CRC_LENGTH]);
         if (data[ROBUSTO_CRC_LENGTH] & MSG_NETWORK)
         {
-            ROB_LOGI(canbus_messaging_log_prefix, "2");
             // It is likely a presentation, add peer and hope it is. TODO: This could be flooded.
             *peer = robusto_add_init_new_peer_canbus(NULL, source);
-            ROB_LOGI(canbus_messaging_log_prefix, "3");
         }
         else
         {
@@ -373,7 +349,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
             return ROB_ERR_WHO;
         }
     }
-
+    add_to_history(&((*peer)->canbus_info), false, ROB_OK);
     ROB_LOGD(canbus_messaging_log_prefix, "Message");
     rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, data + ROBUSTO_CRC_LENGTH, data_length);
     // TODO: Move this to a more central spot and re-use.
