@@ -146,8 +146,8 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         return ROB_FAIL;
     }
     ROB_LOGW(canbus_messaging_log_prefix, "Sending: number_of_packets %" PRIx16 "): ", number_of_packets);
-    ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %lu): ", data_length);
-    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, data, data_length);
+    ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %lu): ", bytes_to_send);
+    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, data + ROBUSTO_CRC_LENGTH, bytes_to_send);
     
     twai_message_t message;
     message.extd = 1;    // Extended frame format
@@ -155,7 +155,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     message.ss = 0; // Not a single-shot, will retry
     message.self = 0,              // Not a self reception request
     message.dlc_non_comp = 0,      // DLC is not more than 8
-    
+
     message.identifier = 0;
     message.identifier |= number_of_packets << 16;
     message.identifier |= get_host_peer()->canbus_address << 8;
@@ -189,7 +189,7 @@ W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
     uint32_t bytes_sent = 0;
     uint32_t package_index = 0;
     while (bytes_to_send - bytes_sent > TWAI_FRAME_MAX_DLC) {
-        memcpy(&message.data, data + bytes_sent, TWAI_FRAME_MAX_DLC);
+        memcpy(&message.data, data + ROBUSTO_CRC_LENGTH + bytes_sent, TWAI_FRAME_MAX_DLC);
         message.data_length_code = TWAI_FRAME_MAX_DLC;
         ROB_LOGE(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
         rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
@@ -210,8 +210,10 @@ W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
         bytes_sent += TWAI_FRAME_MAX_DLC;
     }
 
-    memcpy(&message.data , data + bytes_sent, bytes_to_send - bytes_sent);
+    memcpy(&message.data , data + ROBUSTO_CRC_LENGTH + bytes_sent, bytes_to_send - bytes_sent);
     message.data_length_code = bytes_to_send - bytes_sent;
+    ROB_LOGE(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
+    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
     esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
     if (tr_result == ESP_OK) {
         ROB_LOGI(canbus_messaging_log_prefix, "Message queued for transmission");
