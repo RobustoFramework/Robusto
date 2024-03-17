@@ -14,13 +14,21 @@ static char * canbus_messaging_log_prefix;
 // TODO: If a message is larger than X, free and fail that message
 
 typedef struct in_flight {
+    /* The source address of the sender*/
     uint8_t address;
+    /* The number of frames*/
     uint16_t count; 
-    uint8_t * data;
-    bool available;
+    /* The data received*/
+    uint8_t * data; 
+    /* Final length of data, will be 0 until last transmission done*/
+    uint32_t data_length; 
+    /* This in-flight is taken */
+    bool taken;
 } in_flight_t;
 
 #define CANBUS_MAX_IN_FLIGHT 5
+#define ERR_INVALID_PACKAGE_INDEX -0xFFFFFF
+#define ERR_INFLIGHT_NOT_INITIALIZED -0xFFFFFE
 
 in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 
@@ -49,7 +57,8 @@ in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 int start_in_flight(uint8_t address, uint16_t count, uint8_t * data, uint8_t data_length) {
     // Find a free in-flight
     for (uint8_t curr_inflight = 0; curr_inflight < CANBUS_MAX_IN_FLIGHT; curr_inflight++) {
-        if (in_flights->available) {
+        if (!in_flights->taken) {
+            in_flights->taken = true;
             in_flights[curr_inflight].address = address;
             if (count > CANBUS_MAX_PACKETS ) {
                 ROB_LOGE(canbus_messaging_log_prefix, "CANBUS: Internal error, too many packages indicated.");
@@ -86,18 +95,21 @@ int add_to_in_flight(uint8_t address, uint16_t position, uint8_t * data, uint8_t
         if (in_flights[curr_inflight].address == address) {
             memcpy(in_flights[curr_inflight].data + (position * TWAI_FRAME_MAX_DLC), data, data_length);
             if (position == in_flights[curr_inflight].count -1) {
+                ROB_LOGW(canbus_messaging_log_prefix, "CANBUS: We are at the last in flight from %hu.", address);
+                in_flights[curr_inflight].data_length = (position * TWAI_FRAME_MAX_DLC) + data_length;
                 return -curr_inflight;
             } else
             if (position > in_flights[curr_inflight].count -1) {
-                return -0xFFFFFF;
+                ROB_LOGE(canbus_messaging_log_prefix, "CANBUS: Invalid package index from %hu: %u.", address, position);
+                return ERR_INVALID_PACKAGE_INDEX;
             }
             else {
-                return curr_inflight;
+                return (position * TWAI_FRAME_MAX_DLC) + data_length;
             }
             
         }
     }
-    return -0xFFFFFE; 
+    return ERR_INFLIGHT_NOT_INITIALIZED; 
     
 }
 
@@ -133,11 +145,18 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         set_state(peer, &peer->canbus_info, robusto_mt_canbus, media_state_problem, media_problem_bug);
         return ROB_FAIL;
     }
-    ROB_LOGW(canbus_messaging_log_prefix, "number_of_packets %" PRIx16 ", %u): ", number_of_packets,number_of_packets);
+    ROB_LOGW(canbus_messaging_log_prefix, "Sending: number_of_packets %" PRIx16 "): ", number_of_packets);
+    ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %lu): ", data_length);
+    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, data, data_length);
     
     twai_message_t message;
+    message.extd = 1;    // Extended frame format
+    message.rtr = 0;   // Not a remote transmission request
+    message.ss = 0; // Not a single-shot, will retry
+    message.self = 0,              // Not a self reception request
+    message.dlc_non_comp = 0,      // DLC is not more than 8
+    
     message.identifier = 0;
-    message.extd = 1;    
     message.identifier |= number_of_packets << 16;
     message.identifier |= get_host_peer()->canbus_address << 8;
     message.identifier |= peer->canbus_address;
@@ -168,11 +187,12 @@ W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
 
 */
     uint32_t bytes_sent = 0;
+    uint32_t package_index = 0;
     while (bytes_to_send - bytes_sent > TWAI_FRAME_MAX_DLC) {
         memcpy(&message.data, data + bytes_sent, TWAI_FRAME_MAX_DLC);
         message.data_length_code = TWAI_FRAME_MAX_DLC;
-
-
+        ROB_LOGE(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
+        rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
         esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
         if (tr_result == ESP_OK) {
             ROB_LOGI(canbus_messaging_log_prefix, "Message queued for transmission");
@@ -180,7 +200,13 @@ W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
             ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message for transmission, error_code: %i", tr_result);
             return ROB_FAIL;
         }                
+        package_index++;
+        message.identifier = 0;
+        message.identifier |= package_index << 16;
+        message.identifier |= get_host_peer()->canbus_address << 8;
+        message.identifier |= peer->canbus_address;
         message.identifier &= ~(1 << 28); // Unset bit 29. Not the first packet from now on. Faster to do than check, probably.
+        
         bytes_sent += TWAI_FRAME_MAX_DLC;
     }
 
@@ -206,7 +232,7 @@ W (111947) UNNAMEDPEER: 11111111 11111111 11111111 11111000
 
 int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes){
 
-    // Treat all data lengths shorter than 8 bytes as single messages. Heart beats would be one variant.
+    // TODO: Treat all data lengths shorter than 8 bytes as single messages. Heart beats would be one variant.
     twai_message_t message;
     esp_err_t rec_result = twai_receive(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
     if (rec_result == ESP_ERR_TIMEOUT) {
@@ -217,19 +243,54 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         ROB_LOGW(canbus_messaging_log_prefix, "Failed to receive message, result code: %i", rec_result);
         return ROB_FAIL;
     } 
-    uint8_t source = (uint8_t)(message.identifier);
-    uint8_t dest = (uint8_t)(message.identifier >> 8);
-
-    if (message.identifier & 1 << 28) {
-        // It is the first package (filter away the leftmost four bits)
-        uint16_t packet_count = (message.identifier >> 16) & ~(0xF << 12);
-        ROB_LOGW(canbus_messaging_log_prefix, "Parsed packet count %u", packet_count);
+    uint8_t dest = (uint8_t)(message.identifier);
+    if (dest != get_host_peer()->canbus_address ) {
+        return ROB_OK;
     }
+
+    uint8_t source = (uint8_t)(message.identifier >> 8);
+    
     ROB_LOGE(canbus_messaging_log_prefix, "Source: %hu, Dest: %hu", source, dest);
     ROB_LOGE(canbus_messaging_log_prefix, "Identifier (%" PRIx32 "): ", message.identifier);
     rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, &message.identifier, 4);
     ROB_LOGE(canbus_messaging_log_prefix, "Data (length: %hu): ", message.data_length_code);
-    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, &message.data, message.data_length_code);
+    rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, message.data, message.data_length_code);
+    
+
+    if (message.identifier & 1 << 28) {
+        // It is the first package (filter away the leftmost four bits)
+        uint16_t packet_count = (message.identifier >> 16) & ~(0xF << 12);
+        // TODO: Handle singles
+        ROB_LOGW(canbus_messaging_log_prefix, "Parsed packet count %u", packet_count);
+        start_in_flight(source, packet_count, &message.data, message.data_length_code);
+    } else  {
+        // It is not the first package (filter away the leftmost four bits)
+        uint16_t packet_index = (message.identifier >> 16) & ~(0xF << 12);
+        ROB_LOGW(canbus_messaging_log_prefix, "Parsed packet index %u", packet_index);
+
+        int res_add = add_to_in_flight(source, packet_index, &message.data, message.data_length_code);
+        if (res_add == ERR_INVALID_PACKAGE_INDEX) {
+
+        } else 
+        if (res_add == ERR_INFLIGHT_NOT_INITIALIZED) {
+
+        } else 
+        if (res_add <= 0) {
+
+            ROB_LOGE(canbus_messaging_log_prefix, "Full data (length: %lu): ", in_flights[-res_add].data_length);
+            rob_log_bit_mesh(ROB_LOG_WARN, canbus_messaging_log_prefix, in_flights[-res_add].data, in_flights[-res_add].data_length);
+            in_flights[-res_add].taken = false;
+        } else {
+            ROB_LOGE(canbus_messaging_log_prefix, "Data so far from %hu: %i bytes", source, res_add);
+        }
+
+    }
+
+    if (message.data_length_code < TWAI_FRAME_MAX_DLC) {
+            
+            // This is obviously 
+    }
+    
     
     #if 0
     // Is it for us? The forth byte is our address
