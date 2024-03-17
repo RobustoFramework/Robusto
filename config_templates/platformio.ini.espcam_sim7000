@@ -60,7 +60,7 @@ lib_deps =
 
 [env:ESP32cam]
 ; Used with the The ESP32 cam board
-platform = espressif32@6.4.0
+platform = espressif32@6.5.0
 framework = espidf
 board = esp32cam
 
@@ -76,4 +76,3 @@ upload_protocol = esptool
 
 ; Better partioning
 board_build.partitions = min_spiffs.csv
-
