@@ -185,7 +185,7 @@ void peer_heartbeat(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
         if (media_type == robusto_mt_canbus)
         {
-            // Not Implemented
+            send_heartbeat_message(peer, robusto_mt_canbus);
         }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_UMTS

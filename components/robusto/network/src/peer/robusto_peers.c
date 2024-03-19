@@ -406,6 +406,7 @@ robusto_peer_t *robusto_add_init_new_peer_i2c(const char *peer_name, const uint8
  */
 robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_address)
 {
+    // TODO: Add a check for existing peer.
     robusto_peer_t *peer = robusto_add_init_new_peer_i2c(peer_name, i2c_address);
     if (peer->state < PEER_PRESENTING) {
         // TODO: This should be able to handle trying with several media types
@@ -448,7 +449,7 @@ robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const ui
     return peer;
 }
 /**
- * @brief Adds a new peer, contacts it using CAN bus and its CAN bus address it and exchanges information
+ * @brief If not added, adds a new peer, contacts it using CAN bus and its CAN bus address it and exchanges information
  * @note To find CAN bus peers, one has to either loop all 256 addresses or *know* the address, therefor one cannot go by macaddres.
  * Howerver, it could be done, and here is a question on how the network should work in general. As it is also routing..
  * @param peer_name The name of the peer, if we want to call it something
@@ -457,7 +458,11 @@ robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const ui
  */
 robusto_peer_t *add_peer_by_canbus_address(const char *peer_name, uint32_t canbus_address)
 {
-    robusto_peer_t *peer = robusto_add_init_new_peer_canbus(peer_name, canbus_address);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_canbus_address(canbus_address);
+    if (peer) {
+        return peer;
+    }
+    peer = robusto_add_init_new_peer_canbus(peer_name, canbus_address);
     if (peer->state < PEER_PRESENTING) {
         // TODO: This should be able to handle trying with several media types
         robusto_send_presentation(peer, robusto_mt_canbus, false, presentation_add);

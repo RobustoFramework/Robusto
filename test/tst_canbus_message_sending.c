@@ -19,7 +19,9 @@ static robusto_peer_t *remote_peer;
 
 void canbus_init_defs() {
 
-    
+    if (remote_peer) {
+        return;
+    }
     remote_peer = robusto_malloc(sizeof(robusto_peer_t));
     remote_peer->protocol_version = 0;
     remote_peer->relation_id_outgoing =	TST_RELATIONID_01;
