@@ -85,9 +85,9 @@ void unset_peer_problematic_media_types(robusto_peer_t *peer, e_media_type unpro
 
 void set_state(robusto_peer_t *peer, robusto_media_t *info, e_media_type media_type, e_media_state media_state, e_media_problem problem)
 {
-    if (info->state == media_state)
+    if (info->state == media_state && info->problem == problem)
     {
-        // If there is no change to the state, there is no state change.
+        // If there is no change to the state or problem, thus there is no state change.
         return;
     }
 
@@ -200,7 +200,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
         // Do we have problem receiving from the peer?
         (last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
     {
-        if (info->problem != media_problem_silence)
+        if (info->problem != media_problem_silence) // Huh? how come it is not media_problem_silence after just being set to that
         {
             ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
                      peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
