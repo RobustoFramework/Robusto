@@ -426,6 +426,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #endif    
     #if defined(CONFIG_ROBUSTO_SUPPORTS_I2C) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_i2c) && !(exclude & robusto_mt_i2c)) {
+        new_score = score_peer(peer, robusto_mt_i2c, data_length);
         if (peer->i2c_info.state > media_state_working) {
             new_score = new_score - 20;
         }
@@ -437,6 +438,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #endif       
     #if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_canbus) && !(exclude & robusto_mt_canbus)) {
+        new_score = score_peer(peer, robusto_mt_canbus, data_length);
         if (peer->canbus_info.state > media_state_working) {
             new_score = new_score - 20;
         }
