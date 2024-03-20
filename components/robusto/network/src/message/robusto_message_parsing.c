@@ -74,7 +74,7 @@ bool robusto_check_message(uint8_t *data, int data_len, uint8_t prefix_bytes) {
 
 }
 
-rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes) 
+rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, int prefix_bytes) 
 {
     ROB_LOGD(message_parsing_log_prefix, "In robusto_network_parse_message, prefix bytes: %"PRIu8"", prefix_bytes);
         
@@ -86,8 +86,9 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
     msg_inst->peer = peer;
     ROB_LOGD(message_parsing_log_prefix, "%"PRIu32" bytes memory allocated. Parsing context.", data_len);
     
-    // Then, there is the message context.
+    // Then, there is the message context. 
     uint8_t first_byte = data[prefix_bytes + ROBUSTO_CRC_LENGTH];
+    // TODO: Stop offsetting for CRC if is CAN bus. 
     msg_inst->context.message_type = ((first_byte >> 0) & 1) + (((first_byte >> 1) & 1) * 2) + (((first_byte >> 2) & 1) * 4);
     msg_inst->context.is_service_call = ((first_byte >> 3) & 1);
     msg_inst->context.is_conversation = ((first_byte >> 4) & 1);

@@ -73,7 +73,7 @@ typedef void (incoming_callback_cb)(incoming_queue_item_t *incoming_item);
 
 rob_ret_val_t robusto_register_handler(incoming_callback_cb *_incoming_callback);
 
-rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robusto_peer_t *peer, e_media_type media_type, uint8_t offset);
+rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robusto_peer_t *peer, e_media_type media_type, int offset);
 rob_ret_val_t robusto_handle_network(incoming_queue_item_t * queue_item);
 rob_ret_val_t robusto_handle_service(incoming_queue_item_t *queue_item);
 

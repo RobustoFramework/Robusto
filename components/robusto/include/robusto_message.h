@@ -292,7 +292,7 @@ rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robust
  * @param prefix_bytes
  * @return rob_ret_val_t* 
  */
-rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, uint8_t prefix_bytes);
+rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, robusto_peer_t *peer, robusto_message_t **msg, int prefix_bytes);
 
 /**
  * @brief Check a message against its CRC32 or Fletcher 16 for consistency

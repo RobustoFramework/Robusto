@@ -59,6 +59,9 @@
 #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
 #include "../media/espnow/espnow_peer.h"
 #endif
+#if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+#include "../media/canbus/canbus_peer.h"
+#endif
 
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 #include "../media/mock/mock_peer.h"
@@ -345,6 +348,10 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
         // TODO: Obviously, the length score should go down if we are forced to slow down, with a low actual speed.
         length_score = robusto_calc_suitability(data_length, 50, 1000, 0.005);
     } else
+    if (media_type == robusto_mt_canbus) {
+        // CAN bus is not very fast, but not super-slow.
+        length_score = robusto_calc_suitability(data_length, 50, 1000, 0.005);
+    } else
     if (media_type == robusto_mt_lora) {
         // lora is not very fast, but not super-slow.
         // If there are many peers, per
@@ -428,7 +435,17 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
         }
     }
     #endif       
-    
+    #if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+    if ((peer->supported_media_types & robusto_mt_canbus) && !(exclude & robusto_mt_canbus)) {
+        if (peer->canbus_info.state > media_state_working) {
+            new_score = new_score - 20;
+        }
+        if (new_score > score && peer->canbus_info.state < media_state_recovering) {
+            score = new_score;
+            *result = robusto_mt_canbus;
+        }
+    }
+    #endif   
     if (score < -40)
     {
         return ROB_FAIL;

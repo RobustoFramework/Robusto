@@ -45,7 +45,7 @@ static char *incoming_log_prefix;
 
 static incoming_callback_cb *incoming_callback = NULL;
 
-rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robusto_peer_t *peer, e_media_type media_type, uint8_t offset)
+rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robusto_peer_t *peer, e_media_type media_type, int offset)
 {
     // TODO: Messages might be too large for SRAM and might need to be stored elsewhere (flash), how to handle? We might also have to *send* large files.
     // rob_log_bit_mesh(ROB_LOG_WARN, incoming_log_prefix, data + offset, data_length - offset);

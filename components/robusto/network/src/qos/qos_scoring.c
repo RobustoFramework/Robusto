@@ -97,6 +97,7 @@ void add_to_history(robusto_media_t *stats, bool sending, rob_ret_val_t result)
  */
 float robusto_calc_suitability(int bitrate, int min_offset, int base_offset, float multiplier)
 {
+    // TODO: This must be properly documented
     float retval = min_offset - ((bitrate - base_offset) * multiplier);
     if (retval < -50)
     {
