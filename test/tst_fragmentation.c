@@ -26,7 +26,7 @@ uint8_t * test_data;
 
 void cb_incoming(incoming_queue_item_t *incoming_item) {
     ROB_LOGI(FRAG_TAG,"cb_incoming");
-    incoming_item->service_frees_message = true;
+    incoming_item->recipient_frees_message = true;
     message = incoming_item->message;
     async_receive_flag = true;
 }

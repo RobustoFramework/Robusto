@@ -70,7 +70,7 @@ rob_ret_val_t robusto_handle_service(incoming_queue_item_t *queue_item) {
             ROB_LOGD(incoming_service_log_prefix, "Found a matching service"); 
             // Call the service
             services[curr_srv]->incoming_callback(queue_item->message);
-            queue_item->service_frees_message = services[curr_srv]->service_frees_message;
+            queue_item->recipient_frees_message = services[curr_srv]->service_frees_message;
             return ROB_OK;
         }
         curr_srv++;

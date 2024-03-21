@@ -126,7 +126,7 @@ void esp_now_tst_do_on_work(incoming_queue_item_t *_incoming_item)
     ROB_LOGI("TEST", "In esp_now_tst_do_on_work");
     incoming_message = _incoming_item->message;
     async_receive_flag = true;
-    _incoming_item->service_frees_message = true;
+    _incoming_item->recipient_frees_message = true;
 }
 
 void tst_esp_now_message_receive_string_message(void)

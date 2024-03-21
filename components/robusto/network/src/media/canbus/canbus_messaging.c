@@ -113,6 +113,7 @@ void canbus_do_on_poll_cb(queue_context_t *q_context)
     uint8_t *rcv_data = NULL;
     robusto_peer_t *peer = NULL;
     uint8_t prefix_bytes = NULL;
+    // TODO: refactor away all parameters to the *_read_data implementations. They should not be used that way. 
     canbus_read_data(&rcv_data, &peer, &prefix_bytes);
 }
 

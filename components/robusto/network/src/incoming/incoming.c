@@ -86,7 +86,7 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
 {
 
     ROB_LOGD(incoming_log_prefix, "In incoming_do_on_incoming_cb");
-    queue_item->service_frees_message = false;
+    queue_item->recipient_frees_message = false;
     if (queue_item->message->context.message_type == MSG_NETWORK)
     {
         ROB_LOGD(incoming_log_prefix, "Is network request");
@@ -110,7 +110,7 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
             rob_log_bit_mesh(ROB_LOG_ERROR, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length > 20 ? 20: queue_item->message->raw_data_length );
         }
     }
-    if (!queue_item->service_frees_message)
+    if (!queue_item->recipient_frees_message)
     {
         if (strcmp(queue_item->message->peer->name, "") == 0)
         {
