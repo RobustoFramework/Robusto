@@ -40,42 +40,15 @@ typedef struct in_flight
 
 in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 
-// The following defines are test values awaiting ESP-IDF response to https://github.com/espressif/esp-idf/issues/13332 .
-#if CONFIG_XTAL_FREQ == 26 // TWAI_CLK_SRC_XTAL = 26M
-#warning "CAN bus for XTAL frequencies aren't properly supported by ESP-IDF for TWAI"
-#define TWAI_TIMING_CONFIG_25KBITS()                                                                                                                                            \
-    {                                                                                                                                                                           \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((51 + 1) * (12 + 7 + 1)), .brp = 51, .tseg_1 = 12, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_50KBITS()                                                                                                                                            \
-    {                                                                                                                                                                           \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((25 + 1) * (12 + 7 + 1)), .brp = 25, .tseg_1 = 12, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_125KBITS()                                                                                                                                         \
-    {                                                                                                                                                                         \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((12 + 1) * (8 + 7 + 1)), .brp = 12, .tseg_1 = 8, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_250KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-
-// #define TWAI_TIMING_CONFIG_250KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((7 + 1) * (5 + 7 + 1)), .brp = 7, .tseg_1 = 5, .tseg_2 = 7, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_500KBITS()                                                                                                                                       \
-    {                                                                                                                                                                       \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((3 + 1) * (5 + 7 + 1)), .brp = 3, .tseg_1 = 5, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_800KBITS()                                                                                                                                       \
-    {                                                                                                                                                                       \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((2 + 1) * (3 + 7 + 1)), .brp = 2, .tseg_1 = 3, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    } // Note: Adjusted to nearest possible rate
-#define TWAI_TIMING_CONFIG_1MBITS()                                                                                                                                         \
-    {                                                                                                                                                                       \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 26000000 / ((1 + 1) * (5 + 7 + 1)), .brp = 1, .tseg_1 = 5, .tseg_2 = 7, .sjw = 3, .triple_sampling = false \
-    }
-#endif // CONFIG_XTAL_FREQ
-// {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 247619 , .brp = 4, .tseg_1 = 13, .tseg_2 = 7, .sjw = 3, .triple_sampling = false}
-
+// The following defines are values Espressif proposed to test https://github.com/espressif/esp-idf/issues/13332.
+#if CONFIG_XTAL_FREQ == 26   // TWAI_CLK_SRC_XTAL = 26M
+#define TWAI_TIMING_CONFIG_25KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 400000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
+#define TWAI_TIMING_CONFIG_50KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
+#define TWAI_TIMING_CONFIG_100KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 6, .tseg_2 = 3, .sjw = 3, .triple_sampling = false}
+#define TWAI_TIMING_CONFIG_125KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 5, .tseg_2 = 2, .sjw = 1, .triple_sampling = false}
+#define TWAI_TIMING_CONFIG_250KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 2, .tseg_2 = 1, .sjw = 1, .triple_sampling = false}
+#define TWAI_TIMING_CONFIG_1MBITS()     {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 13000000, .brp = 0, .tseg_1 = 8, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
+#endif
 /**
  * @brief Start a new in-flight
  *
@@ -475,7 +448,6 @@ void canbus_compat_messaging_init(char *_log_prefix)
 #endif
     twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
-//Stämmer T-Beams pin out (13,14?) Stämmer 18, 21 för devkit?
     // Install TWAI driver
     ROB_LOGI(canbus_messaging_log_prefix, "CAN bus installing.");
     esp_err_t ret_install = twai_driver_install(&g_config, &t_config, &f_config);
