@@ -58,14 +58,8 @@ menu "CAN bus configuration"
             This it usually a very short time, but if the slave has enabled heavy logging for example, 
             it might take hundreds of milliseconds. Here this can be taken into account.
 
-    config CANBUS_RESEND_COUNT
-        int "CAN busResend count"
-        default 2
-        range 0 256
-        help
-            Number of times the library tries to re-send through CAN busbefore it considers it a failure.
     config SDP_SIM_CANBUS_BAD_CRC
-        int "| SIM | The number of times CAN buswill get a bad CRC32 on all requests"
+        int "| SIM | The number of times CAN bus will get a bad CRC32 on all requests"
         default 0
         depends on SDP_SIM   
         range 0 256

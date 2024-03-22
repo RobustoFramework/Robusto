@@ -199,9 +199,9 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     message.rtr = 0;              // Not a remote transmission request
     message.ss = 0;               // Not a single-shot, will retry
     message.self = 0,             // Not a self reception request
-        message.dlc_non_comp = 0, // DLC is not more than 8
+    message.dlc_non_comp = 0, // DLC is not more than 8
 
-        message.identifier = 0;
+    message.identifier = 0;
     message.identifier |= number_of_packets << 16;
     message.identifier |= get_host_peer()->canbus_address << 8;
     message.identifier |= peer->canbus_address;
@@ -376,9 +376,9 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         }
     }
     add_to_history(&((*peer)->canbus_info), false, ROB_OK);
-    //ROB_LOGI(canbus_messaging_log_prefix, "Message");
-    //rob_log_bit_mesh(ROB_LOG_INFO, canbus_messaging_log_prefix, data, data_length);
-    // TODO: Move this to a more central spot and re-use.
+    // ROB_LOGI(canbus_messaging_log_prefix, "Message");
+    // rob_log_bit_mesh(ROB_LOG_INFO, canbus_messaging_log_prefix, data, data_length);
+    //  TODO: Move this to a more central spot and re-use.
 
     bool is_heartbeat = data[0] == HEARTBEAT_CONTEXT;
     if (is_heartbeat)
@@ -439,9 +439,43 @@ void canbus_compat_messaging_init(char *_log_prefix)
     canbus_messaging_log_prefix = _log_prefix;
     // Initialize configuration structures using macro initializers
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CONFIG_ROBUSTO_CANBUS_TX_IO, CONFIG_ROBUSTO_CANBUS_RX_IO, TWAI_MODE_NORMAL);
+
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_1MBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_1MBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_800KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_800KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_500KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_250KBITS
     twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_125KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_125KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_100KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_100KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_50KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_50KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_25KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_25KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_20KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_20KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_16KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_16KBITS();
+#endif
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_12_5KBITS
+    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_12_5KBITS();
+#endif
     twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
+//Stämmer T-Beams pin out (13,14?) Stämmer 18, 21 för devkit?
     // Install TWAI driver
     ROB_LOGI(canbus_messaging_log_prefix, "CAN bus installing.");
     esp_err_t ret_install = twai_driver_install(&g_config, &t_config, &f_config);
