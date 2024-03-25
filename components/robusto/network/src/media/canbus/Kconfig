@@ -25,12 +25,10 @@ menu "CAN bus configuration"
         prompt "Bit rate - the speed of the bus"
         config ROBUSTO_CANBUS_BIT_RATE_1MBITS
             bool "1 Mbit/s"
-    if XTAL_FREQ != 26
         config ROBUSTO_CANBUS_BIT_RATE_800KBITS     
             bool "800 Kbit/s"
         config ROBUSTO_CANBUS_BIT_RATE_500KBITS
             bool "500 Kbit/s"
-    endif    
         config ROBUSTO_CANBUS_BIT_RATE_250KBITS
             bool "250 Kbit/s"
         config ROBUSTO_CANBUS_BIT_RATE_125KBITS
@@ -41,7 +39,7 @@ menu "CAN bus configuration"
             bool "50 Kbit/s"
         config ROBUSTO_CANBUS_BIT_RATE_25KBITS
             bool "25 Kbit/s"
-    if XTAL_FREQ != 26
+    if 0
         config ROBUSTO_CANBUS_BIT_RATE_20KBITS
             bool "20 Kbit/s"
         config ROBUSTO_CANBUS_BIT_RATE_16KBITS
