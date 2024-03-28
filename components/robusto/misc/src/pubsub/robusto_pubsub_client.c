@@ -205,9 +205,14 @@ rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t *topic, uint8_t *
         request[0] = PUBSUB_PUBLISH;
         memcpy(request + 1, &topic->topic_hash, sizeof(topic->topic_hash));
         memcpy(request + 5, data, data_length);
-        send_message_binary(topic->peer, PUBSUB_SERVER_ID, 0, request, data_length + 5, NULL);
-        set_topic_state(topic, TOPIC_STATE_PUBLISHED);
-        return ROB_OK;
+        rob_ret_val_t ret_msg = send_message_binary(topic->peer, PUBSUB_SERVER_ID, 0, request, data_length + 5, NULL);
+        if (ret_msg != ROB_OK) {
+            set_topic_state(topic, TOPIC_STATE_PROBLEM);    
+        } else {
+            set_topic_state(topic, TOPIC_STATE_PUBLISHED);
+        }
+        
+        return ret_msg;
     }
     else
     {

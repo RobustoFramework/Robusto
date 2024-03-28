@@ -1,7 +1,7 @@
 /**
  * @file espnow_recover.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief ESP-NOW connection recovery implementation. 
+ * @brief ESP-NOW connection recovery implementation.
  * @todo: Implement this for real where applicable
  * @version 0.1
  * @date 2023-02-19
@@ -40,35 +40,44 @@
 
 static char *espnow_recovery_log_prefix;
 
-void espnow_recover(recover_params_t * params)
+void espnow_recover(recover_params_t *params)
 {
 
     params->info->postpone_qos = true;
-    ROB_LOGW(espnow_recovery_log_prefix, "ESP-NOW recovery: Recovering %s.", params->peer->name);
-    robusto_peer_t * peer = params->peer;
+    robusto_peer_t *peer = params->peer;
+    ROB_LOGW(espnow_recovery_log_prefix, "ESP-NOW recovery: Recovering %s.%hu, %hu, %hu, %hu, %hu ", peer->name, get_host_peer()->supported_media_types,
+             (peer->supported_media_types & get_host_peer()->supported_media_types),
+             peer->state, peer->supported_media_types, peer->problematic_media_types);
+
     e_media_type media_type = robusto_mt_espnow;
-    set_state(peer, params->info, media_type, media_state_recovering, media_problem_none);
+    set_state(peer, params->info, media_type, media_state_recovering, media_problem_unknown);
     rob_ret_val_t rec_retval = ROB_FAIL;
-    // We are not presenting, the peer is not unknown, all media types have problems for this peer, we might either be out of range, or assume that we have been forgotten
-    if ((peer->state > PEER_PRESENTING) && (peer->supported_media_types == peer->problematic_media_types))
-    {
+    // We are not presenting, the peer is not unknown
+    if (peer->state > PEER_PRESENTING) {
+        // Postpone other QoS actions, like heart beats.
         params->info->postpone_qos = true;
-        ROB_LOGW(espnow_recovery_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation using %s.", peer->name, media_type_to_str(media_type));
-        if (robusto_send_presentation(peer, media_type, false, presentation_recover) == ROB_OK) {
-            set_state(peer, params->info, media_type, media_state_working, media_problem_none);
-            rec_retval = ROB_OK;
-        }
-    }
-    if (rec_retval != ROB_OK) {
+        if ((peer->supported_media_types & get_host_peer()->supported_media_types) == peer->problematic_media_types)
+        {
+                // all media types have problems for this peer, we might either be out of range, or assume that we have been forgotten
+                
+                ROB_LOGW(espnow_recovery_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation using %s.", peer->name, media_type_to_str(media_type));
+                if (robusto_send_presentation(peer, media_type, false, presentation_recover) == ROB_OK)
+                {
+                    set_state(peer, params->info, media_type, media_state_working, media_problem_none);
+                    params->info->postpone_qos = false;
+                    rec_retval = ROB_OK;
+                }
+            }
+        if (rec_retval != ROB_OK) {
         // TODO: What can we do for ESP-NOW really?
-        ROB_LOGW(espnow_recovery_log_prefix, "Cannot really do much for ESP-NOW here currently, reverts it to \"problem\" so it can return through heart beats");
-        set_state(peer, params->info, media_type, media_state_problem, media_problem_unknown);
-        params->info->postpone_qos = false;
+        ROB_LOGW(espnow_recovery_log_prefix, ">> Recovering per %s, %s. Sending heartbeat.", peer->name, media_type_to_str(media_type));
+        send_heartbeat_message(peer, robusto_mt_espnow);
+        
+    }
     }
     
+    
     robusto_delete_current_task();
-
-
 }
 
 void init_espnow_recover(char *_log_prefix)

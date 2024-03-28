@@ -132,8 +132,10 @@ typedef struct robusto_media
     uint64_t last_state_change;
     /* Last we received a heartbeat or other communication from the peer */
     uint64_t last_receive;
-    /* Last we sent a heartbeat or other communication from the peer */
+    /* Last we sent a regular message to the peer */
     uint64_t last_send;
+    /* Last we sent a heartbeat to the peer */
+    uint64_t last_sent_heartbeat; 
     /* Last time the peer received something from us, doubly used as a counter */
     uint64_t last_peer_receive;
     /* Postpone qos, resetting all last to now. Used during long, fragmented transmissions. */
@@ -169,6 +171,14 @@ typedef struct robusto_media
 
 } robusto_media_t;
 
+typedef enum  {
+    /* A normal queue item*/
+    media_qit_normal = 0,
+    /* A heartbeat. Do not retry, dial down the logging, and do not try with other media */
+    media_qit_heartbeat = 1,
+    /* Recovery messaging. Do not retry, do not try with other media and do not remove from queues during recovery. */
+    media_qit_recovery = 2,
+} e_media_queue_item_type;
 
 typedef struct media_queue_item
 {
@@ -180,12 +190,13 @@ typedef struct media_queue_item
     struct robusto_peer *peer;
     /* The queue item state */  
     queue_state *state;
-    /* We are just checking the connection, dial down the logging and do not retry using other media. */
-    bool heartbeat;
+    /* The queue item type. */
+    e_media_queue_item_type queue_item_type;
     /* Media types to exclude */
     e_media_type exclude_media;
     /* If true, we will wait for a receipt for the message. */
     bool receipt;
+    /* How many levels have we recursed (trying other medias and so on)*/
     uint8_t depth;
 
     /* Queue reference */

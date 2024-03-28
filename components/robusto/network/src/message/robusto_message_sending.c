@@ -114,7 +114,7 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
 }
 
 
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, bool heartbeat, uint8_t depth, uint8_t exclude_media_types)
+rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, uint8_t exclude_media_types)
 {
     
     rob_ret_val_t retval = ROB_FAIL;
@@ -167,13 +167,13 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         queue_ctx = mock_get_queue_context();
     }
 #endif
-        
+    
     if (queue_ctx != NULL) {
         media_queue_item_t *new_item = robusto_malloc(sizeof(media_queue_item_t)); 
             new_item->peer = peer;
             new_item->data = data;
             new_item->data_length = data_length;
-            new_item->heartbeat = heartbeat;
+            new_item->queue_item_type = queue_item_type;
             new_item->exclude_media = exclude_media_types;
             new_item->depth = depth+ 1;
             new_item->receipt = receipt;
@@ -187,7 +187,10 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     if (retval != ROB_OK)
     {
         robusto_media_t *info = get_media_info(peer, media_type);
-        set_state(peer, info, media_type, media_state_problem, media_problem_queue_problem);
+        if (info->state == media_state_working) {
+            set_state(peer, info, media_type, media_state_problem, media_problem_queue_problem);
+        }
+        
         info->send_failures++;
         // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
         ROB_LOGE(message_sending_log_prefix, "Failed sending to %s, mt %hhu, res %hi, ", peer->name, media_type, retval);
@@ -199,7 +202,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
 }
 
 rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt) {
-    return send_message_raw_internal(peer, media_type, data, data_length, state, receipt, false, 0, robusto_mt_none);
+    return send_message_raw_internal(peer, media_type, data, data_length, state, receipt, media_qit_normal, 0, robusto_mt_none);
 }
 
 
@@ -262,41 +265,51 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
     
     int retval = ROB_FAIL;
     int send_retries = 0;
-    if (on_send_activity && !queue_item->heartbeat) {
-        on_send_activity(queue_item, media_type);
-    }
 
-    robusto_set_queue_state_running(queue_item->state);
-    do
-    {
-        retval = send_callback(queue_item->peer, queue_item->data, queue_item->data_length, queue_item->receipt);
-        if ((retval != ROB_OK) && (send_retries < 3))
-        {
-            info->send_failures++;
-            ROB_LOGI(message_sending_log_prefix, ">> Retry %i failed.", send_retries + 1);
-            // Call the poll function do not spam the network
-            poll_callback(queue_context);
-            robusto_yield();
-        } else {
-            info->send_successes++;
-            
+    // Only try to send if we are not recovering and this is not a recovery message.
+    if (!(info->state == media_state_recovering && queue_item->queue_item_type != media_qit_recovery)) {
+        ROB_LOGE("...............", "Sending because...%i, %i",info->state, queue_item->queue_item_type);
+        if (on_send_activity && (queue_item->queue_item_type != media_qit_heartbeat)) {
+            on_send_activity(queue_item, media_type);
         }
 
-        send_retries++;
+        robusto_set_queue_state_running(queue_item->state);
+        do
+        {
+            retval = send_callback(queue_item->peer, queue_item->data, queue_item->data_length, queue_item->receipt);  
+            if (!queue_item->receipt) {
+                ROB_LOGI(message_sending_log_prefix, ">> No receipt = No retry");
+                // If we fail here, and there is no requirement for a receipt, there is no point in retrying with this media at this time
+                break;
+            }    
+            if ((retval != ROB_OK) && (send_retries < 3))
+            {
+                info->send_failures++;
+                ROB_LOGI(message_sending_log_prefix, ">> Retry %i failed.", send_retries + 1);
+                // Call the poll function do not spam the network
+                poll_callback(queue_context);
+                robusto_yield();
+            } else {
+                info->send_successes++;
+            }
 
-    } while ((!queue_item->heartbeat) && // We don't retry with heart beats..
-    (retval != ROB_ERR_WHO) && // ..or if the peer says we are unknown
-    (retval != ROB_OK) && // ..and only if the attempt failed
-    (send_retries < 3)); // ..a limited number of times 
-    // TODO: Handle retry count?
+            send_retries++;
 
-    add_to_history(info, true, retval);
-    
+        } while ((queue_item->queue_item_type != media_qit_heartbeat) && // We don't retry with heart beats  
+        (retval != ROB_ERR_WHO) && // ..or if the peer says we are unknown
+        (retval != ROB_OK) && // ..and only if the attempt failed
+        (send_retries < 3)); // ..a limited number of times 
+        // TODO: Handle retry count?
+
+        add_to_history(info, true, retval);
+    } else {
+        ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %i is recovering, we need to try some other media for a message (%i, %i)", queue_item->peer->name, media_type, info->state, queue_item->queue_item_type );
+    }
+
     if ((retval != ROB_OK) && // We only try other medias if we have failed..
-    (!queue_item->heartbeat) && // ..and if it wasn't a heartbeat
-    (retval != ROB_ERR_WHO)) // ..or if the peer knew who we were
+    (queue_item->queue_item_type != media_qit_heartbeat) && // ..and if it wasn't a heartbeat
+    (retval != ROB_ERR_WHO)) // ..or if the peer knew who we were (it will only respond to unknowns on wired connections)
     {
-
         e_media_type next_media_type;
         // Add current media type to excluded media
         queue_item->exclude_media = queue_item->exclude_media | media_type;
@@ -317,7 +330,7 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
             queue_state *new_state = (uint8_t *)robusto_malloc(sizeof(queue_state));
             robusto_set_queue_state_trying(queue_item->state);
             rob_ret_val_t retry_retval;
-            rob_ret_val_t retry_res = send_message_raw_internal(queue_item->peer, next_media_type, queue_item->data, queue_item->data_length, new_state, false, queue_item->receipt, queue_item->depth, queue_item->exclude_media);
+            rob_ret_val_t retry_res = send_message_raw_internal(queue_item->peer, next_media_type, queue_item->data, queue_item->data_length, new_state, queue_item->receipt, queue_item->queue_item_type, queue_item->depth, queue_item->exclude_media);
             if (retry_res != ROB_OK)
             {
                 ROB_LOGE(message_sending_log_prefix, "Error queueing retry: %i %i", retry_res, next_media_type);
@@ -345,8 +358,9 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         robusto_set_queue_state_result(queue_item->state, retval);
         robusto_free(queue_item->data); // Not if re-sent, that would re-free..
     }
-    robusto_free(queue_item);
     robusto_yield();
+    robusto_free(queue_item);
+
 }
 
 void robusto_message_sending_init(char *_log_prefix)

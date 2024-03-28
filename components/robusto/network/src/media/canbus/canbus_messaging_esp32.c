@@ -209,7 +209,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         }
         else
         {
-            ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message for transmission, error_code: %i", tr_result);
+            ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %lu for transmission, error_code: %i", peer->canbus_address, tr_result);
             return ROB_FAIL;
         }
         package_index++;
@@ -232,7 +232,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     }
     else
     {
-        ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message for transmission, error_code: %i", tr_result);
+        ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %lu for transmission, error_code: %i", peer->canbus_address, tr_result);
         return ROB_FAIL;
     }
 

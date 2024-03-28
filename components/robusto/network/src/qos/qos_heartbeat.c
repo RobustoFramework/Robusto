@@ -88,7 +88,7 @@ uint64_t parse_heartbeat(uint8_t *data, uint8_t preamble_len)
     uint16_t *retval = data + preamble_len;
     uint64_t hb_time = r_millis() - (*retval * 10);
     // TODO: We need a multistage boot process that differs from initialisation and startup or whatevs. Runlevels?
-    ROB_LOGD("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
+    ROB_LOGI("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
         ((uint8_t*)retval)[0], ((uint8_t*)retval)[1], (uint16_t)(*retval * 10), hb_time, preamble_len);
     
     return hb_time;
@@ -106,9 +106,11 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         ROB_LOGW(heartbeat_log_prefix, "Postponing heartbeat to %s using %s", peer->name, media_type_to_str(media_type));
         return;
     }
-    if ((info->last_send < curr_time - HEARTBEAT_PROBLEM_MARGIN_MS) || // Either we have a problem
-        (info->last_send < curr_time - HEARTBEAT_IDLE_MARGIN_MS) || // or we are idle
-        (info->last_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS *2)) // or we haven't heard from the peer
+    if (((info->last_send < curr_time - HEARTBEAT_PROBLEM_MARGIN_MS) && (info->problem != media_problem_none) ) || // Either we have a problem
+        ((info->last_send < curr_time - HEARTBEAT_IDLE_MARGIN_MS)  && (info->problem == media_problem_none) )|| // or we are idle
+        (info->last_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 2)) || // or we haven't heard from the peer
+        (info->last_peer_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 2)) || // or they haven't heard from us
+        (info->last_sent_heartbeat < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 3)) // or they haven't heard from us
     )
     {
         if (info->problem == media_problem_none) {

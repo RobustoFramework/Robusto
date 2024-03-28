@@ -89,8 +89,15 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         }
 
         robusto_media_t *info = get_media_info(peer, media_type);
-        // Send presentation (no receipt as a reply requires know outgoing id, which is only available after presentation is parsed)
-        rob_ret_val_t queue_ret = send_message_raw(peer, media_type, msg, msg_len, q_state, false);
+        /* Send presentation:
+         * no receipt as a reply requires know outgoing id, which is only available after presentation is parsed
+         * only send to the mentioned media typ
+         * if reason is recovery, set that as the type so that the presentation isn't purged from the queue
+        */
+        rob_ret_val_t queue_ret = send_message_raw_internal(peer, media_type, msg, msg_len, q_state, false, 
+            (reason == presentation_recover) ?  media_qit_recovery :  media_qit_normal, 
+            0, peer->supported_media_types & ~media_type);
+
         if (queue_ret != ROB_OK)
         {
 

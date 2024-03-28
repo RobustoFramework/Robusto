@@ -64,7 +64,7 @@ int i2c_heartbeat(robusto_peer_t *peer) {
     ROB_LOGE(i2c_native_messaging_log_prefix, "Called the *NATIVE* I2c implementation of i2c hearbeat, which isn't a thing.");
     return ROB_FAIL;
 }
-rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, bool heartbeat, bool receipt) {
+rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, int data_length, e_media_queue_item_type queue_item_type, bool receipt) {
     ROB_LOGE(i2c_native_messaging_log_prefix, "Called the *NATIVE* I2c implementation of send message, which isn't a thing.");
     return ROB_FAIL;
 }

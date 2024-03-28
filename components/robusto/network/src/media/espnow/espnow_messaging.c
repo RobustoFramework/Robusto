@@ -113,9 +113,11 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t 
             ROB_LOGE(espnow_log_prefix, "ESP-NOW unknown error: %i", rc);
         }
         rc = -ROB_ERR_SEND_FAIL;
+        add_to_history(&peer->espnow_info, true, rc);
         return rc;
     } else  {
         rc = ROB_OK;
+        add_to_history(&peer->espnow_info, true, rc);
     }
     
     if (!receipt) {
@@ -133,8 +135,10 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t 
         has_receipt = false;
         
         rc = (send_status == ESP_NOW_SEND_SUCCESS) ? ROB_OK : ROB_FAIL;
+        add_to_history(&peer->espnow_info, false, rc);
         if (rc == ROB_FAIL)
         {
+            
             ROB_LOGE(espnow_log_prefix, "ESP-NOW got a negative receipt. Peer: %s", peer->name);
             return ROB_FAIL;
         }
@@ -179,7 +183,7 @@ static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status
         if (peer)
         {
             // Yes, this is counted doubly, but this should not happen, we probably have some kind of issue
-            peer->espnow_info.send_failures++;
+            add_to_history(&peer->espnow_info, true, ROB_FAIL);
         }
         else
         {

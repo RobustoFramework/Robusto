@@ -77,7 +77,7 @@ void canbus_set_queue_blocked(bool blocked) {
 }
 
 void canbus_shutdown_worker() {
-    ROB_LOGI(canbus_worker_log_prefix, "Telling LoRa worker to shut down.");
+    ROB_LOGI(canbus_worker_log_prefix, "Telling CAN bus worker to shut down.");
     canbus_queue_context.shutdown = true;
 }
 
