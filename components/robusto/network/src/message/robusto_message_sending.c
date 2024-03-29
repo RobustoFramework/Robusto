@@ -268,7 +268,6 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
 
     // Only try to send if we are not recovering and this is not a recovery message.
     if (!(info->state == media_state_recovering && queue_item->queue_item_type != media_qit_recovery)) {
-        ROB_LOGE("...............", "Sending because...%i, %i",info->state, queue_item->queue_item_type);
         if (on_send_activity && (queue_item->queue_item_type != media_qit_heartbeat)) {
             on_send_activity(queue_item, media_type);
         }
@@ -278,7 +277,6 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         {
             retval = send_callback(queue_item->peer, queue_item->data, queue_item->data_length, queue_item->receipt);  
             if (!queue_item->receipt) {
-                ROB_LOGI(message_sending_log_prefix, ">> No receipt = No retry");
                 // If we fail here, and there is no requirement for a receipt, there is no point in retrying with this media at this time
                 break;
             }    
@@ -298,6 +296,7 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         } while ((queue_item->queue_item_type != media_qit_heartbeat) && // We don't retry with heart beats  
         (retval != ROB_ERR_WHO) && // ..or if the peer says we are unknown
         (retval != ROB_OK) && // ..and only if the attempt failed
+        (info->state !=  media_state_recovering) && // ..no more retries if we have entered recovery mode
         (send_retries < 3)); // ..a limited number of times 
         // TODO: Handle retry count?
 

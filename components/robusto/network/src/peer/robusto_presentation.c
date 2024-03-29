@@ -95,7 +95,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
          * if reason is recovery, set that as the type so that the presentation isn't purged from the queue
         */
         rob_ret_val_t queue_ret = send_message_raw_internal(peer, media_type, msg, msg_len, q_state, false, 
-            (reason == presentation_recover) ?  media_qit_recovery :  media_qit_normal, 
+            (reason == presentation_recover) ?  media_qit_recovery : media_qit_normal, 
             0, peer->supported_media_types & ~media_type);
 
         if (queue_ret != ROB_OK)
@@ -107,7 +107,10 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         else if (!robusto_waitfor_queue_state(q_state, 1000, &ret_val_flag))
         {
             peer->state = failstate;
-            set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
+            if (info->state == media_state_working) {
+                set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
+            }
+            
             ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t *)q_state[0], ret_val_flag);
         }
         else {
