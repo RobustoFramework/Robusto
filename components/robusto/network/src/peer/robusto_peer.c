@@ -186,6 +186,9 @@ void log_peer_info(char *_log_prefix, robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     ROB_LOGI(_log_prefix, "I2C address:           %"PRIu8"", peer->i2c_address);
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+    ROB_LOGI(_log_prefix, "CAN bus address:           %"PRIu8"", peer->canbus_address);
+#endif
     ROB_LOGI(_log_prefix, "State:                 %u", peer->state);
     char mt_log[1000] = "";
     list_media_types(peer->supported_media_types, &mt_log);

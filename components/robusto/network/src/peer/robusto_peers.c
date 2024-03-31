@@ -199,7 +199,7 @@ robusto_peers_find_peer_by_i2c_address(uint8_t i2c_address)
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 robusto_peer_t *
-robusto_peers_find_peer_by_canbus_address(uint8_t canbus_address)
+robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address)
 {
     robusto_peer_t *peer;
     ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: %hu", canbus_address);
