@@ -47,6 +47,8 @@ extern "C"
 typedef struct recover_params {
     robusto_peer_t *peer;
     robusto_media_t *info;
+    TaskFunction_t custom_recovery;
+    e_media_type media_type;
     uint64_t last_heartbeat_time;
 } recover_params_t;
 

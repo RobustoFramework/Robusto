@@ -149,13 +149,7 @@ void problem_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 // Recovering state behavior
 void recovering_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
-    // Has it been recovering more than one cycle, set it as having problem again, it will retry recovery again later
-    if (info->last_state_change < (last_heartbeat_time * 2))
-    {
-        ROB_LOGE(qos_state_log_prefix, "%s, media type %s still hasn't recovered. info->last_state_change %llu, last_heartbeat_time %llu",
-                 peer->name, media_type_to_str(media_type), info->last_state_change, last_heartbeat_time);
-        set_state(peer, info, media_type, media_state_problem, info->problem);
-    }
+    // TODO: Unclear if there is anything to do in this state step, recovery either succeeds or never ends.
 }
 
 // Initiating state behavior

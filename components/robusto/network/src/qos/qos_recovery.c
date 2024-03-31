@@ -44,88 +44,96 @@
 #include "../media/mock/mock_recover.h"
 #endif
 
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-#include "../media/espnow/espnow_recover.h"
-#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include "../media/lora/lora_recover.h"
 #endif
 static char *recovery_log_prefix;
 
-void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t task_function)
+void task_recover(recover_params_t *params)
+{
+
+    params->info->postpone_qos = true;
+    robusto_peer_t *peer = params->peer;
+    e_media_type media_type = params->media_type;
+    char *str_media_type =  media_type_to_str(media_type);
+    ROB_LOGW(recovery_log_prefix, "%s recovery: Recovering %s.%hu, %hu, %hu, %hu, %hu ",
+             str_media_type, peer->name, get_host_peer()->supported_media_types,
+             (peer->supported_media_types & get_host_peer()->supported_media_types),
+             peer->state, peer->supported_media_types, peer->problematic_media_types);
+    // TODO: We have a custom recovery function being passed, how and when is that going to be called? And what parameters should it take?
+    set_state(peer, params->info, media_type, media_state_recovering, media_problem_unknown);
+    rob_ret_val_t rec_retval = ROB_FAIL;
+    // We are not presenting, the peer is not unknown
+    if (peer->state > PEER_PRESENTING)
+    {
+        // Postpone other QoS actions, like heart beats.
+        params->info->postpone_qos = true;
+        if ((peer->supported_media_types & get_host_peer()->supported_media_types) == peer->problematic_media_types)
+        {
+            // all media types have problems for this peer, we might either be out of range, or assume that we have been forgotten
+            ROB_LOGW(recovery_log_prefix, "All medias have problems for peer %s, we may be forgotten, trigger presentation using %s.", 
+                peer->name, str_media_type);
+            if (robusto_send_presentation(peer, media_type, false, presentation_recover) == ROB_OK)
+            {
+                set_state(peer, params->info, media_type, media_state_working, media_problem_none);
+                params->info->postpone_qos = false;
+                rec_retval = ROB_OK;
+            }
+        }
+        if (rec_retval != ROB_OK)
+        {
+            ROB_LOGW(recovery_log_prefix, ">> Recovering per %s, %s. Sending heartbeat.", peer->name, str_media_type);
+            send_heartbeat_message(peer, media_type);
+        }
+    }
+
+    robusto_delete_current_task();
+}
+
+void create_recovery_task(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type, TaskFunction_t custom_recovery)
 {
     ROB_LOGI(recovery_log_prefix, "Creating a recovery task for peer %s, media %s", peer->name, media_type_to_str(media_type));
     recover_params_t *params = robusto_malloc(sizeof(recover_params_t));
     params->peer = peer;
     params->info = info;
     params->last_heartbeat_time = last_heartbeat_time;
+    params->custom_recovery = custom_recovery;
+    params->media_type = media_type;
     char *task_name;
     robusto_asprintf(&task_name, "Recovery task for peer %s, media %s", peer->name, media_type_to_str(media_type));
-    if (robusto_create_task(task_function, params, task_name, NULL, 0) != ROB_OK)
+    if (robusto_create_task(&task_recover, params, task_name, NULL, 0) != ROB_OK)
     {
         ROB_LOGE(recovery_log_prefix, "Failed creating a recovery task for the peer %s, media %s ", peer->name, media_type_to_str(media_type));
     }
     robusto_free(task_name);
     // Always wait a while before returning to avoid other tasks being missing the PEER_PRESENTING state.
     r_delay(300);
-
 }
 
 void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat, e_media_type media_type)
 {
 
-    // If we have not received a response for a while.
-    // Regardless of the cause, Robusto peers completely disregard any peers that they don't know about.
-    // Hence, it might be a good idea to just try a presentation.
+    // At some point we need to try and actively recover a media 
 
-#ifdef CONFIG_ROBUSTO_SUPPORTS_TTL
-
-    if (media_type == robusto_mt_ttl)
-    {
-        // Not Implemented
-    }
-#endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-    if (media_type == robusto_mt_ble)
-    {
-        // Not Implemented
-    }
-#endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
-    if (media_type == robusto_mt_espnow)
-    {
-        create_recovery_task(peer, info, last_heartbeat, media_type, &espnow_recover);
-    }
-#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (media_type == robusto_mt_lora)
     {
         create_recovery_task(peer, info, last_heartbeat, media_type, &lora_recover);
-    }
+        return;
+    } 
 #endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
-    if (media_type == robusto_mt_i2c)
-    {
-    }
-#endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
-    if (media_type == robusto_mt_canbus)
-    {
-        // Not Implemented
-    }
-#endif
-#ifdef CONFIG_ROBUSTO_SUPPORTS_UMTS
-    if (media_type == robusto_mt_umts)
-    {
-        // Not Implemented
-    }
-#endif
+
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
     if (media_type == robusto_mt_mock)
     {
-        create_recovery_task(peer, info, last_heartbeat, media_type, &mock_recover);
-    }
+        // We won't actually do any recovering.
+        // Note that mock_recover.c can be used here.
+        return;
+    } 
 #endif
+    // Normal recovery without any custom stuff
+    create_recovery_task(peer, info, last_heartbeat, media_type, NULL);
+    
 
 }
 

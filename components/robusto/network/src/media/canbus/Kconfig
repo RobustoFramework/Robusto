@@ -90,7 +90,7 @@ menu "CAN bus configuration"
 
 
         config ROB_NETWORK_TEST_CANBUS_KILL_SWITCH
-            int "Kill switch GPIO - Makes CAN busstop working when low"
+            int "Kill switch GPIO - Makes CAN bus stop working when set low"
             default -1
             help
                 Used for testing scoring.
