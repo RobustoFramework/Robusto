@@ -123,7 +123,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         int hb_msg_len = robusto_make_binary_message(MSG_HEARTBEAT, 0, 0, (uint8_t *)&deka_ms_diff, 2, &hb_msg);
         // Heartbeats are one-way and doesn't wait for receipts
         rob_ret_val_t queue_ret_val = send_message_raw_internal(peer, media_type, hb_msg, hb_msg_len, NULL, 
-            true, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none);
+            false, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none);
         if (queue_ret_val != ROB_OK) {
             // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
             ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %hhu, res %hi, ", peer->name, (uint8_t)media_type, queue_ret_val);
