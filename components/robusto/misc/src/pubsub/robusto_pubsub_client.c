@@ -280,7 +280,11 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
     }
 
     ROB_LOGE(pubsub_client_log_prefix, "Sending subscription for %s conversation_id %u!", topic_name, new_topic->conversation_id);
-    send_message_binary(peer, PUBSUB_SERVER_ID, new_topic->conversation_id, (uint8_t *)msg, data_length, NULL);
+    rob_ret_val_t ret_sub = send_message_binary(peer, PUBSUB_SERVER_ID, new_topic->conversation_id, (uint8_t *)msg, data_length, NULL);
+    if (ret_sub != ROB_OK) {
+        ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, failed to queue or send message %s.", new_topic->topic_name);
+        set_topic_state(new_topic, TOPIC_STATE_PROBLEM);
+    } else
     if (!new_topic->topic_hash && !robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 1000))
     {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, no response with topic hash for %s.", new_topic->topic_name);

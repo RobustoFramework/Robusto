@@ -58,8 +58,8 @@ esp_now_peer_info_t* espnow_add_peer(uint8_t *mac_adress)
 {
     esp_now_peer_info_t *esp_now_peer = malloc(sizeof(esp_now_peer_info_t));
     if (esp_now_get_peer(mac_adress, esp_now_peer) == ESP_OK) {
-        ROB_LOGE(espnow_peer_log_prefix, "Tried to re-add an already existing peer. MAC address:");
-        rob_log_bit_mesh(ROB_LOG_ERROR, espnow_peer_log_prefix, mac_adress, ROBUSTO_MAC_ADDR_LEN);
+        ROB_LOGI(espnow_peer_log_prefix, "Tried to re-add an already existing ESP-NOW-peer. MAC address:");
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_peer_log_prefix, mac_adress, ROBUSTO_MAC_ADDR_LEN);
         return esp_now_peer;
     }
     /* Add broadcast peer information to peer list. */

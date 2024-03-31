@@ -293,12 +293,11 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
 
             send_retries++;
 
-        } while ((queue_item->queue_item_type != media_qit_heartbeat) && // We don't retry with heart beats  
-        (retval != ROB_ERR_WHO) && // ..or if the peer says we are unknown
+        } while ((retval != ROB_ERR_WHO) && // ..if the peer replies we are unknown (wired only)
         (retval != ROB_OK) && // ..and only if the attempt failed
-        (info->state !=  media_state_recovering) && // ..no more retries if we have entered recovery mode
+        (info->state !=  media_state_recovering) && // ..or if we have entered recovery mode (TODO: This might be up for debate in some cases)
         (send_retries < 3)); // ..a limited number of times 
-        // TODO: Handle retry count?
+        // TODO: Add a setting for retry count?
 
         add_to_history(info, true, retval);
     } else {
@@ -306,7 +305,7 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
     }
 
     if ((retval != ROB_OK) && // We only try other medias if we have failed..
-    (queue_item->queue_item_type != media_qit_heartbeat) && // ..and if it wasn't a heartbeat
+    (queue_item->receipt) && // ..and if it is receipt required, then we infer that we will try with multiple medias
     (retval != ROB_ERR_WHO)) // ..or if the peer knew who we were (it will only respond to unknowns on wired connections)
     {
         e_media_type next_media_type;
@@ -324,7 +323,7 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         }
         else
         {
-            ROB_LOGW(message_sending_log_prefix, "Failed sending using %s, will try sending using %s instead.", media_type_to_str(media_type), media_type_to_str(next_media_type));
+            ROB_LOGW(message_sending_log_prefix, "Will try sending using %s instead.", media_type_to_str(next_media_type));
             // Another media found, try sending using that instead
             queue_state *new_state = (uint8_t *)robusto_malloc(sizeof(queue_state));
             robusto_set_queue_state_trying(queue_item->state);

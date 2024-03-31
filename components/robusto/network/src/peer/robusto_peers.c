@@ -122,17 +122,21 @@ robusto_peer_t *
 robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t * check_peer)
 {
     robusto_peer_t *peer;
-
     SLIST_FOREACH(peer, &robusto_peers, next)
     {
 
-        if ((peer != check_peer) &&
-           (memcmp(peer->base_mac_address, check_peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN) == 0))
+        if (peer->peer_handle == check_peer->peer_handle) {
+            ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address, skip self (same handle)");
+        } else 
+        if (memcmp((uint8_t *)&(peer->base_mac_address), (uint8_t *)&(check_peer->base_mac_address), ROBUSTO_MAC_ADDR_LEN) == 0)
         {
             ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address, duplicate found: %s, same as %s, handles (%u/%u)", 
-            peer->name, check_peer->name, peer->peer_handle, check_peer->peer_handle);
+                    peer->name, check_peer->name, peer->peer_handle, check_peer->peer_handle);
             rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
             return peer;
+        } else {
+            ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address - it is not:"); 
+                        rob_log_bit_mesh(ROB_LOG_WARN, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         }
     }
     return NULL;
@@ -146,7 +150,7 @@ robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address)
     SLIST_FOREACH(peer, &robusto_peers, next)
     {
 
-        if (memcmp(peer->base_mac_address, mac_address, ROBUSTO_MAC_ADDR_LEN) == 0)
+        if (memcmp((uint8_t *)&(peer->base_mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN) == 0)
         {
             ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_base_mac_address found:");
             rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
@@ -199,7 +203,7 @@ robusto_peers_find_peer_by_i2c_address(uint8_t i2c_address)
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 robusto_peer_t *
-robusto_peers_find_peer_by_canbus_address(uint32_t canbus_address)
+robusto_peers_find_peer_by_canbus_address(uint8_t canbus_address)
 {
     robusto_peer_t *peer;
     ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_canbus_address: %hu", canbus_address);
@@ -326,10 +330,10 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
     if (peer != NULL)
     {
         // TODO: Note that we have a potentially pointless 6-byte leak here, trust that the mac_address pointer perseveres?
-        memcpy(peer->base_mac_address, mac_address, ROBUSTO_MAC_ADDR_LEN);
+        memcpy((uint8_t *)&(peer->base_mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN);
         peer->supported_media_types = media_types;
         
-        ROB_LOGE(peers_log_prefix, "Supported media types %hu, Mac:", peer->supported_media_types);
+        ROB_LOGE(peers_log_prefix, "Supported media types %hhu, Mac:", peer->supported_media_types);
         rob_log_bit_mesh(ROB_LOG_ERROR, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
 
         init_supported_media_types(peer);
@@ -430,7 +434,7 @@ robusto_peer_t *add_peer_by_i2c_address(const char *peer_name, uint8_t i2c_addre
  * @param canbus_address The CAN bus adress
  * @return robusto_peer* An initialized peer
  */
-robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const uint32_t canbus_address)
+robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const uint8_t canbus_address)
 {
     
     robusto_peer_t *peer = NULL;
@@ -456,7 +460,7 @@ robusto_peer_t *robusto_add_init_new_peer_canbus(const char *peer_name, const ui
  * @param canbus_address The CAN bus address of the peer
  * @return Returns a pointer to the peer
  */
-robusto_peer_t *add_peer_by_canbus_address(const char *peer_name, uint32_t canbus_address)
+robusto_peer_t *add_peer_by_canbus_address(const char *peer_name, uint8_t canbus_address)
 {
     robusto_peer_t *peer = robusto_peers_find_peer_by_canbus_address(canbus_address);
     if (peer) {

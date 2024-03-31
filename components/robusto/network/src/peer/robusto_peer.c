@@ -141,7 +141,7 @@ void init_supported_media_types(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
     if (peer->supported_media_types & robusto_mt_espnow)
     {
-        ROB_LOGE(peer_log_prefix, "Initializing espnow peer at:");
+        ROB_LOGI(peer_log_prefix, "Initializing espnow peer at:");
         rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         espnow_peer_init_peer(peer);
         int rc = ROB_OK;
@@ -187,7 +187,7 @@ void log_peer_info(char *_log_prefix, robusto_peer_t *peer)
     ROB_LOGI(_log_prefix, "I2C address:           %"PRIu8"", peer->i2c_address);
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
-    ROB_LOGI(_log_prefix, "CAN bus address:           %"PRIu8"", peer->canbus_address);
+    ROB_LOGI(_log_prefix, "CAN bus address:       %"PRIu8"", peer->canbus_address);
 #endif
     ROB_LOGI(_log_prefix, "State:                 %u", peer->state);
     char mt_log[1000] = "";

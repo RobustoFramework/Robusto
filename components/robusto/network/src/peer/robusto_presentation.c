@@ -161,15 +161,12 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
              media_type_to_str(message->media_type), message->binary_data_length);
 
     /* Parse the base MAC address*/
-    if (memcmp(&message->peer->base_mac_address, message->binary_data + MAC_ADDR_POS, ROBUSTO_MAC_ADDR_LEN) != 0)
-    {
-        memcpy(&message->peer->base_mac_address, message->binary_data + MAC_ADDR_POS, ROBUSTO_MAC_ADDR_LEN);
-    }
-    // Check if there is already an existing peer, if so, populate that instead.
+    memcpy(&message->peer->base_mac_address, message->binary_data + MAC_ADDR_POS, ROBUSTO_MAC_ADDR_LEN);
+    // Check the special case if there is an existing peer, with the same base address and another handle, if so, populate that instead.
     robusto_peer_t *existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
     if (existing_peer)
     {
-        ROB_LOGW(presentation_log_prefix, "We already had a peer (%s) with the same base_mac_address, removing the new one", existing_peer->name);
+        ROB_LOGW(presentation_log_prefix, "We already had a peer (%s) with the same base_mac_address (handle %u), removing the new one (%u)", existing_peer->name, existing_peer->peer_handle, message->peer->peer_handle );
         robusto_peers_delete_peer(message->peer->peer_handle);
         message->peer = existing_peer;
     }
@@ -179,6 +176,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     message->peer->min_protocol_version = message->binary_data[PROT_VER_MIN_POS];
 
     /* Set supported media types*/
+    bool new_supported_media_types = message->peer->supported_media_types != message->binary_data[MEDIA_T_POS];
     message->peer->supported_media_types = message->binary_data[MEDIA_T_POS];
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
@@ -198,16 +196,15 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     // Store the relation id
     memcpy(&message->peer->relation_id_outgoing, message->binary_data + REL_ID_IN_POS, ROBUSTO_RELATION_LEN);
 
-    if (!existing_peer)
-    {
-        // This is called here as a new peer is being populated after created.
-        // Otherwise creating peers is done using add_peer_by_mac_address/i2c_address.
-        init_supported_media_types(message->peer);
-        ROB_LOGI(presentation_log_prefix, "<< Initiated all supported media types.");
-    }
-
+   
     /* Set the name of the peer (the rest of the message) */
     memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - MAC_ADDR_POS - ROBUSTO_MAC_ADDR_LEN);
+
+    /* A peer might have gotten or lost supported media */
+    if (new_supported_media_types) {
+        init_supported_media_types(message->peer);
+        ROB_LOGI(presentation_log_prefix, "<< Initiated new or changed supported media types for %s.", message->peer->name);
+    }
 
     // There might be a previous situation where there was a problem, set this media type to working
     robusto_media_t *info = get_media_info(message->peer, message->media_type);
