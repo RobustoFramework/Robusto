@@ -10,9 +10,18 @@
 #include <driver/twai.h>
 #include <string.h>
 
+#define CANBUS_ADDR_LEN 1
+#define CANBUS_MAX_IN_FLIGHT 5
+#define ERR_INVALID_PACKAGE_INDEX -0xFFFFFF
+#define ERR_INFLIGHT_NOT_INITIALIZED -0xFFFFFE
+#define ERR_INFLIGHT_NONE_AVAILABLE -1
+#define ERR_INFLIGHT_TOO_MANY_PACKAGES -2
+#define ERR_INFLIGHT_ALLOCATION_FAILED -3
+
 static char *canbus_messaging_log_prefix;
-// TODO: Add in-flight message handling
-// TODO: If a message is larger than X, free and fail that message
+
+/* Last known status of the TWAI controller */
+twai_status_info_t status_info;
 
 typedef struct in_flight
 {
@@ -30,13 +39,7 @@ typedef struct in_flight
     bool taken;
 } in_flight_t;
 
-#define CANBUS_ADDR_LEN 1
-#define CANBUS_MAX_IN_FLIGHT 5
-#define ERR_INVALID_PACKAGE_INDEX -0xFFFFFF
-#define ERR_INFLIGHT_NOT_INITIALIZED -0xFFFFFE
-#define ERR_INFLIGHT_NONE_AVAILABLE -1
-#define ERR_INFLIGHT_TOO_MANY_PACKAGES -2
-#define ERR_INFLIGHT_ALLOCATION_FAILED -3
+void canbus_twai_install();
 
 in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 
@@ -109,6 +112,7 @@ in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
         .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
     }
 #endif // APB_CLK_FREQ
+
 /**
  * @brief Start a new in-flight
  *
@@ -174,7 +178,7 @@ int add_to_in_flight(uint8_t address, uint16_t package_index, uint8_t *data, uin
             memcpy(in_flights[curr_inflight].data + (package_index * TWAI_FRAME_MAX_DLC), data, data_length);
             if (package_index == in_flights[curr_inflight].count - 1)
             {
-                ROB_LOGW(canbus_messaging_log_prefix, "CANBUS: We are at the last in flight from %hu.", address);
+                ROB_LOGI(canbus_messaging_log_prefix, "CANBUS: We are at the last in flight from %hu.", address);
                 in_flights[curr_inflight].data_length = (package_index * TWAI_FRAME_MAX_DLC) + data_length;
                 return -curr_inflight;
             }
@@ -188,6 +192,66 @@ int add_to_in_flight(uint8_t address, uint16_t package_index, uint8_t *data, uin
 }
 
 /*     ------------------------------              Outgoing           ----------------------------                                       ------------------------------------------*/
+
+
+void handle_twai_transmit_error(robusto_peer_t *peer, esp_err_t tr_result) {
+    ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %hhu for transmission, error_code: 0x%x", peer->canbus_address, tr_result);
+    twai_get_status_info(&status_info);
+    ROB_LOGI(canbus_messaging_log_prefix, "TWAI information: \nState: %u \n arb_lost_count: %lu, bus_error_count: %lu, rx_error_counter: %lu, tx_error_counter: %lu",
+         status_info.state, status_info.arb_lost_count, status_info.bus_error_count, status_info.rx_error_counter, status_info.tx_error_counter);
+    
+    switch (tr_result)
+    {
+        case ESP_ERR_TIMEOUT:
+            ROB_LOGW(canbus_messaging_log_prefix, "TWAI error 263: Timeout");
+            break;
+        case ESP_ERR_INVALID_STATE:
+            ROB_LOGE(canbus_messaging_log_prefix, "TWAI error 259: Invalid State");
+            if (status_info.tx_error_counter > 127) {
+                
+                if (status_info.state != TWAI_STATE_BUS_OFF) {
+                    ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Bus wasn't off, will not initiate recovery.");
+                    break;
+                } else {
+                    ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Bus is off, initiate recovery.");
+                    twai_driver_uninstall();
+                }
+                if (twai_initiate_recovery() != ESP_OK) {
+                    ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Failed to initiate recovery.");
+                } else {
+                    ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Recovery initiated. Waiting for status to be stopped.");
+                    r_delay(500);
+                    twai_get_status_info(&status_info);
+                    uint32_t start_time = r_millis();
+                    while (status_info.state != TWAI_STATE_STOPPED && (start_time < start_time + 1000)) {
+                        r_delay(500);
+                        twai_get_status_info(&status_info);
+                    }
+                    
+                    if (status_info.state == TWAI_STATE_STOPPED) {
+                        ROB_LOGI(canbus_messaging_log_prefix, "TWAI: State is stopped, attempting starting.");
+                        if (twai_start() != ESP_OK) {
+                            ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Start failed.");    
+                        } else {
+                            ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Start succeeded!");
+                        }
+                        
+                    } else {
+                        ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Recovery didn't lead to TWAI being stopped.");
+                    }
+                }
+            }
+            break;
+        case ESP_ERR_INVALID_CRC:
+            ROB_LOGW(canbus_messaging_log_prefix, "TWAI error 265: Invalid CRC");
+            break;
+        default:
+            break;
+    }
+
+
+
+}
 
 rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
@@ -207,10 +271,17 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     // This might be significant for very fast updates as that would enable the context byte + 2 uint32s in one frame, context byte + or a 16 bit serviceid + uint16_t an uint32_t.
     // If we don't want this, we'll just use that bit to double the possible message length
 
+    if (status_info.state != TWAI_STATE_RUNNING) {
+        twai_get_status_info(&status_info);
+        if (status_info.state != TWAI_STATE_RUNNING) {
+            ROB_LOGE(canbus_messaging_log_prefix, "canbus_send_message: TWAI CAN bus is not running");
+            return ROB_FAIL;
+        }
+    }
+
     // BTW if you haven't, go watch "Nanook of the North" (Flaherty).
     // It is free and a completely bonkers silent dramatized documentary about the inuit from 1922.
     // If you think you're tough, it will take you out of that misconception. The inuit were teh shit.
-
     // Offset Robusto preamble buffer (note that we don't add a byte for the address, this is done in the sending later)
     uint8_t *offset_data = data + ROBUSTO_CRC_LENGTH + ROBUSTO_PREFIX_BYTES;
     uint32_t offset_data_length = data_length - ROBUSTO_PREFIX_BYTES - ROBUSTO_CRC_LENGTH;
@@ -257,22 +328,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         }
         else
         {
-            ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %hhu for transmission, error_code: %i", peer->canbus_address, tr_result);
-            switch (tr_result)
-            {
-                case ESP_ERR_TIMEOUT:
-                    ROB_LOGW(canbus_messaging_log_prefix, "Timeout");
-                    break;
-                case ESP_ERR_INVALID_STATE:
-                    ROB_LOGE(canbus_messaging_log_prefix, "Invalid State");
-                    break;
-                case ESP_ERR_INVALID_CRC:
-                    ROB_LOGW(canbus_messaging_log_prefix, "Invalid CRC");
-                    break;
-                default:
-                    break;
-            }
-            // twai_get_status_info
+            handle_twai_transmit_error(peer, tr_result);
             return ROB_FAIL;
         }
         package_index++;
@@ -295,23 +351,9 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     }
     else
     {
-        ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %hhu for transmission, error_code: %i", peer->canbus_address, tr_result);
-        switch (tr_result)
-        {
-
-            case ESP_ERR_TIMEOUT:
-                ROB_LOGW(canbus_messaging_log_prefix, "Timeout");
-                break;
-            case ESP_ERR_INVALID_STATE:
-                ROB_LOGE(canbus_messaging_log_prefix, "Invalid State");
-                break;
-            case ESP_ERR_INVALID_CRC:
-                ROB_LOGW(canbus_messaging_log_prefix, "Invalid CRC");
-                break;
-            default:
-                break;
-        }
+        handle_twai_transmit_error(peer, tr_result);
         return ROB_FAIL;
+        
     }
 
     // TODO: Explain why we use crc32 relation for wireless but not here for wired. (there are no others on wires)
@@ -497,9 +539,7 @@ void canbus_compat_messaging_start(void)
     }
 };
 
-void canbus_compat_messaging_init(char *_log_prefix)
-{
-    canbus_messaging_log_prefix = _log_prefix;
+void canbus_twai_install(){
     // Initialize configuration structures using macro initializers
     twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CONFIG_ROBUSTO_CANBUS_TX_IO, CONFIG_ROBUSTO_CANBUS_RX_IO, TWAI_MODE_NORMAL);
 
@@ -550,6 +590,13 @@ void canbus_compat_messaging_init(char *_log_prefix)
         ROB_LOGE(canbus_messaging_log_prefix, "CAN bus TWAI Failed to install driver. Code: %i", ret_install);
         return;
     }
+}
+
+void canbus_compat_messaging_init(char *_log_prefix)
+{
+    canbus_messaging_log_prefix = _log_prefix;
+    
+    canbus_twai_install();
 };
 
 #endif
