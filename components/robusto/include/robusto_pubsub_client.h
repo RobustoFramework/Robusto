@@ -21,8 +21,9 @@ typedef enum
     TOPIC_STATE_INACTIVE, /* The topic in inactive */
     TOPIC_STATE_ACTIVE, /* The topic is inactive */
     TOPIC_STATE_PROBLEM, /* The topic has some problems */
+    TOPIC_STATE_UNKNOWN, /* The topic is unknown by the server */
     TOPIC_STATE_PUBLISHED, /* We have recently published data */
-    TOPIC_STATE_STALE, /* Haven't gotten or publihsed data in stale_time_ms */
+    TOPIC_STATE_STALE, /* Haven't gotten or published data in stale_time_ms */
     TOPIC_STATE_REMOVING, /* Topic is about to be removed */
 
 } topic_state_t;

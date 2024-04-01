@@ -3,6 +3,7 @@
 #include <robusto_message.h>
 #include <robusto_peer.h>
 #include <robusto_network_service.h>
+#include <robusto_repeater.h>
 #include <robusto_pubsub.h>
 #include <robusto_queue.h>
 #include <string.h>
@@ -24,6 +25,16 @@ network_service_t pubsub_client_service = {
     .service_name = "Pub-Sub service",
     .service_id = PUBSUB_CLIENT_ID,
     .shutdown_callback = &shutdown_callback,
+};
+
+void robusto_pubsub_check_topics();
+
+recurrence_t pubsub_topic_monitor = {
+    .recurrence_callback = &robusto_pubsub_check_topics,
+    .recurrence_name = "Pubsub topic monitor",
+    .shutdown_callback = NULL,
+    .skip_count = 40,
+    .skips_left = 30,
 };
 
 void set_topic_state(subscribed_topic_t *topic, topic_state_t state)
@@ -135,6 +146,18 @@ void incoming_callback(robusto_message_t *message)
 {
     ROB_LOGI(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
     rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
+    if (*message->binary_data == PUBSUB_PUBLISH_UNKNOWN_TOPIC)
+    {
+        subscribed_topic_t *curr_topic = find_subscribed_topic_by_topic_hash(*(uint32_t *)(message->binary_data + 1));
+        if (curr_topic)
+        {
+            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the topic %s (topic hash %lu) is unknown,", curr_topic->topic_name, curr_topic->topic_hash);
+            set_topic_state(curr_topic, TOPIC_STATE_UNKNOWN);
+        } else {
+            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", curr_topic->topic_hash);
+        }
+        
+    } else
     if ((*message->binary_data == PUBSUB_SUBSCRIBE_RESPONSE) ||
         (*message->binary_data == PUBSUB_GET_TOPIC_RESPONSE))
     {
@@ -311,7 +334,6 @@ void recover_topic(subscribed_topic_t *topic)
         ROB_LOGI(pubsub_client_log_prefix, "Recovered %s using the %s peer!", topic->topic_name, topic->peer->name);
     }
     topic->restoring = false;
-    // Ok, that didn't work, so what can we try next?
     robusto_delete_current_task();
 }
 
@@ -331,13 +353,14 @@ void create_topic_recovery_task(subscribed_topic_t *topic)
 void robusto_pubsub_check_topics()
 {
     subscribed_topic_t *curr_topic = first_subscribed_topic;
+    ROB_LOGI(pubsub_client_log_prefix, "Check");
     while (curr_topic)
     {
         if (curr_topic->restoring)
         {
             // Do nothing regardless of state to not disturb any existing recovery processes
         }
-        else if (curr_topic->state == TOPIC_STATE_PROBLEM)
+        else if ((curr_topic->state == TOPIC_STATE_PROBLEM) || (curr_topic->state == TOPIC_STATE_UNKNOWN))
         {
             // Don't try to recover if we have broader issues with the peer.
             if (curr_topic->peer->problematic_media_types != curr_topic->peer->supported_media_types)
@@ -355,6 +378,7 @@ rob_ret_val_t robusto_pubsub_client_start()
 {
     // Start queue
     robusto_register_network_service(&pubsub_client_service);
+    robusto_register_recurrence(&pubsub_topic_monitor);
     return ROB_OK;
 };
 

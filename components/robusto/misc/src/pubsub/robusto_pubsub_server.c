@@ -160,11 +160,8 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
 
     // Do NOT create topic if nonexisting as we are only getting a hash -> we can't. 
     if (!curr_topic) {
-        // TODO: Add pubsub return values like unknown topic, some_send_failues and so on.
-        // TODO: We should never really check right? We have a count, should suffice for those who care?
-        // TODO: The client should build an expectation on message history
-        ROB_LOGE(pubsub_log_prefix, "Fail to find the topic %lu.", topic_hash);
-        return ROB_FAIL;
+        ROB_LOGE(pubsub_log_prefix, "Failed to find the topic %lu.", topic_hash);
+        return ROB_ERR_INVALID_ID;
     }
     int pub_count = 0;
     pubsub_server_subscriber_t *curr_subscriber = curr_topic->first_subscriber;
@@ -205,12 +202,20 @@ void incoming_callback(robusto_message_t *message) {
         memcpy(response + 1, &topic_hash, 4);
         ROB_LOGI(pubsub_log_prefix, "Sending a unsubscription response to %s peer, conv id %u", message->peer->name, message->conversation_id);
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
-        robusto_free(response);
         send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
     } else if (*message->binary_data == PUBSUB_PUBLISH) {
         ROB_LOGI(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
         rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
-        robusto_pubsub_server_publish( *(uint32_t *)(message->binary_data + 1), message->binary_data + 5, message->binary_data_length - 5);
+        // We only respond if it is an invalid topic hash
+        if (robusto_pubsub_server_publish( *(uint32_t *)(message->binary_data + 1), message->binary_data + 5, message->binary_data_length - 5) == ROB_ERR_INVALID_ID) {
+            uint8_t *response = robusto_malloc(5);
+            response[0] = PUBSUB_PUBLISH_UNKNOWN_TOPIC;
+            memcpy(response + 1, message->binary_data + 1, 4);
+            ROB_LOGW(pubsub_log_prefix, "Sending an unknown topic message to %s peer, conv id %u", message->peer->name, message->conversation_id);
+            rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
+            send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
+        }
+        
     } else {
         ROB_LOGW(pubsub_log_prefix, "PubSub: Unknown command %hu.", *message->binary_data);
     } 
