@@ -41,26 +41,74 @@ typedef struct in_flight
 in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 
 // The following defines are values Espressif proposed to test https://github.com/espressif/esp-idf/issues/13332.
-#if APB_CLK_FREQ == (32*1000000)   // TWAI_CLK_SRC_DEFAULT = 32M
-#define TWAI_TIMING_CONFIG_25KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 400000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_50KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_100KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_125KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 23, .tseg_2 = 8, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_250KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_500KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 8000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_800KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_1MBITS()     {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
+#if APB_CLK_FREQ == (32 * 1000000) // TWAI_CLK_SRC_DEFAULT = 32M
+#define TWAI_TIMING_CONFIG_25KBITS()                                                                                                             \
+    {                                                                                                                                            \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 400000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_50KBITS()                                                                                                              \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_100KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_125KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 23, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_250KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_500KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 8000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_800KBITS()                                                                                                              \
+    {                                                                                                                                              \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_1MBITS()                                                                                                                \
+    {                                                                                                                                              \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
 
-#elif APB_CLK_FREQ == (80*1000000)   // TWAI_CLK_SRC_DEFAULT = 80M
-#define TWAI_TIMING_CONFIG_25KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 625000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_50KBITS()    {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_100KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_125KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2500000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_250KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 5000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_500KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 10000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_800KBITS()   {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false}
-#define TWAI_TIMING_CONFIG_1MBITS()     {.clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false}
-#endif  //APB_CLK_FREQ
+#elif APB_CLK_FREQ == (80 * 1000000) // TWAI_CLK_SRC_DEFAULT = 80M
+#define TWAI_TIMING_CONFIG_25KBITS()                                                                                                             \
+    {                                                                                                                                            \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 625000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_50KBITS()                                                                                                              \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_100KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_125KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2500000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_250KBITS()                                                                                                             \
+    {                                                                                                                                             \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 5000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_500KBITS()                                                                                                              \
+    {                                                                                                                                              \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 10000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_800KBITS()                                                                                                              \
+    {                                                                                                                                              \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
+    }
+#define TWAI_TIMING_CONFIG_1MBITS()                                                                                                                \
+    {                                                                                                                                              \
+        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    }
+#endif // APB_CLK_FREQ
 /**
  * @brief Start a new in-flight
  *
@@ -184,7 +232,7 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     message.rtr = 0;              // Not a remote transmission request
     message.ss = 0;               // Not a single-shot, will retry
     message.self = 0,             // Not a self reception request
-    message.dlc_non_comp = 0, // DLC is not more than 8
+        message.dlc_non_comp = 0, // DLC is not more than 8
 
     message.identifier = 0;
     message.identifier |= number_of_packets << 16;
@@ -210,6 +258,21 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
         else
         {
             ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %hhu for transmission, error_code: %i", peer->canbus_address, tr_result);
+            switch (tr_result)
+            {
+                case ESP_ERR_TIMEOUT:
+                    ROB_LOGW(canbus_messaging_log_prefix, "Timeout");
+                    break;
+                case ESP_ERR_INVALID_STATE:
+                    ROB_LOGE(canbus_messaging_log_prefix, "Invalid State");
+                    break;
+                case ESP_ERR_INVALID_CRC:
+                    ROB_LOGW(canbus_messaging_log_prefix, "Invalid CRC");
+                    break;
+                default:
+                    break;
+            }
+            // twai_get_status_info
             return ROB_FAIL;
         }
         package_index++;
@@ -233,6 +296,21 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     else
     {
         ROB_LOGW(canbus_messaging_log_prefix, "Failed to queue message to %hhu for transmission, error_code: %i", peer->canbus_address, tr_result);
+        switch (tr_result)
+        {
+
+            case ESP_ERR_TIMEOUT:
+                ROB_LOGW(canbus_messaging_log_prefix, "Timeout");
+                break;
+            case ESP_ERR_INVALID_STATE:
+                ROB_LOGE(canbus_messaging_log_prefix, "Invalid State");
+                break;
+            case ESP_ERR_INVALID_CRC:
+                ROB_LOGW(canbus_messaging_log_prefix, "Invalid CRC");
+                break;
+            default:
+                break;
+        }
         return ROB_FAIL;
     }
 
