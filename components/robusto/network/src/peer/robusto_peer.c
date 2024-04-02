@@ -217,6 +217,9 @@ void recover_relations() {
         #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
             new_peer->i2c_address = relations[rel_idx].i2c_address;
         #endif
+        #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+            new_peer->canbus_address = relations[rel_idx].canbus_address;
+        #endif
         #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
         // As the conductor we are assuming that all existing relations are sleepers. 
         // TODO: This might not always be true obviously, but can be handled by the application
