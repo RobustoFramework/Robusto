@@ -54,10 +54,6 @@ rob_ret_val_t robusto_register_recurrence(recurrence_t * recurrence) {
         ROB_LOGE(repeater_log_prefix, "Failed registering recurrence with repeater, no recurrence callback assigned.");
         return ROB_FAIL;
     }
-    if (recurrence->shutdown_callback == NULL) {
-        ROB_LOGE(repeater_log_prefix, "Failed registering recurrence with repeater, no recurence shutdown callback assigned.");
-        return ROB_FAIL;
-    }
     recurrences[recurrence_count] = recurrence;
     recurrence_count++;
     ROB_LOGI(repeater_log_prefix, "Repeater: Recurrence '%s' successfully added.", recurrence->recurrence_name);
@@ -131,6 +127,5 @@ void robusto_repeater_init(char * _log_prefix) {
 
     repeater_log_prefix = _log_prefix;
     // Register the internal repeaters
-
 
 }
