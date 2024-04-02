@@ -144,9 +144,9 @@ void robusto_gpio_set_pullup(int gpio_num, bool pullup) {
     
     #ifdef ARDUINO_ARCH_STM32
     // TODO: Add pullup handling for all Arduino cases
-    set_gpio_mode(gpio_num, mode);
+    set_gpio_mode(gpio_num, pullup ? INPUT_PULLUP: INPUT);
     #elif defined(USE_ARDUINO)
-    pinMode(gpio_num, mode);
+    pinMode(gpio_num, , pullup ? INPUT_PULLUP: INPUT);
     #elif defined(USE_ESPIDF)
     esp_err_t retval;
     if (pullup) {
