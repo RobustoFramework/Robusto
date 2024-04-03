@@ -43,6 +43,27 @@
 #include <robusto_retval.h>
 #include <robusto_peer.h>
 
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+#include "../media/i2c/i2c_messaging.h"
+#endif
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
+#include "../media/lora/lora_messaging.hpp"
+#endif
+#if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+#include "../media/espnow/espnow_messaging.h"
+#endif
+#if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+#include "../media/canbus/canbus_messaging.h"
+#endif
+
+#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
+#include "../media/mock/mock_peer.h"
+#endif
+
+
+
 static char *scoring_log_prefix;
 
 void scoring_cb();
@@ -89,21 +110,37 @@ void add_to_history(robusto_media_t *stats, bool sending, rob_ret_val_t result)
 /**
  * @brief Calculate the suitability
  *
- * @param bitrate
- * @param min_offset
- * @param base_offset
+ * @param data_length The length of data to transfer
+ * @param base_value The initial position, is this generally a good or worse media
+ * @param base_offset 
  * @param multiplier
  * @return float
  */
-float robusto_calc_suitability(int bitrate, int min_offset, int base_offset, float multiplier)
-{
-    // TODO: This must be properly documented
-    float retval = min_offset - ((bitrate - base_offset) * multiplier);
-    if (retval < -50)
-    {
-        retval = -50;
+
+uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize) {
+    int phc;
+    switch (media_type) {
+        case robusto_mt_canbus:
+        // CAN bus is great with small volumes, but quickly start losing out.
+            phc = (payloadSize - CANBUS_MESSAGE_OFFSET <= 8) ? 100 : 80 - ((payloadSize - CANBUS_MESSAGE_OFFSET - 8) / 10);
+        // TODO: Shoud stop showing the data length with a lot of data that won't be used in many cases, especially like the 20 bytes here
+            break;
+        case robusto_mt_espnow:
+            phc = 100; // ESP-NOW is quite flexible
+            break;
+        case robusto_mt_i2c:
+            phc = 90; // Assuming I2C is generally good
+            break;
+        case robusto_mt_lora:
+        // TODO: We should create a kind of CANBUS_MESSAGE_OFFSET for LoRa and use here and in code.
+            phc = 80 - (payloadSize - ROBUSTO_CRC_LENGTH / 10); // Decrease with size
+            break;
+        default:
+            phc = 50; // Default case
     }
-    return retval;
+    if (phc > 100) phc = 100; // Ensure not to exceed 100
+    if (phc < 0) phc = 0; // Ensure not to drop below 0
+    return phc;
 }
 /**
  * @brief Add the latest failure rate to history, calculate averages
@@ -233,7 +270,7 @@ void peer_scoring(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
         if (media_type == robusto_mt_canbus)
         {
-            // Not Implemented
+            update_score(peer, robusto_mt_espnow);
         }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_UMTS

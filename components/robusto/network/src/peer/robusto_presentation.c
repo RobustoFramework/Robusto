@@ -124,9 +124,9 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                 // We are not replying, so wait for the state to change to PEER_KNOWN_INSECURE
                 if ((!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 1500)))
                 {
-                    peer->state = failstate;
                     ret_val_flag = ROB_ERR_TIMEOUT;
                     ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout (state = %u). System will retry later..", peer->name, peer->state);
+                    peer->state = failstate;
                     r_delay(1000);
                 }
 

@@ -62,7 +62,7 @@ void robusto_qos_register_on_state_change(on_state_change_t *_cb_on_state_change
 
 float add_to_failure_rate_history(robusto_media_t *stats, float rate);
 void add_to_history(robusto_media_t * stats, bool sending, rob_ret_val_t result);
-float robusto_calc_suitability(int bitrate, int min_offset, int base_offset, float multiplier);
+uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize);
 void set_state(robusto_peer_t * peer, robusto_media_t *info, e_media_type media_type, e_media_state media_state, e_media_problem problem);
 void check_media(robusto_peer_t * peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type);
 void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type);

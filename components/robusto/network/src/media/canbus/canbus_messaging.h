@@ -55,7 +55,7 @@ extern "C"
 #error "CAN bus - A CAN bus address must be set in menuconfig!"
 #endif
 
-
+#define CANBUS_MESSAGE_OFFSET (ROBUSTO_CRC_LENGTH + ROBUSTO_PREFIX_BYTES)
 #define CANBUS_TIMEOUT_MS 200
 #define CANBUS_MAX_PACKETS 2048 // Makes the maximum message length 16 384 bytes
 
