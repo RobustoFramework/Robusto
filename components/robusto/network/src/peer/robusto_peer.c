@@ -1,5 +1,3 @@
-
-
 /**
  * @file robusto_peer.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
@@ -213,6 +211,9 @@ void recover_relations() {
     robusto_peer_t * new_peer = NULL;
     while (rel_idx < relation_count)
     {
+        ROB_LOGI(peer_log_prefix, "Adding stored peer, mac address %02X:%02X:%02X:%02X:%02X:%02X",
+        relations[rel_idx].mac_address[0], relations[rel_idx].mac_address[1], relations[rel_idx].mac_address[2],
+        relations[rel_idx].mac_address[3], relations[rel_idx].mac_address[4], relations[rel_idx].mac_address[5]);
         new_peer = robusto_add_init_new_peer(NULL, relations[rel_idx].mac_address, relations[rel_idx].supported_media_types);
         #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
             new_peer->i2c_address = relations[rel_idx].i2c_address;
@@ -345,30 +346,9 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
         curr_info->send_successes, curr_info->receive_successes,
         curr_info->send_failures, curr_info->receive_failures);
 
-    float length_score = 0;
-    if (media_type == robusto_mt_i2c) {
-        // I2C is not very fast, but not super-slow.
-        // If there are many peers, per
-        // Is there a level of usage that is "too much"
-        // TODO: Add different demands, like "wired"? "secure", "fast", "roundtrip", or similar?
-        // TODO: Obviously, the length score should go down if we are forced to slow down, with a low actual speed.
-        length_score = robusto_calc_suitability(data_length, 50, 1000, 0.005);
-    } else
-    if (media_type == robusto_mt_canbus) {
-        // CAN bus is not very fast, but not super-slow.
-        length_score = robusto_calc_suitability(data_length, 50, 1000, 0.005);
-    } else
-    if (media_type == robusto_mt_lora) {
-        // lora is not very fast, but not super-slow.
-        // If there are many peers, per
-        // Is there a level of usage that is "too much"
-        // TODO: Add different demands, like "wired"? "secure", "fast", "roundtrip", or similar?
-        // -50 if its way too long, +50 if its below 1000 bytes
-        length_score = robusto_calc_suitability(data_length, 50, 100, 0.05);
-    } else
-    if (media_type == robusto_mt_espnow) {
-        length_score = robusto_calc_suitability(data_length, 55, 1000, 0.0005);
-    }
+    // TODO: Add different demands, like "wired"? "secure", "fast", "roundtrip", or similar?
+    // TODO: Obviously, the length score should go down if we are forced to slow down, with a low actual speed.
+    float length_score = robusto_calc_suitability(media_type, data_length);
 
     // A failure fraction of 0.1 - 0. No failures - 10. Anything over 0.5 returns -100.
     float success_score = 10 - (curr_info->failure_rate * 100);
@@ -378,11 +358,14 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
         success_score = -100;
     }
 
-    // If there are problems, discount them
-    int problem_score = 25 * curr_info->state;
-
-    // We do not include the length score in the last score
+    // We do not include the other scores in the last score
     curr_info->last_score = success_score;
+
+    int problem_score = 0;
+    // If there are problems, discount them
+    if (curr_info->state == media_state_problem) {
+        problem_score = 25;
+    } 
 
     float total_score = length_score + success_score - problem_score;
     if (total_score < -100)
@@ -408,10 +391,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_espnow) && !(exclude & robusto_mt_espnow)) {
         new_score = score_peer(peer, robusto_mt_espnow, data_length);
-        // There is a problem, better use something else if possible
-        if (peer->espnow_info.state > media_state_working) {
-            new_score = new_score - 20;
-        }
+
         if (new_score > score && peer->espnow_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_espnow;
@@ -421,9 +401,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_lora) && !(exclude & robusto_mt_lora)) {
         new_score = score_peer(peer, robusto_mt_lora, data_length);
-        if (peer->lora_info.state > media_state_working) {
-            new_score = new_score - 20;
-        }
+
         if (new_score > score && peer->lora_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_lora;
@@ -433,9 +411,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #if defined(CONFIG_ROBUSTO_SUPPORTS_I2C) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_i2c) && !(exclude & robusto_mt_i2c)) {
         new_score = score_peer(peer, robusto_mt_i2c, data_length);
-        if (peer->i2c_info.state > media_state_working) {
-            new_score = new_score - 20;
-        }
+
         if (new_score > score && peer->i2c_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_i2c;
@@ -445,9 +421,7 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
     #if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_canbus) && !(exclude & robusto_mt_canbus)) {
         new_score = score_peer(peer, robusto_mt_canbus, data_length);
-        if (peer->canbus_info.state > media_state_working) {
-            new_score = new_score - 20;
-        }
+
         if (new_score > score && peer->canbus_info.state < media_state_recovering) {
             score = new_score;
             *result = robusto_mt_canbus;

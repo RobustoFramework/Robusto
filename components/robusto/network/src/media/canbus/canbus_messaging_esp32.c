@@ -319,9 +319,9 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     message.rtr = 0;              // Not a remote transmission request
     message.ss = 0;               // Not a single-shot, will retry
     message.self = 0,             // Not a self reception request
-        message.dlc_non_comp = 0, // DLC is not more than 8
+    message.dlc_non_comp = 0,     // DLC is not more than 8
 
-        message.identifier = 0;
+    message.identifier = 0;
     message.identifier |= number_of_packets << 16;
     message.identifier |= get_host_peer()->canbus_address << 8;
     message.identifier |= peer->canbus_address;
@@ -555,6 +555,7 @@ void canbus_compat_messaging_start(void)
         ROB_LOGE(canbus_messaging_log_prefix, "CAN bus TWAI Failed to start driver. Code %i", ret_start);
         return;
     }
+    twai_clear_receive_queue();
 };
 
 void canbus_twai_install()
@@ -609,6 +610,8 @@ void canbus_twai_install()
         ROB_LOGE(canbus_messaging_log_prefix, "CAN bus TWAI Failed to install driver. Code: %i", ret_install);
         return;
     }
+
+
 }
 
 void canbus_compat_messaging_init(char *_log_prefix)
