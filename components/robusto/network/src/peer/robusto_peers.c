@@ -136,7 +136,7 @@ robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t * check_peer)
             return peer;
         } else {
             ROB_LOGD(peers_log_prefix, "robusto_peers_find_duplicate_by_base_mac_address - it is not:"); 
-                        rob_log_bit_mesh(ROB_LOG_WARN, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+            rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         }
     }
     return NULL;
@@ -353,7 +353,7 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
 }
 
 /**
- * @brief Adds a new peer, locates it via its mac address, and contacts it and exchanges information
+ * @brief Adds a new peer if not existing, locates it via its mac address, and contacts it and exchanges information
  *
  * @param peer_name The name of the peer, if we want to call it something
  * @param mac_address The mac_address of the peer
@@ -362,7 +362,11 @@ robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address
  */
 robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, robusto_media_types media_types)
 {
-    robusto_peer_t *peer = robusto_add_init_new_peer(peer_name, mac_address, media_types);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_address);
+    if (peer) {
+        return peer;
+    }
+    peer = robusto_add_init_new_peer(peer_name, mac_address, media_types);
     if (peer->state < PEER_PRESENTING) {
         // TODO: This should be able to handle trying with several media types
         robusto_send_presentation(peer, media_types, false, presentation_add);
