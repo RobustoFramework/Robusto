@@ -493,6 +493,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         {
             // In CAN bus, which is a wired connection, we actually trust the peer so much that we
             // Respond with a receipt that asks who it is, this is not done in wireless environments.
+            // TODO: Implement "who"-message. It will significally speed up reconnections elliminating the client timeout.
             canbus_send_receipt(NULL, false, true);
             robusto_free(data);
             return ROB_ERR_WHO;
