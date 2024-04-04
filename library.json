@@ -1,4 +1,87 @@
 {
-  "name": "Robusto",
-  "version": "1.1.9"
+    "name": "robusto",
+    "version": "1.1.10",
+    "description": "The Robusto framework.",
+    "keywords": "framework, microcontrollers",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/RobustoFramework/Robusto"
+    },
+    "authors": [
+        {
+            "name": "Nicklas Borjessson",
+            "email": "nicklasb_remove_me_@gmail.com",
+            "url": "https://optimalbpm.se",
+            "maintainer": true
+        }
+    ],
+    "license": "BSD-2-Clause",
+    "homepage": "https://robustoframework.github.io/Robusto/index.html",
+    "dependencies": {
+        "esp_modem": "https://github.com/RobustoFramework/Robusto/releases/download/v1.0.0/esp_modem_1.1.0.zip",
+        "RadioLib": "https://github.com/jgromes/RadioLib.git#6.4.2",
+        "lvgl/lvgl": "~8.3.0",
+        "esp_lvgl_port": "https://github.com/RobustoFramework/Robusto/releases/download/v1.0.0/esp_lvgl_port_1.4.0.zip"
+    },
+    "frameworks": "*",
+    "platforms": "*",
+    "examples": [
+        {
+            "name": "Camera",
+            "base": "examples/camera",
+            "files": [
+                "camera.c",
+                "camera.h",
+                "camera_pins.h",
+                "README.md"
+            ],
+            "name": "Conductor",
+            "base": "examples/conductor",
+            "files": [
+                "conductor_client.c",
+                "conductor_client.h",
+                "conductor_server.c",
+                "conductor_server.h",
+                "README.md"
+            ],
+            "name": "Flash",
+            "base": "examples/flash",
+            "files": [
+                "flash.c",
+                "flash.h",
+                "README.md"
+            ],
+            "name": "Hello",
+            "base": "examples/hello",
+            "files": [
+                "hello_service.c",
+                "hello_service.h",
+                "README.md"
+            ],
+            "name": "Input",
+            "base": "examples/input",
+            "files": [
+                "ladder_buttons.c",
+                "ladder_buttons.h",
+                "README.md"
+            ],
+            "name": "UI",
+            "base": "examples/ui",
+            "files": [
+                "hello_ui.c",
+                "hello_ui.h",
+                "README.md"
+            ],
+            "name": "UMTS",
+            "base": "examples/umts",
+            "files": [
+                "umts.c",
+                "umts.h",
+                "README.md"
+            ]
+        }
+    ],
+    "build": {
+        "srcDir": "components/robusto"
+    }
 }
