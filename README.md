@@ -49,7 +49,7 @@ Features include:
 * Communication
   * redundant communication
     * central in/out queues and independent queues per media
-    * I2C, ESP-NOW, LoRa (and a little bit of UMTS/Cellular)
+    * I2C, ESP-NOW, LoRa, CAN bus (TWAI) (and a UMTS/Cellular gateway)
     * scoring media
   * peer management
     * presentation, information exchange
@@ -73,7 +73,7 @@ Features include:
   * logging
 * Misc
   * UMTS/GSM gateway
-  * Publisher subscriber
+  * Publisher subscriber (Pub sub)
   
   
 ..and other things typically only associated with "big" computer systems. But obviously without their memory footprint and power consumption.
