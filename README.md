@@ -26,7 +26,7 @@ _(bit of a work in progress currently)_
 More conceptual information:
 - [About](https://github.com/RobustoFramework/Robusto/blob/main/docs/About.md) 
 - [Architecture](https://github.com/RobustoFramework/Robusto/blob/main/docs/Architecture.md) 
-- [Concepts](https://github.com/RobustoFramework/Robusto/blob/main/docs/Architecture.md) 
+- [Concepts](https://github.com/RobustoFramework/Robusto/blob/main/docs/Concepts.md) 
 
 The more technical documentation on features are in their README:s:
  - [Base functionality](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/base/README.md) 
