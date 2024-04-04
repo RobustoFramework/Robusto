@@ -2,7 +2,7 @@
 <!-- omit from toc -->
 # The Robusto framework
 
-**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](/docs/About.md)
+**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](https://github.com/RobustoFramework/Robusto/blob/main/docs/About.md)
 
 ## Getting started
 The easiest way is to:
@@ -24,23 +24,23 @@ _(bit of a work in progress currently)_
 
 ## Documentation
 More conceptual information:
-- [About](/docs/About.md) 
-- [Architecture](/docs/Architecture.md) 
-- [Concepts](/docs/Architecture.md) 
+- [About](https://github.com/RobustoFramework/Robusto/blob/main/docs/About.md) 
+- [Architecture](https://github.com/RobustoFramework/Robusto/blob/main/docs/Architecture.md) 
+- [Concepts](https://github.com/RobustoFramework/Robusto/blob/main/docs/Architecture.md) 
 
 The more technical documentation on features are in their README:s:
- - [Base functionality](/components/robusto/base/README.md) 
- - [Networking](/components/robusto/network/README.md)
- - [Conductor](/components/robusto/conductor/README.md)
- - [Flash](/components/robusto/flash/README.md)
- - [Input](/components/robusto/input/README.md)
- - [Server](/components/robusto/server/README.md)
- - [Sensor](/components/robusto/sensor/README.md)
- - [Misc](/components/robusto/misc/README.md)
+ - [Base functionality](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/base/README.md) 
+ - [Networking](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/network/README.md)
+ - [Conductor](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/conductor/README.md)
+ - [Flash](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/flash/README.md)
+ - [Input](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/input/README.md)
+ - [Server](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/server/README.md)
+ - [Sensor](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/sensor/README.md)
+ - [Misc](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/misc/README.md)
 
 If you want to help out developing Robusto:
-- [Development](/development/README.md)
-- [Templates](/development/)
+- [Development](https://github.com/RobustoFramework/Robusto/blob/main/development/README.md)
+- [Templates](https://github.com/RobustoFramework/Robusto/blob/main/development/)
 
 # What is Robusto?
 Robusto is a framework that in some ways tries to rethink IoT development to produce cheap and robust networks, applications and services on microcontrollers.<br /> 
@@ -84,7 +84,7 @@ Features include:
 Robusto is not designed to provide high-speed streaming communications for high definition video.
 
 Instead, it is about reliably connecting sensors, actuators, controls, microcontrollers and similar components, and while it can transfer security footage and lower-grade live feeds, much more than that veers out its focus and is typically beyond the abilities and needs of the involved components[^4].
-It is also a matter of [positioning](/components/robusto/network/README.md#the-robusto-relation-to-the-internet).
+It is also a matter of [positioning](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/network/README.md#the-robusto-relation-to-the-internet).
 
 Obviously that may change, but currently, if you want to do these things using cheap MCU:s please visit the [ESP32-Camera](https://github.com/espressif/esp32-camera) project, bringing tempered expectations. 
 

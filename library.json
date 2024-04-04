@@ -1,6 +1,6 @@
 {
     "name": "robusto",
-    "version": "1.1.11",
+    "version": "1.1.13",
     "description": "The Robusto framework.",
     "keywords": "framework, microcontrollers",
     "repository": {
@@ -34,7 +34,9 @@
                 "camera.h",
                 "camera_pins.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "Conductor",
             "base": "examples/conductor",
             "files": [
@@ -43,35 +45,45 @@
                 "conductor_server.c",
                 "conductor_server.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "Flash",
             "base": "examples/flash",
             "files": [
                 "flash.c",
                 "flash.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "Hello",
             "base": "examples/hello",
             "files": [
                 "hello_service.c",
                 "hello_service.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "Input",
             "base": "examples/input",
             "files": [
                 "ladder_buttons.c",
                 "ladder_buttons.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "UI",
             "base": "examples/ui",
             "files": [
                 "hello_ui.c",
                 "hello_ui.h",
                 "README.md"
-            ],
+            ]
+        },
+        {
             "name": "UMTS",
             "base": "examples/umts",
             "files": [
