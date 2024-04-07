@@ -149,7 +149,7 @@ void peer_heartbeat(robusto_peer_t *peer)
         uint64_t last_heartbeat = curr_time - HEARTBEAT_IDLE_MARGIN_MS;
     }
     
-    for (e_media_type media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
     {
         if ((peer->supported_media_types & media_type) != media_type)
         {

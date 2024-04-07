@@ -120,11 +120,13 @@ void add_to_history(robusto_media_t *stats, bool sending, rob_ret_val_t result)
 uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize) {
     int phc;
     switch (media_type) {
+        #if CONFIG_ROBUSTO_SUPPORTS_CANBUS
         case robusto_mt_canbus:
         // CAN bus is great with small volumes, but quickly start losing out.
             phc = (payloadSize - CANBUS_MESSAGE_OFFSET <= 8) ? 100 : 80 - ((payloadSize - CANBUS_MESSAGE_OFFSET - 8) / 10);
         // TODO: Shoud stop showing the data length with a lot of data that won't be used in many cases, especially like the 20 bytes here
             break;
+        #endif
         case robusto_mt_espnow:
             phc = 100; // ESP-NOW is quite flexible
             break;
@@ -136,6 +138,7 @@ uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize)
             phc = 80 - (payloadSize - ROBUSTO_CRC_LENGTH / 10); // Decrease with size
             break;
         default:
+            ROB_LOGE(scoring_log_prefix, "robusto_calc_suitability: Unsupported media type: %s", media_type_to_str(media_type));
             phc = 50; // Default case
     }
     if (phc > 100) phc = 100; // Ensure not to exceed 100
@@ -231,7 +234,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
 void peer_scoring(robusto_peer_t *peer)
 {
 
-    for (e_media_type media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
     {
         if ((peer->supported_media_types & media_type) != media_type)
         {

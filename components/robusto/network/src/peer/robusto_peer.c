@@ -325,7 +325,8 @@ robusto_media_t * get_media_info(robusto_peer_t * peer, e_media_type media_type)
     }
     #endif       
 
-    ROB_LOGE(peer_log_prefix, "Invalid media type (%hhu) in get_media_info for peer %s", media_type, peer->name);
+    ROB_LOGE(peer_log_prefix, "Invalid media type (%u) in get_media_info for peer %s", media_type, peer->name);
+    r_delay(1000);
     return NULL;
 }
 
@@ -339,6 +340,7 @@ robusto_media_t * get_media_info(robusto_peer_t * peer, e_media_type media_type)
  */
 float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
 {
+
     robusto_media_t *curr_info = get_media_info(peer, media_type);
 
     ROB_LOGD(peer_log_prefix, "Mt: %s, peer: %s ss: %"PRIu32", rs: %"PRIu32", sf: %"PRIu32", rf: %"PRIu32" ", 

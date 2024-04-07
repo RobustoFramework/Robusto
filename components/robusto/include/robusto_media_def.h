@@ -54,27 +54,27 @@ extern "C"
 
 /* Note: When adding a media type, update the conductor client.*/
 
-typedef enum e_media_type
+typedef enum  e_media_type
 {
-    robusto_mt_none = 0, 
+    robusto_mt_none = 0U, 
     
     /* Wireless */
-    robusto_mt_ble = 1,
-    robusto_mt_espnow = 2,
-    robusto_mt_lora = 4, 
+    robusto_mt_ble = 1U,
+    robusto_mt_espnow = 2U,
+    robusto_mt_lora = 4U, 
 
     /* Wired */
-    robusto_mt_i2c = 8,
+    robusto_mt_i2c = 8U,
 
-    robusto_mt_canbus = 16, 
+    robusto_mt_canbus = 16U, 
     /* TODO: To be implemented 
     
-    robusto_mt_umts = 32, // TODO: Only implemented as a gateway service. 
-    robusto_mt_wifi = 64,    // TODO: On what level should UMTS and wifi be implemented? Neither are direct and both use IP adressing
+    robusto_mt_umts = 32U, // TODO: Only implemented as a gateway service. 
+    robusto_mt_wifi = 64U,    // TODO: On what level should UMTS and wifi be implemented? Neither are direct and both use IP adressing
     // TTL? Onewire? Probably this should be implemented in some way. Or onewire. (perhaps separate for testing connections)
     */
     /* Special types */
-    robusto_mt_mock = 128
+    robusto_mt_mock = 128U
 } e_media_type;
 
 typedef uint8_t robusto_media_types;

@@ -290,7 +290,7 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
         return ROB_OK;
     }
     // Loop all media types and check each
-    for (e_media_type media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
     {
         if (
             !(

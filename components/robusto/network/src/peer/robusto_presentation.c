@@ -80,14 +80,14 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
     ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
+    e_media_type supported_mt = get_host_supported_media_types();
     rob_ret_val_t ret_val_flag;
-    for (e_media_type media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < 25; media_type = media_type * 2)
     {
-        if ((media_types & media_type) != media_type)
+        if ((!(media_types & media_type) || !(supported_mt & media_type)))
         {
             continue;
         }
-
         robusto_media_t *info = get_media_info(peer, media_type);
         /* Send presentation:
          * no receipt as a reply requires know outgoing id, which is only available after presentation is parsed
