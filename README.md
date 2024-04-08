@@ -11,6 +11,8 @@ The easiest way is to:
 3. See if any of your MCU:s match the platform.ini ones (can also try using platform.ini.all)<br />
 4. Run the examples. <br />
 
+...or.. use [ESP-IDF](https://components.espressif.com/components/robusto/robusto)- or  [PlatformIO](https://registry.platformio.org/libraries/robusto/robusto)-dependency management and start with a blank project. A little harder, so please check out the [examples](https://github.com/RobustoFramework/Robusto/tree/main/examples/src). Bare bones projects will be added soon™.
+
 For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) will hold everything together.
 _(bit of a work in progress currently)_
 
