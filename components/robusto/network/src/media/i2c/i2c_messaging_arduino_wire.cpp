@@ -295,7 +295,7 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
     {
         if (peer)
         {
-            peer->i2c_info.send_failures++; // TODO: Not sure how this should count, but probably it should
+            peer->i2c_info.send_successes++;
         }
         i2c_arduino_receipt[0] = 0xff;
         i2c_arduino_receipt[1] = 0x00;
@@ -304,9 +304,14 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
     {
         i2c_arduino_receipt[0] = 0x00;
         i2c_arduino_receipt[1] = 0xff;
-        peer->i2c_info.last_send = r_millis();
-        peer->i2c_info.send_successes++;
+        if (peer)
+        {
+            peer->i2c_info.last_send = r_millis();
+            peer->i2c_info.send_failures++; // TODO: Not sure how this should count, but probably it should
+        }
+
     }
+    
     return ROB_OK;
 }
 
@@ -377,12 +382,12 @@ void i2c_compat_messaging_init(char *_log_prefix)
     incoming_data_length = 0;
     i2c_arduino_receipt[0] = 0;
     i2c_arduino_receipt[1] = 0;
-
+    
     Wire.setSCL(CONFIG_I2C_SCL_IO);
     Wire.setSDA(CONFIG_I2C_SDA_IO);
 
-    Wire.onReceive(i2c_incoming_cb);
-    Wire.onRequest(i2c_peripheral_request);
+    Wire.onReceive(&i2c_incoming_cb);
+    Wire.onRequest(&i2c_peripheral_request);
     i2c_set_master(false, true);
 }
 

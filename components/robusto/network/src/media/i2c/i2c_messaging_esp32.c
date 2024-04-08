@@ -432,7 +432,7 @@ void i2c_compat_messaging_init(char *_log_prefix)
 {
     // TODO: Implement detection and handling of these error states: https://arduino.stackexchange.com/questions/46680/i2c-packet-ocasionally-send-a-garbage-data
     i2c_esp32_messaging_log_prefix = _log_prefix;
-    // This we have to set manually for some non-s3 cards
+    // This we have to set manually for some non-s3 cards 
     i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 1000 / portTICK_PERIOD_MS); 
 }
 
