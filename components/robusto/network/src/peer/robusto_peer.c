@@ -304,6 +304,11 @@ robusto_media_t * get_media_info(robusto_peer_t * peer, e_media_type media_type)
         return &peer->espnow_info;
     }
     #endif
+    #if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+    if (media_type == robusto_mt_ble) {
+        return &peer->ble_info;
+    }
+    #endif
     #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if (media_type == robusto_mt_lora) {
         return &peer->lora_info;

@@ -91,7 +91,7 @@ typedef struct ble_peer {
 
     uint16_t conn_handle;
 
-    uint16_t sdp_handle;
+    uint16_t robusto_handle;
 
     /** Connection info */
     struct ble_gap_conn_desc desc;

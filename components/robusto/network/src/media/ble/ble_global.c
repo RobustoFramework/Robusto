@@ -123,7 +123,7 @@ void report_ble_connection_error(int conn_handle, int code)
 
     if (b_peer != NULL)
     {
-        struct robusto_peer *s_peer = robusto_peers_find_peer_by_handle(b_peer->sdp_handle);
+        struct robusto_peer *s_peer = robusto_peers_find_peer_by_handle(b_peer->robusto_handle);
         if (s_peer != NULL)
         {
             ESP_LOGE(ble_global_log_prefix, "Peer %s encountered a BLE error. Code: %i", s_peer->name, code);
