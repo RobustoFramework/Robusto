@@ -1,7 +1,9 @@
 
 
-#ifndef _BLE_H_
-#define _BLE_H_
+#pragma once
+#include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+
     /*********************
      *      DEFINES
      *********************/
@@ -13,11 +15,11 @@
     /**********************
      * GLOBAL PROTOTYPES
      **********************/
-    void ble_init(char *log_prefix);
-    void ble_shutdown();
+    void robusto_ble_init(char *log_prefix);
+    void robusto_ble_shutdown();
     /**********************
      *      MACROS
      **********************/
 
-#endif
 
+#endif

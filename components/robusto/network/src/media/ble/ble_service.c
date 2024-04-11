@@ -3,6 +3,7 @@
  * Loosely based on the ESP-IDF-demo
  */
 #include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 #include "ble_spp.h"
 #include <host/ble_hs.h>
@@ -11,10 +12,9 @@
 #include "ble_global.h"
 #include "ble_service.h"
 
-#include "../sdp_messaging.h"
-#include "../robusto_peer.h"
-#include "../sdp_mesh.h"
-#include "../sdp_def.h"
+#include <robusto_incoming.h>
+#include <robusto_peer.h>
+
 
 /* 16 Bit Alert Notification Service UUID */
 #define GATT_SVR_SVC_ALERT_UUID 0x1811
@@ -31,20 +31,27 @@
 /* 16 Bit SPP Service Characteristic UUID */
 #define BLE_SVC_SPP_CHR_UUID16 0xABF1
 
+uint16_t ble_svc_gatt_read_val_handle;
+uint16_t ble_spp_svc_gatt_read_val_handle;
+
+char* ble_service_log_prefix;
+uint16_t get_ble_spp_svc_gatt_read_val_handle() {
+    return ble_spp_svc_gatt_read_val_handle;
+};
 
 /**
  * @brief Callback function for custom service
  *
  */
 
-char* ble_service_log_prefix;
+
 
 static int ble_handle_incoming(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt) {
-    robusto_peer *peer = sdp_mesh_find_peer_by_handle(conn_handle);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_handle(conn_handle);
     // TODO: This is a weird one, this needs to be set so that 
     // the first reply will not be suppressed (really doesn't matter then). 
-    peer->ble_state.initial_media = true;
-    return handle_incoming(peer, ctxt->om->om_data, ctxt->om->om_len, SDP_MT_BLE);
+
+    return robusto_handle_incoming(ctxt->om->om_data, ctxt->om->om_len, peer, robusto_mt_ble, 0);
 }
 
 static int ble_svc_gatt_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
@@ -85,6 +92,7 @@ static const struct ble_gatt_svc_def new_ble_svc_gatt_defs[] = {
                                         }},
     },
     {
+        
         /*** Service: SPP */
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = BLE_UUID16_DECLARE(BLE_SVC_SPP_UUID16),
@@ -128,4 +136,5 @@ int gatt_svr_register(void)
 void ble_init_service(char * _log_prefix) {
     ble_service_log_prefix = _log_prefix;
 }
+#endif
 #endif

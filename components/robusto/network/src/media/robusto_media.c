@@ -43,7 +43,9 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
 #include "canbus/canbus_control.h"
 #endif
-
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+#include "ble/ble_control.h"
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 #include "espnow/espnow_control.h"
 #endif
@@ -231,6 +233,10 @@ void robusto_media_init(char * _log_prefix) {
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     robusto_lora_init(media_log_prefix);
+    #endif
+
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+    robusto_ble_init(media_log_prefix);
     #endif
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS

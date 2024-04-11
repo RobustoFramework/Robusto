@@ -7,6 +7,7 @@
  * @todo Restructure this into a more understandable solution, perhaps a separate header for peer and gatt stuff.
  */
 #include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 #include <assert.h>
 #include <stdio.h>
@@ -216,4 +217,5 @@ int new_gatt_svr_init(void)
 
     return 0;
 }
+#endif
 #endif

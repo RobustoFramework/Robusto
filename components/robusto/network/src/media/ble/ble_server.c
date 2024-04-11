@@ -3,6 +3,7 @@
  * This is general server level handling
  ***********************/
 #include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 
 #include <host/util/util.h>
@@ -11,12 +12,12 @@
 #include <esp_nimble_hci.h>
 #include <services/gap/ble_svc_gap.h>
 
+
+
+#include "ble_server.h"
+#include "ble_global.h"
 #include "ble_spp.h"
 
-#include "ble_global.h"
-#include "ble_server.h"
-
-#include "sdp_def.h"
 
 
 static uint8_t own_addr_type;
@@ -231,4 +232,5 @@ void ble_spp_server_on_sync(void)
     /* Begin advertising. */
     ble_spp_server_advertise();
 }
+#endif
 #endif

@@ -128,7 +128,7 @@ void init_supported_media_types(robusto_peer_t *peer)
 {
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-    if (peer->supported_media_types & ROB_MT_BLE)
+    if (peer->supported_media_types & robusto_mt_ble)
     {
         //(mac_address);
         // TODO: Usually BLE peers sort of finds each other, however we might wan't to do something here

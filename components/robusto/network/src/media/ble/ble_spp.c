@@ -6,6 +6,7 @@
  * @todo Restructure this into a more understandable solution, perhaps a separate header for ble_peer and gatt stuff.
  */
 #include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 #include <assert.h>
 #include <stdio.h>
@@ -13,6 +14,11 @@
 #include <host/ble_hs.h>
 #include <host/ble_uuid.h>
 #include "ble_spp.h"
+
+
+char * ble_spp_log_prefix;
+
+
 
 /**
  * Utility function to log an array of bytes.
@@ -209,4 +215,11 @@ print_adv_fields(const struct ble_hs_adv_fields *fields)
         MODLOG_DFLT(DEBUG, "\n");
     }
 }
+
+void init_ble_spp(char * _log_prefix) {
+    ble_spp_log_prefix = _log_prefix;
+
+}
+
+#endif
 #endif

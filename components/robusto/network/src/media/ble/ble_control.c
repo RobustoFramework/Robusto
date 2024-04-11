@@ -5,9 +5,9 @@
  */
 
 #include <robconfig.h>
-#ifdef CONFIG_SDP_LOAD_BLE
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 
-#include "ble.h"
+#include "ble_control.h"
 
 
 #include <host/ble_hs.h>
@@ -15,25 +15,25 @@
 
 #include <nvs.h>
 #include <nvs_flash.h>
-
+#include <esp_mac.h>
 #include <esp_nimble_hci.h>
 #include <services/gap/ble_svc_gap.h>
 
 #include "ble_client.h"
 #include "ble_service.h"
 #include "ble_server.h"
+#include <robusto_media.h>
 
-#include "sdp_def.h"
 
 #include "ble_global.h"
 #include <nimble/nimble_port.h>
 #include <nimble/nimble_port_freertos.h>
-#include <robusto_media.h>
+#include <robusto_peer_def.h>
 #include <robusto_logging.h>
 
 static char *ble_init_log_prefix;
 
-void ble_shutdown() {
+void robusto_ble_shutdown() {
     ESP_LOGI(ble_init_log_prefix, "Shutting down BLE:");
     ESP_LOGI(ble_init_log_prefix, " - freertos deinit");
     nimble_port_freertos_deinit();
@@ -49,14 +49,12 @@ void ble_shutdown() {
  * @param ble_init_log_prefix The prefix for logging and naming
  * @param pvTaskFunction A function containing the task to run
  */
-void ble_init(char *_log_prefix)
+void robusto_ble_init(char *_log_prefix)
 {
     ble_init_log_prefix = _log_prefix;
     ESP_LOGI(ble_init_log_prefix, "Initialising BLE..");
 
     // Note: NVS is not initiated here butin the main initiation
-
-    ESP_ERROR_CHECK(esp_nimble_hci_and_controller_init());
 
     /* Initialize the host stack */
     nimble_port_init();
@@ -70,18 +68,17 @@ void ble_init(char *_log_prefix)
     ble_init_service(ble_init_log_prefix);
     
     // Print out the address
-    sdp_mac_address ble_mac_addr;
+    rob_mac_address ble_mac_addr;
     esp_base_mac_addr_get(ble_mac_addr);
     ESP_LOGI(ble_init_log_prefix, "BLE base MAC address:");
-    ESP_LOG_BUFFER_HEX(ble_init_log_prefix, ble_mac_addr, SDP_MAC_ADDR_LEN);
+    ESP_LOG_BUFFER_HEX(ble_init_log_prefix, ble_mac_addr, ROBUSTO_MAC_ADDR_LEN);
 
     /* Register custom service */
     ret = gatt_svr_register();
     assert(ret == 0);
 
-    /* Create mutexes for blocking during BLE operations */
-    xBLE_Comm_Semaphore = xSemaphoreCreateMutex();
-
+    
+    init_ble_global(_log_prefix);
     /* TODO: Add setting for stack size (it might need to become bigger) */
 
     /* Initialize the NimBLE host configuration. */
@@ -109,7 +106,7 @@ void ble_init(char *_log_prefix)
     ESP_LOGI(ble_init_log_prefix, "Init peer with %i max connections.", MYNEWT_VAL(BLE_MAX_CONNECTIONS));
     ret = ble_peer_init(ble_init_log_prefix, MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
     assert(ret == 0);
-    
+ 
     /* Generate and set the GAP device name. */
     char gapname[50] = "\0";
     strcpy(gapname, ble_init_log_prefix);
@@ -118,11 +115,13 @@ void ble_init(char *_log_prefix)
 
     /* XXX Need to have template for store */
     ble_store_config_init();
-
+  
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
     nimble_port_freertos_init(ble_host_task);
-    add_host_supported_media_type(SDP_MT_BLE);
+
+    add_host_supported_media_type(robusto_mt_ble);
     ESP_LOGI(ble_init_log_prefix, "BLE initialized.");
+
 }
 
 #endif

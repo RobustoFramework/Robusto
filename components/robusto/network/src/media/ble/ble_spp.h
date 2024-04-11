@@ -8,14 +8,16 @@
  */
 
 
-#ifndef _BLE_SPP_H_
-#define _BLE_SPP_H_
+#pragma once
 
+#include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #include <stdbool.h>
-#include <nimble/ble.h>
-#include <modlog/modlog.h>
-#include <host/ble_uuid.h>
+#include "sys/queue.h"
+
+#include <inttypes.h>
 #include <host/ble_gatt.h>
+#include <host/ble_uuid.h>
 #include <host/ble_gap.h>
 
 
@@ -108,7 +110,7 @@ typedef struct ble_peer {
     void *disc_cb_arg;
 } ble_peer;
 
-SLIST_HEAD(, ble_peer) ble_peers;
+SLIST_HEAD(ble_peers, ble_peer);
 
 int ble_peer_disc_all(uint16_t conn_handle, peer_disc_fn *disc_cb,
                   void *disc_cb_arg);
@@ -126,7 +128,5 @@ int ble_peer_init(char *_log_prefix, int max_peers, int max_svcs, int max_chrs, 
 
 struct ble_peer * ble_peer_find(uint16_t conn_handle);
 
+void init_ble_spp(char * _log_prefix);
 #endif
-
-
-

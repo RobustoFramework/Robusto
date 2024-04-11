@@ -1,6 +1,6 @@
-
-#ifndef _BLE_CLIENT_H_
-#define _BLE_CLIENT_H_
+#pragma once
+#include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
     /*********************
      *      DEFINES
      *********************/

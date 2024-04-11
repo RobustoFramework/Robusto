@@ -3,6 +3,7 @@
  * This is general client level handling
  ***********************/
 #include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 
 #include <host/util/util.h>
@@ -302,4 +303,5 @@ void ble_spp_client_on_sync(void)
     ble_spp_client_scan();
 }
 
+#endif
 #endif

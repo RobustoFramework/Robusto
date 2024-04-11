@@ -14,9 +14,8 @@
 #include <string.h>
 #include <host/ble_hs.h>
 #include "ble_spp.h"
-#include "../sdp_def.h"
-#include "../sdp_mesh.h"
-#include "robusto_logging.h"
+#include <robusto_peer.h>
+#include <robusto_logging.h>
 
 static void *peer_svc_mem;
 static struct os_mempool peer_svc_pool;
@@ -30,6 +29,7 @@ static struct os_mempool peer_dsc_pool;
 static void *ble_peer_mem;
 static struct os_mempool ble_peer_pool;
 
+struct ble_peers ble_peers;
 
 static struct peer_svc *
 peer_svc_find_range(struct ble_peer *peer, uint16_t attr_handle);
@@ -66,10 +66,10 @@ static char *ble_peer_log_prefix;
  * @return struct ble_peer* 
  */
 struct robusto_peer *
-ble_peer_find_robusto_peer_by_reverse_addr(sdp_mac_address *mac_address)
+ble_peer_find_robusto_peer_by_reverse_addr(rob_mac_address *mac_address)
 {
     /* Handle BLE:s penchant for little-endedness, and adjust for the BLE offset to the base MAC (2) */
-    uint8_t reversed_address[SDP_MAC_ADDR_LEN];
+    uint8_t reversed_address[ROBUSTO_MAC_ADDR_LEN];
     reversed_address[0] = (uint8_t)(*mac_address)[5];
     reversed_address[1] = (uint8_t)(*mac_address)[4];
     reversed_address[2] = (uint8_t)(*mac_address)[3];
@@ -77,16 +77,8 @@ ble_peer_find_robusto_peer_by_reverse_addr(sdp_mac_address *mac_address)
     reversed_address[4] = (uint8_t)(*mac_address)[1];
     reversed_address[5] = (uint8_t)(*mac_address)[0] - 2;
 
-    struct robusto_peer *peer;
-    SLIST_FOREACH(peer, &robusto_peers, next)
-    {
-        if (memcmp(&(peer->base_mac_address),&reversed_address, SDP_MAC_ADDR_LEN) == 0)
-        {
-            return peer;
-        }
-    }
+    return robusto_peers_find_peer_by_base_mac_address(&reversed_address);
 
-    return NULL;
 }
 
 
@@ -817,7 +809,7 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     } else {
         ESP_LOGW(ble_peer_log_prefix, "Didn't find the connection, looking at the address");
         // Might be a reboot
-        robusto_peer *robusto_peer = ble_peer_find_robusto_peer_by_reverse_addr(&(desc.peer_id_addr.val));
+        robusto_peer_t *robusto_peer = ble_peer_find_robusto_peer_by_reverse_addr(&(desc.peer_id_addr.val));
         if (robusto_peer != NULL)
         {
             ESP_LOGW(ble_peer_log_prefix, "An existing peer had the same peer_id_addr, assuming reconnect and updates conn_handle. \n \
@@ -832,10 +824,10 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     }
     
     ESP_LOGI(ble_peer_log_prefix, "peer_id_addr (MAC address):");
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_id_addr.val), SDP_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_ota_addr.val), SDP_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_id_addr.val), SDP_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_ota_addr.val), SDP_MAC_ADDR_LEN);
+    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
 
 
     peer = os_memblock_get(&ble_peer_pool);
@@ -857,13 +849,13 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     
     // Add an SDP-peer that contains this
     char * tmpPeerName;
-    sprintf((char *)tmpPeerName, "UNKN_BLE_%i", conn_handle);
-    int _sdp_handle = sdp_mesh_peer_add(tmpPeerName);
+    asprintf(&tmpPeerName, "UNKN_BLE_%i", conn_handle);
+    int _sdp_handle = robusto_add_init_new_peer (tmpPeerName, &(desc.peer_id_addr.val), robusto_mt_ble);
 
-    robusto_peer *_robusto_peer = NULL;
+    robusto_peer_t *_robusto_peer = NULL;
     if (_sdp_handle > -1) {
         peer->sdp_handle = _sdp_handle;
-        _robusto_peer = sdp_mesh_find_peer_by_handle(_sdp_handle);
+        _robusto_peer = robusto_peers_find_peer_by_handle(_sdp_handle);
         if (_robusto_peer == NULL) {
             ESP_LOGE(ble_peer_log_prefix, "ble_peer_add() - Wasn't able to map back to the sdp_handle. Handle: %i", _sdp_handle);
             return BLE_ERR_HW_FAIL;
@@ -871,8 +863,8 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
         
         _robusto_peer->ble_conn_handle = conn_handle;        
         
-    } else if (_sdp_handle == -SDP_ERR_PEER_EXISTS) {
-        _robusto_peer = sdp_mesh_find_peer_by_name(tmpPeerName);
+    } else if (_sdp_handle == -ROB_ERR_PEER_EXISTS) {
+        _robusto_peer = robusto_peers_find_peer_by_name(tmpPeerName);
         _robusto_peer->ble_conn_handle = conn_handle;  
         
         ESP_LOGI(ble_peer_log_prefix, "Didn't add SDP peer due to BLE reconnection (same name), but set the ble connection handle.");
@@ -881,10 +873,7 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
 
     if (_robusto_peer->state == PEER_UNKNOWN) {
         // We know to little about the peer; ask for more information.
-        if (robusto_peer_send_who_message(_robusto_peer) == SDP_MT_NONE)
-        {
-            ESP_LOGE(ble_peer_log_prefix, "robusto_peer_add() - Failed to ask for more information: %s", _robusto_peer->name);
-        }
+        return 0;
     }
 
     SLIST_INSERT_HEAD(&ble_peers, peer, next);

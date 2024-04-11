@@ -1,6 +1,7 @@
 
-#ifndef _BLE_SERVER_H_
-#define _BLE_SERVER_H_
+#pragma once
+#include <robconfig.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 /*********************
  *      DEFINES
  *********************/
@@ -25,7 +26,6 @@
     /**********************
      *      MACROS
      **********************/
-
 
 
 #endif

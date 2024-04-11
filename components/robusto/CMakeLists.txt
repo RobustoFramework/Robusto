@@ -20,6 +20,7 @@ FILE(GLOB rob_sources
 "network/src/encryption/*.c" 
 "network/src/media/*.*" 
 "network/src/media/i2c/*.*" 
+"network/src/media/ble/*.*" 
 "network/src/media/canbus/*.*" 
 "network/src/media/espnow/*.*" 
 "network/src/media/lora/*.*" 
@@ -56,7 +57,7 @@ idf_component_register(
         # Flash
         spiffs vfs
         # Networking dependecies
-        radiolib
+        radiolib bt
         # ESP-NOW dependencies    
         esp_wifi esp_adc 
         # Screen
