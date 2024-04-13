@@ -178,6 +178,8 @@ typedef struct queue_context
   /* Worker task name*/
   char worker_task_name[50];
 
+  void *work_queue;
+
   /* If set, the queue will not process any items */
   bool blocked;
   /* If set, worker will shut down */
