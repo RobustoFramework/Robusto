@@ -8,7 +8,7 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 
 #include "ble_control.h"
-
+#include <robusto_media_def.h>
 
 #include <host/ble_hs.h>
 #include "ble_spp.h" // This needs to be after ble_hs.h
@@ -18,6 +18,7 @@
 #include <esp_mac.h>
 #include <esp_nimble_hci.h>
 #include <services/gap/ble_svc_gap.h>
+#include "../queue/media_queue.h"
 
 #include "ble_client.h"
 #include "ble_service.h"
@@ -32,16 +33,29 @@
 #include <robusto_logging.h>
 
 static char *ble_init_log_prefix;
+queue_context_t * ble_media_queue;
 
 void robusto_ble_shutdown() {
-    ESP_LOGI(ble_init_log_prefix, "Shutting down BLE:");
-    ESP_LOGI(ble_init_log_prefix, " - freertos deinit");
+    ROB_LOGI(ble_init_log_prefix, "Shutting down BLE:");
+    ROB_LOGI(ble_init_log_prefix, " - freertos deinit");
     nimble_port_freertos_deinit();
-    ESP_LOGI(ble_init_log_prefix, " - port deinit");
+    ROB_LOGI(ble_init_log_prefix, " - port deinit");
     nimble_port_deinit();
-    ESP_LOGI(ble_init_log_prefix, "BLE shut down.");
+    ROB_LOGI(ble_init_log_prefix, "BLE shut down.");
 }
 
+queue_context_t *ble_get_queue_context() {
+    return ble_media_queue;
+}
+
+void ble_do_on_work_cb(media_queue_item_t *queue_item) {
+    ROB_LOGI(ble_init_log_prefix, "In BLE ble_do_on_work_cb.");
+
+}
+
+void ble_do_on_poll_cb(queue_context_t *q_context) {
+
+}
 
 /**
  * @brief Initialize the  BLE server
@@ -52,7 +66,7 @@ void robusto_ble_shutdown() {
 void robusto_ble_init(char *_log_prefix)
 {
     ble_init_log_prefix = _log_prefix;
-    ESP_LOGI(ble_init_log_prefix, "Initialising BLE..");
+    ROB_LOGI(ble_init_log_prefix, "Initialising BLE..");
 
     // Note: NVS is not initiated here butin the main initiation
 
@@ -70,8 +84,8 @@ void robusto_ble_init(char *_log_prefix)
     // Print out the address
     rob_mac_address ble_mac_addr;
     esp_base_mac_addr_get(ble_mac_addr);
-    ESP_LOGI(ble_init_log_prefix, "BLE base MAC address:");
-    ESP_LOG_BUFFER_HEX(ble_init_log_prefix, ble_mac_addr, ROBUSTO_MAC_ADDR_LEN);
+    ROB_LOGI(ble_init_log_prefix, "BLE base MAC address:");
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_init_log_prefix, ble_mac_addr, ROBUSTO_MAC_ADDR_LEN);
 
     /* Register custom service */
     ret = gatt_svr_register();
@@ -85,8 +99,8 @@ void robusto_ble_init(char *_log_prefix)
 
     /* Configure the host callbacks */
 
-    ble_hs_cfg.reset_cb = ble_on_reset;
-    ble_hs_cfg.sync_cb = ble_spp_server_on_sync;
+    ble_hs_cfg.reset_cb = &ble_on_reset;
+    ble_hs_cfg.sync_cb = &ble_spp_server_on_sync;
     /*
         if (is_controller)
     {
@@ -103,7 +117,7 @@ void robusto_ble_init(char *_log_prefix)
     ble_hs_cfg.sm_sc = 0;
     /* Initialize data structures to track connected peers.
     There is a local pool in spp.h */
-    ESP_LOGI(ble_init_log_prefix, "Init peer with %i max connections.", MYNEWT_VAL(BLE_MAX_CONNECTIONS));
+    ROB_LOGI(ble_init_log_prefix, "Init peer with %i max connections.", MYNEWT_VAL(BLE_MAX_CONNECTIONS));
     ret = ble_peer_init(ble_init_log_prefix, MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
     assert(ret == 0);
  
@@ -117,11 +131,12 @@ void robusto_ble_init(char *_log_prefix)
     ble_store_config_init();
   
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
-    nimble_port_freertos_init(ble_host_task);
+    nimble_port_freertos_init(&ble_host_task);
 
     add_host_supported_media_type(robusto_mt_ble);
-    ESP_LOGI(ble_init_log_prefix, "BLE initialized.");
-
+    ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue.");
+    ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
+    ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
 }
 
 #endif

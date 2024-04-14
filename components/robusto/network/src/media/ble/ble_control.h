@@ -12,9 +12,11 @@
      *      INCLUDES
      *********************/
     #include <stdbool.h>
+
     /**********************
      * GLOBAL PROTOTYPES
      **********************/
+    
     void robusto_ble_init(char *log_prefix);
     void robusto_ble_shutdown();
     /**********************

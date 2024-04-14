@@ -27,6 +27,7 @@ FILE(GLOB rob_sources
 "network/src/media/mock/*.*" 
 "network/src/media/radio/*.*" 
 "network/src/media/radio/XPowers/*.*" 
+"network/src/media/queue/*.*" 
 "network/src/media/wired/*.*" 
 "network/src/media/spi/*.*" 
 "network/src/peer/*.*" 

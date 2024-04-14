@@ -807,12 +807,12 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     {       
         return BLE_HS_EALREADY;   
     } else {
-        ESP_LOGW(ble_peer_log_prefix, "Didn't find the connection, looking at the address");
+        ROB_LOGW(ble_peer_log_prefix, "Didn't find the connection, looking at the address");
         // Might be a reboot
         robusto_peer_t *robusto_peer = ble_peer_find_robusto_peer_by_reverse_addr(&(desc.peer_id_addr.val));
         if (robusto_peer != NULL)
         {
-            ESP_LOGW(ble_peer_log_prefix, "An existing peer had the same peer_id_addr, assuming reconnect and updates conn_handle. \n \
+            ROB_LOGW(ble_peer_log_prefix, "An existing peer had the same peer_id_addr, assuming reconnect and updates conn_handle. \n \
              Might be hack though.");
             // TODO: Could this be an easy way to steal connections?
             // TODO: This should probably trigger some form of check or re-authentication.
@@ -823,11 +823,11 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
         }
     }
     
-    ESP_LOGI(ble_peer_log_prefix, "peer_id_addr (MAC address):");
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
-    ESP_LOG_BUFFER_HEX(ble_peer_log_prefix, &(desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ROB_LOGI(ble_peer_log_prefix, "peer_id_addr (MAC address):");
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.our_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
 
 
     peer = os_memblock_get(&ble_peer_pool);

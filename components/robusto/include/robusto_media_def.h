@@ -212,7 +212,7 @@ typedef void (media_queue_callback)(media_queue_item_t *work_item);
 /* Callbacks that act as filters on incoming work items */
 typedef int(media_filter_callback)(media_queue_item_t *work_item);
 
-
+queue_context_t *ble_get_queue_context();
 
 #ifdef __cplusplus
 } /* extern "C" */

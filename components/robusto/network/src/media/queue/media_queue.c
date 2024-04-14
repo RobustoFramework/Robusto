@@ -42,22 +42,24 @@ typedef STAILQ_HEAD(new_work_q_s, media_queue_item) new_media_q_t;
 
 /* Expands to a declaration for the work queue */
 
-
-media_queue_item_t *get_first_queueitem(queue_context_t * q_context) 
+media_queue_item_t *get_first_queueitem(queue_context_t *q_context)
 {
-    return STAILQ_FIRST((new_media_q_t*)(q_context->work_queue)); 
+    return STAILQ_FIRST((new_media_q_t *)(q_context->work_queue));
 }
 
-void remove_first_queue_item(queue_context_t * q_context){
-    STAILQ_REMOVE_HEAD((new_media_q_t*)(q_context->work_queue), items);
+void remove_first_queue_item(queue_context_t *q_context)
+{
+    STAILQ_REMOVE_HEAD((new_media_q_t *)(q_context->work_queue), items);
 }
-void insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL((new_media_q_t*)(q_context->work_queue), new_item, items);
+void insert_at_tail(queue_context_t *q_context, media_queue_item_t *new_item)
+{
+    STAILQ_INSERT_TAIL((new_media_q_t *)(q_context->work_queue), new_item, items);
 }
 
-void canbus_cleanup_queue_task(queue_context_t * q_context, media_queue_item_t *queue_item) {
+void canbus_cleanup_queue_task(queue_context_t *q_context, media_queue_item_t *queue_item)
+{
     if (queue_item != NULL)
-    {    
+    {
         free(queue_item->peer);
         free(queue_item->data);
         free(queue_item);
@@ -65,32 +67,28 @@ void canbus_cleanup_queue_task(queue_context_t * q_context, media_queue_item_t *
     cleanup_queue_task(q_context);
 }
 
-queue_context_t * create_media_queue(char * _log_prefix, char * queue_name, work_callback work_cb, poll_callback poll_cb) {
+queue_context_t *create_media_queue(char *_log_prefix, char *queue_name, 
+    work_callback work_cb, poll_callback poll_cb)
+{
 
-    queue_context_t * new_queue_context = robusto_malloc(sizeof(queue_context_t));
-    
-    new_media_q_t *new_media_q =  robusto_malloc(sizeof(new_media_q_t));
-     // Initialize the work queue
+    queue_context_t *new_queue_context = robusto_malloc(sizeof(queue_context_t));
+
+    new_media_q_t *new_media_q = robusto_malloc(sizeof(new_media_q_t));
+    // Initialize the work queue
     STAILQ_INIT(new_media_q);
 
-    new_queue_context->first_queue_item_cb = &get_first_queueitem; 
-    new_queue_context->remove_first_queueitem_cb = &remove_first_queue_item; 
-    new_queue_context->insert_tail_cb = &insert_tail;
-    new_queue_context->on_work_cb = work_cb; 
+    new_queue_context->first_queue_item_cb = &get_first_queueitem;
+    new_queue_context->remove_first_queueitem_cb = &remove_first_queue_item;
+    new_queue_context->insert_tail_cb = &insert_at_tail;
+    new_queue_context->on_work_cb = work_cb;
     new_queue_context->on_poll_cb = poll_cb;
     new_queue_context->max_task_count = 1;
     new_queue_context->multitasking = false;
     // This queue cannot start processing items until the media is initialized
     new_queue_context->blocked = true;
     new_queue_context->log_prefix = _log_prefix;
-  /* If set, worker will shut down */
+    /* If set, worker will shut down */
     new_queue_context->watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
-    
-    return init_work_queue(new_queue_context, _log_prefix, queue_name);      
 
-
+    return init_work_queue(new_queue_context, _log_prefix, queue_name);
 }
-
-
-
-

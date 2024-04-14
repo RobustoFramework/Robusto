@@ -129,6 +129,15 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         //retval = lora_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+    if (media_type == robusto_mt_ble)
+    {
+        // TODO: Make all log messages reflect direction using >> or << where applicable
+        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using BLE..", data_length);
+        queue_ctx = ble_get_queue_context();
+        //retval = espnow_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
+    }
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
     if (media_type == robusto_mt_espnow)
     {
@@ -137,7 +146,6 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         queue_ctx = espnow_get_queue_context();
         //retval = espnow_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
-
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     if (media_type == robusto_mt_i2c)
@@ -155,10 +163,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         //retval = canbus_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
 #endif
-
-
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
-
     if (media_type == robusto_mt_mock)
     {
         ROB_LOGI(message_sending_log_prefix, ">> Mock sending to mock host: %lu ", peer->relation_id_outgoing);
@@ -167,7 +172,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         queue_ctx = mock_get_queue_context();
     }
 #endif
-    
+
     if (queue_ctx != NULL) {
         media_queue_item_t *new_item = robusto_malloc(sizeof(media_queue_item_t)); 
             new_item->peer = peer;

@@ -29,7 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <robconfig.h>
-#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+
 
 #pragma once
 /*********************
@@ -51,11 +51,9 @@ extern "C"
 {
 #endif
 
-queue_context_t * create_media_queue(char * _log_prefix, char * queue_name, work_callback work_cb, poll_callback poll_cb) {
-
-
+queue_context_t * create_media_queue(char * _log_prefix, char * queue_name, work_callback work_cb, poll_callback poll_cb);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-#endif
+
