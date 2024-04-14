@@ -8,6 +8,7 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 
 #include "ble_control.h"
+#include <robusto_message.h>
 #include <robusto_media_def.h>
 
 #include <host/ble_hs.h>
@@ -48,14 +49,16 @@ queue_context_t *ble_get_queue_context() {
     return ble_media_queue;
 }
 
-void ble_do_on_work_cb(media_queue_item_t *queue_item) {
-    ROB_LOGI(ble_init_log_prefix, "In BLE ble_do_on_work_cb.");
-
-}
-
 void ble_do_on_poll_cb(queue_context_t *q_context) {
 
 }
+void ble_do_on_work_cb(media_queue_item_t *work_item) {
+    
+    ROB_LOGD(ble_init_log_prefix, ">> In ESP-NOW work callback.");
+    send_work_item(work_item, &(work_item->peer->ble_info), robusto_mt_espnow, 
+        &ble_send_message, &ble_do_on_poll_cb, ble_get_queue_context());
+}
+
 
 /**
  * @brief Initialize the  BLE server

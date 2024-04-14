@@ -1,4 +1,6 @@
 /**
+ * @deprecated This functionality is deprecated, the Robusto platform is entirely asynchronous
+ * 
  * @file robusto_message_sending.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
  * @brief Robusto functionality for receiving messages

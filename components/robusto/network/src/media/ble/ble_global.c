@@ -14,11 +14,9 @@
 
 #include "ble_global.h"
 
-SemaphoreHandle_t BLE_Semaphore;
-
 /* This semaphore is use for blocking, so different threads doesn't accidentaly communicate at the same time */
 SemaphoreHandle_t xBLE_Comm_Semaphore;
-
+// TODO: The semaphore might not be needed when this is behind the queue, the receive is probably not conflicting?
 char *ble_global_log_prefix;
 
 /**
@@ -138,20 +136,25 @@ void report_ble_connection_error(int conn_handle, int code)
 /**
  * @brief Sends a message through BLE.
  */
-int ble_send_message(uint16_t conn_handle, void *data, int data_length)
+rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
-
+    // TODO: Add 
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
         int ret;
-        ret = ble_gattc_write_flat(conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, NULL, NULL);
+        if (receipt) {
+            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, NULL, NULL);
+        } else {
+            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length);
+        }
+        
         if (ret == 0)
         {
-            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %i bytes of data! CRC32: %u", data_length, (int)crc32_be(0, data, data_length));
+            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data, data_length));
         }
         else
         {
-            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when writing data! Peer: %i Code: %i", conn_handle, ret);
+            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when writing data! Peer: %i Code: %i", peer->ble_conn_handle, ret);
             xSemaphoreGive(xBLE_Comm_Semaphore);
             return -ret;
         }
