@@ -37,7 +37,7 @@ extra_scripts =
 
 [env:TTGO-T-Beam_SIM7000G]
 ; Used with the TTGO T-BEAM SIM-7000 board
-platform = espressif32@6.5.0
+platform = espressif32@6.6.0
 framework = espidf
 board = ttgo-t-beam
 monitor_port = /dev/cu.wchusbserial54D80084791
@@ -60,7 +60,7 @@ lib_deps =
 
 [env:ESP32cam]
 ; Used with the The ESP32 cam board
-platform = espressif32@6.5.0
+platform = espressif32@6.6.0
 framework = espidf
 board = esp32cam
 

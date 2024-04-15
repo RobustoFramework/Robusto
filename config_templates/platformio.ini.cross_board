@@ -82,7 +82,7 @@ build_flags =
 
 [env:Devkit_v4]
 ; Used with the The ESP32 devkit board
-platform = espressif32@6.4.0
+platform = espressif32@6.6.0
 framework = espidf
 board = az-delivery-devkit-v4
 
