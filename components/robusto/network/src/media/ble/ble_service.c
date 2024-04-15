@@ -34,7 +34,8 @@
 uint16_t ble_svc_gatt_read_val_handle;
 uint16_t ble_spp_svc_gatt_read_val_handle;
 
-char* ble_service_log_prefix;
+char * ble_service_log_prefix;
+
 uint16_t get_ble_spp_svc_gatt_read_val_handle() {
     return ble_spp_svc_gatt_read_val_handle;
 };

@@ -2,10 +2,9 @@ menu "Networking"
 	config ROBUSTO_SUPPORTS_BLE
 		bool "Load Bluetooth Low Energy (BLE) libraries"
         select BT_ENABLED
-        select BT_NIMBLE_ENABLED
 		help
             Set this option to tell Robusto to load the Bluetooth library.
-            Automatically enables the Nimble library.
+            Automatically enable Bluetooth, but the NimBLE has to be selected manually under Bluetooth settings.
             https://en.wikipedia.org/wiki/Bluetooth_Low_Energy
 
 	orsource "src/media/ble/Kconfig"

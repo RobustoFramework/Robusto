@@ -1,5 +1,6 @@
-menu "BLE-configuration"
+menu "BLE-configuration - Do not forget to select the NimBLE host type in the configuration"
     depends on ROBUSTO_SUPPORTS_BLE
+
 
     
 endmenu

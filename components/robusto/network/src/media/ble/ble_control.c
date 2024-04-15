@@ -83,13 +83,13 @@ void robusto_ble_init(char *_log_prefix)
 
     /* Initialize service */
     ble_init_service(ble_init_log_prefix);
-    
+
     // Print out the address
     rob_mac_address ble_mac_addr;
     esp_base_mac_addr_get(ble_mac_addr);
     ROB_LOGI(ble_init_log_prefix, "BLE base MAC address:");
     rob_log_bit_mesh(ROB_LOG_INFO, ble_init_log_prefix, ble_mac_addr, ROBUSTO_MAC_ADDR_LEN);
-
+      
     /* Register custom service */
     ret = gatt_svr_register();
     assert(ret == 0);
@@ -132,14 +132,16 @@ void robusto_ble_init(char *_log_prefix)
 
     /* XXX Need to have template for store */
     ble_store_config_init();
-  
+
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
     nimble_port_freertos_init(&ble_host_task);
 
     add_host_supported_media_type(robusto_mt_ble);
     ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue.");
+
     ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
     ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
+
 }
 
 #endif
