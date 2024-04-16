@@ -89,6 +89,13 @@ queue_context_t *create_media_queue(char *_log_prefix, char *queue_name,
     new_queue_context->log_prefix = _log_prefix;
     /* If set, worker will shut down */
     new_queue_context->watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
-
-    return init_work_queue(new_queue_context, _log_prefix, queue_name);
+     
+    rob_ret_val_t ret_init = init_work_queue(new_queue_context, _log_prefix, queue_name);
+    if (ret_init == ROB_OK) {
+        return new_queue_context;
+    } else {
+        robusto_free(new_queue_context);
+        return NULL;
+    }
+    
 }

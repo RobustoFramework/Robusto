@@ -36,14 +36,20 @@
 static char *ble_init_log_prefix;
 queue_context_t * ble_media_queue;
 
+void ble_set_queue_blocked(bool blocked) {
+    set_queue_blocked(ble_media_queue,blocked);
+}
 void robusto_ble_shutdown() {
     ROB_LOGI(ble_init_log_prefix, "Shutting down BLE:");
+    ble_set_queue_blocked(true);
     ROB_LOGI(ble_init_log_prefix, " - freertos deinit");
     nimble_port_freertos_deinit();
     ROB_LOGI(ble_init_log_prefix, " - port deinit");
     nimble_port_deinit();
     ROB_LOGI(ble_init_log_prefix, "BLE shut down.");
 }
+
+
 
 queue_context_t *ble_get_queue_context() {
     return ble_media_queue;
@@ -138,9 +144,15 @@ void robusto_ble_init(char *_log_prefix)
 
     add_host_supported_media_type(robusto_mt_ble);
     ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue.");
-
     ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
-    ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
+    if (!ble_media_queue) {
+        robusto_ble_shutdown();
+        ROB_LOGI(ble_init_log_prefix, "Failed to create the BLE media queue. Shutting down BLE, Robusto will report that it is an invalid media type.");
+    } else {
+        ble_set_queue_blocked(false);
+        ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
+    }
+    
 
 }
 

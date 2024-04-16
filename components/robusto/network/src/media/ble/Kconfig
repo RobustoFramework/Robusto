@@ -1,6 +1,35 @@
 menu "BLE-configuration - Do not forget to select the NimBLE host type in the configuration"
     depends on ROBUSTO_SUPPORTS_BLE
 
+	menu "Testing"
+		config ROB_NETWORK_TEST_BLE_LOOP_INITIATOR
+			bool "This device begins and ends a test loop"
+			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING  
+			help
+				When testing the communication of several devices, a test loop is often constructed to test both sending and receiving of the same communication.
+
+				The loop starts with all devices except from the initiator starts listening. 
+				The first call is done by the initiator, that sends to the next and then starts listening. 
+				The next, in turn sends to the next. 
+				The last device have the initiator as the destination, and the loop is closed when the initiator has gotten the message. 
+
+
+		config ROB_NETWORK_TEST_BLE_CALL_ADDR
+			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT || ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
+            hex "The MAC-address of the ESP-NOW-enabled peer to test, a 6-byte hex value."
+			default 0xFFFFFFFFFFFF
+			range 0x000000000000 0xFFFFFFFFFFFF
+			help
+				When doing physical testing of BLE peers, this is the address this peer will call upon when testing.
+				Write it as a large number, for example 0x01AB11BB12BC (6*8 bits)
+
+        config ROB_NETWORK_TEST_BLE_KILL_SWITCH
+            int "Kill switch GPIO - Makes BLE stop working when low"
+            default -1
+            help
+                Used for testing scoring.
+
+	endmenu      
 
     
 endmenu

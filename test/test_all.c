@@ -53,6 +53,11 @@
 #include "tst_esp_now_message_receiving.h"
 #endif
 
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+#include "tst_ble_message_sending.h"
+#include "tst_ble_message_receiving.h"
+#endif
+
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include "tst_lora_message_sending.h"
 #include "tst_lora_message_receiving.h"
@@ -391,6 +396,57 @@ void runUnityTests(void *pvParameters)
 
 #endif
 
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+
+    /* Asynchronous testing*/
+#if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
+
+    RUN_TEST(tst_ble_message_send_presentation, "TEST DEST");
+    robusto_yield();
+
+#endif
+
+    RUN_TEST(tst_ble_message_receive_presentation);
+    robusto_yield();
+
+#if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
+    RUN_TEST(tst_ble_message_send_presentation, "TEST NEXT");
+    robusto_yield();
+
+#endif
+
+#if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
+
+    RUN_TEST(tst_ble_message_send_message);
+    robusto_yield();
+#endif
+
+    RUN_TEST(tst_ble_message_receive_string_message);
+    robusto_yield();
+
+#if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
+    RUN_TEST(tst_ble_message_send_message);
+    robusto_yield();
+#endif
+
+#if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
+    RUN_TEST(tst_ble_message_send_message_fragmented);
+    robusto_yield();
+#endif
+
+    RUN_TEST(tst_ble_message_receive_fragmented_message);
+    robusto_yield();
+
+
+#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
+    RUN_TEST(tst_ble_message_send_message_fragmented);
+    robusto_yield();
+#endif
+
+
+
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 
 /* TODO: Decide: Should we even do any synchronous communication?
