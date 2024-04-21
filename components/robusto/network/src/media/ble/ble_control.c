@@ -32,9 +32,9 @@
 #include <nimble/nimble_port_freertos.h>
 #include <robusto_peer_def.h>
 #include <robusto_logging.h>
-
+#include "esp_heap_trace.h"
 static char *ble_init_log_prefix;
-queue_context_t * ble_media_queue;
+static queue_context_t *ble_media_queue;
 
 void ble_set_queue_blocked(bool blocked) {
     set_queue_blocked(ble_media_queue,blocked);
@@ -74,11 +74,18 @@ void ble_do_on_work_cb(media_queue_item_t *work_item) {
  */
 void robusto_ble_init(char *_log_prefix)
 {
+
     ble_init_log_prefix = _log_prefix;
+        
     ROB_LOGI(ble_init_log_prefix, "Initialising BLE..");
-
+    ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue (stopped).");
+    ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
+    if (!ble_media_queue) {
+        ROB_LOGE(ble_init_log_prefix, "Failed to create the BLE media queue. Shutting down BLE, Robusto will report that it is an invalid media type.");
+        return;
+    }
     // Note: NVS is not initiated here butin the main initiation
-
+  //  ESP_ERROR_CHECK( heap_trace_start(HEAP_TRACE_LEAKS) );
     /* Initialize the host stack */
     nimble_port_init();
 
@@ -143,16 +150,10 @@ void robusto_ble_init(char *_log_prefix)
     nimble_port_freertos_init(&ble_host_task);
 
     add_host_supported_media_type(robusto_mt_ble);
-    ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue.");
-    ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
-    if (!ble_media_queue) {
-        robusto_ble_shutdown();
-        ROB_LOGI(ble_init_log_prefix, "Failed to create the BLE media queue. Shutting down BLE, Robusto will report that it is an invalid media type.");
-    } else {
-        ble_set_queue_blocked(false);
-        ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
-    }
-    
+
+    ROB_LOGI(ble_init_log_prefix, "Unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
+    ble_set_queue_blocked(false);
+    ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
 
 }
 

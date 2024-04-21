@@ -138,8 +138,10 @@ typedef struct queue_item
     STAILQ_ENTRY(queue_item) items;
 } work_queue_item_t;
 
-typedef void *(first_queueitem)();
-typedef void(remove_first_queueitem)();
+typedef struct queue_context queue_context_t;
+
+typedef void *(first_queueitem)(queue_context_t * q_context);
+typedef void(remove_first_queueitem)(queue_context_t * q_context);
 
 typedef void(insert_tail)(void *new_item);
 

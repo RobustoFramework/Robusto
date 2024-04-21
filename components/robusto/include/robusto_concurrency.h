@@ -36,10 +36,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <robusto_retval.h>
-
 #ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/semphr.h>
 #endif
 #ifdef USE_ARDUINO
 #include <Arduino.h>
@@ -47,11 +47,10 @@
 #include <task.h>
 #endif
 
-
 // Tasks'n threads (FreeRTOS tasks are equated with POSIX threads here)
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
     typedef TaskHandle_t rob_task_handle_t;
-    typedef void *mutex_ref_t;
+    typedef SemaphoreHandle_t mutex_ref_t;
 #else
 #include <semaphore.h>
 typedef uint32_t rob_task_handle_t;

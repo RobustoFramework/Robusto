@@ -53,12 +53,12 @@ void *safe_get_head_work_item(queue_context_t *q_context)
     if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, 300))
     {
         /* Pull the first item from the work queue */
-        void *curr_work = q_context->first_queue_item_cb();
+        void *curr_work = q_context->first_queue_item_cb(q_context);
 
         /* Immidiate deletion from the head of the queue */
         if (curr_work != NULL)
         {
-            q_context->remove_first_queueitem_cb();
+            q_context->remove_first_queueitem_cb(q_context);
         }
         robusto_mutex_give(q_context->__x_queue_mutex);
         return curr_work;
@@ -207,6 +207,7 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
 
     /* Create semaphores to ensure thread safety (queue and tasks) */
     q_context->__x_queue_mutex = robusto_mutex_init();
+    
     assert(q_context->__x_queue_mutex);
     q_context->__x_task_state_mutex = robusto_mutex_init();
     assert(q_context->__x_task_state_mutex);
@@ -226,15 +227,16 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
      * applications on 1, traditionally called APP
      * TODO: Should we try to allocate these tasks statically using xTaskCreateStatic or/and xTaskCreateRestrictedStatic?
      */
-
     ROB_LOGI(robusto_worker_log_prefix, "Register the worker task. Name: %s", q_context->worker_task_name);
-
+    /* We obviously don't immidiately want to shutdown the worker just because someone haven't set shutdown to false. */
+    q_context->shutdown = false;
     int rc = robusto_create_task((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, &q_context->worker_task_handle, 0);
     if (rc != ROB_OK)
     {
         ROB_LOGE(robusto_worker_log_prefix, "Failed creating worker task, returned: %i (see projdefs.h)", rc);
         return ROB_ERR_INIT_FAIL;
     }
+    
     ROB_LOGI(robusto_worker_log_prefix, "Worker task registered.");
 
     return ROB_OK;

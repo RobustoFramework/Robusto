@@ -31,7 +31,7 @@
 #include <robusto_concurrency.h>
 
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
-
+#include <robusto_logging.h>
 #ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <FreeRTOS.h>
@@ -67,7 +67,11 @@ rob_ret_val_t robusto_delete_current_task() {
 }
 
 mutex_ref_t robusto_mutex_init() {
-    return xSemaphoreCreateMutex();
+    mutex_ref_t retval = xSemaphoreCreateMutex();
+    if (!retval) {
+        ROB_LOGE("FREERTOS", "Failure getting a semaphore");
+    }
+    return retval;
 }
 
 void robusto_mutex_deinit(mutex_ref_t mutex) {

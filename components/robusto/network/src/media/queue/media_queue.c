@@ -73,9 +73,9 @@ queue_context_t *create_media_queue(char *_log_prefix, char *queue_name,
 
     queue_context_t *new_queue_context = robusto_malloc(sizeof(queue_context_t));
 
-    new_media_q_t *new_media_q = robusto_malloc(sizeof(new_media_q_t));
+    new_queue_context->work_queue = robusto_malloc(sizeof(new_media_q_t));
     // Initialize the work queue
-    STAILQ_INIT(new_media_q);
+    STAILQ_INIT((new_media_q_t *)(new_queue_context->work_queue));
 
     new_queue_context->first_queue_item_cb = &get_first_queueitem;
     new_queue_context->remove_first_queueitem_cb = &remove_first_queue_item;
@@ -86,14 +86,17 @@ queue_context_t *create_media_queue(char *_log_prefix, char *queue_name,
     new_queue_context->multitasking = false;
     // This queue cannot start processing items until the media is initialized
     new_queue_context->blocked = true;
+    new_queue_context->shutdown = false;
     new_queue_context->log_prefix = _log_prefix;
     /* If set, worker will shut down */
     new_queue_context->watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
-     
+   
     rob_ret_val_t ret_init = init_work_queue(new_queue_context, _log_prefix, queue_name);
     if (ret_init == ROB_OK) {
+    
         return new_queue_context;
     } else {
+        ROB_LOGE("Media queue", "Failed initiating work queue. Code : %u", ret_init);
         robusto_free(new_queue_context);
         return NULL;
     }
