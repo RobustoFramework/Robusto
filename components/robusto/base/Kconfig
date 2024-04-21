@@ -53,6 +53,11 @@ menu "Base system configuration"
         default -1
         help
             If > -1, the GPIO of a LED that can be used as an indicator.
-
-   #ifdef CONFIG_ROBUSTO_SLEEP     
+    if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+    config ROBUSTO_HEAP_TRACING
+        bool "Enable heap tracing"  
+        help
+            The Robusto sleeping functionality.
+            This is a setting as the sleep functionality uses some of the very scarce RTC memory.
+    endif
 endmenu                    

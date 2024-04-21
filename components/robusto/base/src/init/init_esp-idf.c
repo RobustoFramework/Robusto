@@ -34,7 +34,17 @@
 #include "robusto_init.h"
 #ifdef USE_ESPIDF
 
+#ifdef CONFIG_ROBUSTO_HEAP_TRACING
+#include "esp_heap_trace.h"
+
+#define NUM_RECORDS 100
+static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
+
+#endif
 void robusto_init_compatibility() {
+#ifdef CONFIG_ROBUSTO_HEAP_TRACING
+    ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
+#endif
     // Add ESP-IDF initalization here when needed.
 }
 
