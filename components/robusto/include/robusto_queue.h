@@ -143,7 +143,7 @@ typedef struct queue_context queue_context_t;
 typedef void *(first_queueitem)(queue_context_t * q_context);
 typedef void(remove_first_queueitem)(queue_context_t * q_context);
 
-typedef void(insert_tail)(void *new_item);
+typedef void(insert_tail)(queue_context_t * q_context, void *new_item);
 
 typedef void(work_callback)(void *q_work_item);
 

@@ -54,7 +54,7 @@ media_queue_item_t *espnow_first_queueitem()
 void espnow_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&espnow_work_q, items);
 }
-void espnow_insert_tail(media_queue_item_t *new_item) { 
+void espnow_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&espnow_work_q, new_item, items);
 }
 

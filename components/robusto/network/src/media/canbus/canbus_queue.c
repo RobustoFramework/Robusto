@@ -54,7 +54,7 @@ media_queue_item_t *canbus_first_queueitem()
 void canbus_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&canbus_work_q, items);
 }
-void canbus_insert_tail(media_queue_item_t *new_item) { 
+void canbus_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&canbus_work_q, new_item, items);
 }
 

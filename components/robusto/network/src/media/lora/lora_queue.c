@@ -57,7 +57,7 @@ media_queue_item_t *lora_first_queueitem()
 void lora_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&lora_work_q, items);
 }
-void lora_insert_tail(media_queue_item_t *new_item) { 
+void lora_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&lora_work_q, new_item, items);
 }
 

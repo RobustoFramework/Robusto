@@ -56,7 +56,7 @@ void insert_at_tail(queue_context_t *q_context, media_queue_item_t *new_item)
     STAILQ_INSERT_TAIL((new_media_q_t *)(q_context->work_queue), new_item, items);
 }
 
-void canbus_cleanup_queue_task(queue_context_t *q_context, media_queue_item_t *queue_item)
+void media_cleanup_queue_task(queue_context_t *q_context, media_queue_item_t *queue_item)
 {
     if (queue_item != NULL)
     {

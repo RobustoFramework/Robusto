@@ -59,7 +59,7 @@ void incoming_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&incoming_work_q, items);
 }
 
-void incoming_insert_tail(void *new_item) { 
+void incoming_insert_tail(queue_context_t * q_context, void *new_item) { 
     STAILQ_INSERT_TAIL(&incoming_work_q, (incoming_queue_item_t *)new_item, items);
 }
 

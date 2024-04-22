@@ -135,7 +135,7 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item)
     if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, (q_context->watchdog_timeout-1) * 1000)) // TODO: Not fond of max delay here, what should it be?
     {
         /* As the worker takes the queue from the head, and we want a LIFO, add the item to the tail */
-        q_context->insert_tail_cb(new_item);
+        q_context->insert_tail_cb(q_context, new_item);
         robusto_mutex_give(q_context->__x_queue_mutex);
     }
     else

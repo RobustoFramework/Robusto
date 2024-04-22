@@ -60,7 +60,7 @@ void mock_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&mock_work_q, items);
 }
 
-void mock_insert_tail(media_queue_item_t *new_item) { 
+void mock_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&mock_work_q, new_item, items);
 }
 

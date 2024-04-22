@@ -27,7 +27,7 @@ void sample_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&sample_work_q, items);
 }
 
-void sample_insert_tail(void *new_item) { 
+void sample_insert_tail(queue_context_t * q_context, void *new_item) { 
     sample_queue_item_t *item = new_item;
     STAILQ_INSERT_TAIL(&sample_work_q, item, items);
 }

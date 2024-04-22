@@ -55,7 +55,7 @@ media_queue_item_t *i2c_first_queueitem()
 void i2c_remove_first_queue_item(){
     STAILQ_REMOVE_HEAD(&i2c_work_q, items);
 }
-void i2c_insert_tail(media_queue_item_t *new_item) { 
+void i2c_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&i2c_work_q, new_item, items);
 }
 
