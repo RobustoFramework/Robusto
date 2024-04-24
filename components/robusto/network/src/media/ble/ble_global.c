@@ -148,7 +148,7 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
             ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length);
         }
         
-        if (ret == 0)
+        if (ret == ESP_OK)
         {
             ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data, data_length));
         }
@@ -168,7 +168,7 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
     return 0;
 }
 
-void init_ble_global(char *_log_prefix)
+void ble_global_init(char *_log_prefix)
 {
     ble_global_log_prefix = _log_prefix;
     /* Create mutexes for blocking during BLE operations */

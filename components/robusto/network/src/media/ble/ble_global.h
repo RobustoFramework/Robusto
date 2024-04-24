@@ -22,5 +22,5 @@ void ble_host_task(void *param);
 void report_ble_connection_error(int conn_handle, int code);
 rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
-void init_ble_global(char * _log_prefix);
+void ble_global_init(char * _log_prefix);
 #endif

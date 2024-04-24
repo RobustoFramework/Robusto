@@ -12,17 +12,23 @@
 #include <esp_nimble_hci.h>
 #include <services/gap/ble_svc_gap.h>
 
-
+#include <robusto_logging.h>
 
 #include "ble_server.h"
 #include "ble_global.h"
 #include "ble_spp.h"
 
 
-
+char * ble_server_log_prefix;
 static uint8_t own_addr_type;
+static ble_server_state_t ble_srv_state = robusto_ble_stopped;
 
 static int ble_spp_server_gap_event(struct ble_gap_event *event, void *arg);
+
+ble_server_state_t *ble_server_get_state_ptr() {
+    return &ble_srv_state;
+}
+
 
 /**
  * Enables advertising with the following parameters:
@@ -62,7 +68,7 @@ ble_spp_server_advertise(void)
     fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
 
     name = ble_svc_gap_device_name();
-    MODLOG_DFLT(ERROR, "ble_svc_gap_device_name  = %s\n", name);
+    ROB_LOGE(ble_server_log_prefix, "ble_svc_gap_device_name  = %s\n", name);
     fields.name = (uint8_t *)name;
     fields.name_len = strlen(name);
     fields.name_is_complete = 1;
@@ -75,7 +81,7 @@ ble_spp_server_advertise(void)
     rc = ble_gap_adv_set_fields(&fields);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "error setting advertisement data; rc=%d\n", rc);
+        ROB_LOGE(ble_server_log_prefix, "error setting advertisement data; rc=%d\n", rc);
         return;
     }
 
@@ -87,9 +93,10 @@ ble_spp_server_advertise(void)
                            &adv_params, ble_spp_server_gap_event, NULL);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "error enabling advertisement; rc=%d\n", rc);
+        ROB_LOGE(ble_server_log_prefix, "error enabling advertisement; rc=%d\n", rc);
         return;
     }
+    ble_srv_state = robusto_ble_advertising;
 }
 
 /**
@@ -117,7 +124,7 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
     {
     case BLE_GAP_EVENT_CONNECT:
         /* A new connection was established or a connection attempt failed. */
-        MODLOG_DFLT(INFO, "connection %s; status=%d ",
+        ROB_LOGI(ble_server_log_prefix, "connection %s; status=%d ",
                     event->connect.status == 0 ? "established" : "failed",
                     event->connect.status);
         if (event->connect.status == 0)
@@ -127,12 +134,12 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             print_conn_desc(&desc);
-            MODLOG_DFLT(INFO, "\n");
+            ROB_LOGI(ble_server_log_prefix, "\n");
 
             rc = ble_negotiate_mtu(event->connect.conn_handle);
             if (rc != 0)
             {
-                MODLOG_DFLT(ERROR, "Failed to negotiate MTU; rc=%d\n", rc);
+                ROB_LOGE(ble_server_log_prefix, "Failed to negotiate MTU; rc=%d\n", rc);
                 return 0;
             }
             /* Remember peer. */
@@ -140,21 +147,21 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
             if (rc != 0)
             {
                 if (rc == BLE_HS_EALREADY) {
-                    MODLOG_DFLT(INFO, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
+                    ROB_LOGI(ble_server_log_prefix, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
                     return 0;
                 } else {
-                    MODLOG_DFLT(ERROR, "Failed to add peer; rc=%d\n", rc);
+                    ROB_LOGE(ble_server_log_prefix, "Failed to add peer; rc=%d\n", rc);
                     return 0;
                 }
 
             }
-            MODLOG_DFLT(INFO, "Added peer, now discover services.");
+            ROB_LOGI(ble_server_log_prefix, "Added peer, now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
                                (peer_disc_fn *)ble_on_disc_complete, NULL);
             if (rc != 0)
             {
-                MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);
+                ROB_LOGE(ble_server_log_prefix, "Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
 
@@ -170,9 +177,9 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_DISCONNECT:
-        MODLOG_DFLT(INFO, "disconnect; reason=%d ", event->disconnect.reason);
+        ROB_LOGI(ble_server_log_prefix, "disconnect; reason=%d ", event->disconnect.reason);
         print_conn_desc(&event->disconnect.conn);
-        MODLOG_DFLT(INFO, "\n");
+        ROB_LOGI(ble_server_log_prefix, "\n");
 
         /* Connection terminated; resume advertising. */
         ble_spp_server_advertise();
@@ -180,22 +187,22 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_CONN_UPDATE:
         /* The central has updated the connection parameters. */
-        MODLOG_DFLT(INFO, "connection updated; status=%d ",
+        ROB_LOGI(ble_server_log_prefix, "connection updated; status=%d ",
                     event->conn_update.status);
         rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
         assert(rc == 0);
         print_conn_desc(&desc);
-        MODLOG_DFLT(INFO, "\n");
+        ROB_LOGI(ble_server_log_prefix, "\n");
         return 0;
 
     case BLE_GAP_EVENT_ADV_COMPLETE:
-        MODLOG_DFLT(INFO, "advertise complete; reason=%d",
+        ROB_LOGI(ble_server_log_prefix, "advertise complete; reason=%d",
                     event->adv_complete.reason);
         ble_spp_server_advertise();
         return 0;
 
     case BLE_GAP_EVENT_MTU:
-        MODLOG_DFLT(INFO, "mtu update event; conn_handle=%d cid=%d mtu=%d\n",
+        ROB_LOGI(ble_server_log_prefix, "mtu update event; conn_handle=%d cid=%d mtu=%d\n",
                     event->mtu.conn_handle,
                     event->mtu.channel_id,
                     event->mtu.value);
@@ -218,7 +225,7 @@ void ble_spp_server_on_sync(void)
     rc = ble_hs_id_infer_auto(0, &own_addr_type);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "error determining address type; rc=%d\n", rc);
+        ROB_LOGE(ble_server_log_prefix, "error determining address type; rc=%d\n", rc);
         return;
     }
 
@@ -226,11 +233,16 @@ void ble_spp_server_on_sync(void)
     uint8_t addr_val[6] = {0};
     rc = ble_hs_id_copy_addr(own_addr_type, addr_val, NULL);
 
-    MODLOG_DFLT(INFO, "Device Address: ");
+    ROB_LOGI(ble_server_log_prefix, "Device Address: ");
     print_addr(addr_val);
-    MODLOG_DFLT(INFO, "\n");
+    ROB_LOGI(ble_server_log_prefix, "\n");
     /* Begin advertising. */
     ble_spp_server_advertise();
 }
+
+void ble_server_init(char * _log_prefix) {
+    ble_server_log_prefix = _log_prefix;
+}
+
 #endif
 #endif

@@ -21,8 +21,6 @@ void ble_init_defs() {
     remote_peer->protocol_version = 0;
     remote_peer->relation_id_outgoing =	TST_RELATIONID_01;
     remote_peer->peer_handle = 0;
-    // We use mac in all initial communication. 
-
     
 }
 

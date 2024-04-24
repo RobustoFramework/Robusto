@@ -67,7 +67,7 @@ void ble_do_on_work_cb(media_queue_item_t *work_item) {
 
 
 /**
- * @brief Initialize the  BLE server
+ * @brief Initialize the BLE server
  *
  * @param ble_init_log_prefix The prefix for logging and naming
  * @param pvTaskFunction A function containing the task to run
@@ -108,7 +108,7 @@ void robusto_ble_init(char *_log_prefix)
     assert(ret == 0);
 
     
-    init_ble_global(_log_prefix);
+    ble_global_init(_log_prefix);
     /* TODO: Add setting for stack size (it might need to become bigger) */
 
     /* Initialize the NimBLE host configuration. */
@@ -143,17 +143,27 @@ void robusto_ble_init(char *_log_prefix)
     ret = ble_svc_gap_device_name_set(strncat(strlwr(gapname), "-cli", 100));
     assert(ret == 0);
 
+
+    ble_server_init(_log_prefix);
+
     /* XXX Need to have template for store */
     ble_store_config_init();
 
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
     nimble_port_freertos_init(&ble_host_task);
 
+    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 5000)) {
+        ROB_LOGE(ble_init_log_prefix, "BLE never started to advertise.");  
+        robusto_ble_shutdown();
+        return;  
+    }
+
     add_host_supported_media_type(robusto_mt_ble);
 
-    ROB_LOGI(ble_init_log_prefix, "Unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
+
+    ROB_LOGI(ble_init_log_prefix, "Advertizing; unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
     ble_set_queue_blocked(false);
-    ROB_LOGI(ble_init_log_prefix, "BLE initialized.");
+    ROB_LOGI(ble_init_log_prefix, "BLE running.");
 
 }
 
