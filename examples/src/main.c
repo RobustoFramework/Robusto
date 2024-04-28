@@ -85,19 +85,11 @@
 #include <../input/ladder_buttons.h>
 #endif
 
-#ifdef CONFIG_HEAP_TRACING_STANDALONE
-#include "esp_heap_trace.h"
-#define NUM_RECORDS 100
-static heap_trace_record_t trace_record[NUM_RECORDS]; // This buffer must be in internal RAM
-#endif
-
 char * example_log_prefix = "Example";
 
 void setup_examples() {
 
-    #ifdef CONFIG_HEAP_TRACING_STANDALONE
-        ESP_ERROR_CHECK( heap_trace_init_standalone(trace_record, NUM_RECORDS) );
-    #endif
+
 
     init_robusto();
 
