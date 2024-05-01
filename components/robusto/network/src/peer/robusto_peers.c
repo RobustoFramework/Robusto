@@ -320,7 +320,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
  * @param mac_address The mac adress
  * @return robusto_peer* An initialized peer
  */
-robusto_peer_t *robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, robusto_media_types media_types)
+robusto_peer_t * robusto_add_init_new_peer(const char *peer_name, rob_mac_address *mac_address, robusto_media_types media_types)
 {
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_address);
     if (peer) {

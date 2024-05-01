@@ -9,7 +9,7 @@
 #include <robusto_logging.h>
 #include <robusto_system.h>
 #include <robusto_concurrency.h>
-
+#include "esp_heap_trace.h"
 
 
 static robusto_peer_t *remote_peer;
@@ -27,8 +27,15 @@ void ble_init_defs() {
 
 void tst_ble_message_send_presentation(char * dest) {
 
+    ROB_LOGI("TEST", "In tst_ble_message_send_presentation.");
 	// Send it.
-	add_peer_by_mac_address(dest, kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR), robusto_mt_ble);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR));
+    TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Peer was not found, had the hosts not found each other?");
+    if ((!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 5000)))
+    {
+        TEST_FAIL_MESSAGE("The peer didn't reach PEER_KNOWN_INSECURE state.");
+    }
+    
 }
 
 void tst_ble_message_send_message(void)

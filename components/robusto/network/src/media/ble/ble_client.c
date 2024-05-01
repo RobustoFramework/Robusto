@@ -6,6 +6,10 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #ifdef USE_ESPIDF
 
+#ifndef CONFIG_BT_NIMBLE_ENABLED 
+    #error "Robusto requires NimBLE -BLE only to be enabled in menuconfig."
+#endif
+
 #include <host/util/util.h>
 #include <host/ble_gap.h>
 
@@ -212,7 +216,7 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
             MODLOG_DFLT(INFO, "Added peer, now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
-                               ble_on_disc_complete, NULL);
+                               &ble_on_disc_complete, NULL);
             if (rc != 0)
             {
                 MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);

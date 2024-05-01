@@ -393,6 +393,8 @@ void runUnityTests(void *pvParameters)
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 
+    /* We will want to wait for BLE connections to establish */
+    r_delay(4000);
     /* Asynchronous testing*/
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
 

@@ -1,7 +1,7 @@
 
 # Arduino Library Development file
 .development
-
+cache
 # Atom
 *.tags
 *.tags1

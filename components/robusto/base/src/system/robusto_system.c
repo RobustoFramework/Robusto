@@ -218,10 +218,10 @@ void robusto_led_blink(uint16_t on_delay_ms, uint16_t off_delay_ms, uint16_t cou
     }
 }
 /**
- * @brief Takes a hex value from a Kconfig #define and creates a six-byte uint8 array.
+ * @brief Takes a hex value from a Kconfig #define and allocates a six-byte uint8 array.
  * 
  * @param mac_kconfig A number representing a MAC-address
- * @return uint8_t* The resulting 6 byte MAC array
+ * @return uint8_t* Pointer to the resulting six byte MAC array
  */
 uint8_t *kconfig_mac_to_6_bytes(uint64_t mac_kconfig) {
     #if ROBUSTO_MAC_ADDR_LEN != 6

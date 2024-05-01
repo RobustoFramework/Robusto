@@ -37,7 +37,7 @@
 #include "robusto_queue.h"
 #include "robusto_qos.h"
 #include "string.h"
-
+#include "esp_heap_trace.h"
 static char *presentation_log_prefix;
 
 #define HI_POS 0
@@ -143,7 +143,6 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         // This is kind of odd, we are in here while presenting or unknown.
         peer->state = failstate;
     }
-
     robusto_free_queue_state(q_state);
     return ret_val_flag;
 }

@@ -43,6 +43,7 @@ void tst_ble_message_receive_presentation(void)
     {
         TEST_FAIL_MESSAGE("Test failed, incoming_peer NULL.");
     }
+    r_delay(1000);
     // TODO: We need more tests here. I think.
 }
 

@@ -54,6 +54,9 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include "../media/lora/lora_peer.h"
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+#include "../media/ble/ble_spp.h"
+#endif
 #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
 #include "../media/espnow/espnow_peer.h"
 #endif
@@ -130,8 +133,10 @@ void init_supported_media_types(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
     if (peer->supported_media_types & robusto_mt_ble)
     {
-        //(mac_address);
-        // TODO: Usually BLE peers sort of finds each other, however we might wan't to do something here
+        // We need to connect it with the underlying peer
+        ble_peer_init_peer(peer);
+        // TODO: This might actually often fail as the might be no such peer connected (yet)
+        
     }
 
 #endif

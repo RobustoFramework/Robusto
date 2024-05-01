@@ -138,7 +138,6 @@ void report_ble_connection_error(int conn_handle, int code)
  */
 rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
-    // TODO: Add 
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
         int ret;
@@ -154,7 +153,7 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
         }
         else
         {
-            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when writing data! Peer: %i Code: %i", peer->ble_conn_handle, ret);
+            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when sending data! Peer: %i Code: %i", peer->ble_conn_handle, ret);
             xSemaphoreGive(xBLE_Comm_Semaphore);
             return -ret;
         }

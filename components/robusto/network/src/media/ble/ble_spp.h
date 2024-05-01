@@ -19,6 +19,7 @@
 #include <host/ble_gatt.h>
 #include <host/ble_uuid.h>
 #include <host/ble_gap.h>
+#include <robusto_peer_def.h>
 
 
 // Client
@@ -124,7 +125,15 @@ const struct peer_svc *
 ble_peer_svc_find_uuid(const struct ble_peer *peer, const ble_uuid_t *uuid);
 int ble_peer_delete(uint16_t conn_handle);
 int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc);
+
 int ble_peer_init(char *_log_prefix, int max_peers, int max_svcs, int max_chrs, int max_dscs);
+// TODO: Rename all "peer" to ble_peer or something and typedef a ble_peer_t instead of struct ble_peer
+/**
+ * @brief Initialize a Robusto peer with the BLE-peer
+ * 
+ * @param r_peer
+ */
+void ble_peer_init_peer(robusto_peer_t *r_peer);
 
 struct ble_peer * ble_peer_find(uint16_t conn_handle);
 

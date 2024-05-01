@@ -150,7 +150,7 @@ This library assumes this and may fail using other lengths for this setting.
          */
         uint32_t relation_id_incoming;
         uint32_t relation_id_outgoing;
-        /* The unique handle of the peer*/
+        /* The locally unique handle of the peer*/
         uint16_t peer_handle;
         /* The peer state, if unknown, it cannot be used in many situations*/
         e_peer_state state;

@@ -55,6 +55,15 @@ peer_dsc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
 /* Log prefix*/
 static char *ble_peer_log_prefix; 
 
+void reverse_ble_address(rob_mac_address *mac_address, rob_mac_address *dest_address) {
+
+    *dest_address[0] = (uint8_t)(*mac_address)[5];
+    *dest_address[1] = (uint8_t)(*mac_address)[4];
+    *dest_address[2] = (uint8_t)(*mac_address)[3];
+    *dest_address[3] = (uint8_t)(*mac_address)[2];
+    *dest_address[4] = (uint8_t)(*mac_address)[1];
+    *dest_address[5] = (uint8_t)(*mac_address)[0] - 2;
+}
 
 /**
  * @brief Check if there are any SDP peers with the same BLE address.
@@ -70,12 +79,7 @@ ble_peer_find_robusto_peer_by_reverse_addr(rob_mac_address *mac_address)
 {
     /* Handle BLE:s penchant for little-endedness, and adjust for the BLE offset to the base MAC (2) */
     uint8_t reversed_address[ROBUSTO_MAC_ADDR_LEN];
-    reversed_address[0] = (uint8_t)(*mac_address)[5];
-    reversed_address[1] = (uint8_t)(*mac_address)[4];
-    reversed_address[2] = (uint8_t)(*mac_address)[3];
-    reversed_address[3] = (uint8_t)(*mac_address)[2];
-    reversed_address[4] = (uint8_t)(*mac_address)[1];
-    reversed_address[5] = (uint8_t)(*mac_address)[0] - 2;
+    reverse_ble_address(mac_address, &reversed_address);
 
     return robusto_peers_find_peer_by_base_mac_address(&reversed_address);
 
@@ -99,6 +103,11 @@ ble_peer_find(uint16_t conn_handle)
 }
 
 
+
+void ble_peer_init_peer(robusto_peer_t *r_peer) {
+    // Currently, nothing to do here as the peer is added during the initialization process
+
+}
 
 static void
 peer_disc_complete(struct ble_peer *peer, int rc)
@@ -791,7 +800,7 @@ int ble_peer_delete(uint16_t conn_handle)
 }
 /**
  * @brief Try to add a new BLE peer
- * This routine make several checks to mae
+ * This routine make several checks to make sure it wasn't existing
  * 
  * @param conn_handle 
  * @param desc 
@@ -848,8 +857,9 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     // Which is important to always set, btw or send_message will fail. 
     
     // Add a robusto-peer that contains the information
-
-    robusto_peer_t *_robusto_peer = robusto_add_init_new_peer (NULL, &(desc.peer_id_addr.val), robusto_mt_ble);
+    rob_mac_address * reversed_address = robusto_malloc(ROBUSTO_MAC_ADDR_LEN);
+    reverse_ble_address(&(desc.peer_id_addr.val), reversed_address);
+    robusto_peer_t *_robusto_peer = robusto_add_init_new_peer (NULL, reversed_address, robusto_mt_ble);
     _robusto_peer->ble_conn_handle = conn_handle;        
     
     SLIST_INSERT_HEAD(&ble_peers, peer, next);

@@ -56,15 +56,20 @@ queue_context_t *ble_get_queue_context() {
 }
 
 void ble_do_on_poll_cb(queue_context_t *q_context) {
-
+    ROB_LOGD(ble_init_log_prefix, ">> In BLE poll.");
 }
 void ble_do_on_work_cb(media_queue_item_t *work_item) {
     
-    ROB_LOGD(ble_init_log_prefix, ">> In ESP-NOW work callback.");
-    send_work_item(work_item, &(work_item->peer->ble_info), robusto_mt_espnow, 
+    ROB_LOGD(ble_init_log_prefix, ">> In BLE work callback.");
+    send_work_item(work_item, &(work_item->peer->ble_info), robusto_mt_ble, 
         &ble_send_message, &ble_do_on_poll_cb, ble_get_queue_context());
 }
 
+
+void ble_sync_callback(void) {
+    ble_spp_client_on_sync();
+    ble_spp_server_on_sync();
+}
 
 /**
  * @brief Initialize the BLE server
@@ -116,7 +121,8 @@ void robusto_ble_init(char *_log_prefix)
     /* Configure the host callbacks */
 
     ble_hs_cfg.reset_cb = &ble_on_reset;
-    ble_hs_cfg.sync_cb = &ble_spp_server_on_sync;
+    ble_hs_cfg.sync_cb = &ble_sync_callback;
+    
     /*
         if (is_controller)
     {
@@ -152,7 +158,7 @@ void robusto_ble_init(char *_log_prefix)
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
     nimble_port_freertos_init(&ble_host_task);
 
-    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 5000)) {
+    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 15000)) {
         ROB_LOGE(ble_init_log_prefix, "BLE never started to advertise.");  
         robusto_ble_shutdown();
         return;  
@@ -161,7 +167,7 @@ void robusto_ble_init(char *_log_prefix)
     add_host_supported_media_type(robusto_mt_ble);
 
 
-    ROB_LOGI(ble_init_log_prefix, "Advertizing; unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
+    ROB_LOGI(ble_init_log_prefix, "Advertising; unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
     ble_set_queue_blocked(false);
     ROB_LOGI(ble_init_log_prefix, "BLE running.");
 

@@ -16,7 +16,7 @@ menu "BLE-configuration - Do not forget to select the NimBLE host type in the co
 
 		config ROB_NETWORK_TEST_BLE_CALL_ADDR
 			depends on ROBUSTO_NETWORK_INTEGRATION_TESTING || ROBUSTO_NETWORK_QOS_TESTING || ROBUSTO_EXAMPLE_HELLO_CLIENT || ROBUSTO_EXAMPLE_CONDUCTOR_CLIENT
-            hex "The MAC-address of the ESP-NOW-enabled peer to test, a 6-byte hex value."
+            hex "The MAC-address of the BLE-enabled peer to test, a 6-byte hex value."
 			default 0xFFFFFFFFFFFF
 			range 0x000000000000 0xFFFFFFFFFFFF
 			help
