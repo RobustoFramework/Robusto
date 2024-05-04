@@ -705,20 +705,24 @@ peer_svc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
 {
     struct ble_peer *peer;
     int rc;
+    ROB_LOGI("ssss", "10_");
 
     peer = arg;
     assert(peer->conn_handle == conn_handle);
-
+    ROB_LOGI("ssss", "10");
     switch (error->status)
     {
     case 0:
+    ROB_LOGI("ssss", "10.1");
         rc = peer_svc_add(peer, service);
         break;
 
     case BLE_HS_EDONE:
         /* All services discovered; start discovering characteristics. */
+        ROB_LOGI("ssss", "10.2");
         if (peer->disc_prev_chr_val > 0)
         {
+            ROB_LOGI("ssss", "10.3");
             peer_disc_chrs(peer);
         }
         rc = 0;
@@ -729,12 +733,14 @@ peer_svc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
         break;
     }
 
+ROB_LOGI("ssss", "11");
     if (rc != 0)
     {
+        ROB_LOGI("ssss", "12");
         /* Error; abort discovery. */
         peer_disc_complete(peer, rc);
     }
-
+ROB_LOGI("ssss", "13");
     return rc;
 }
 
@@ -749,18 +755,18 @@ int ble_peer_disc_all(uint16_t conn_handle, peer_disc_fn *disc_cb, void *disc_cb
     {
         return BLE_HS_ENOTCONN;
     }
-
+    ROB_LOGI("ssss", "0");
     /* Undiscover everything first. */
     while ((svc = SLIST_FIRST(&peer->svcs)) != NULL)
     {
         SLIST_REMOVE_HEAD(&peer->svcs, next);
         peer_svc_delete(svc);
     }
-
+    ROB_LOGI("ssss", "0,5");
     peer->disc_prev_chr_val = 1;
     peer->disc_cb = disc_cb;
     peer->disc_cb_arg = disc_cb_arg;
-
+    ROB_LOGI("ssss", "1 %u", conn_handle);
     rc = ble_gattc_disc_all_svcs(conn_handle, peer_svc_disced, peer);
     if (rc != 0)
     {

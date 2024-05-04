@@ -361,7 +361,9 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
         robusto_set_queue_state_result(queue_item->state, retval);
         robusto_free(queue_item->data); // Not if re-sent, that would re-free..
     }
+    // Letting those monitoring the queue state react
     robusto_yield();
+    // TODO: Instead of yielding, we can just let the one that created the state free it.
     robusto_free(queue_item);
 
 }

@@ -76,13 +76,15 @@ void task_recover(recover_params_t *params)
             if (robusto_send_presentation(peer, media_type, false, presentation_recover) == ROB_OK)
             {
                 set_state(peer, params->info, media_type, media_state_working, media_problem_none);
-                params->info->postpone_qos = false;
                 rec_retval = ROB_OK;
+            } else {
+                ROB_LOGW(recovery_log_prefix, ">> Sending presentation failed");
             }
         }
+        params->info->postpone_qos = false;
         if (rec_retval != ROB_OK)
         {
-            ROB_LOGW(recovery_log_prefix, ">> Recovering per %s, %s. Sending heartbeat.", peer->name, str_media_type);
+            ROB_LOGW(recovery_log_prefix, ">> Recovering peer %s, %s. Sending heartbeat.", peer->name, str_media_type);
             send_heartbeat_message(peer, media_type);
         }
     }

@@ -81,7 +81,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     e_media_type supported_mt = get_host_supported_media_types();
-    rob_ret_val_t ret_val_flag;
+    rob_ret_val_t ret_val_flag = ROB_FAIL;
     for (uint16_t media_type = 1; media_type < 25; media_type = media_type * 2)
     {
         if ((!(media_types & media_type) || !(supported_mt & media_type)))
@@ -128,6 +128,9 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                     ret_val_flag = ROB_ERR_TIMEOUT;
                     ROB_LOGE(presentation_log_prefix, "The peer %s didn't reach PEER_KNOWN_INSECURE state within timeout (state = %u). System will retry later..", peer->name, peer->state);
                     r_delay(1000);
+                } else {
+                    ret_val_flag = ROB_OK;
+                    break;
                 }
 
             } 

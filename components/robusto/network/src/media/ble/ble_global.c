@@ -11,6 +11,7 @@
 
 #include "ble_service.h"
 #include <robusto_peer.h>
+#include <robusto_qos.h>
 
 #include "ble_global.h"
 
@@ -142,29 +143,32 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
     {
         int ret;
         if (receipt) {
-            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, NULL, NULL);
+            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, NULL, NULL);
         } else {
-            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length);
+            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES);
         }
         
         if (ret == ESP_OK)
         {
-            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data, data_length));
+            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES));
+            add_to_history(&peer->ble_info, true, ROB_OK);
+            ret = ROB_OK; 
         }
         else
         {
             ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when sending data! Peer: %i Code: %i", peer->ble_conn_handle, ret);
-            xSemaphoreGive(xBLE_Comm_Semaphore);
-            return -ret;
+            add_to_history(&peer->ble_info, true, ret);
+            ret = -ret;
         }
         xSemaphoreGive(xBLE_Comm_Semaphore);
+        return ret;
     }
     else
     {
         ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Couldn't get semaphore!");
         return ROB_ERR_MUTEX;
     }
-    return 0;
+    
 }
 
 void ble_global_init(char *_log_prefix)

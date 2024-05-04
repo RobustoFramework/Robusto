@@ -14,6 +14,7 @@
 
 #include <robusto_incoming.h>
 #include <robusto_peer.h>
+#include <robusto_qos.h>
 
 
 /* 16 Bit Alert Notification Service UUID */
@@ -44,15 +45,14 @@ uint16_t get_ble_spp_svc_gatt_read_val_handle() {
  * @brief Callback function for custom service
  *
  */
-
-
-
 static int ble_handle_incoming(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt) {
     robusto_peer_t *peer = robusto_peers_find_peer_by_handle(conn_handle);
+    add_to_history(&peer->ble_info, false, ROB_OK);
     // TODO: This is a weird one, this needs to be set so that 
     // the first reply will not be suppressed (really doesn't matter then). 
-
-    return robusto_handle_incoming(ctxt->om->om_data, ctxt->om->om_len, peer, robusto_mt_ble, 0);
+    uint8_t * message_data = robusto_malloc(ctxt->om->om_len);
+    memcpy(message_data, ctxt->om->om_data, ctxt->om->om_len);
+    return robusto_handle_incoming(message_data, ctxt->om->om_len, peer, robusto_mt_ble, 0);
 }
 
 static int ble_svc_gatt_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)

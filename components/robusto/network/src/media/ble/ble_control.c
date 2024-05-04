@@ -83,6 +83,7 @@ void robusto_ble_init(char *_log_prefix)
     ble_init_log_prefix = _log_prefix;
         
     ROB_LOGI(ble_init_log_prefix, "Initialising BLE..");
+
     ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue (stopped).");
     ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
     if (!ble_media_queue) {
@@ -111,7 +112,6 @@ void robusto_ble_init(char *_log_prefix)
     /* Register custom service */
     ret = gatt_svr_register();
     assert(ret == 0);
-
     
     ble_global_init(_log_prefix);
     /* TODO: Add setting for stack size (it might need to become bigger) */
@@ -139,7 +139,7 @@ void robusto_ble_init(char *_log_prefix)
     ble_hs_cfg.sm_sc = 0;
     /* Initialize data structures to track connected peers.
     There is a local pool in spp.h */
-    ROB_LOGI(ble_init_log_prefix, "Init peer with %i max connections.", MYNEWT_VAL(BLE_MAX_CONNECTIONS));
+    ROB_LOGI(ble_init_log_prefix, "Init peer with %i max connections.", MYNEWT_VAL(BLE_MAX_CONNECTIONS)); 
     ret = ble_peer_init(ble_init_log_prefix, MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
     assert(ret == 0);
  
@@ -152,7 +152,7 @@ void robusto_ble_init(char *_log_prefix)
 
     ble_server_init(_log_prefix);
 
-    /* XXX Need to have template for store */
+    /* Need to have template for store */
     ble_store_config_init();
 
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
@@ -165,7 +165,6 @@ void robusto_ble_init(char *_log_prefix)
     }
 
     add_host_supported_media_type(robusto_mt_ble);
-
 
     ROB_LOGI(ble_init_log_prefix, "Advertising; unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);
     ble_set_queue_blocked(false);
