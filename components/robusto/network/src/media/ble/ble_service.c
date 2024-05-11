@@ -28,6 +28,7 @@
 
 /* 16 Bit SPP Service UUID */
 #define BLE_SVC_SPP_UUID16 0xABF0
+// TODO: Go Robusto-specific?
 
 /* 16 Bit SPP Service Characteristic UUID */
 #define BLE_SVC_SPP_CHR_UUID16 0xABF1
@@ -46,13 +47,19 @@ uint16_t get_ble_spp_svc_gatt_read_val_handle() {
  *
  */
 static int ble_handle_incoming(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt) {
-    robusto_peer_t *peer = robusto_peers_find_peer_by_handle(conn_handle);
-    add_to_history(&peer->ble_info, false, ROB_OK);
-    // TODO: This is a weird one, this needs to be set so that 
-    // the first reply will not be suppressed (really doesn't matter then). 
-    uint8_t * message_data = robusto_malloc(ctxt->om->om_len);
-    memcpy(message_data, ctxt->om->om_data, ctxt->om->om_len);
-    return robusto_handle_incoming(message_data, ctxt->om->om_len, peer, robusto_mt_ble, 0);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_ble_conn_handle(conn_handle);
+    if (peer) {
+        add_to_history(&peer->ble_info, false, ROB_OK);
+        // TODO: This is a weird one, this needs to be set so that 
+        // the first reply will not be suppressed (really doesn't matter then). 
+        uint8_t * message_data = robusto_malloc(ctxt->om->om_len);
+        memcpy(message_data, ctxt->om->om_data, ctxt->om->om_len);
+        return robusto_handle_incoming(message_data, ctxt->om->om_len, peer, robusto_mt_ble, 0);
+    } else {
+        ROB_LOGI(ble_service_log_prefix, "ble_handle_incoming: did not find peer with ble_conn handle %u. attr_handle = %u.", conn_handle, attr_handle);
+        return ROB_FAIL;
+    }
+    
 }
 
 static int ble_svc_gatt_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)

@@ -21,6 +21,22 @@ int ble_negotiate_mtu(uint16_t conn_handle);
 void ble_host_task(void *param);
 void report_ble_connection_error(int conn_handle, int code);
 rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
+/**
+ * @brief BLE addresses are presented in reverse and has an offset (+2) against the base MAC
+ * 
+ * @param mac_address source data
+ * @param dest_address destination structure
+ */
+void ble_to_base_mac_address(rob_mac_address *mac_address, rob_mac_address *dest_address);
+
+/**
+ * @brief Make a base MAC address into a BLE address, which is reversed and has an offset (+2) against the base MAC
+ * 
+ * @param mac_address source data
+ * @param dest_address destination structure
+ */
+
+void base_mac_to_ble_address(rob_mac_address *mac_address, rob_mac_address *dest_address);
 
 void ble_global_init(char * _log_prefix);
 #endif

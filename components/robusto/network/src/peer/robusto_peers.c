@@ -108,7 +108,6 @@ robusto_peers_find_peer_by_handle(int16_t peer_handle)
 
     SLIST_FOREACH(peer, &robusto_peers, next)
     {
-        ROB_LOGI(peers_log_prefix, "robusto_peer_find_handle %i, %i ", peer->peer_handle, peer_handle);
         if (peer->peer_handle == peer_handle)
         {
             return peer;
@@ -117,6 +116,27 @@ robusto_peers_find_peer_by_handle(int16_t peer_handle)
 
     return NULL;
 }
+
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+
+robusto_peer_t *
+robusto_peers_find_peer_by_ble_conn_handle(int16_t conn_handle)
+{
+    robusto_peer_t *peer;
+
+    SLIST_FOREACH(peer, &robusto_peers, next)
+    {
+        if (peer->ble_conn_handle == conn_handle)
+        {
+            return peer;
+        }
+    }
+
+    return NULL;
+}
+#endif
+
 
 robusto_peer_t *
 robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t * check_peer)

@@ -91,3 +91,18 @@ bool robusto_waitfor_uint32_t_change(uint32_t *uint32_t_ptr, uint32_t timeout_ms
         return true;
     }
 }
+
+
+bool robusto_waitfor_int_change(int *int_ptr, uint32_t timeout_ms) {
+    int start_value = *int_ptr;
+    int starttime = r_millis();
+    while ((*int_ptr == start_value) && (r_millis() < starttime + timeout_ms)) {
+        robusto_yield();
+    }
+
+    if (r_millis() >= starttime + timeout_ms) {
+        return false;
+    } else {
+        return true;
+    }
+}

@@ -110,11 +110,11 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         ((info->last_send < curr_time - HEARTBEAT_IDLE_MARGIN_MS)  && (info->problem == media_problem_none) )|| // or we are idle
         (info->last_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 2)) || // or we haven't heard from the peer
         (info->last_peer_receive < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 2)) || // or they haven't heard from us
-        (info->last_sent_heartbeat < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 3)) // or they haven't heard from us
+        (info->last_sent_heartbeat < curr_time - (HEARTBEAT_IDLE_MARGIN_MS * 3)) // or we haven't sent a heart beat
     )
     {
         if (info->problem == media_problem_none) {
-            ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+            ROB_LOGI(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
         } else {
             ROB_LOGW(heartbeat_log_prefix, "Sending heartbeat to problematic peer %s using %s", peer->name, media_type_to_str(media_type));
         }
@@ -164,7 +164,7 @@ void peer_heartbeat(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
         if (media_type == robusto_mt_ble)
         {
-            // Not Implemented
+            send_heartbeat_message(peer, robusto_mt_ble);
         }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW

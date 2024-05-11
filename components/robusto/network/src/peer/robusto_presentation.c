@@ -67,6 +67,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         return ROB_FAIL;
     }
     ROB_LOGI(presentation_log_prefix, ">> Sending a presentation to peer %s using %s.", peer->name, media_type_to_str(media_types));
+    rob_log_bit_mesh(ROB_LOG_INFO, presentation_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     // If it is a reply, us failing to present ourselves should not affect the state of the peer
     e_peer_state failstate = peer->state;
     // If it wasn't a reply, it was an unknown peer, set it back to unknown.
@@ -159,7 +160,7 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
         ROB_LOGE(presentation_log_prefix, "<< Got a HI or HIR-message with information but message->peer is NULL, internal error!");
         return ROB_FAIL;
     }
-    ROB_LOGW(presentation_log_prefix, "<< Got a HI or HIR-message through %s with information, length %lu.",
+    ROB_LOGW(presentation_log_prefix, "<< Got a %s-message through %s with information, length %lu.", message->binary_data[HI_POS] == NET_HI ? "HI": "HIR",
              media_type_to_str(message->media_type), message->binary_data_length);
 
     /* Parse the base MAC address*/

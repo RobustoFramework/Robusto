@@ -196,6 +196,15 @@ extern "C"
      */
     robusto_peer_t *robusto_peers_find_peer_by_canbus_address(uint8_t canbus_address);
 #endif 
+#ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
+    /**
+     * @brief Lookup a peer by its BLE connection handle
+     * 
+     * @param conn_handle The BLE connection handle we are looking for
+     * @return robusto_peer_t* 
+     */
+    robusto_peer_t * robusto_peers_find_peer_by_ble_conn_handle(int16_t conn_handle);
+#endif
 
 
     /**

@@ -67,8 +67,8 @@ void ble_do_on_work_cb(media_queue_item_t *work_item) {
 
 
 void ble_sync_callback(void) {
-    ble_spp_client_on_sync();
-    ble_spp_server_on_sync();
+   ble_spp_server_on_sync();
+   ble_spp_client_on_sync();
 }
 
 /**
@@ -114,6 +114,7 @@ void robusto_ble_init(char *_log_prefix)
     assert(ret == 0);
     
     ble_global_init(_log_prefix);
+    ble_spp_client_init(_log_prefix);
     /* TODO: Add setting for stack size (it might need to become bigger) */
 
     /* Initialize the NimBLE host configuration. */
@@ -159,11 +160,11 @@ void robusto_ble_init(char *_log_prefix)
     nimble_port_freertos_init(&ble_host_task);
 
     if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 15000)) {
-        ROB_LOGE(ble_init_log_prefix, "BLE never started to advertise.");  
+        ROB_LOGE(ble_init_log_prefix, "BLE never started to advertise, state = %hu.", *ble_server_get_state_ptr());  
         robusto_ble_shutdown();
         return;  
     }
-
+    // TODO: Present PubSub using dynamic BLE servives. "Enable dynamic services"
     add_host_supported_media_type(robusto_mt_ble);
 
     ROB_LOGI(ble_init_log_prefix, "Advertising; unblocking the BLE queue. Task: %s", ble_media_queue->worker_task_name);

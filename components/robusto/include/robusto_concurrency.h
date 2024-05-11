@@ -151,6 +151,11 @@ extern "C"
     bool robusto_waitfor_uint32_t_change(uint32_t *uint32_t_ptr, uint32_t timeout_ms);
 
     /**
+     * @brief Wait for a int to change value
+     *
+     */
+    bool robusto_waitfor_int_change(int *int_ptr, uint32_t timeout_ms);
+    /**
      * @brief Yields control to the scheduler
      *
      */

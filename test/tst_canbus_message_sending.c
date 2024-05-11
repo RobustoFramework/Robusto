@@ -13,8 +13,6 @@
 #include <robusto_system.h>
 #include <robusto_concurrency.h>
 
-
-
 static robusto_peer_t *remote_peer;
 
 void canbus_init_defs() {

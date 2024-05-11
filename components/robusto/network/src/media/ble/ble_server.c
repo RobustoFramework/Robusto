@@ -21,7 +21,7 @@
 
 char * ble_server_log_prefix;
 static uint8_t own_addr_type;
-static ble_server_state_t ble_srv_state = robusto_ble_stopped;
+static uint8_t ble_srv_state = robusto_ble_stopped;
 
 static int ble_spp_server_gap_event(struct ble_gap_event *event, void *arg);
 
@@ -130,7 +130,6 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
         if (event->connect.status == 0)
         {
             /* Connection successfully established. */
-
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             print_conn_desc(&desc);
@@ -142,20 +141,8 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
                 ROB_LOGE(ble_server_log_prefix, "Failed to negotiate MTU; rc=%d\n", rc);
                 return 0;
             }
-            /* Remember peer. */
-            rc = ble_peer_add(event->connect.conn_handle, desc);
-            if (rc != 0)
-            {
-                if (rc == BLE_HS_EALREADY) {
-                    ROB_LOGI(ble_server_log_prefix, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
-                    return 0;
-                } else {
-                    ROB_LOGE(ble_server_log_prefix, "Failed to add peer; rc=%d\n", rc);
-                    return 0;
-                }
 
-            }
-            ROB_LOGI(ble_server_log_prefix, "Added peer, now discover services.");
+            ROB_LOGI(ble_server_log_prefix, "Server: Now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
                                (peer_disc_fn *)ble_on_disc_complete, NULL);
@@ -164,8 +151,7 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
                 ROB_LOGE(ble_server_log_prefix, "Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
-
-            
+    
             
         }
         

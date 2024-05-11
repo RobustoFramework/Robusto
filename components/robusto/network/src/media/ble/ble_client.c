@@ -21,14 +21,14 @@
 #include "ble_service.h"
 #include "ble_client.h"
 
+char * ble_client_log_prefix;
 
 static int ble_spp_client_gap_event(struct ble_gap_event *event, void *arg);
 
 /**
  * Initiates the GAP general discovery procedure.
  */
-static void
-ble_spp_client_scan(void)
+void ble_spp_client_scan(void)
 {
     uint8_t own_addr_type;
     struct ble_gap_disc_params disc_params;
@@ -67,6 +67,9 @@ ble_spp_client_scan(void)
                     rc);
     }
 }
+
+
+
 
 /**
  * Indicates whether we should try to connect to the sender of the specified
@@ -182,9 +185,9 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_CONNECT:
         /* A new connection was established or a connection attempt failed. */
-        MODLOG_DFLT(INFO, "connection %s; status=%d ",
+        MODLOG_DFLT(INFO, "connection %s; status=%d; conn_handle=%u ",
                     event->connect.status == 0 ? "established" : "failed",
-                    event->connect.status);        
+                    event->connect.status, event->connect.conn_handle);        
         if (event->connect.status == 0)
         {
             /* Connection successfully established. */
@@ -200,20 +203,19 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
                 MODLOG_DFLT(ERROR, "Failed to negotiate MTU; rc=%d\n", rc);
                 return 0;
             }
-            /* Remember peer. */
-            rc = ble_peer_add(event->connect.conn_handle, desc);
+            int rc = ble_peer_add(event->connect.conn_handle, desc);
             if (rc != 0)
             {
                 if (rc == BLE_HS_EALREADY) {
-                    MODLOG_DFLT(INFO, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
-                    return 0;
+                    ROB_LOGI(ble_client_log_prefix, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
+
                 } else {
-                    MODLOG_DFLT(ERROR, "Failed to add peer; rc=%d\n", rc);
-                    return 0;
+                    ROB_LOGE(ble_client_log_prefix, "Failed to add peer; rc=%d\n", rc);
+                    
                 }
 
             }
-            MODLOG_DFLT(INFO, "Added peer, now discover services.");
+            MODLOG_DFLT(INFO, "Client: Now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
                                ble_on_disc_complete, NULL);
@@ -303,8 +305,12 @@ void ble_spp_client_on_sync(void)
     rc = ble_hs_util_ensure_addr(0);
     assert(rc == 0);
 
-    /* Begin scanning for a peripheral to connect to. */
+   /* Begin scanning for a peripheral to connect to. */
     ble_spp_client_scan();
+}
+
+void ble_spp_client_init(char * _log_prefix) {
+    ble_client_log_prefix = _log_prefix;
 }
 
 #endif

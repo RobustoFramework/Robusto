@@ -133,10 +133,7 @@ void init_supported_media_types(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
     if (peer->supported_media_types & robusto_mt_ble)
     {
-        // We need to connect it with the underlying peer
-        ble_peer_init_peer(peer);
-        // TODO: This might actually often fail as the might be no such peer connected (yet)
-        
+        ble_peer_init_peer(peer);   
     }
 
 #endif

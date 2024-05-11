@@ -12,15 +12,17 @@
 #include "esp_heap_trace.h"
 
 
+
 static robusto_peer_t *remote_peer;
 
 void ble_init_defs() {
-
+    
     remote_peer = robusto_add_init_new_peer("TEST_BLE", kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR), robusto_mt_ble);
 
     remote_peer->protocol_version = 0;
     remote_peer->relation_id_outgoing =	TST_RELATIONID_01;
     remote_peer->peer_handle = 0;
+
     
 }
 

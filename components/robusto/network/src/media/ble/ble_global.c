@@ -20,6 +20,29 @@ SemaphoreHandle_t xBLE_Comm_Semaphore;
 // TODO: The semaphore might not be needed when this is behind the queue, the receive is probably not conflicting?
 char *ble_global_log_prefix;
 
+
+
+void ble_to_base_mac_address(rob_mac_address *mac_address, rob_mac_address *dest_address) {
+
+    *dest_address[0] = (uint8_t)(*mac_address)[5];
+    *dest_address[1] = (uint8_t)(*mac_address)[4];
+    *dest_address[2] = (uint8_t)(*mac_address)[3];
+    *dest_address[3] = (uint8_t)(*mac_address)[2];
+    *dest_address[4] = (uint8_t)(*mac_address)[1];
+    *dest_address[5] = (uint8_t)(*mac_address)[0] - 2;
+}
+
+void base_mac_to_ble_address(rob_mac_address *mac_address, rob_mac_address *dest_address) {
+
+    *dest_address[0] = (uint8_t)(*mac_address)[5] + 2;
+    *dest_address[1] = (uint8_t)(*mac_address)[4];
+    *dest_address[2] = (uint8_t)(*mac_address)[3];
+    *dest_address[3] = (uint8_t)(*mac_address)[2];
+    *dest_address[4] = (uint8_t)(*mac_address)[1];
+    *dest_address[5] = (uint8_t)(*mac_address)[0];
+}
+
+
 /**
  * @brief The general client host task
  * @details This is the actual task the host runs in.
@@ -55,7 +78,25 @@ void ble_on_disc_complete(const struct ble_peer *peer, int status, void *arg)
         ble_gap_terminate(peer->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
         return;
     }
+    ble_uuid16_t uuid;
+    uuid.value = GATT_SPP_SVC_UUID;
+    uuid.u.type = BLE_UUID_TYPE_16;
+    if (ble_peer_svc_find_uuid(peer, &uuid)) {
+        /* Remember peer. */
+        ROB_LOGI(ble_global_log_prefix, "Peer had the SPP-service, adding as Robusto peer");      
 
+        // Add a robusto-peer that contains the information
+        rob_mac_address * reversed_address = robusto_malloc(ROBUSTO_MAC_ADDR_LEN);
+        ble_to_base_mac_address(&(peer->desc.our_ota_addr.val), reversed_address);
+        robusto_peer_t *_robusto_peer = robusto_add_init_new_peer (NULL, reversed_address, robusto_mt_ble);
+        _robusto_peer->ble_conn_handle = peer->conn_handle;        
+
+            
+        } else {
+            ROB_LOGI(ble_global_log_prefix, "Peer didn't have the SPP-service, will not add as Robusto peer");
+        }
+
+  
     /* Service discovery has completed successfully.  Now we have a complete
      * list of services, characteristics, and descriptors that the peer
      * supports.

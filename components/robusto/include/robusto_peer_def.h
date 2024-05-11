@@ -170,6 +170,8 @@ This library assumes this and may fail using other lengths for this setting.
 /* Media-specific statistics, used by transmission optimizer */
 #if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t ble_info;
+        /* The connection handle of the BLE connection, NimBLE has its own peer handling.*/
+        int ble_conn_handle;
 #endif
 #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t espnow_info;
@@ -192,11 +194,6 @@ This library assumes this and may fail using other lengths for this setting.
 #endif
         SLIST_ENTRY(robusto_peer)
         next;
-
-#if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
-        /* The connection handle of the BLE connection, NimBLE has its own peer handling.*/
-        int ble_conn_handle;
-#endif
 
     } robusto_peer_t;
 
