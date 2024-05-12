@@ -35,7 +35,7 @@ An important part of a solution that can endure failure must be great reporting.
 It cannot work around issues silently, that would undermine the value of the approach.
 
 ## Cheaper to evolve
-A more software (firmware) and configuration-defined system can more easily maintain backwards compatibility and change much more frequently. 
+An inherently networked, and more software (firmware) and configuration-defined system can more easily maintain backwards compatibility and change much more frequently. Even dynamic configuration is down the line.
 
 ## Cheaper to secure
 All wireless transmissions are susceptible to interception, if we also have a wired connection, we may exchange, and then use, unbreakable one-time-pad encryption schemes. 
@@ -43,7 +43,7 @@ All wireless transmissions are susceptible to interception, if we also have a wi
 ## Cheaper to protect
 
 If either connection fails, the other can keep up the information flow. If the wireless communication is interfered with, not only can the wired pick up the slack, the wireless may use the wired connection to negotiate new frequencies or simply report that it is being interfered with. [^2] 
-It may also combine different wireless technologies, LoRa and ESP-NOW are currently implemented.
+It may also combine different wireless technologies, LoRa, BLE and ESP-NOW are currently implemented.
 
 
 # Reasoning
@@ -101,6 +101,7 @@ The ability to run at least most your code on native PC:s makes software develop
 
 
 [^1]: Note that specialized components are not always the solution anyway. For example, vibration has been a huge issue for even hardened microprocessors when mounted directly on some VP marine diesel engines, and in those cases moving the microprocessor off the engine has been the only solution.
+[^2]: Configuration-as-Code (CaC) concepts are not as supported by libraries in the is a much more difficult concept to implement on mon-virtual and physically dispersed hardware. 
 [^2]: If something external caused both wired and wireless communication to fail at the same time, we probably just experienced a direct lightning strike or war conditions. Note that Robusto will try and re-establish communications, even after a broad failure.
 [^3]: The car stops working inexplicably and has to be brought to a mechanic, or the boat's network stops working and neither the autopilot, the wind meter or the speed log works, and the nauseating crawl to try to find the glitching cable begins. Yes, they may not only glitch, but break due to their stiffness.
 [^4]: I.e. frame rates may drop but still update, and other functionalities may be completely unaffected. Note that NMEA2000 with all its thick and expensive cabling and ability to support many devices, only transmits at 250kBits/s. It is quite possible to bridge communication to NMEA2000, should be added.
