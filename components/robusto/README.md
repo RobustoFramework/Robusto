@@ -1,6 +1,6 @@
 # The Robusto framework
 
-**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](/docs/About.md)
+**_"Handling failure is much cheaper than never failing"_** - [The Robusto paradigm](/docs/About.md)
 
 
 # What is Robusto?

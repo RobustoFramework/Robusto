@@ -2,7 +2,7 @@
 <!-- omit from toc -->
 # The Robusto framework
 
-**_"Handling failure is cheaper than never failing"_** - [The Robusto paradigm](https://github.com/RobustoFramework/Robusto/blob/main/docs/About.md)
+**_"Handling failure is much cheaper than never failing"_** - [The Robusto paradigm](https://github.com/RobustoFramework/Robusto/blob/main/docs/About.md)
 
 ## Getting started
 The easiest way is to:

@@ -5,7 +5,7 @@ What is the Robusto paradigm?
 What is it really about? What is its agenda? What is its potential?
 
 
-- ["Handling failure is cheaper than never failing"](#handling-failure-is-cheaper-than-never-failing)
+- ["Handling failure is much cheaper than never failing"](#handling-failure-is-much-cheaper-than-never-failing)
   - [Cheaper to build](#cheaper-to-build)
   - [Cheaper to sustain](#cheaper-to-sustain)
   - [Cheaper to monitor](#cheaper-to-monitor)
@@ -20,7 +20,7 @@ What is it really about? What is its agenda? What is its potential?
 
 
 
-# "Handling failure is cheaper than never failing"
+# "Handling failure is much cheaper than never failing"
 
 The Robusto paradigm is the base assumption that the framework tries to prove.
 
