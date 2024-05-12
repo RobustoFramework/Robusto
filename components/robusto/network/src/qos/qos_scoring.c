@@ -130,6 +130,9 @@ uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize)
         case robusto_mt_espnow:
             phc = 100; // ESP-NOW is quite flexible
             break;
+        case robusto_mt_ble:
+            phc = 90; // BLE is also quite flexible, but has smaller MTUs and a bit slower
+            break;
         case robusto_mt_i2c:
             phc = 90; // Assuming I2C is generally good
             break;

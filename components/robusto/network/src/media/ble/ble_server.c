@@ -138,17 +138,29 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
             rc = ble_negotiate_mtu(event->connect.conn_handle);
             if (rc != 0)
             {
-                ROB_LOGE(ble_server_log_prefix, "Failed to negotiate MTU; rc=%d\n", rc);
+                ROB_LOGE(ble_server_log_prefix, "Server:Failed to negotiate MTU; rc=%d\n", rc);
                 return 0;
             }
+            
+            rc = ble_peer_add(event->connect.conn_handle, desc);
+            if (rc != 0)
+            {
+                if (rc == BLE_HS_EALREADY) {
+                    ROB_LOGI(ble_server_log_prefix, "Peer was already present (conn_handle=%i).", event->connect.conn_handle);
 
+                } else {
+                    ROB_LOGE(ble_server_log_prefix, "Failed to add peer; rc=%d\n", rc);
+                    
+                }
+
+            }
             ROB_LOGI(ble_server_log_prefix, "Server: Now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
                                (peer_disc_fn *)ble_on_disc_complete, NULL);
             if (rc != 0)
             {
-                ROB_LOGE(ble_server_log_prefix, "Failed to discover services; rc=%d\n", rc);
+                ROB_LOGE(ble_server_log_prefix, "Server: Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
     

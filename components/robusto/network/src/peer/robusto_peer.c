@@ -407,6 +407,17 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
         }
     }
     #endif
+
+    #if defined(CONFIG_ROBUSTO_SUPPORTS_BLE) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+    if ((peer->supported_media_types & robusto_mt_ble) && !(exclude & robusto_mt_espnow)) {
+        new_score = score_peer(peer, robusto_mt_ble, data_length);
+
+        if (new_score > score && peer->ble_info.state < media_state_recovering) {
+            score = new_score;
+            *result = robusto_mt_ble;
+        }
+    }
+    #endif
     #if defined(CONFIG_ROBUSTO_SUPPORTS_LORA) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
     if ((peer->supported_media_types & robusto_mt_lora) && !(exclude & robusto_mt_lora)) {
         new_score = score_peer(peer, robusto_mt_lora, data_length);

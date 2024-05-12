@@ -221,7 +221,7 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
                                ble_on_disc_complete, NULL);
             if (rc != 0)
             {
-                MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);
+                MODLOG_DFLT(ERROR, "Client: Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
         }

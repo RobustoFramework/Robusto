@@ -266,7 +266,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     }
     else
     {
-        // It is a receipt, do nothing more, return.
+        // It is a receipt, just update stats and return.
         if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
             ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
             peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;

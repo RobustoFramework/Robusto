@@ -700,29 +700,24 @@ peer_svc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
 
     struct ble_peer *peer;
     int rc;
-    ROB_LOGI("ssss", "10_");
 
     peer = arg;
     assert(peer->conn_handle == conn_handle);
-    ROB_LOGI("ssss", "10");
     switch (error->status)
     {
     case 0:
-    ROB_LOGI("ssss", "10.1");
         rc = peer_svc_add(peer, service);
         break;
 
     case BLE_HS_ENOTCONN:
-        ROB_LOGE(ble_peer_log_prefix, "Failed to discover services, not connected");
+        ROB_LOGE(ble_peer_log_prefix, "Peer: Failed to discover services, not connected");
         rc = error->status;
         break;
 
     case BLE_HS_EDONE:
         /* All services discovered; start discovering characteristics. */
-        ROB_LOGI("ssss", "10.2");
         if (peer->disc_prev_chr_val > 0)
         {
-            ROB_LOGI("ssss", "10.3");
             peer_disc_chrs(peer);
         }
         rc = 0;
@@ -733,14 +728,11 @@ peer_svc_disced(uint16_t conn_handle, const struct ble_gatt_error *error,
         break;
     }
 
-ROB_LOGI("ssss", "11");
     if (rc != 0)
     {
-        ROB_LOGI("ssss", "12");
         /* Error; abort discovery. */
         peer_disc_complete(peer, rc);
     }
-ROB_LOGI("ssss", "13");
     return rc;
 }
 
@@ -755,21 +747,18 @@ int ble_peer_disc_all(uint16_t conn_handle, peer_disc_fn *disc_cb, void *disc_cb
     {
         return BLE_HS_ENOTCONN;
     }
-    ROB_LOGI("ssss", "0");
     /* Undiscover everything first. */
     while ((svc = SLIST_FIRST(&peer->svcs)) != NULL)
     {
         SLIST_REMOVE_HEAD(&peer->svcs, next);
         peer_svc_delete(svc);
     }
-    ROB_LOGI("ssss", "0,5");
     peer->disc_prev_chr_val = 1;
     peer->disc_cb = disc_cb;
     peer->disc_cb_arg = disc_cb_arg;
     rc = ble_gattc_disc_all_svcs(conn_handle, peer_svc_disced, peer);
     if (rc != 0)
     {
-        ROB_LOGI("ssss", "0.999 %u", conn_handle);
         return rc;
     }
 
@@ -822,7 +811,7 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     {       
         return BLE_HS_EALREADY;   
     } else {
-        ROB_LOGW(ble_peer_log_prefix, "Didn't find the connection, looking at the address");
+        ROB_LOGI(ble_peer_log_prefix, "Didn't find a matching connection hand, looking at the address instead.");
         // Might be a reboot
         robusto_peer_t *robusto_peer = ble_peer_find_robusto_peer_by_ble_addr(&(desc.peer_id_addr.val));
         if (robusto_peer != NULL)
@@ -838,12 +827,8 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
         }
     }
     
-    ROB_LOGI(ble_peer_log_prefix, "peer_id_addr (MAC address):");
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.our_id_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ROB_LOGI(ble_peer_log_prefix, "BLE MAC address (our_ota_addr = reversed max address + 2):");
     rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
-
 
     peer = os_memblock_get(&ble_peer_pool);
     if (peer == NULL)
