@@ -119,7 +119,7 @@ void robusto_repeater_stop() {
 void robusto_repeater_start() {
     rob_task_handle_t *handle;
     char task_name[30] = "Repeater task";
-    robusto_create_task(repeater_task, NULL, &task_name, &handle, 0);
+    robusto_create_task_custom(repeater_task, NULL, &task_name, &handle, 1, 16384);
     ROB_LOGI(repeater_log_prefix, "Repeater initiated.");
 }
 

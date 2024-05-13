@@ -1,8 +1,7 @@
-/**
- * @file ble_gatt_svr.h
+/* @file ble_gatt_svr.h
  * @brief Gatt server declaration
- * 
- * 
+ *
+ *
  * Inspired by the Espressif examples
  * @todo Restructure this into a more understandable solution, perhaps a separate header for peer and gatt stuff.
  */
@@ -38,17 +37,17 @@
  */
 
 /* 59462f12-9543-9999-12c8-58b459a2712d */
-static const ble_uuid128_t gatt_svr_svc_sec_test_uuid =
+static ble_uuid128_t gatt_svr_svc_sec_test_uuid =
     BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
                      0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);
 
 /* 5c3a659e-897e-45e1-b016-007107c96df6 */
-static const ble_uuid128_t gatt_svr_chr_sec_test_rand_uuid =
+static ble_uuid128_t gatt_svr_chr_sec_test_rand_uuid =
     BLE_UUID128_INIT(0xf6, 0x6d, 0xc9, 0x07, 0x71, 0x00, 0x16, 0xb0,
                      0xe1, 0x45, 0x7e, 0x89, 0x9e, 0x65, 0x3a, 0x5c);
 
 /* 5c3a659e-897e-45e1-b016-007107c96df7 */
-static const ble_uuid128_t gatt_svr_chr_sec_test_static_uuid =
+static ble_uuid128_t gatt_svr_chr_sec_test_static_uuid =
     BLE_UUID128_INIT(0xf7, 0x6d, 0xc9, 0x07, 0x71, 0x00, 0x16, 0xb0,
                      0xe1, 0x45, 0x7e, 0x89, 0x9e, 0x65, 0x3a, 0x5c);
 
@@ -59,34 +58,35 @@ gatt_svr_chr_access_sec_test(uint16_t conn_handle, uint16_t attr_handle,
                              struct ble_gatt_access_ctxt *ctxt,
                              void *arg);
 
-struct ble_gatt_svc_def gatt_svr_svcs[] = {
-    {
-        /*** Service: Security test. */
-        .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = &gatt_svr_svc_sec_test_uuid.u,
-        .characteristics =
-            (struct ble_gatt_chr_def[]){{
-                                            /*** Characteristic: Random number generator. */
-                                            .uuid = &gatt_svr_chr_sec_test_rand_uuid.u,
-                                            .access_cb = gatt_svr_chr_access_sec_test,
-                                            .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC,
-                                        },
-                                        {
-                                            /*** Characteristic: Static value. */
-                                            .uuid = &gatt_svr_chr_sec_test_static_uuid.u,
-                                            .access_cb = gatt_svr_chr_access_sec_test,
-                                            .flags = BLE_GATT_CHR_F_READ |
-                                                     BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC,
-                                        },
-                                        {
-                                            0, /* No more characteristics in this service. */
-                                        }},
-    },
+static struct ble_gatt_svc_def gatt_svr_svcs[2];
+struct ble_gatt_chr_def chr_def[3];
+char *gatt_svr_log_prefix;
 
-    {
-        0, /* No more services. */
-    },
-};
+void init_ble_gatt_svc_def(rob_mac_address *mac_address)
+{
+    memcpy(gatt_svr_svc_sec_test_uuid.value + sizeof(gatt_svr_chr_sec_test_rand_uuid.value) - ROBUSTO_MAC_ADDR_LEN, mac_address, ROBUSTO_MAC_ADDR_LEN);
+    memcpy(gatt_svr_chr_sec_test_rand_uuid.value + sizeof(gatt_svr_chr_sec_test_rand_uuid.value) - ROBUSTO_MAC_ADDR_LEN, mac_address, ROBUSTO_MAC_ADDR_LEN);
+    memcpy(gatt_svr_chr_sec_test_static_uuid.value + sizeof(gatt_svr_chr_sec_test_rand_uuid.value) - ROBUSTO_MAC_ADDR_LEN, mac_address, ROBUSTO_MAC_ADDR_LEN);
+    /*** Service: Security test. */
+   
+    memset(&chr_def, 0, sizeof(struct ble_gatt_chr_def) * 3);
+    /*** Characteristic: Random number generator. */
+    chr_def[0].uuid = &gatt_svr_chr_sec_test_rand_uuid.u;
+    chr_def[0].access_cb = gatt_svr_chr_access_sec_test;
+    chr_def[0].flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC;
+
+    /*** Characteristic: Static value. */
+    chr_def[1].uuid = &gatt_svr_chr_sec_test_static_uuid.u;
+    chr_def[1].access_cb = gatt_svr_chr_access_sec_test;
+    chr_def[1].flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_ENC;
+    
+    /*** Service: Security test. */
+    memset(&gatt_svr_svcs, 0, sizeof(struct ble_gatt_svc_def) *2);
+    gatt_svr_svcs[0].type = BLE_GATT_SVC_TYPE_PRIMARY;
+    gatt_svr_svcs[0].uuid = &gatt_svr_svc_sec_test_uuid.u;
+    gatt_svr_svcs[0].characteristics = chr_def;
+    
+}
 
 static int
 gatt_svr_chr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len,
@@ -216,6 +216,16 @@ int new_gatt_svr_init(void)
     }
 
     return 0;
+}
+
+void init_ble_gatt_svr(char *_log_prefix, rob_mac_address *mac_address)
+{
+    gatt_svr_log_prefix = _log_prefix;
+    init_ble_gatt_svc_def(mac_address);
+
+    // TODO: Check out if ESP_ERROR_CHECK could't be used.
+    int ret = new_gatt_svr_init();
+    assert(ret == 0);
 }
 #endif
 #endif

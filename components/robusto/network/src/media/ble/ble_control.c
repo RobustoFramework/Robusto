@@ -95,22 +95,22 @@ void robusto_ble_init(char *_log_prefix)
     /* Initialize the host stack */
     nimble_port_init();
 
-    // TODO: Check out if ESP_ERROR_CHECK could't be used.
-    // Server as well
-    int ret = new_gatt_svr_init();
-    assert(ret == 0);
-
-    /* Initialize service */
-    ble_init_service(ble_init_log_prefix);
-
+    
     // Print out the address
     rob_mac_address ble_mac_addr;
     esp_base_mac_addr_get(ble_mac_addr);
     ROB_LOGI(ble_init_log_prefix, "BLE base MAC address:");
     rob_log_bit_mesh(ROB_LOG_INFO, ble_init_log_prefix, ble_mac_addr, ROBUSTO_MAC_ADDR_LEN);
+    // Server as well
+    init_ble_gatt_svr(ble_init_log_prefix, (rob_mac_address*)ble_mac_addr);
+    
+    /* Initialize service */
+    ble_init_service(ble_init_log_prefix);
+
+
       
     /* Register custom service */
-    ret = gatt_svr_register();
+    int ret = gatt_svr_register();
     assert(ret == 0);
     
     ble_global_init(_log_prefix);

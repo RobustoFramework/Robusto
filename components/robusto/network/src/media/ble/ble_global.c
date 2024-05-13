@@ -12,6 +12,7 @@
 #include "ble_service.h"
 #include <robusto_peer.h>
 #include <robusto_qos.h>
+#include <robusto_message.h>
 
 #include "ble_global.h"
 
@@ -180,6 +181,12 @@ void report_ble_connection_error(int conn_handle, int code)
  */
 rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
+
+    if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10))
+    {
+        ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10);
+        return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, CONFIG_NIMBLE_ATT_PREFERRED_MTU, &ble_send_message);
+    }
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
         int ret;

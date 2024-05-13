@@ -150,13 +150,30 @@ ble_spp_client_connect_if_interesting(const struct ble_gap_disc_desc *disc)
 
     rc = ble_gap_connect(own_addr_type, &disc->addr, 30000, NULL,
                          ble_spp_client_gap_event, NULL);
-    if (rc != 0)
-    {
-        MODLOG_DFLT(ERROR, "Error: Failed to connect to device; addr_type=%d "
-                           "addr=%s; rc=%d\n",
-                    disc->addr.type, addr_str(disc->addr.val), rc);
-        return;
-    }
+
+    switch (rc) {
+        case 0:            
+            return;
+        case BLE_HS_EALREADY:
+            ROB_LOGW(ble_client_log_prefix, "Failed connecting, simultaneous attempt in progress - addr_type=%d "
+                           "addr=%s", disc->addr.type, addr_str(disc->addr.val));
+            return;
+        case BLE_HS_EBUSY:
+            ROB_LOGW(ble_client_log_prefix, "Peer is busy scanning - addr_type=%d "
+                           "addr=%s", disc->addr.type, addr_str(disc->addr.val));
+            return;
+        case BLE_HS_EDONE:
+            ROB_LOGW(ble_client_log_prefix, "Peer is already connected - addr_type=%d "
+                           "addr=%s", disc->addr.type, addr_str(disc->addr.val));
+            return;
+        default:
+            ROB_LOGE(ble_client_log_prefix, "Unspecified error occure connecting to peer - addr_type=%d "
+                           "addr=%s, rc=%d", disc->addr.type, addr_str(disc->addr.val), rc);
+            return;
+
+
+    }   
+
 }
 
 /**

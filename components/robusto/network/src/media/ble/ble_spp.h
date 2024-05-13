@@ -138,4 +138,6 @@ void ble_peer_init_peer(robusto_peer_t *r_peer);
 struct ble_peer * ble_peer_find(uint16_t conn_handle);
 
 void init_ble_spp(char * _log_prefix);
+
+void init_ble_gatt_svr(char * _log_prefix, rob_mac_address *mac_address);
 #endif

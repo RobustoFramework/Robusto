@@ -45,13 +45,12 @@
 #include "esp_task_wdt.h"
 #endif
 
-// TODO: This interface has to be finalized, the handle for example, and affinity
-rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity)  
-{
+rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity, uint32_t memory)  
+{    
     #ifdef USE_ARDUINO // Arduino seems to only support one core
-    int rc = xTaskCreate(task_function, task_name, 8192, parameter, 8, handle);
+    int rc = xTaskCreate(task_function, task_name, memory, parameter, 8, handle);
     #else
-    int rc = xTaskCreatePinnedToCore(task_function, task_name, 8192, parameter, 8, handle, 0);
+    int rc = xTaskCreatePinnedToCore(task_function, task_name, memory, parameter, 8, handle, 0);
     #endif
     if (rc == pdTRUE)
     {
@@ -59,6 +58,12 @@ rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter,
     } else {
         return ROB_ERR_INIT_FAIL;
     }
+}
+
+// TODO: This interface has to be finalized, the handle for example, and affinity
+rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity)  
+{
+    return robusto_create_task_custom(task_function, parameter, task_name, handle, 0, 8192);
 }
 
 rob_ret_val_t robusto_delete_current_task() {

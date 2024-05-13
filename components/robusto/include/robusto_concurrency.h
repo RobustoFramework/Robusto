@@ -80,6 +80,18 @@ extern "C"
     rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity);
 
     /**
+     * @brief Create a new task
+     *
+     * @param task_function The code to run
+     * @param parameter A parameter that might be useful inside
+     * @param task_name A name, useful for logging
+     * @param affinity What core is preferred
+     * @param memory The amount of memory in bytes
+     * @return uint32_t A handle to the task, 0 if failed
+     */
+    rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity, uint32_t memory); 
+
+    /**
      * @brief Delete the current task
      *
      * @return rob_ret_val_t Returns ROB_OK if successful
