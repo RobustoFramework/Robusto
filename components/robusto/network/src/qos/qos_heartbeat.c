@@ -88,7 +88,7 @@ uint64_t parse_heartbeat(uint8_t *data, uint8_t preamble_len)
     uint16_t *retval = data + preamble_len;
     uint64_t hb_time = r_millis() - (*retval * 10);
     // TODO: We need a multistage boot process that differs from initialisation and startup or whatevs. Runlevels?
-    ROB_LOGI("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
+    ROB_LOGD("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 
         ((uint8_t*)retval)[0], ((uint8_t*)retval)[1], (uint16_t)(*retval * 10), hb_time, preamble_len);
     
     return hb_time;
@@ -114,7 +114,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
     )
     {
         if (info->problem == media_problem_none) {
-            ROB_LOGI(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+            ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
         } else {
             ROB_LOGW(heartbeat_log_prefix, "Sending heartbeat to problematic peer %s using %s", peer->name, media_type_to_str(media_type));
         }

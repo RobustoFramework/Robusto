@@ -142,6 +142,7 @@ ble_spp_server_gap_event(struct ble_gap_event *event, void *arg)
                 return 0;
             }
             
+            
             rc = ble_peer_add(event->connect.conn_handle, desc);
             if (rc != 0)
             {

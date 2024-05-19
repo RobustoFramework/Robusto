@@ -62,6 +62,17 @@ static struct ble_gatt_svc_def gatt_svr_svcs[2];
 struct ble_gatt_chr_def chr_def[3];
 char *gatt_svr_log_prefix;
 
+
+
+ble_uuid128_t * create_mac_on_sec_test_uuid(rob_mac_address *mac_address) {
+    ble_uuid128_t *curr_mac_uuid = robusto_malloc(sizeof(ble_uuid128_t));
+    curr_mac_uuid->u.type = BLE_UUID_TYPE_128;
+    memcpy(curr_mac_uuid->value, gatt_svr_svc_sec_test_uuid.value, sizeof(gatt_svr_svc_sec_test_uuid.value));
+    
+    memcpy(curr_mac_uuid->value + sizeof(curr_mac_uuid->value) - ROBUSTO_MAC_ADDR_LEN, mac_address, ROBUSTO_MAC_ADDR_LEN);
+    return curr_mac_uuid;
+}
+
 void init_ble_gatt_svc_def(rob_mac_address *mac_address)
 {
     memcpy(gatt_svr_svc_sec_test_uuid.value + sizeof(gatt_svr_chr_sec_test_rand_uuid.value) - ROBUSTO_MAC_ADDR_LEN, mac_address, ROBUSTO_MAC_ADDR_LEN);

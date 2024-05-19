@@ -123,6 +123,9 @@ ble_peer_chr_find_uuid(const struct ble_peer *peer, const ble_uuid_t *svc_uuid,
                    const ble_uuid_t *chr_uuid);
 const struct peer_svc *
 ble_peer_svc_find_uuid(const struct ble_peer *peer, const ble_uuid_t *uuid);
+
+ble_uuid128_t * create_mac_on_sec_test_uuid(rob_mac_address *mac_address);
+
 int ble_peer_delete(uint16_t conn_handle);
 int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc);
 

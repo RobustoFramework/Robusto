@@ -38,7 +38,7 @@ void ble_spp_client_scan(void)
     rc = ble_hs_id_infer_auto(0, &own_addr_type);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "Error determining address type; rc=%d\n", rc);
+        ROB_LOGE(ble_client_log_prefix, "Error determining address type; rc=%d\n", rc);
         return;
     }
 
@@ -63,7 +63,7 @@ void ble_spp_client_scan(void)
                       ble_spp_client_gap_event, NULL);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "Error initiating GAP discovery procedure; rc=%d\n",
+        ROB_LOGE(ble_client_log_prefix, "Error initiating GAP discovery procedure; rc=%d\n",
                     rc);
     }
 }
@@ -140,7 +140,7 @@ ble_spp_client_connect_if_interesting(const struct ble_gap_disc_desc *disc)
     rc = ble_hs_id_infer_auto(0, &own_addr_type);
     if (rc != 0)
     {
-        MODLOG_DFLT(ERROR, "error determining address type; rc=%d\n", rc);
+        ROB_LOGE(ble_client_log_prefix, "error determining address type; rc=%d\n", rc);
         return;
     }
 
@@ -202,7 +202,7 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_CONNECT:
         /* A new connection was established or a connection attempt failed. */
-        MODLOG_DFLT(INFO, "connection %s; status=%d; conn_handle=%u ",
+        ROB_LOGI(ble_client_log_prefix, "connection %s; status=%d; conn_handle=%u ",
                     event->connect.status == 0 ? "established" : "failed",
                     event->connect.status, event->connect.conn_handle);        
         if (event->connect.status == 0)
@@ -212,12 +212,12 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             print_conn_desc(&desc);
-            MODLOG_DFLT(INFO, "\n");
+            ROB_LOGI(ble_client_log_prefix, "\n");
 
             rc = ble_negotiate_mtu(event->connect.conn_handle);
             if (rc != 0)
             {
-                MODLOG_DFLT(ERROR, "Failed to negotiate MTU; rc=%d\n", rc);
+                ROB_LOGE(ble_client_log_prefix, "Failed to negotiate MTU; rc=%d\n", rc);
                 return 0;
             }
             int rc = ble_peer_add(event->connect.conn_handle, desc);
@@ -232,20 +232,20 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
                 }
 
             }
-            MODLOG_DFLT(INFO, "Client: Now discover services.");
+            ROB_LOGI(ble_client_log_prefix, "Client: Now discover services.");
             /* Perform service discovery. */
             rc = ble_peer_disc_all(event->connect.conn_handle,
                                ble_on_disc_complete, NULL);
             if (rc != 0)
             {
-                MODLOG_DFLT(ERROR, "Client: Failed to discover services; rc=%d\n", rc);
+                ROB_LOGE(ble_client_log_prefix, "Client: Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
         }
         else
         {
             /* Connection attempt failed; resume scanning. */
-            MODLOG_DFLT(ERROR, "Error: Connection failed; status=%d\n",
+            ROB_LOGE(ble_client_log_prefix, "Error: Connection failed; status=%d\n",
                         event->connect.status);
             ble_spp_client_scan();
         }
@@ -254,9 +254,9 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
 
     case BLE_GAP_EVENT_DISCONNECT:
         /* Connection terminated. */
-        MODLOG_DFLT(INFO, "disconnect; reason=%d ", event->disconnect.reason);
+        ROB_LOGI(ble_client_log_prefix, "disconnect; reason=%d ", event->disconnect.reason);
         print_conn_desc(&event->disconnect.conn);
-        MODLOG_DFLT(INFO, "\n");
+        ROB_LOGI(ble_client_log_prefix, "\n");
 
         /* Forget about peer. */
         ble_peer_delete(event->disconnect.conn.conn_handle);
@@ -281,27 +281,27 @@ ble_spp_client_gap_event(struct ble_gap_event *event, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_DISC_COMPLETE:
-        MODLOG_DFLT(INFO, "discovery complete; reason=%d\n",
+        ROB_LOGI(ble_client_log_prefix, "discovery complete; reason=%d\n",
                     event->disc_complete.reason);
         return 0;
 
     case BLE_GAP_EVENT_NOTIFY_RX:
         /* Peer sent us a notification or indication. */
-        MODLOG_DFLT(INFO, "received %s; conn_handle=%d attr_handle=%d "
+        ROB_LOGI(ble_client_log_prefix, "received %s; conn_handle=%d attr_handle=%d "
                           "attr_len=%d\n",
                     event->notify_rx.indication ? "indication" : "notification",
                     event->notify_rx.conn_handle,
                     event->notify_rx.attr_handle,
                     OS_MBUF_PKTLEN(event->notify_rx.om));
 
-        MODLOG_DFLT(INFO, "Data:\n%s", (char *)(event->notify_rx.om->om_data));
+        ROB_LOGI(ble_client_log_prefix, "Data:\n%s", (char *)(event->notify_rx.om->om_data));
 
         /* Attribute data is contained in event->notify_rx.om. Use
          * `os_mbuf_copydata` to copy the data received in notification mbuf */
         return 0;
 
     case BLE_GAP_EVENT_MTU:
-        MODLOG_DFLT(INFO, "mtu update event; conn_handle=%d cid=%d mtu=%d\n",
+        ROB_LOGI(ble_client_log_prefix, "mtu update event; conn_handle=%d cid=%d mtu=%d\n",
                     event->mtu.conn_handle,
                     event->mtu.channel_id,
                     event->mtu.value);

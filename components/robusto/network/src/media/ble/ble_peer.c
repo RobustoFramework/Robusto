@@ -811,7 +811,7 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     {       
         return BLE_HS_EALREADY;   
     } else {
-        ROB_LOGI(ble_peer_log_prefix, "Didn't find a matching connection hand, looking at the address instead.");
+        ROB_LOGI(ble_peer_log_prefix, "Didn't find a matching connection handle, looking at the address instead.");
         // Might be a reboot
         robusto_peer_t *robusto_peer = ble_peer_find_robusto_peer_by_ble_addr(&(desc.peer_id_addr.val));
         if (robusto_peer != NULL)
@@ -827,8 +827,8 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
         }
     }
     
-    ROB_LOGI(ble_peer_log_prefix, "BLE MAC address (our_ota_addr = reversed max address + 2):");
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    ROB_LOGI(ble_peer_log_prefix, "BLE MAC address (peer_ota_addr = reversed max address + 2):");
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
 
     peer = os_memblock_get(&ble_peer_pool);
     if (peer == NULL)
@@ -837,13 +837,11 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
         return BLE_HS_ENOMEM;
     }
 
-
     memset(peer, 0, sizeof *peer);
     peer->conn_handle = conn_handle;
     peer->desc = desc;
     peer->failure_count = 0;
 
-    
     SLIST_INSERT_HEAD(&ble_peers, peer, next);
     return ROB_OK;
 }

@@ -27,7 +27,7 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
  * @param mac_address source data
  * @param dest_address destination structure
  */
-void ble_to_base_mac_address(rob_mac_address *mac_address, rob_mac_address *dest_address);
+void ble_to_base_mac_address(uint8_t *mac_address, uint8_t *dest_address);
 
 /**
  * @brief Make a base MAC address into a BLE address, which is reversed and has an offset (+2) against the base MAC
@@ -36,7 +36,7 @@ void ble_to_base_mac_address(rob_mac_address *mac_address, rob_mac_address *dest
  * @param dest_address destination structure
  */
 
-void base_mac_to_ble_address(rob_mac_address *mac_address, rob_mac_address *dest_address);
+void base_mac_to_ble_address(uint8_t *mac_address, uint8_t *dest_address);
 
 void ble_global_init(char * _log_prefix);
 #endif

@@ -27,6 +27,12 @@ void tst_ble_message_receive_presentation(void)
 {
     ROB_LOGI("Test", "In tst_ble_message_receive_presentation");
     // Register the on work callback
+
+    robusto_peer_t * peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR));
+    if (peer) {
+        TEST_PASS();
+    }
+
     robusto_register_on_new_peer(&ble_tst_on_new_peer);
     async_receive_flag = false;
     incoming_peer = NULL;

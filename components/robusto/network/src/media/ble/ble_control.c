@@ -68,6 +68,10 @@ void ble_do_on_work_cb(media_queue_item_t *work_item) {
 
 void ble_sync_callback(void) {
    ble_spp_server_on_sync();
+    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 5000)) {
+        ROB_LOGW(ble_init_log_prefix, "BLE never started to advertise, will still start the client, state = %hu.", *ble_server_get_state_ptr());  
+    }
+   ROB_LOGW(ble_init_log_prefix, "BLE is now advertising, lets start discovering others.");
    ble_spp_client_on_sync();
 }
 

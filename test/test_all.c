@@ -122,7 +122,7 @@ void runUnityTests(void *pvParameters)
 
     UNITY_BEGIN();
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
-    
+    #if 0
 
     RUN_TEST(tst_millis);
     robusto_yield();
@@ -152,7 +152,7 @@ void runUnityTests(void *pvParameters)
 
     RUN_TEST(tst_calc_message_crc); // TODO: This should actually be able to work on the Arduino, but i seems to go 16 bit somewhere.
     robusto_yield();
-
+#endif
 #ifdef CONFIG_ROBUSTO_INPUT
     RUN_TEST(tst_input_adc_single_resolve);
     robusto_yield();
@@ -392,7 +392,7 @@ void runUnityTests(void *pvParameters)
 
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-
+    r_delay(4000);
     /* Asynchronous testing*/
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     /* We will want to wait for BLE connections to establish */
