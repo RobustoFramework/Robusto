@@ -16,6 +16,8 @@
 
 #include "ble_global.h"
 
+int send_status;
+
 /* This semaphore is use for blocking, so different threads doesn't accidentaly communicate at the same time */
 SemaphoreHandle_t xBLE_Comm_Semaphore;
 // TODO: The semaphore might not be needed when this is behind the queue, the receive is probably not conflicting?
@@ -34,13 +36,12 @@ void ble_to_base_mac_address(uint8_t *mac_address, uint8_t *dest_address)
 
 void base_mac_to_ble_address(uint8_t *mac_address, uint8_t *dest_address)
 {
-    uint8_t tmp = *(mac_address +5) - 2;
+    uint8_t tmp = *(mac_address + 5) - 2;
     memcpy(dest_address, &tmp, 1);
     memcpy(dest_address + 1, mac_address + 4, 1);
     memcpy(dest_address + 2, mac_address + 3, 1);
     memcpy(dest_address + 3, mac_address + 2, 1);
     memcpy(dest_address + 4, mac_address + 1, 1);
- 
 }
 
 /**
@@ -185,6 +186,14 @@ void report_ble_connection_error(int conn_handle, int code)
     ROB_LOGE(ble_global_log_prefix, "Unregistered peer (!) at conn handle %i encountered a BLE error. Code: %i.", conn_handle, code);
 }
 
+void ble_send_cb(uint16_t conn_handle,
+                 const struct ble_gatt_error *error,
+                 struct ble_gatt_attr *attr,
+                 void *arg)
+{
+    send_status = error->status;
+}
+
 /**
  * @brief Sends a message through BLE.
  */
@@ -194,14 +203,20 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
     if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10))
     {
         ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10);
-        return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, CONFIG_NIMBLE_ATT_PREFERRED_MTU, &ble_send_message);
+        return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 20, &ble_send_message);
     }
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
         int ret;
         if (receipt)
         {
-            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, NULL, NULL);
+            send_status = -1;
+            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, ble_send_cb, NULL);
+            
+            if ((ret == ESP_OK) && (!robusto_waitfor_int_change(&send_status, 10000))) {
+                add_to_history(&peer->ble_info, true, send_status);
+                ret = -send_status;
+            } 
         }
         else
         {

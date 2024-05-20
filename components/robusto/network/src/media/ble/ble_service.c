@@ -64,7 +64,7 @@ static int ble_handle_incoming(uint16_t conn_handle, uint16_t attr_handle, struc
     {
         uint8_t *n_data = robusto_malloc(ctxt->om->om_len);
         memcpy(n_data, ctxt->om->om_data, ctxt->om->om_len);
-        handle_fragmented(peer, robusto_mt_espnow, n_data, ctxt->om->om_len, CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU, &ble_send_message);
+        handle_fragmented(peer, robusto_mt_ble, n_data, ctxt->om->om_len, CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU, &ble_send_message);
         return BLE_ERR_SUCCESS;
     }
         add_to_history(&peer->ble_info, false, ROB_OK);
