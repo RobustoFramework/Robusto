@@ -194,24 +194,15 @@ void ble_send_cb(uint16_t conn_handle,
     send_status = error->status;
 }
 
-/**
- * @brief Sends a message through BLE.
- */
-rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
+rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
-
-    if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10))
-    {
-        ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 10);
-        return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, CONFIG_NIMBLE_ATT_PREFERRED_MTU - ROBUSTO_PREFIX_BYTES - 20, &ble_send_message);
-    }
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
         int ret;
         if (receipt)
         {
             send_status = -1;
-            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, ble_send_cb, NULL);
+            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, ble_send_cb, NULL);
             
             if ((ret == ESP_OK) && (!robusto_waitfor_int_change(&send_status, 10000))) {
                 add_to_history(&peer->ble_info, true, send_status);
@@ -220,12 +211,12 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
         }
         else
         {
-            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES);
+            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length );
         }
 
         if (ret == ESP_OK)
         {
-            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES));
+            ROB_LOGI(ble_global_log_prefix, "ble_send_message: Success sending %lu bytes of data! CRC32: %lu", data_length, crc32_be(0, data , data_length ));
             add_to_history(&peer->ble_info, true, ROB_OK);
             ret = ROB_OK;
         }
@@ -243,6 +234,28 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
         ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Couldn't get semaphore!");
         return ROB_ERR_MUTEX;
     }
+
+}
+
+/**
+ * @brief Sends a message through BLE.
+ */
+rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
+{
+#if CONFIG_ROB_NETWORK_TEST_BLE_KILL_SWITCH > -1
+    if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_BLE_KILL_SWITCH) == true)
+    {
+        ROB_LOGE("BLE", "BLE KILL SWITCH ON - Failing sending");
+        r_delay(100);
+        return ROB_FAIL;
+    }
+#endif
+    if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU - 10))
+    {
+        ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - 10);
+        return send_message_fragmented(peer, robusto_mt_ble, data, data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - 20, &ble_send_message_raw);
+    }
+    return ble_send_message_raw(peer, data, data_length, receipt);
 }
 
 void ble_global_init(char *_log_prefix)

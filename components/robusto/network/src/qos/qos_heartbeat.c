@@ -120,7 +120,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         }
         
         deka_ms_diff = calc_deka_ms_since(info->last_receive, curr_time);
-        int hb_msg_len = robusto_make_binary_message(MSG_HEARTBEAT, 0, 0, (uint8_t *)&deka_ms_diff, 2, &hb_msg);
+        int hb_msg_len = robusto_make_multi_message_internal(MSG_HEARTBEAT, 0, 0, NULL, NULL, (uint8_t *)&deka_ms_diff, 2, &hb_msg);
         // Heartbeats are one-way and doesn't wait for receipts
         rob_ret_val_t queue_ret_val = send_message_raw_internal(peer, media_type, hb_msg, hb_msg_len, NULL, 
             false, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none);

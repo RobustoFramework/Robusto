@@ -314,7 +314,7 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     peer->relation_id_incoming = relation_id_incoming;
     memcpy(data + MAC_ADDR_POS, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
     strcpy((char *)data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, &get_host_peer()->name);
-    return robusto_make_binary_message(MSG_NETWORK, 0, 0, data, data_len, msg);
+    return robusto_make_multi_message_internal(MSG_NETWORK, 0, 0, NULL, NULL, data, data_len, msg);
 }
 
 void robusto_presentation_init(char *_log_prefix)

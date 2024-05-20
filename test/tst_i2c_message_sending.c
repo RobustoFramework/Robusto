@@ -34,37 +34,6 @@ void i2c_init_defs() {
 }
 
 
-void tst_i2c_message_send_message_sync(void)
-{
-
-    uint8_t *tst_strings_msg;
-
-    int tst_strings_length = robusto_make_strings_message(MSG_MESSAGE, 0, 0, (uint8_t *)&tst_strings, 8, &tst_strings_msg);
-   // TODO: Fix above and enable content of send message media type.
-    int32_t startime = r_millis();
-    rob_ret_val_t retval = ROB_FAIL;
-    /*
-    int attempts = 0;
-    while ((r_millis() < startime + 10000)) //&& (retval != ROB_OK)) 
-    {
-        */
-        robusto_led_blink(50,50,1);
-        retval = send_message_raw_internal(remote_peer, robusto_mt_i2c, tst_strings_msg, tst_strings_length, NULL, true, false, 0, robusto_mt_none);
-    /*
-        attempts++;
-    }
-    ROB_LOGI("TEST", "Send attempts: %i, time: %lu ", attempts, startime - r_millis());  
-    */
-    //rob_ret_val_t retval = robusto_send_message_media_type(remote_peer, tst_strings_res, tst_strings_length, robusto_mt_i2c, false);
-    TEST_ASSERT_EQUAL_MESSAGE(ROB_OK, retval, "Not the right response, ie ROB_OK (0).");
-
-  
-//    rob_log_bit_mesh(ROB_LOG_INFO, "test_make_strings_message result", tst_strings_res, tst_msg_length);
-
-    robusto_free(tst_strings_msg);
-}
-
-
 void tst_i2c_message_send_presentation(char * dest) {
 
 	r_delay(1000);

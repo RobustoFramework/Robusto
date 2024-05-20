@@ -17,7 +17,7 @@ static robusto_message *incoming_message = NULL;
 static robusto_peer_t *incoming_peer = NULL;
 static uint8_t *reply_msg = NULL;
 static uint16_t reply_msg_length = 0;
-
+#if 0
 
 void tst_i2c_message_receive_string_message_sync(void)
 {
@@ -65,7 +65,7 @@ void tst_i2c_message_receive_string_message_sync(void)
 
 
 }
-
+#endif
 
 bool i2c_tst_on_new_peer(robusto_peer_t * _peer) {
     ROB_LOGI("TEST", "In on_new_peer");

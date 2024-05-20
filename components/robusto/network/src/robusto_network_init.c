@@ -55,7 +55,6 @@ void robusto_network_init(char *_log_prefix)
 {
     robusto_message_building_init(_log_prefix);
     robusto_message_sending_init(_log_prefix);
-    robusto_message_receiving_init(_log_prefix);
     robusto_message_parsing_init(_log_prefix);
     robusto_message_fragment_init(_log_prefix);
     robusto_peers_init(_log_prefix);

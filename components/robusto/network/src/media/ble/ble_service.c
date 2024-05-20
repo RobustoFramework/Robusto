@@ -50,17 +50,17 @@ static int ble_handle_incoming(uint16_t conn_handle, uint16_t attr_handle, struc
     robusto_peer_t *peer = robusto_peers_find_peer_by_ble_conn_handle(conn_handle);
     if (peer) {
 
-    bool is_heartbeat = ctxt->om->om_data[ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT;
+    bool is_heartbeat = ctxt->om->om_data[0] == HEARTBEAT_CONTEXT;
     if (is_heartbeat)
     {
         ROB_LOGD(ble_service_log_prefix, "BLE is heartbeat");
         rob_log_bit_mesh(ROB_LOG_DEBUG, ble_service_log_prefix, ctxt->om->om_data, ctxt->om->om_len);
-        peer->ble_info.last_peer_receive = parse_heartbeat(ctxt->om->om_data, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
+        peer->ble_info.last_peer_receive = parse_heartbeat(ctxt->om->om_data, ROBUSTO_CONTEXT_BYTE_LEN);
         add_to_history(&peer->ble_info, false, ROB_OK);
         return BLE_ERR_SUCCESS;
     }
 
-    if ((ctxt->om->om_data[ROBUSTO_CRC_LENGTH] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
+    if ((ctxt->om->om_data[0] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
     {
         uint8_t *n_data = robusto_malloc(ctxt->om->om_len);
         memcpy(n_data, ctxt->om->om_data, ctxt->om->om_len);

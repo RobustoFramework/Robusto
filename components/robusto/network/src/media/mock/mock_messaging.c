@@ -65,14 +65,6 @@ rob_ret_val_t mock_after_comms(bool is_sending, bool first_call)
     return ROB_OK;
 }
 
-rob_ret_val_t mock_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
-{
-
-    ROB_LOGI("MOCK", "Got data to send.");
-    peer->mock_info.last_send = r_millis();
-    ROB_LOGI("MOCK", "done...");
-    return ROB_OK;
-}
 
 rob_ret_val_t mock_read_receipt(robusto_peer_t *peer, uint8_t **dest_data)
 {

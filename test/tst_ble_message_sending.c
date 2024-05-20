@@ -12,7 +12,6 @@
 #include "esp_heap_trace.h"
 
 
-
 static robusto_peer_t *remote_peer;
 
 void ble_init_defs() {

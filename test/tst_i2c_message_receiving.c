@@ -18,53 +18,6 @@ static uint8_t *reply_msg = NULL;
 static uint16_t reply_msg_length = 0;
 
 
-void tst_i2c_message_receive_string_message_sync(void)
-{
-    ROB_LOGI("TEST", "In tst_i2c_message_receive_string_message");
-    // TODO: Handle inverse leds (add robusto_led_solid)
-    if (CONFIG_I2C_ADDR == 3) {
-        robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 0);
-    } else {
-        robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 1);
-    }
-    
-    robusto_message_t *message = NULL;
-    int32_t startime = r_millis();
-    rob_ret_val_t retval = ROB_INFO_RECV_NO_MESSAGE;
-    int attempts = 0;
-    while ((r_millis() < startime + 120000) && (retval == ROB_INFO_RECV_NO_MESSAGE)) {
-        retval = robusto_receive_message_media_type(robusto_mt_i2c, &message);
-        if ((retval == ROB_INFO_RECV_NO_MESSAGE) && (message != NULL)) {
-            robusto_free(message->strings);
-            robusto_free(message->raw_data);
-            robusto_free(message);
-        }
-        //ROB_LOGI("-------", "Attempt %i", attempts);
-        attempts++;
-        r_delay(10);
-    }
-    if (CONFIG_I2C_ADDR == 3) {
-        robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 1);
-    } else {
-        robusto_gpio_set_level(CONFIG_ROB_BLINK_GPIO, 0);
-    }
-
-    
-    ROB_LOGI("TEST", "Receive attempts: %i ", attempts);
-
-    TEST_ASSERT_EQUAL_MESSAGE(ROB_OK,retval, "Receive message did not return ROB_OK (-203 is no message).");
-    if (retval == ROB_OK) {
-        TEST_ASSERT_EQUAL_INT_MESSAGE(2, message->string_count, "The string count is wrong.");
-        TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, message->strings[0], "First string did not match");
-        TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), message->strings[1], "Second string did not match");
-    }
-    robusto_free(message->strings);
-    robusto_free(message->raw_data);
-    robusto_free(message);
-
-
-}
-
 
 bool i2c_tst_on_new_peer(robusto_peer_t * _peer) {
     ROB_LOGI("TEST", "In on_new_peer");

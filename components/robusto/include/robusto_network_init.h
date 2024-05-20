@@ -40,7 +40,6 @@ void robusto_network_init(char * _log_prefix);
 void robusto_media_init(char * _log_prefix);
 void robusto_message_init(char * _log_prefix);
 void robusto_message_sending_init(char * _log_prefix);
-void robusto_message_receiving_init(char * _log_prefix);
 void robusto_message_parsing_init(char * _log_prefix);
 void robusto_message_building_init(char * _log_prefix);
 void robusto_message_fragment_init(char *_log_prefix);

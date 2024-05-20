@@ -67,23 +67,6 @@ int freeMemory() {
 #endif
 
 #endif
-void tst_sync_mock_send_message(void)
-{
-
-    
-    uint8_t *tst_strings_msg;
-
-    //  rob_log_bit_mesh(ROB_LOG_INFO, "test_make_strings_message input", (uint8_t*)&tst_strings, sizeof(tst_strings));
-
-    int tst_strings_length = robusto_make_strings_message(MSG_MESSAGE, 0, 0, (uint8_t *)&tst_strings, 8, &tst_strings_msg);
-    robusto_peer_t * test_peer_mock = robusto_peers_find_peer_by_name("TEST_MOCK");
-    rob_ret_val_t retval = mock_send_message(test_peer_mock, tst_strings_msg, tst_strings_length, false);
-    TEST_ASSERT_EQUAL_MESSAGE(ROB_OK, retval, "Not the right response, ie ROB_OK (0).");
-
-    //    rob_log_bit_mesh(ROB_LOG_INFO, "test_make_strings_message result", tst_strings_res, tst_msg_length);
-
-    robusto_free(tst_strings_msg);
-}
 
 void tst_async_mock_send_message(void)
 {

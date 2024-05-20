@@ -78,21 +78,6 @@ rob_ret_val_t send_message_binary(robusto_peer_t *peer, uint16_t service_id, uin
 
 
 /**
- * @brief Put a multi message (both strings and binary) message to a specified peer on the appropriate media send queue.
- * 
- * @param peer The destination peer
- * @param media_type The media to use
- * @param data The data to send
- * @param data_length The length of the data
- * @param state Optional state structure if one want to track message progress
-  * @param receipt Require a receipt for successful transfer
- * @return rob_ret_val_t Was the message successfully built and put on the queue for sending?
- */
-
-/* TODO: We might always want to follow until a message was sent. 
-    And optionally until receipt has been received. 
-*/
-/**
 * @brief Sends a multi message (both strings and binary) message to a specified peer on the appropriate media send queue.
  * 
  * @param peer The destination peer
@@ -148,7 +133,27 @@ typedef void (on_send_activity_t)(media_queue_item_t * queue_item, e_media_type 
 
 void robusto_message_sending_register_on_activity(on_send_activity_t *_on_send_activity);
 
-// TODO: If this works, centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
+/**
+ * @brief Make a multi message, for sending internal, do not use for normal use
+ * 
+ * @param message_type 
+ * @param service_id 
+ * @param conversation_id 
+ * @param strings_data 
+ * @param strings_length 
+ * @param binary_data 
+ * @param binary_length 
+ * @param dest_message 
+ * @param no_addressing 
+ * @param no_crc 
+ * @return int 
+ */
+int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
+                               uint8_t *strings_data, uint32_t strings_length,
+                               uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
+
+
+// TODO: Centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
 typedef struct fragmented_message
 {
     // The hash of the message, used to identify the message
@@ -232,28 +237,6 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
  */
 rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message * send_message);
 
-/*
-Make messages
-*/
-int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t **dest_message);
-int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
-
-
-/**
- * @brief 
- * 
- * @param message_type 
- * @param conversation_id 
- * @param strings_data 
- * @param strings_length 
- * @param binary_data 
- * @param binary_length 
- * @param dest_message 
- * @return int 
- */
-int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message);
-
-
 /**
  * @brief A simple way to, using format strings, build a message.
  * However; as the result will have to be null-terminated, and we cannot put nulls in that string.
@@ -275,14 +258,6 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
  */
 int build_strings_data(uint8_t **message, const char *format, ...);
 
-/**
- * @brief TODO: Document this
- * 
- * @param media_type 
- * @param dest_msg 
- * @return robusto_message_t* 
- */
-rob_ret_val_t robusto_receive_message_media_type(e_media_type media_type, robusto_message_t **dest_msg);
 /**
  * @brief TODO: Document this
  * 

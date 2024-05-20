@@ -11,63 +11,6 @@
 static bool async_receive_flag = false;
 static incoming_queue_item_t *incoming_item = NULL;
 
-void tst_sync_mock_receive_string_message(void)
-{
-    set_message_expectation(MMI_STRINGS);
-
-    robusto_message_t *message;
-    rob_ret_val_t res = robusto_receive_message_media_type(robusto_mt_mock, &message);
-
-    TEST_ASSERT_MESSAGE(res == ROB_OK, "Receive message did not return ROB_OK.");
-    TEST_ASSERT_EQUAL_INT_MESSAGE(2, message->string_count, "The string count is wrong.");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, message->strings[0], "First string did not match");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), message->strings[1], "Second string did not match");
-
-    robusto_free(message->strings);
-    robusto_free(message->raw_data);
-    robusto_free(message);
-
-}
-
-
-void tst_sync_mock_receive_binary_message(void)
-{
-    set_message_expectation(MMI_BINARY);
-    robusto_message_t *message;
-    rob_ret_val_t res = robusto_receive_message_media_type(robusto_mt_mock, &message);
-    TEST_ASSERT_MESSAGE(res == ROB_OK, "Receive message did not return ROB_OK.");
-    // ROB_LOGI("sdf", "message->binary_data_length %u", message->binary_data_length);
-    //rob_log_bit_mesh(ROB_LOG_INFO, "sdf", message->binary_data, message->binary_data_length);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(&tst_binary, message->binary_data, message->binary_data_length, "Binary data did not match");
-    robusto_message_free(message);
-}
-
-void tst_sync_mock_receive_multi_message(void)
-{
-
-    set_message_expectation(MMI_MULTI);
-    robusto_message_t *message;
-    rob_ret_val_t res = robusto_receive_message_media_type(robusto_mt_mock, &message);
-    TEST_ASSERT_MESSAGE(res == ROB_OK, "Receive message did not return ROB_OK.");
-    TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(&tst_binary, message->binary_data, message->binary_data_length, "Binary data did not match");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE(&tst_strings, message->strings[0], "First string did not match");
-    TEST_ASSERT_EQUAL_STRING_MESSAGE((char *)&(tst_strings[4]), message->strings[1], "Second string did not match");
-    robusto_message_free(message);
-}
-
-void tst_sync_mock_receive_binary_message_restricted(void)
-{
-    set_message_expectation(MMI_BINARY_RESTRICTED);
-    robusto_message_t *message;
-    rob_ret_val_t res = robusto_receive_message_media_type(robusto_mt_mock, &message);
-    TEST_ASSERT_MESSAGE(res == ROB_OK, "Receive message did not return ROB_OK.");
-    TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE(&tst_binary, 
-    message->binary_data, message->binary_data_length,    "Binary data did not match");
-    
-    robusto_message_free(message);
-}
-
-
 
 void mock_tst_do_on_work(incoming_queue_item_t *_incoming_item) {
     incoming_item = _incoming_item;

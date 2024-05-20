@@ -85,7 +85,7 @@ uint8_t robusto_encode_message_context(message_context_t *context)
     return res_ctxt;
 }
 
-int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
+int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
                                uint8_t *strings_data, uint32_t strings_length,
                                uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message)
 {
@@ -181,18 +181,6 @@ int robusto_make_multi_message(e_msg_type_t message_type, uint16_t service_id, u
     ROB_LOGD(message_building_log_prefix, "CRC32 dec: %lu", crc32);
     memcpy(*dest_message + ROBUSTO_PREFIX_BYTES, &crc32, ROBUSTO_CRC_LENGTH);
     return message_length;
-}
-
-int robusto_make_strings_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id, uint8_t *strings_data, uint32_t strings_length, uint8_t **dest_message)
-{
-    return robusto_make_multi_message(message_type, service_id, conversation_id, strings_data, strings_length, NULL, 0, dest_message);
-}
-
-int robusto_make_binary_message(e_msg_type_t message_type, uint16_t service_id, uint16_t conversation_id,
-                                uint8_t *binary_data, uint32_t binary_length, uint8_t **dest_message)
-{
-    ROB_LOGD(message_building_log_prefix, "In robusto_make_binary_message");
-    return robusto_make_multi_message(message_type, service_id, conversation_id, NULL, 0, binary_data, binary_length, dest_message);
 }
 
 int build_strings_data(uint8_t **message, const char *format, ...)
