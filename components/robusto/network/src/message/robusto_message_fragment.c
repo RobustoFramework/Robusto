@@ -108,7 +108,14 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
         return NULL;
     }
 }
-
+/**
+ * @brief Send the result of a fragmentation message transmission
+ * 
+ * @param peer 
+ * @param frag_msg 
+ * @param return_value 
+ * @param send_message 
+ */
 void send_result(robusto_peer_t *peer, fragmented_message_t *frag_msg, rob_ret_val_t return_value, cb_send_message *send_message)
 {
     uint8_t *buffer = robusto_malloc(ROBUSTO_CRC_LENGTH + 4);
@@ -203,6 +210,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         {
             missing[ROBUSTO_CRC_LENGTH + 2 + missing_counter] = frag_msg->received_fragments[missing_counter];
         }
+        rob_log_bit_mesh(ROB_LOG_WARN, fragmentation_log_prefix, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
         send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, false);
         return;
     }
@@ -219,10 +227,10 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         else
         {
             ROB_LOGI(fragmentation_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->receive_buffer_length);
-            rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, frag_msg->receive_buffer, frag_msg->receive_buffer_length > 100 ? 100:frag_msg->receive_buffer_length);
+            //rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, frag_msg->receive_buffer, frag_msg->receive_buffer_length > 100 ? 100:frag_msg->receive_buffer_length);
             send_result(peer, frag_msg, ROB_OK, send_message);
             add_to_history(get_media_info(peer, media_type), false, robusto_handle_incoming(frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, media_type, 0));
-            // TODO: We'll need the media type here and instead go through that. Or have a callback for the handling of the finished message.
+            // TODO: We'll need the media type here and instead go through that. Or have a callback for the handling of the finished message. Or not?
             // TODO: Remove the frag_msg from the list. (handle incoming have already freed the data)
             return;
         }
@@ -291,7 +299,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
 
 }
 
-void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_send_message *send_message)
+void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)
 {
     
     ROB_LOGI(fragmentation_log_prefix, "Send fragments (%" PRIu32 "):", frag_msg->fragment_count);
@@ -301,13 +309,17 @@ void send_fragments(robusto_peer_t *peer, fragmented_message_t *frag_msg, cb_sen
 
     uint8_t *buffer = NULL;
     uint32_t curr_frag_size = curr_frag_size = frag_msg->fragment_size;
-
+    
+    robusto_media_t * info = get_media_info(peer, media_type);
     for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
         if (frag_msg->abort_transmission)
         {
             return;
         }
+        // QoS will disturb sending like this
+        info->postpone_qos = true;
+
         buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
         // We always send the same hash, as an identifier
         memcpy(buffer, &frag_msg->hash, 4);
@@ -379,7 +391,7 @@ void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uin
     media->receive_successes++;
     frag_msg->state = ROB_ST_RETRYING;
     memcpy(frag_msg->received_fragments, data + ROBUSTO_CRC_LENGTH + 2, len - (ROBUSTO_CRC_LENGTH + 2));
-    send_fragments(peer, frag_msg, send_message);
+    send_fragments(peer, media_type, frag_msg, send_message);
 }
 
 /**
@@ -557,10 +569,8 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         rc = ROB_FAIL;
         goto finish;
     }
-    // TODO: Apparently, ESP-NOW has no acknowledgement, we might need to add the same we do for LoRa, for example.
 
-    send_fragments(peer, frag_msg, send_message);
-    
+    send_fragments(peer, media_type, frag_msg, send_message);
     uint32_t starttime;
     // A state machine that handles the probes
     while (1) {

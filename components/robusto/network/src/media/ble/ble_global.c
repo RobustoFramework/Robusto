@@ -16,6 +16,7 @@
 
 #include "ble_global.h"
 
+
 int send_status;
 
 /* This semaphore is use for blocking, so different threads doesn't accidentaly communicate at the same time */
@@ -198,19 +199,29 @@ rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t
 {
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
     {
-        int ret;
+        int ret = BLE_HS_EAGAIN; // Setting to 1 to handle BLE_HS_EAGAIN == Temporary errr
+        int retries = -1;
         if (receipt)
         {
             send_status = -1;
-            ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, ble_send_cb, NULL);
-            
+            while ((ret == BLE_HS_EAGAIN) && (retries < 3)) {
+                retries++;
+                if (retries > 0) {
+                    ROB_LOGW(ble_global_log_prefix, "ble_send_message: Retrying dues to BLE being busy");
+                    r_delay(500);
+                }
+                ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, ble_send_cb, NULL);
+            }
+                 
             if ((ret == ESP_OK) && (!robusto_waitfor_int_change(&send_status, 10000))) {
+                ROB_LOGW(ble_global_log_prefix, "ble_send_message: send failed waiting for result. send_status = %i", send_status);
                 add_to_history(&peer->ble_info, true, send_status);
                 ret = -send_status;
             } 
         }
         else
         {
+            retries++;
             ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length );
         }
 
@@ -222,7 +233,7 @@ rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t
         }
         else
         {
-            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when sending data! Peer: %i Code: %i", peer->ble_conn_handle, ret);
+            ROB_LOGE(ble_global_log_prefix, "Error: ble_send_message  - Failure when sending data! Connection handle: %i Return code: %i Retries: %i Receipt: %s", peer->ble_conn_handle, ret, retries, receipt ? "Yes": "No");
             add_to_history(&peer->ble_info, true, ret);
             ret = -ret;
         }
@@ -250,12 +261,13 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
         return ROB_FAIL;
     }
 #endif
-    if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU - 10))
+    if (data_length > (CONFIG_NIMBLE_ATT_PREFERRED_MTU + ROBUSTO_PREFIX_BYTES - 10))
     {
         ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - 10);
-        return send_message_fragmented(peer, robusto_mt_ble, data, data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - 20, &ble_send_message_raw);
+        return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES,
+             CONFIG_NIMBLE_ATT_PREFERRED_MTU - 20, &ble_send_message_raw);
     }
-    return ble_send_message_raw(peer, data, data_length, receipt);
+    return ble_send_message_raw(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
 }
 
 void ble_global_init(char *_log_prefix)

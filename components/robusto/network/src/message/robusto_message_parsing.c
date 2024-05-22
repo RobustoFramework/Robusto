@@ -189,7 +189,7 @@ rob_ret_val_t robusto_network_parse_message(uint8_t *data, uint32_t data_len, ro
     {
         /* As the message has gotten here, it has a gotten through the checks, which makes it a protocol error */
         ROB_LOGE(message_parsing_log_prefix, "The message seems to be have trailing data and no binary bit set. ");
-        rob_log_bit_mesh(ROB_LOG_ERROR, message_parsing_log_prefix, data, data_len);
+        rob_log_bit_mesh(ROB_LOG_ERROR, message_parsing_log_prefix, data, data_len > 20 ? 20: data_len);
         return ROB_ERR_PARSING_FAILED;
     } else {
         msg_inst->binary_data = NULL;

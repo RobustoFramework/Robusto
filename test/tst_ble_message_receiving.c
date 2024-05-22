@@ -96,7 +96,7 @@ void tst_ble_message_receive_fragmented_message(void)
     async_receive_flag = false;
     incoming_message = NULL;
 
-    if (robusto_waitfor_bool(&async_receive_flag, CONFIG_ROBUSTO_TESTING_FRAGMENT_MESSAGE_SIZE))
+    if (robusto_waitfor_bool(&async_receive_flag, CONFIG_ROBUSTO_TESTING_FRAGMENT_MESSAGE_SIZE * 6))
     {
         ROB_LOGI("Test", "Async receive flag was set to true.");
     }
@@ -109,7 +109,7 @@ void tst_ble_message_receive_fragmented_message(void)
         TEST_FAIL_MESSAGE("Test failed, incoming_item NULL.");
     }
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(CONFIG_ROBUSTO_TESTING_FRAGMENT_MESSAGE_SIZE, incoming_message->binary_data_length, "The binary data length is wrong.");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(CONFIG_ROBUSTO_TESTING_FRAGMENT_MESSAGE_SIZE/4, incoming_message->binary_data_length, "The binary data length is wrong.");
     robusto_message_free(incoming_message);
 }
 

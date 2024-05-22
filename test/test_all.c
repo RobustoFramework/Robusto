@@ -393,7 +393,6 @@ void runUnityTests(void *pvParameters)
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
     r_delay(4000);
-    #if 0
     /* Asynchronous testing*/
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     /* We will want to wait for BLE connections to establish */
@@ -425,7 +424,7 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_ble_message_send_message);
     robusto_yield();
 #endif
-#endif
+
     r_delay(4000);
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     RUN_TEST(tst_ble_message_send_message_fragmented);
@@ -437,6 +436,7 @@ void runUnityTests(void *pvParameters)
 
 
 #if CONFIG_ROB_NETWORK_TEST_BLE_NOW_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_BLE_NOW_LOOP_INITIATOR)
+    r_delay(4000);
     RUN_TEST(tst_ble_message_send_message_fragmented);
     robusto_yield();
 #endif
