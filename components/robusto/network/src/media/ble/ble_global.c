@@ -107,6 +107,7 @@ void ble_on_disc_complete(const struct ble_peer *peer, int status, void *arg)
         ROB_LOGI(ble_global_log_prefix, "Peer didn't have the SPP-service, will not add as Robusto peer:");
         rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, reversed_address, ROBUSTO_MAC_ADDR_LEN);
     }
+    robusto_free(reversed_address);
     robusto_free(uuid);
 
     /* Service discovery has completed successfully.  Now we have a complete
@@ -198,7 +199,7 @@ void ble_send_cb(uint16_t conn_handle,
 rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
     if (pdTRUE == xSemaphoreTake(xBLE_Comm_Semaphore, portMAX_DELAY))
-    {
+    {   
         int ret = BLE_HS_EAGAIN; // Setting to 1 to handle BLE_HS_EAGAIN == Temporary errr
         int retries = -1;
         if (receipt)
@@ -210,11 +211,15 @@ rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t
                     ROB_LOGW(ble_global_log_prefix, "ble_send_message: Retrying dues to BLE being busy");
                     r_delay(500);
                 }
+                if (data_length == 8) {
+                    rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix,data, data_length);
+                }
+                
                 ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, ble_send_cb, NULL);
             }
                  
             if ((ret == ESP_OK) && (!robusto_waitfor_int_change(&send_status, 10000))) {
-                ROB_LOGW(ble_global_log_prefix, "ble_send_message: send failed waiting for result. send_status = %i", send_status);
+                ROB_LOGW(ble_global_log_prefix, "ble_send_message: send failed waiting for result. send_status = %i (setting return code to %i)", send_status, -send_status);
                 add_to_history(&peer->ble_info, true, send_status);
                 ret = -send_status;
             } 
@@ -222,7 +227,8 @@ rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t
         else
         {
             retries++;
-            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length );
+            ret = ble_gattc_write_no_rsp_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length);
+            robusto_yield();
         }
 
         if (ret == ESP_OK)
@@ -265,7 +271,7 @@ rob_ret_val_t ble_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
     {
         ROB_LOGI(ble_global_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, CONFIG_NIMBLE_ATT_PREFERRED_MTU - 10);
         return send_message_fragmented(peer, robusto_mt_ble, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES,
-             CONFIG_NIMBLE_ATT_PREFERRED_MTU - 20, &ble_send_message_raw);
+             CONFIG_NIMBLE_ATT_PREFERRED_MTU - 20, ble_send_message_raw);
     }
     return ble_send_message_raw(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
 }
