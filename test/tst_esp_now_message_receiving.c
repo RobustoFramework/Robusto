@@ -28,9 +28,15 @@ void tst_esp_now_message_receive_presentation(void)
 {
     ROB_LOGI("Test", "In tst_esp_now_message_receive_presentation");
     // Register the on work callback
+    
     robusto_register_on_new_peer(&esp_now_tst_on_new_peer);
     async_receive_flag = false;
     incoming_peer = NULL;
+    // Remove peer so that new_peer is triggered.
+    robusto_peer_t * peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
+    if (peer) {
+        robusto_peers_delete_peer(peer->peer_handle);
+    }
 
     if (robusto_waitfor_bool(&async_receive_flag, 40000))
     {

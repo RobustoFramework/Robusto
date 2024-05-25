@@ -350,7 +350,7 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
         }
         else
         {
-            ROB_LOGI(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).",
+            ROB_LOGD(fragmentation_log_prefix, "Sending fragment %lu (of %lu), pos %lu, length %lu bytes of (%lu total bytes).",
                      curr_fragment + 1, frag_msg->fragment_count, frag_msg->fragment_size * curr_fragment, curr_frag_size, frag_msg->send_data_length);
         }
         memcpy(buffer + FRAG_HEADER_LEN, frag_msg->send_data + (frag_msg->fragment_size * curr_fragment), curr_frag_size);
@@ -483,12 +483,14 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *
  * @param len The length of the data
  * @param fragment_size The size of the fragment of the media
  */
-void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
+    bool receipt = false;
     switch (data[ROBUSTO_CRC_LENGTH + 1])
     {
     case FRAG_REQUEST:
         handle_frag_request(peer, media_type, data, len, fragment_size);
+        receipt = true;
         break;
     case FRAG_MESSAGE:
         handle_frag_message(peer, media_type, data, len, fragment_size, send_message);
@@ -511,7 +513,7 @@ void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint
     // The data must be freeable.
 
     robusto_free(data);
-    return;
+    return receipt;
 }
 
 rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)

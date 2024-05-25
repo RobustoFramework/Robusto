@@ -50,7 +50,7 @@
 #include "esp_crc.h"
 #include "esp_now.h"
 
-static char * espnow_log_prefix;
+static char *espnow_log_prefix;
 
 #define ESPNOW_MAXDELAY 512
 #define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN - 10)
@@ -65,12 +65,12 @@ static uint8_t *synchro_data = NULL;
 static int synchro_data_len = 0;
 static robusto_peer_t *synchro_peer = NULL;
 
-
-rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t data_length, bool receipt)
+rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
 
     // TODO: Recommend more wifi TX buffers and add warning if not enabled
     has_receipt = false;
+    ROB_LOGD(espnow_log_prefix, "esp_now_send_check, sending %lu bytes.", data_length);
     int rc = esp_now_send(&peer->base_mac_address, data, data_length);
     if (rc != ESP_OK)
     {
@@ -115,12 +115,15 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t 
         rc = -ROB_ERR_SEND_FAIL;
         add_to_history(&peer->espnow_info, true, rc);
         return rc;
-    } else  {
+    }
+    else
+    {
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
-    
-    if (!receipt) {
+
+    if (!receipt)
+    {
         return rc;
     }
 
@@ -133,12 +136,12 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t 
     if (has_receipt)
     {
         has_receipt = false;
-        
+
         rc = (send_status == ESP_NOW_SEND_SUCCESS) ? ROB_OK : ROB_FAIL;
         add_to_history(&peer->espnow_info, false, rc);
         if (rc == ROB_FAIL)
         {
-            
+
             ROB_LOGE(espnow_log_prefix, "ESP-NOW got a negative receipt. Peer: %s", peer->name);
             return ROB_FAIL;
         }
@@ -149,7 +152,6 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t * peer, uint8_t *data, uint32_t 
         return ROB_ERR_NO_RECEIPT;
     }
     return rc;
-
 }
 
 /**
@@ -194,6 +196,7 @@ static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status
 
 static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int len)
 {
+    bool handled = false;
     if (strncmp((char *)(esp_now_info->des_addr), "\xff\xff\xff\xff\xff\xff", 6) == 0)
     {
         ROB_LOGW("ESP-NOW", "Somebody is sending to the broadcast address (FF:FF:FF:FF:FF:FF) on ESP-NOW, disregarding.");
@@ -251,8 +254,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     {
         uint8_t *n_data = robusto_malloc(len);
         memcpy(n_data, data, len);
-        handle_fragmented(peer, robusto_mt_espnow, n_data, len, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
-        return;
+        if (!handle_fragmented(peer, robusto_mt_espnow, n_data, len, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check))
+        {
+            return;
+        }
+        handled = true;
     }
 
     peer->espnow_info.last_receive = r_millis();
@@ -267,27 +273,30 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     else
     {
         // It is a receipt, just update stats and return.
-        if (len == 2 && data[0] == 0xff && data[1] == 0x00) {
+        if (len == 2 && data[0] == 0xff && data[1] == 0x00)
+        {
             ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a receipt from %s.", peer->name);
             peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
             add_to_history(&peer->espnow_info, false, ROB_OK);
             has_receipt = true;
             return;
-        } 
-        
+        }
+
         // Send a receipt
         uint8_t response[2];
         response[0] = 0xff;
         response[1] = 0x00;
-        esp_now_send_check(peer, &response,  2, false);
-        // Forward data
-        uint8_t *n_data = robusto_malloc(len);
-        memcpy(n_data, data, len);
-        add_to_history(&peer->espnow_info, false, robusto_handle_incoming(n_data, len, peer, robusto_mt_espnow, 0));
-        // robusto_free(data);
+
+        esp_now_send_check(peer, &response, 2, false);
+        if (!handled)
+        {
+            // Copy data a ESP-NOW frees it
+            uint8_t *n_data = robusto_malloc(len);
+            memcpy(n_data, data, len);
+            add_to_history(&peer->espnow_info, false, robusto_handle_incoming(n_data, len, peer, robusto_mt_espnow, 0));
+        }
     }
 }
-
 
 /**
  * @brief Sends a message through ESPNOW.
@@ -355,8 +364,6 @@ void espnow_do_on_work_cb(media_queue_item_t *work_item)
     send_work_item(work_item, &(work_item->peer->espnow_info), robusto_mt_espnow, &esp_now_send_message, &espnow_do_on_poll_cb, espnow_get_queue_context());
 }
 
-
-
 static esp_err_t espnow_init(void)
 {
 
@@ -385,12 +392,10 @@ static void espnow_deinit(espnow_send_param_t *send_param)
     esp_now_deinit();
 }
 
-
 void espnow_messaging_init(char *_log_prefix)
 {
     espnow_log_prefix = _log_prefix;
     espnow_init();
-
 }
 
 #endif

@@ -63,6 +63,11 @@ void tst_esp_now_message_send_message_sync(void)
 
 
 void tst_esp_now_message_send_presentation(char * dest) {
+    // Remove peer so that addition triggers presentation (immidiately)
+    robusto_peer_t * peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR));
+    if (peer) {
+        robusto_peers_delete_peer(peer->peer_handle);
+    }
 
 	// Send it.
 	add_peer_by_mac_address(dest, kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR), robusto_mt_espnow);
@@ -92,7 +97,7 @@ void tst_esp_now_message_send_message(void)
 
 void tst_esp_now_message_send_message_fragmented(void)
 {
-	r_delay(2000);
+	r_delay(4000);
 
 	ROB_LOGI("TEST", "In tst_espnow_message_send_message (fragmented).");
 

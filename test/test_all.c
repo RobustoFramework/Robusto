@@ -274,32 +274,6 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
 #endif
 
-#if 0
-    /**
-     * @brief Below is a test loop 
-     */
-
-    /* If the current device is the initator, it begins the loop by sending a message*/
-#if CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_I2C_LOOP_INITIATOR)
-    RUN_TEST(tst_i2c_message_send_message);
-    robusto_yield();
-#endif
-
-    /* All other devices will start by listening. (start these devices first) */
-    RUN_TEST(tst_i2c_message_receive_string_message);
-    robusto_yield();
-
-    /* If you are not the initiator, call the next.  */
-#if !defined(CONFIG_ROB_NETWORK_TEST_I2C_LOOP_INITIATOR) && CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR > -1
-#if CONFIG_ROB_NETWORK_TEST_I2C_CALL_ADDR == 1
-        //TODO: This is when you just run the initiator and a new board and the receipt doesn't work. Ugly AF.
-        r_delay(2000);
-#endif
-    r_delay(2000);
-    RUN_TEST(tst_i2c_message_send_message);
-    robusto_yield();
-#endif
-#endif
 
 #endif
 
@@ -343,7 +317,7 @@ void runUnityTests(void *pvParameters)
 
     /* Asynchronous testing*/
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR)
-
+    r_delay(4000);
     RUN_TEST(tst_esp_now_message_send_presentation, "TEST DEST");
     robusto_yield();
 
@@ -387,7 +361,6 @@ void runUnityTests(void *pvParameters)
 #endif
 
 
-
 #endif
 
 
@@ -395,7 +368,7 @@ void runUnityTests(void *pvParameters)
     r_delay(4000);
     /* Asynchronous testing*/
 
-#if 0
+
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     /* We will want to wait for BLE connections to establish */
     r_delay(4000);
@@ -426,7 +399,7 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_ble_message_send_message);
     robusto_yield();
 #endif
-#endif
+
     r_delay(4000);
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     RUN_TEST(tst_ble_message_send_message_fragmented);

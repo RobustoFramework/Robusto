@@ -219,9 +219,10 @@ typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data,
  * @param len Length of data
  * @param fragment_size The fragment size of the media
  * @param send_message A callback to be able to respond
+ * @return If true, send receipt (used in initialisation, but not with parts)
  */
 
-void handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
+bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
 
 
 /**
