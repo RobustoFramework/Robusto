@@ -1,6 +1,8 @@
 
 # Arduino Library Development file
 .development
+
+# C-cache
 cache
 # Atom
 *.tags
@@ -22,15 +24,17 @@ build
 # ESP-IDF dependencies
 managed_components
 dependencies.lock
+
 # Our secrets
 secret
 
 # Coverage output
 cov
 
+# Python
 __pycache__
 
-#Configs
+# Configs
 /.config.*
 /Kconfig.*
 /sdkconfig*
