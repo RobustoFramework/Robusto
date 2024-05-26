@@ -29,7 +29,7 @@ void ble_init_defs() {
 void tst_ble_message_send_presentation(char * dest) {
 
     ROB_LOGI("TEST", "In tst_ble_message_send_presentation.");
-	// Send it.
+	// They should already be presented to each other.
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR));
     TEST_ASSERT_NOT_NULL_MESSAGE(peer, "Peer was not found, had the hosts not found each other?");
     if ((!robusto_waitfor_byte(&(peer->state), PEER_KNOWN_INSECURE, 5000)))
