@@ -49,7 +49,7 @@
 #endif
 
 #ifndef USE_ARDUINO
-#include "sys/queue.h"
+#include <robusto_sys_queue.h>
 #endif
 
 #if !(defined(USE_ESPIDF) || defined(USE_ARDUINO))

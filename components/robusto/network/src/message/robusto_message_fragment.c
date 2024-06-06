@@ -41,7 +41,7 @@
 #include <freertos/semphr.h>
 #include <freertos/queue.h>
 #else
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 #endif
 #include <string.h>
 

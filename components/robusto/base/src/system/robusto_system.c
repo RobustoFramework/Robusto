@@ -198,7 +198,7 @@ bool robusto_gpio_get_level(uint8_t gpio_num)
 #elif defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING)
     return 1;
 #else
-    #warn "There is no GPIO implementation on the Native platform, "
+    #warning "There is no GPIO implementation on the Native platform, "
     return 0;
 #endif
 }

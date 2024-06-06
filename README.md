@@ -51,7 +51,7 @@ Features include:
 * Communication
   * redundant communication
     * central in/out queues and independent queues per media
-    * I2C, ESP-NOW, LoRa, CAN bus (TWAI) (and a UMTS/Cellular gateway)
+    * I2C, ESP-NOW, LoRa, BLE, CAN bus (TWAI) (and a UMTS/Cellular gateway)
     * scoring media
   * peer management
     * presentation, information exchange

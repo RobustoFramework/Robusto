@@ -38,7 +38,7 @@
 #include <stdbool.h>
 
 #ifndef USE_ARDUINO
-#include "sys/queue.h"
+#include <robusto_sys_queue.h>
 #else
 #include <compat/arduino_sys_queue.h>
 #endif

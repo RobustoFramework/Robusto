@@ -11,7 +11,7 @@
 #include "robusto_umts_queue.h"
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 #include <robusto_system.h>
 
 #include <robusto_logging.h>

@@ -32,7 +32,7 @@
 #include "robusto_media_def.h"
 #include "robusto_system.h"
 
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 
 #include <robusto_logging.h>
 #include <string.h>

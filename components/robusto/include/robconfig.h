@@ -44,8 +44,13 @@
 /* TODO: The STM32 platform is not properly defined, do that. It doesn't use USE_STM32, either, do that. */
 #define USE_STM32 
 #else
-/* If it is not an MCU, it is native*/
+/* Not and MCU, it is native*/
 #define USE_NATIVE
+
+/* But we also need to know if it is windows */
+#if defined(_WIN32) || defined(_WIN64)
+#define USE_WINDOWS
+#endif
 #endif
 
 // TODO: We need to get a proper fix of the environments to make proper choices; ESP-IDF, Arduino and STM32. And perhaps others.
