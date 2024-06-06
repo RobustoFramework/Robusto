@@ -33,11 +33,7 @@
 
 #include <robconfig.h>
 
-#ifndef USE_ARDUINO
-#include "sys/queue.h"
-#else
-#include <compat/arduino_sys_queue.h>
-#endif
+#include <robusto_sys_queue.h>
 
 #include <stdint.h>
 #include <stdbool.h>

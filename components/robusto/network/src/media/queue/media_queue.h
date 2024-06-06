@@ -44,7 +44,6 @@
  *      DEFINES
  *********************/
 
-#include <esp_err.h>
 
 #ifdef __cplusplus
 extern "C"

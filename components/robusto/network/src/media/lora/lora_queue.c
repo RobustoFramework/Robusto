@@ -35,7 +35,7 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 
 
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 
 #include <robusto_logging.h>
 #include <string.h>

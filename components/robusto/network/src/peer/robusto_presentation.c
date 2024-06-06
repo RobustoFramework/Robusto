@@ -37,7 +37,7 @@
 #include "robusto_queue.h"
 #include "robusto_qos.h"
 #include "string.h"
-#include "esp_heap_trace.h"
+
 static char *presentation_log_prefix;
 
 #define HI_POS 0

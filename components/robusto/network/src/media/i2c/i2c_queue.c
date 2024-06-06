@@ -32,7 +32,7 @@
 #include "i2c_queue.h"
 #if defined(CONFIG_ROBUSTO_SUPPORTS_I2C) 
 
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 
 #include <robusto_logging.h>
 #include <robusto_queue.h>

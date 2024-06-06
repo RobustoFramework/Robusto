@@ -192,33 +192,6 @@ lib_deps =
 ; to find and update the board, the rest defines how it presents
 ; itself after being updated.
 
-[env:STM32F03C8]
-; This board has been deemed to have too little RAM or Flash to work with robusto.
-platform=ststm32
-board = bluepill_f103c8
-lib_extra_dirs = test, components
-lib_compat_mode = off
-framework = arduino
-upload_protocol = hid
-upload_port = /dev/cu.usbmodem4E8D368338001
-monitor_port = /dev/cu.usbmodem4E8D368338001
-test_port = /dev/cu.usbmodem4E8D368338001
-test_framework= unity
-lib_deps = 
-  ${env.lib_deps}
-  stm32duino/STM32duino FreeRTOS@^10.3.2
-build_flags =
-  -D USBD_VID=0x0483
-  -D USBD_PID=0x5740
-  -D PIO_FRAMEWORK_ARDUINO_ENABLE_CDC
-  -D USBCON
-  -D USB_MANUFACTURER="Unknown"
-  -D USB_PRODUCT="BLUEPILL_F103C8"
-  -D HAL_PCD_MODULE_ENABLED
-  -DUNITY_OUTPUT_CHAR=robusto_test_log
-
-monitor_dtr = 1
-
 [env:STM32F407VE]
 platform = ststm32
 board = black_f407ve
@@ -255,3 +228,30 @@ monitor_dtr = 1
 ; upload_port = /dev/cu.usbserial-142320
 ; test_port = /dev/cu.usbserial-142320
 ; monitor_rts = 0 ; AIR105 board has inverted RTS
+
+[env:STM32F03C8]
+; This board has been deemed to have too little RAM or Flash to work with robusto.
+platform=ststm32
+board = bluepill_f103c8
+lib_extra_dirs = test, components
+lib_compat_mode = off
+framework = arduino
+upload_protocol = hid
+upload_port = /dev/cu.usbmodem4E8D368338001
+monitor_port = /dev/cu.usbmodem4E8D368338001
+test_port = /dev/cu.usbmodem4E8D368338001
+test_framework= unity
+lib_deps = 
+  ${env.lib_deps}
+  stm32duino/STM32duino FreeRTOS@^10.3.2
+build_flags =
+  -D USBD_VID=0x0483
+  -D USBD_PID=0x5740
+  -D PIO_FRAMEWORK_ARDUINO_ENABLE_CDC
+  -D USBCON
+  -D USB_MANUFACTURER="Unknown"
+  -D USB_PRODUCT="BLUEPILL_F103C8"
+  -D HAL_PCD_MODULE_ENABLED
+  -DUNITY_OUTPUT_CHAR=robusto_test_log
+
+monitor_dtr = 1

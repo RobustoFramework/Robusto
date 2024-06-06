@@ -36,7 +36,7 @@
 #endif
 #include <robusto_logging.h>
 #include <robusto_init_internal.h>
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 
 typedef struct service
 {

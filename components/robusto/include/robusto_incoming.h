@@ -39,7 +39,7 @@
 #include <robusto_message.h>
 #include <robusto_peer.h>
 #ifndef USE_ARDUINO
-#include "sys/queue.h"
+#include <robusto_sys_queue.h>
 #endif
 
 

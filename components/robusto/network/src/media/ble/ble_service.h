@@ -5,7 +5,7 @@
 #pragma once
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 
 
 /* 16 Bit SPP Service UUID */

@@ -5,7 +5,7 @@
 #include <robusto_queue.h>
 
 #ifndef USE_ARDUINO
-#include "sys/queue.h"
+#include <robusto_sys_queue.h>
 #endif
 
 

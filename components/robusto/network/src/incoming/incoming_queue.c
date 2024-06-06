@@ -34,7 +34,7 @@
 #ifdef USE_ARDUINO
 #include "compat/arduino_sys_queue.h"
 #else
-#include <sys/queue.h>
+#include <robusto_sys_queue.h>
 #include <stddef.h>
 #include <stdlib.h>
 #endif

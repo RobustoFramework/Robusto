@@ -52,9 +52,17 @@
     typedef TaskHandle_t rob_task_handle_t;
     typedef SemaphoreHandle_t mutex_ref_t;
 #else
+
 #include <semaphore.h>
-typedef uint32_t rob_task_handle_t;
-typedef pthread_mutex_t *mutex_ref_t;
+    typedef uint32_t rob_task_handle_t;
+
+#ifndef USE_WINDOWS
+    typedef pthread_mutex_t *mutex_ref_t;
+#else
+    #include <windows.h>
+    typedef HANDLE mutex_ref_t;
+#endif
+
 #endif
 
 #ifdef __cplusplus

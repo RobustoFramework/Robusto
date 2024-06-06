@@ -13,7 +13,7 @@
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #include <stdbool.h>
-#include "sys/queue.h"
+#include <robusto_sys_queue.h>
 
 #include <inttypes.h>
 #include <host/ble_gatt.h>
