@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+    "settings": {
+        "files.associations": {
+            "ble_global.h": "c",
+            "ble_hs.h": "c",
+            "robusto_time.h": "c",
+            "tst_ble_message_sending.h": "c",
+            "robusto_logging.h": "c",
+            "robusto_message.h": "c"
+        }
+    }
+}
