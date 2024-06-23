@@ -219,7 +219,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
         ROB_LOGE(message_sending_log_prefix, "The peer is not set!");
         return ROB_FAIL;
     }
-
+    uint8_t *dest_message = NULL;
     e_media_type media_type;
     if (force_media_type == robusto_mt_none) {
         rob_ret_val_t suitability_res = set_suitable_media(peer, strings_length + binary_length, robusto_mt_none, &media_type);
@@ -231,7 +231,6 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
         media_type = force_media_type;
     }
 
-    uint8_t *dest_message;
     uint32_t message_length = robusto_make_multi_message_internal(MSG_MESSAGE, service_id, conversation_id,
                                                         strings_data, strings_length, binary_data, binary_length, &dest_message);
 

@@ -353,7 +353,6 @@ void create_topic_recovery_task(subscribed_topic_t *topic)
 void robusto_pubsub_check_topics()
 {
     subscribed_topic_t *curr_topic = first_subscribed_topic;
-    ROB_LOGI(pubsub_client_log_prefix, "Check");
     while (curr_topic)
     {
         if (curr_topic->restoring)
