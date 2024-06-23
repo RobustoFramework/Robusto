@@ -12,8 +12,7 @@
 #include "hal/adc_types.h"
 #endif
 
-#define MOVEMENT_TOLERANCE 5U
-#define MINIMUM_VOLTAGE 150
+
 
 SLIST_HEAD(resistor_monitors_head, resistor_monitor);
 struct resistor_monitors_head monitors_head;
@@ -210,17 +209,17 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
         adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &value1);
         adc_oneshot_get_calibrated_result(monitor->adc_handle, monitor->cali_handle, monitor->adc_channel, &value2);
 #endif
-        if (value2 < value1 - MOVEMENT_TOLERANCE || value2 > value1 + MOVEMENT_TOLERANCE)
+        if (value2 < value1 - CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE || value2 > value1 + CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE)
         {
             // Filter large movements
-            ROB_LOGD(input_log_prefix, "Filter out movements > %u mV %i", MOVEMENT_TOLERANCE, (int)value1 - (int)value2);
+            ROB_LOGD(input_log_prefix, "Filter out movements > %u mV %i", CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE, (int)value1 - (int)value2);
             return ROB_OK;
         }
         adc_voltage = (double)(value1 + value2) / 2.0;
 
-        if ((first_voltage > 0) && ((first_voltage < adc_voltage - MOVEMENT_TOLERANCE) || (first_voltage > adc_voltage + MOVEMENT_TOLERANCE)))
+        if ((first_voltage > 0) && ((first_voltage < adc_voltage - CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE) || (first_voltage > adc_voltage + CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE)))
         {
-            ROB_LOGD(input_log_prefix, "Filter out > %u mv change between first and second average  %1.f", MOVEMENT_TOLERANCE, first_voltage - adc_voltage);
+            ROB_LOGD(input_log_prefix, "Filter out > %u mv change between first and second average  %1.f", CONFIG_ROBUSTO_INPUT_MOVEMENT_TOLERANCE, first_voltage - adc_voltage);
             return ROB_OK;
         }
         else
@@ -228,9 +227,9 @@ rob_ret_val_t robusto_input_check_resistor_monitor(resistor_monitor_t *monitor)
             first_voltage = adc_voltage;
         }
 
-        if ((monitor->R2_check_resistor > 0) && (adc_voltage < MINIMUM_VOLTAGE))
+        if ((monitor->R2_check_resistor > 0) && (adc_voltage < CONFIG_ROBUSTO_INPUT_MINIMUM_VOLTAGE))
         {
-            ROB_LOGE(input_log_prefix, "Voltage beneath %u mV, possible short or disconnect!", MINIMUM_VOLTAGE);
+            ROB_LOGE(input_log_prefix, "Voltage beneath %u mV, possible short or disconnect!", CONFIG_ROBUSTO_INPUT_MINIMUM_VOLTAGE);
             // TODO: Handle failure in some way
             return ROB_FAIL;
         }

@@ -7,6 +7,17 @@ menu "Input"
             The Robusto input service is responsible for handling and distributing information about inputs.
             Inputs are gpios, buttons, and similar.
 
+    config ROBUSTO_INPUT_MOVEMENT_TOLERANCE
+        int "The tolerance for voltage fluctuations in millivolts"
+        depends on ROBUSTO_INPUT
+        default 7   
+    config ROBUSTO_INPUT_MINIMUM_VOLTAGE
+        int "Minimum voltage in millivolts before considering it a short circuit or disconnect"
+        depends on ROBUSTO_INPUT
+        default 150
+
+
+
     config ROBUSTO_INPUT_ADC_MONITOR
 		bool "Enable the Robusto ADC monitor and mapper"
 		default 0
@@ -44,5 +55,5 @@ menu "Input"
         int "The number of resistances to monitor"
         depends on ROBUSTO_INPUT_ADC_MONITOR
         default 0
-    
+
 endmenu
