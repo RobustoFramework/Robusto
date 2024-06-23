@@ -154,7 +154,7 @@ void incoming_callback(robusto_message_t *message)
             ROB_LOGW(pubsub_client_log_prefix, "Server told us that the topic %s (topic hash %lu) is unknown,", curr_topic->topic_name, curr_topic->topic_hash);
             set_topic_state(curr_topic, TOPIC_STATE_UNKNOWN);
         } else {
-            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", curr_topic->topic_hash);
+            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", *(uint32_t *)(message->binary_data + 1));
         }
         
     } else
