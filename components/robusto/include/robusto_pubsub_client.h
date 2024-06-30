@@ -21,6 +21,7 @@ typedef enum
     TOPIC_STATE_INACTIVE, /* The topic in inactive */
     TOPIC_STATE_ACTIVE, /* The topic is inactive */
     TOPIC_STATE_PROBLEM, /* The topic has some problems */
+    TOPIC_STATE_RECOVERING, /* We have recently published data */
     TOPIC_STATE_UNKNOWN, /* The topic is unknown by the server */
     TOPIC_STATE_PUBLISHED, /* We have recently published data */
     TOPIC_STATE_STALE, /* Haven't gotten or published data in stale_time_ms */
@@ -46,8 +47,6 @@ struct subscribed_topic
     uint32_t stale_time_ms;
     /* Calculated hash used for referencing the topic */
     uint32_t topic_hash;
-    /* Is being restored*/
-    bool restoring;
     /* The peer */
     robusto_peer_t *peer;
     /* A conversation ID for communication */

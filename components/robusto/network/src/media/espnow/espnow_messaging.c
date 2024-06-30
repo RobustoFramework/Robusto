@@ -52,13 +52,12 @@
 
 static char *espnow_log_prefix;
 
-#define ESPNOW_MAXDELAY 512
 #define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN - 10)
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
 static bool has_receipt = false;
-static esp_now_send_status_t send_status = ESP_NOW_SEND_FAIL;
+static int send_status = -1;
 
 // For synchronously reading async data
 static uint8_t *synchro_data = NULL;
@@ -69,9 +68,12 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
 {
 
     // TODO: Recommend more wifi TX buffers and add warning if not enabled
-    has_receipt = false;
+    
     ROB_LOGD(espnow_log_prefix, "esp_now_send_check, sending %lu bytes.", data_length);
     int rc = esp_now_send(&peer->base_mac_address, data, data_length);
+    send_status = -1;
+    has_receipt = false;
+
     if (rc != ESP_OK)
     {
         ROB_LOGE(espnow_log_prefix, "Mac address:");
@@ -90,7 +92,8 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         }
         else if (rc == ESP_ERR_ESPNOW_NO_MEM)
         {
-            ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM");
+            ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Will delay a short while to let it free its memory.");
+            r_delay(3000);
         }
         else if (rc == ESP_ERR_ESPNOW_FULL)
         {
@@ -121,15 +124,29 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
+    // We will wait here until the message was sent, for 2 seconds
+    int32_t start_send = r_millis();
+    while ((send_status < 0) && (r_millis() < start_send + 2000))
+    {
+        robusto_yield();
+    }
 
+    if (send_status == ESP_NOW_SEND_FAIL) {
+        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission failed completing after %lu ms. Peer: %s", r_millis() - start_send, peer->name);
+        return ROB_FAIL;
+    }
+    if (send_status < 0) {
+        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete in time (2000 ms). Peer: %s", peer->name);
+        return ROB_FAIL;
+    }
     if (!receipt)
     {
         return rc;
     }
 
-    // We want to wait to make sure the transmission is done.
+    // We want to wait to make sure the transmission is received successfully.
     int32_t start = r_millis();
-    while ((!has_receipt) && (r_millis() < start + 2000))
+    while ((!has_receipt) && (r_millis() < start + 500))
     {
         robusto_yield();
     }
@@ -281,13 +298,14 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             has_receipt = true;
             return;
         }
-
         // Send a receipt
         uint8_t response[2];
         response[0] = 0xff;
         response[1] = 0x00;
-
-        esp_now_send_check(peer, &response, 2, false);
+        // NOTE: We are calling esp_now_send directly here as we are calling it inside of the receive callback
+        if (esp_now_send(&peer->base_mac_address, &response, 2) != ROB_OK) {
+            ROB_LOGE(espnow_log_prefix, ">> espnow_recv_cb failed to send a receipt to %s.", peer->name);
+        }
         if (!handled)
         {
             // Copy data a ESP-NOW frees it

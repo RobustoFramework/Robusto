@@ -308,16 +308,19 @@ void send_work_item(media_queue_item_t * queue_item, robusto_media_t *info, e_me
 
         add_to_history(info, true, retval);
     } else {
-        ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %i is recovering, we need to try some other media for a message (%i, %i)", queue_item->peer->name, media_type, info->state, queue_item->queue_item_type );
+        
+        ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %i is recovering, we might need to try some other media for a message (%i, %i)", queue_item->peer->name, media_type, info->state, queue_item->queue_item_type );
     }
 
     if ((retval != ROB_OK) && // We only try other medias if we have failed..
     (queue_item->receipt) && // ..and if it is receipt required, then we infer that we will try with multiple medias
-    (retval != ROB_ERR_WHO)) // ..or if the peer knew who we were (it will only respond to unknowns on wired connections)
+    (retval != ROB_ERR_WHO) && // ..or if the peer knew who we were (it will only respond to unknowns on wired connections)
+    (get_host_supported_media_types() != (queue_item->exclude_media | media_type))) // And that there are no other medias to try
     {
         e_media_type next_media_type;
         // Add current media type to excluded media
         queue_item->exclude_media = queue_item->exclude_media | media_type;
+
         ROB_LOGW(message_sending_log_prefix, "Failed sending using %s, will try some other media.", media_type_to_str(media_type));
         // Check suitability again to find another media to try
         rob_ret_val_t suitability_res = set_suitable_media(queue_item->peer, queue_item->data_length, queue_item->exclude_media, &next_media_type);

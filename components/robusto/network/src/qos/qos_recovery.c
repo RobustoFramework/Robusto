@@ -78,7 +78,9 @@ void task_recover(recover_params_t *params)
                 set_state(peer, params->info, media_type, media_state_working, media_problem_none);
                 rec_retval = ROB_OK;
             } else {
+                set_state(peer, params->info, media_type, media_state_problem, media_problem_unknown);
                 ROB_LOGW(recovery_log_prefix, ">> Sending presentation failed");
+                rec_retval = ROB_FAIL;
             }
         }
         params->info->postpone_qos = false;
@@ -88,7 +90,7 @@ void task_recover(recover_params_t *params)
             send_heartbeat_message(peer, media_type);
         }
     }
-
+    
     robusto_delete_current_task();
 }
 

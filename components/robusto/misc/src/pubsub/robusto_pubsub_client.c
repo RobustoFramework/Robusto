@@ -154,7 +154,7 @@ void incoming_callback(robusto_message_t *message)
             ROB_LOGW(pubsub_client_log_prefix, "Server told us that the topic %s (topic hash %lu) is unknown,", curr_topic->topic_name, curr_topic->topic_hash);
             set_topic_state(curr_topic, TOPIC_STATE_UNKNOWN);
         } else {
-            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", *(uint32_t *)(message->binary_data + 1));
+            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", curr_topic->topic_hash);
         }
         
     } else
@@ -255,7 +255,6 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
     new_topic->next = NULL;
     new_topic->peer = peer;
     new_topic->topic_hash = 0;
-    new_topic->restoring = false;
     new_topic->callback = callback;
     new_topic->display_offset = display_offset;
     new_topic->state = TOPIC_STATE_UNSET;
@@ -302,7 +301,7 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
         msg[0] = PUBSUB_GET_TOPIC;
     }
 
-    ROB_LOGE(pubsub_client_log_prefix, "Sending subscription for %s conversation_id %u!", topic_name, new_topic->conversation_id);
+    ROB_LOGE(pubsub_client_log_prefix, "Sending subscription for %s conversation_id %u, hash: %lu", topic_name, new_topic->conversation_id, new_topic->topic_hash);
     rob_ret_val_t ret_sub = send_message_binary(peer, PUBSUB_SERVER_ID, new_topic->conversation_id, (uint8_t *)msg, data_length, NULL);
     if (ret_sub != ROB_OK) {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, failed to queue or send message %s.", new_topic->topic_name);
@@ -327,18 +326,28 @@ void recover_topic(subscribed_topic_t *topic)
     if (topic->state == TOPIC_STATE_PROBLEM && !robusto_waitfor_byte_change(&topic->state, 1000) != ROB_OK)
     {
         ROB_LOGE(pubsub_client_log_prefix, "Failed to recover %s using the %s peer", topic->topic_name, topic->peer->name);
+        topic->state = TOPIC_STATE_PROBLEM;
+        r_delay(5000);
     }
     else
     {
         // A successful incoming call will set the state to inactive or active elsewhere
         ROB_LOGI(pubsub_client_log_prefix, "Recovered %s using the %s peer!", topic->topic_name, topic->peer->name);
+        topic->state = TOPIC_STATE_ACTIVE;
     }
-    topic->restoring = false;
+    
     robusto_delete_current_task();
 }
 
 void create_topic_recovery_task(subscribed_topic_t *topic)
 {
+    topic->state = TOPIC_STATE_RECOVERING;
+
+    if (topic->peer->state < PEER_KNOWN_INSECURE){
+       ROB_LOGW(pubsub_client_log_prefix, "Not creating a topic recovery task for %s topic, peer %s because the peer is not working properly.",
+             topic->topic_name, topic->peer->name); 
+        return;
+    }
     ROB_LOGW(pubsub_client_log_prefix, "Creating a topic recovery task for %s topic, peer %s",
              topic->topic_name, topic->peer->name);
     char *task_name;
@@ -355,7 +364,7 @@ void robusto_pubsub_check_topics()
     subscribed_topic_t *curr_topic = first_subscribed_topic;
     while (curr_topic)
     {
-        if (curr_topic->restoring)
+        if (curr_topic->state == TOPIC_STATE_RECOVERING)
         {
             // Do nothing regardless of state to not disturb any existing recovery processes
         }
@@ -365,7 +374,7 @@ void robusto_pubsub_check_topics()
             if (curr_topic->peer->problematic_media_types != curr_topic->peer->supported_media_types)
             {
                 create_topic_recovery_task(curr_topic);
-                r_delay(1000);
+                r_delay(5000);
             }
         }
 

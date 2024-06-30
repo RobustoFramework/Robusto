@@ -97,7 +97,7 @@ uint32_t robusto_pubsub_add_subscriber(pubsub_server_topic_t *topic, robusto_pee
     pubsub_server_subscriber_t * existing = find_subscription_by_subscriber_hash(topic, peer);
     // TODO: Handle cases where adding with only callback, they might be double
     if (existing) {
-        ROB_LOGW(pubsub_log_prefix, "%s asked to subscribe to %s, but is already a subscriber, returning hash.", peer->name, topic->name);
+        ROB_LOGW(pubsub_log_prefix, "%s asked to subscribe to %s, but is already a subscriber, returning hash: %lu.", peer->name, topic->name, topic->hash);
         return topic->hash;
     }
 

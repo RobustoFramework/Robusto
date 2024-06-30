@@ -48,6 +48,9 @@ void rob_log_write(rob_log_level_t level,
     va_end(list);
 }
 #endif
+
+// TODO: Add a Mac address log function
+
 // TODO: Move rob_log_bit_mesh into a macro instead so we don't need this.
 void rob_log_bit_mesh(rob_log_level_t level,
                       const char *tag,

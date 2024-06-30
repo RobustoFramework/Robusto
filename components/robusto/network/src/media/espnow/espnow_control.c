@@ -50,7 +50,8 @@ static char *espnow_log_prefix;
 
 void init_wifi()
 {
-
+    ROB_LOGI(espnow_log_prefix, "Creating default event loop.");
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     ROB_LOGI(espnow_log_prefix, "Initializing wifi (for ESP-NOW)");
     ESP_ERROR_CHECK(esp_netif_init());
     ROB_LOGI(espnow_log_prefix, "esp_netif_init done.");

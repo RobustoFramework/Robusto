@@ -133,9 +133,14 @@ void working_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 // Problem state behavior
 void problem_state(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type)
 {
-    // Has it been having a problem more than one cycle, mark it as as recovering.
+    
+    if (info->state == media_state_recovering) {
+        // If is in recovery, do nothing.
+        return;
+    }
     if (info->last_state_change < last_heartbeat_time - 1000)
     {
+        // Has it been having a problem more than one cycle, mark it as as recovering and initiate recovery
         ROB_LOGE(qos_state_log_prefix, "%s, media type %s has had a problem for too long, going into recovery.", peer->name, media_type_to_str(media_type));
         set_state(peer, info, media_type, media_state_recovering, info->problem);
         recover_media(peer, info, last_heartbeat_time, media_type);
