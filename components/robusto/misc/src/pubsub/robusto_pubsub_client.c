@@ -154,7 +154,7 @@ void incoming_callback(robusto_message_t *message)
             ROB_LOGW(pubsub_client_log_prefix, "Server told us that the topic %s (topic hash %lu) is unknown,", curr_topic->topic_name, curr_topic->topic_hash);
             set_topic_state(curr_topic, TOPIC_STATE_UNKNOWN);
         } else {
-            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", curr_topic->topic_hash);
+            ROB_LOGW(pubsub_client_log_prefix, "Server told us that the %lu topic hash is unknown, it is to us too, newly removed?", *(uint32_t *)(message->binary_data + 1));
         }
         
     } else
@@ -341,13 +341,14 @@ void recover_topic(subscribed_topic_t *topic)
 
 void create_topic_recovery_task(subscribed_topic_t *topic)
 {
-    topic->state = TOPIC_STATE_RECOVERING;
+    
 
     if (topic->peer->state < PEER_KNOWN_INSECURE){
        ROB_LOGW(pubsub_client_log_prefix, "Not creating a topic recovery task for %s topic, peer %s because the peer is not working properly.",
              topic->topic_name, topic->peer->name); 
         return;
     }
+    topic->state = TOPIC_STATE_RECOVERING;
     ROB_LOGW(pubsub_client_log_prefix, "Creating a topic recovery task for %s topic, peer %s",
              topic->topic_name, topic->peer->name);
     char *task_name;
