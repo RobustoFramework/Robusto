@@ -48,7 +48,8 @@ void robusto_misc_start() {
     robusto_pubsub_server_start();
     #endif
     #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_start();
+    //  Note that this has been deliberately commented is, that this probably has to be like this.
+    //  robusto_pubsub_client_start();
     #endif
 }
 
@@ -60,7 +61,8 @@ void robusto_misc_init(char * _log_prefix) {
     #endif
     
     #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-//    robusto_pubsub_client_init();
+    //  Note that this has been deliberately commented is, that this probably has to be like this.
+    //  robusto_pubsub_client_init();
     #endif   
     #ifdef CONFIG_ROBUSTO_UMTS_SERVER
     robusto_umts_init(_log_prefix);

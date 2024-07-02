@@ -1,4 +1,5 @@
 #include <robconfig.h>
+#include <robusto_retval.h>
 #ifdef CONFIG_ROBUSTO_UI
 #include "lvgl.h"
 
