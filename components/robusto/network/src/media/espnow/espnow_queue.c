@@ -51,11 +51,16 @@ media_queue_item_t *espnow_first_queueitem()
     return STAILQ_FIRST(&espnow_work_q); 
 }
 
-void espnow_remove_first_queue_item(){
+void espnow_remove_first_queue_item(queue_context_t * q_context){
     STAILQ_REMOVE_HEAD(&espnow_work_q, items);
+    q_context->count--;
 }
 void espnow_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
     STAILQ_INSERT_TAIL(&espnow_work_q, new_item, items);
+    q_context->count++;
+    if (q_context->count > 5) {
+        ROB_LOGW(espnow_worker_log_prefix, "espnow_queue has %hu items!", q_context->count);
+    }
 }
 
 queue_context_t *espnow_get_queue_context() {

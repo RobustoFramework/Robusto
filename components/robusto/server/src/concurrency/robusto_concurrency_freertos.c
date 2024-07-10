@@ -49,8 +49,8 @@ rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *par
 {    
     #ifdef USE_ARDUINO // Arduino seems to only support one core
     int rc = xTaskCreate(task_function, task_name, memory, parameter, 8, handle);
-    #else
-    int rc = xTaskCreatePinnedToCore(task_function, task_name, memory, parameter, 8, handle, 0);
+    #else 
+    int rc = xTaskCreatePinnedToCore(task_function, task_name, memory, parameter, 8, handle, affinity);
     #endif
     if (rc == pdTRUE)
     {
@@ -63,7 +63,7 @@ rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *par
 // TODO: This interface has to be finalized, the handle for example, and affinity
 rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity)  
 {
-    return robusto_create_task_custom(task_function, parameter, task_name, handle, 0, 8192);
+    return robusto_create_task_custom(task_function, parameter, task_name, handle, affinity, 8192);
 }
 
 rob_ret_val_t robusto_delete_current_task() {

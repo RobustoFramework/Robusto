@@ -214,8 +214,9 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
     else if (
         // Did the peer hear from us at about the penultimate heartbeat time we tried to reach them?
         (last_heartbeat_time > 100) && (info->last_peer_receive > 0) &&
-        (last_heartbeat_time > HEARD_FROM_LIMIT) &&
-        (info->last_peer_receive < (last_heartbeat_time - HEARD_FROM_LIMIT)))
+        (last_heartbeat_time > HEARD_FROM_LIMIT) &&  // Have we been running for long enough 
+        (info->last_receive > (last_heartbeat_time - HEARD_FROM_LIMIT)) && // If it is old information, we do not know if they haven't heard from us since then
+        (info->last_peer_receive < (last_heartbeat_time - HEARD_FROM_LIMIT))) // They haven't heard from ut for too long
     {
         if (info->problem != media_problem_cannot_reach)
         {
