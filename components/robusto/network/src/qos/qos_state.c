@@ -49,7 +49,7 @@ void qos_state_cb();
 void qos_state_shutdown_cb();
 
 #define HEARTBEAT_DELAY (CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT * CONFIG_ROBUSTO_REPEATER_DELAY_MS)
-#define HEARD_FROM_LIMIT (HEARTBEAT_DELAY * 2)
+#define HEARD_FROM_LIMIT (HEARTBEAT_DELAY * 6)
 #define LAST_PEER_RECEIVED_LIFESPAN 1
 
 static char qos_state_name[19] = "QoS\x00";
