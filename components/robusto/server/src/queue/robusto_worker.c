@@ -40,13 +40,11 @@
 #include <assert.h>
 #endif
 
-
 #include <robusto_concurrency.h>
 #include <robusto_time.h>
 #include <robusto_system.h>
 /* The log prefix for all logging */
 static char *robusto_worker_log_prefix;
-
 
 void *safe_get_head_work_item(queue_context_t *q_context)
 {
@@ -92,14 +90,15 @@ void cleanup_queue_task(queue_context_t *q_context)
 {
     ROB_LOGI(robusto_worker_log_prefix, "Cleaning up tasks.");
     alter_task_count(q_context, -1);
-    if (q_context->multitasking) {
+    if (q_context->multitasking)
+    {
         // If we do this when it is not multitasking, we kill the entire queue worker task.
         robusto_delete_current_task();
     }
-    
 }
 
-void log_queue_context(queue_context_t *q_context) {
+void log_queue_context(queue_context_t *q_context)
+{
     ROB_LOGI(robusto_worker_log_prefix, "%s. More info: ", q_context->worker_task_name);
     ROB_LOGI(robusto_worker_log_prefix, "on_work_cb: %p", q_context->on_work_cb);
     ROB_LOGI(robusto_worker_log_prefix, "on_poll_cb: %p", q_context->on_poll_cb);
@@ -168,12 +167,11 @@ static void robusto_worker(queue_context_t *q_context)
                 {
                     ROB_LOGD(robusto_worker_log_prefix, ">> Running single task callback on_work. Worker address %p, work address %p.", (void *)(q_context->on_work_cb), (void *)(curr_work));
                     q_context->on_work_cb(curr_work);
-                    
                 }
                 robusto_yield();
             }
         }
-        
+
         /* If defined, call the poll callback. */
         if (q_context->on_poll_cb != NULL)
         {
@@ -183,7 +181,7 @@ static void robusto_worker(queue_context_t *q_context)
     }
     ROB_LOGI(robusto_worker_log_prefix, "Worker task %s shut down, deleting task.", q_context->worker_task_name);
     // TODO: Should there be some freeing of semaphore here?
-    //free(q_context->__x_queue_mutex);
+    // free(q_context->__x_queue_mutex);
 
     robusto_mutex_deinit(q_context->__x_queue_mutex);
     robusto_mutex_deinit(q_context->__x_task_state_mutex);
@@ -204,10 +202,19 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
                  queue_name);
         return ROB_ERR_INIT_FAIL;
     }
+    // Default if not set
+    if (q_context->normal_max_count == 0)
+    {
+        q_context->normal_max_count = 3;
+    }
+    if (q_context->important_max_count == 0)
+    {
+        q_context->important_max_count = 5;
+    }
 
     /* Create semaphores to ensure thread safety (queue and tasks) */
     q_context->__x_queue_mutex = robusto_mutex_init();
-    
+
     assert(q_context->__x_queue_mutex);
     q_context->__x_task_state_mutex = robusto_mutex_init();
     assert(q_context->__x_task_state_mutex);
@@ -227,6 +234,7 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
      * applications on 1, traditionally called APP
      * TODO: Should we try to allocate these tasks statically using xTaskCreateStatic or/and xTaskCreateRestrictedStatic?
      */
+    // TODO: Apps aren't actually run on 1? So should we move these to 1 instead?
     ROB_LOGI(robusto_worker_log_prefix, "Register the worker task. Name: %s", q_context->worker_task_name);
     /* We obviously don't immidiately want to shutdown the worker just because someone haven't set shutdown to false. */
     q_context->shutdown = false;
@@ -236,7 +244,7 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
         ROB_LOGE(robusto_worker_log_prefix, "Failed creating worker task, returned: %i (see projdefs.h)", rc);
         return ROB_ERR_INIT_FAIL;
     }
-    
+
     ROB_LOGI(robusto_worker_log_prefix, "Worker task registered.");
 
     return ROB_OK;

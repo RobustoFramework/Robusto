@@ -123,7 +123,9 @@ typedef enum e_robusto_return_codes
     /* Couldn't get a semaphore to successfully lock a resource for thread safe usage. */
     ROB_ERR_MUTEX = RBC_CC - 1,
     /* General RTOS error.  ESP32: See enum os_error in os/os_error.h for meaning of values when debugging */
-    ROB_ERR_OS_ERROR = RBC_CC - 2
+    ROB_ERR_OS_ERROR = RBC_CC - 2,
+    /* Queue was full */
+    ROB_ERR_QUEUE_FULL = RBC_CC - 3
 
 } e_robusto_return_codes;
 

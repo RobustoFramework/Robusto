@@ -182,7 +182,10 @@ extern "C"
 
         /* The current number of items */
         uint8_t count;
-
+        /* The max number of items where normal items are dropped */
+        uint8_t normal_max_count;
+        /* The current number of items where important items are dropped */
+        uint8_t important_max_count;
         /* If set, the queue will not process any items */
         bool blocked;
         /* If set, worker will shut down */

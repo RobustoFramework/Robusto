@@ -125,13 +125,23 @@ bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_re
 }
 
 
-rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item)
+rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bool important)
 {
     if (q_context->shutdown)
     {
         ROB_LOGE(q_context->log_prefix, "The queue is shut down.");
         return ROB_ERR_MUTEX;
-    }
+    } 
+    
+    if (q_context->count > q_context->normal_max_count) {
+        if (!important) {
+            return ROB_ERR_QUEUE_FULL;
+        } else 
+        if (q_context->count > q_context->important_max_count) {
+            return ROB_ERR_QUEUE_FULL;
+        } 
+    } 
+
     if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, (q_context->watchdog_timeout-1) * 1000)) // TODO: Not fond of max delay here, what should it be?
     {
         /* As the worker takes the queue from the head, and we want a LIFO, add the item to the tail */

@@ -246,9 +246,9 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     {
         /* We didn't find the peer */
         ROB_LOGW(espnow_log_prefix, "<< espnow_recv_cb got a message from an unknown peer. Data:");
-        rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, data, len);
-        ROB_LOGW(espnow_log_prefix, "<< Mac address:");
-        rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, data, len);
+        ROB_LOGI(espnow_log_prefix, "<< Mac address:");
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
         if (data[ROBUSTO_CRC_LENGTH] != 0x42)
         {
             // If it is unknown, and not a presentation, disregard

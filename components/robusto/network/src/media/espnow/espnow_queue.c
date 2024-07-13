@@ -98,6 +98,8 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     espnow_queue_context.on_work_cb = work_cb; 
     espnow_queue_context.on_poll_cb = poll_cb;
     espnow_queue_context.max_task_count = 1;
+    espnow_queue_context.normal_max_count = 3;
+    espnow_queue_context.important_max_count = 5;
     espnow_queue_context.multitasking = false;
     // This queue cannot start processing items until espnow is initialized
     espnow_queue_context.blocked = true;

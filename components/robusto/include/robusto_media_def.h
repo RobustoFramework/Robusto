@@ -198,7 +198,8 @@ typedef struct media_queue_item
     bool receipt;
     /* How many levels have we recursed (trying other medias and so on)*/
     uint8_t depth;
-
+    /* This is an important queue item */
+    bool important;
     /* Queue reference */
     STAILQ_ENTRY(media_queue_item)
     items;
