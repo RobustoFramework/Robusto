@@ -344,7 +344,7 @@ void espnow_do_on_work_cb(media_queue_item_t *work_item)
 {
 
     ROB_LOGD(espnow_log_prefix, ">> In ESP-NOW work callback.");
-    send_work_item(work_item, &(work_item->peer->espnow_info), robusto_mt_espnow, &esp_now_send_message, &espnow_do_on_poll_cb, espnow_get_queue_context());
+    send_work_item(work_item, &(work_item->peer->espnow_info), robusto_mt_espnow, &esp_now_send_message, NULL, espnow_get_queue_context());
 }
 
 static esp_err_t espnow_init(void)
