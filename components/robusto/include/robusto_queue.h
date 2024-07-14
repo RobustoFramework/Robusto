@@ -143,7 +143,7 @@ extern "C"
     typedef void *(first_queueitem)(queue_context_t *q_context);
     typedef void(remove_first_queueitem)(queue_context_t *q_context);
 
-    typedef void(insert_tail)(queue_context_t *q_context, void *new_item);
+    typedef void(insert_queue_item)(queue_context_t *q_context, void *new_item);
 
     typedef void(work_callback)(void *q_work_item);
 
@@ -154,8 +154,8 @@ extern "C"
         /* Queue management callbacks, needed because of the difficulties in passing queues as pointers */
         first_queueitem *first_queue_item_cb;
         remove_first_queueitem *remove_first_queueitem_cb;
-        insert_tail *insert_tail_cb;
-
+        insert_queue_item *insert_tail_cb;
+        insert_queue_item *insert_head_cb;
         /* Mandatory callback that handles incoming work items */
         work_callback *on_work_cb;
 
@@ -199,7 +199,7 @@ extern "C"
         mutex_ref_t __x_task_state_mutex; // Thread-safe the tasks
     } queue_context_t;
 
-    rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item);
+    rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bool important);
 
     rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, const char *queue_name);
 

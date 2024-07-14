@@ -93,6 +93,7 @@ rob_ret_val_t lora_init_worker(work_callback work_cb, poll_callback poll_cb, cha
     lora_queue_context.first_queue_item_cb = &lora_first_queueitem; 
     lora_queue_context.remove_first_queueitem_cb = &lora_remove_first_queue_item; 
     lora_queue_context.insert_tail_cb = &lora_insert_tail;
+    lora_queue_context.insert_head_cb = NULL;
     lora_queue_context.on_work_cb = work_cb; 
     lora_queue_context.on_poll_cb = poll_cb;
     lora_queue_context.max_task_count = 1;

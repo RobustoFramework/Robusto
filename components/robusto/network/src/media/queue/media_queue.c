@@ -1,7 +1,7 @@
 /**
- * @file media_queue.c
+ * @file canbus_queue.c
  * @author Nicklas Börjesson (<nicklasb at gmail dot com>)
- * @brief A generalized media queue implementations, used by the different medias
+ * @brief The CAN bus queue maintain and monitor the CAN bus work queue and uses callbacks to notify the user code
  * @version 0.1
  * @date 2023-02-19
  *
@@ -28,77 +28,79 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "media_queue.h"
-#include "robusto_media_def.h"
-#include "robusto_system.h"
+#include "canbus_queue.h"
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+
 
 #include <robusto_sys_queue.h>
 
 #include <robusto_logging.h>
 #include <string.h>
 
-// The queue type definition
-typedef STAILQ_HEAD(new_work_q_s, media_queue_item) new_media_q_t;
+// The queue context
+queue_context_t canbus_queue_context;
+
+static char *canbus_worker_log_prefix;
 
 /* Expands to a declaration for the work queue */
+STAILQ_HEAD(canbus_work_q, media_queue_item ) 
+canbus_work_q;
 
-media_queue_item_t *get_first_queueitem(queue_context_t *q_context)
+media_queue_item_t *canbus_first_queueitem() 
 {
-    return STAILQ_FIRST((new_media_q_t *)(q_context->work_queue));
+    return STAILQ_FIRST(&canbus_work_q); 
 }
 
-void remove_first_queue_item(queue_context_t *q_context)
-{
-    STAILQ_REMOVE_HEAD((new_media_q_t *)(q_context->work_queue), items);
+void canbus_remove_first_queue_item(){
+    STAILQ_REMOVE_HEAD(&canbus_work_q, items);
 }
-void insert_at_tail(queue_context_t *q_context, media_queue_item_t *new_item)
-{
-    STAILQ_INSERT_TAIL((new_media_q_t *)(q_context->work_queue), new_item, items);
+void canbus_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
+    STAILQ_INSERT_TAIL(&canbus_work_q, new_item, items);
 }
 
-void media_cleanup_queue_task(queue_context_t *q_context, media_queue_item_t *queue_item)
-{
+queue_context_t *canbus_get_queue_context() {
+    return &canbus_queue_context;
+}
+
+void canbus_cleanup_queue_task(media_queue_item_t *queue_item) {
     if (queue_item != NULL)
-    {
+    {    
         free(queue_item->peer);
         free(queue_item->data);
         free(queue_item);
     }
-    cleanup_queue_task(q_context);
+    cleanup_queue_task(&canbus_queue_context);
 }
 
-queue_context_t *create_media_queue(char *_log_prefix, char *queue_name, 
-    work_callback work_cb, poll_callback poll_cb)
+void canbus_set_queue_blocked(bool blocked) {
+    set_queue_blocked(&canbus_queue_context,blocked);
+}
+
+void canbus_shutdown_worker() {
+    ROB_LOGI(canbus_worker_log_prefix, "Telling CAN bus worker to shut down.");
+    canbus_queue_context.shutdown = true;
+}
+
+rob_ret_val_t canbus_init_worker(work_callback work_cb, poll_callback poll_cb, char *_log_prefix)
 {
-
-    queue_context_t *new_queue_context = robusto_malloc(sizeof(queue_context_t));
-
-    new_queue_context->work_queue = robusto_malloc(sizeof(new_media_q_t));
+    canbus_worker_log_prefix = _log_prefix;
     // Initialize the work queue
-    STAILQ_INIT((new_media_q_t *)(new_queue_context->work_queue));
+    STAILQ_INIT(&canbus_work_q);
 
-    new_queue_context->first_queue_item_cb = &get_first_queueitem;
-    new_queue_context->remove_first_queueitem_cb = &remove_first_queue_item;
-    new_queue_context->insert_tail_cb = &insert_at_tail;
-    new_queue_context->on_work_cb = work_cb;
-    new_queue_context->on_poll_cb = poll_cb;
-    new_queue_context->max_task_count = 1;
-    new_queue_context->multitasking = false;
-    // This queue cannot start processing items until the media is initialized
-    new_queue_context->blocked = true;
-    new_queue_context->shutdown = false;
-    new_queue_context->log_prefix = _log_prefix;
-    /* If set, worker will shut down */
-    new_queue_context->watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
-   
-    rob_ret_val_t ret_init = init_work_queue(new_queue_context, _log_prefix, queue_name);
-    if (ret_init == ROB_OK) {
+    canbus_queue_context.first_queue_item_cb = &canbus_first_queueitem; 
+    canbus_queue_context.remove_first_queueitem_cb = &canbus_remove_first_queue_item; 
+    canbus_queue_context.insert_tail_cb = &canbus_insert_tail;
+    canbus_queue_context.insert_head_cb = NULL;
+    canbus_queue_context.on_work_cb = work_cb; 
+    canbus_queue_context.on_poll_cb = poll_cb;
+    canbus_queue_context.max_task_count = 1;
+    canbus_queue_context.multitasking = false;
+    // This queue cannot start processing items until canbus is initialized
+    canbus_queue_context.blocked = true;
+  /* If set, worker will shut down */
+    canbus_queue_context.watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
     
-        return new_queue_context;
-    } else {
-        ROB_LOGE("Media queue", "Failed initiating work queue. Code : %u", ret_init);
-        robusto_free(new_queue_context);
-        return NULL;
-    }
-    
+
+    return init_work_queue(&canbus_queue_context, _log_prefix, "CAN bus Queue");      
 }
+#endif

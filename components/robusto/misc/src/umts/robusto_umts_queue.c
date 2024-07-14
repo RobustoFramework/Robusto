@@ -68,6 +68,7 @@ rob_ret_val_t umts_init_queue(work_callback work_cb, char *_log_prefix)
     umts_queue_context.first_queue_item_cb = &umts_first_queueitem; 
     umts_queue_context.remove_first_queueitem_cb = &umts_remove_first_queue_item; 
     umts_queue_context.insert_tail_cb = &umts_insert_tail;
+    umts_queue_context.insert_head_cb = NULL;
     umts_queue_context.on_work_cb = work_cb; 
     umts_queue_context.max_task_count = 1;
     // This queue cannot start processing items until GSM is initialized

@@ -36,7 +36,7 @@ void sample_insert_tail(queue_context_t * q_context, void *new_item) {
 rob_ret_val_t sample_safe_add_work_queue(int test_value) { 
     sample_queue_item_t *new_item = malloc(sizeof(sample_queue_item_t)); 
     new_item->test_value = test_value;
-    return safe_add_work_queue(sample_queue_context, new_item);
+    return safe_add_work_queue(sample_queue_context, new_item, false);
 }
 void sample_cleanup_queue_task(sample_queue_item_t *queue_item) {
     if (queue_item != NULL)

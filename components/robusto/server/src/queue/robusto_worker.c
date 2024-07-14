@@ -105,6 +105,7 @@ void log_queue_context(queue_context_t *q_context)
     ROB_LOGI(robusto_worker_log_prefix, "max_task_count: %i", q_context->max_task_count);
     ROB_LOGI(robusto_worker_log_prefix, "first_queue_item_cb: %p", q_context->first_queue_item_cb);
     ROB_LOGI(robusto_worker_log_prefix, "insert_tail_cb: %p", q_context->insert_tail_cb);
+    ROB_LOGI(robusto_worker_log_prefix, "insert_head_cb: %p", q_context->insert_head_cb);
     ROB_LOGI(robusto_worker_log_prefix, "multitasking: %s", q_context->multitasking ? "true" : "false");
     ROB_LOGI(robusto_worker_log_prefix, "watchdog_timeout: %i seconds", q_context->watchdog_timeout);
     ROB_LOGI(robusto_worker_log_prefix, "---------------------------");

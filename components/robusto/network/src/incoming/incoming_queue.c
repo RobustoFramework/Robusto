@@ -65,7 +65,7 @@ void incoming_insert_tail(queue_context_t * q_context, void *new_item) {
 
 
 rob_ret_val_t incoming_safe_add_work_queue(incoming_queue_item_t * queue_item) { 
-    return safe_add_work_queue(incoming_queue_context, queue_item);
+    return safe_add_work_queue(incoming_queue_context, queue_item, false);
 }
 
 void incoming_cleanup_queue_task(incoming_queue_item_t *queue_item) {
@@ -98,6 +98,7 @@ rob_ret_val_t incoming_init_worker(incoming_callback_cb work_cb, char *_log_pref
     incoming_queue_context->first_queue_item_cb = incoming_first_queueitem; 
     incoming_queue_context->remove_first_queueitem_cb = incoming_remove_first_queue_item; 
     incoming_queue_context->insert_tail_cb = incoming_insert_tail;
+    incoming_queue_context->insert_head_cb = NULL;
     incoming_queue_context->on_work_cb = work_cb; 
     incoming_queue_context->on_poll_cb = NULL;
     incoming_queue_context->max_task_count = 1;
