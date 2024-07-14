@@ -122,10 +122,9 @@ typedef struct {
 rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 
 
-void espnow_do_on_poll_cb(queue_context_t *q_context);
 void espnow_do_on_work_cb(media_queue_item_t *work_item);
 
-int esp_now_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes);
+
 void espnow_messaging_init(char * _log_prefix);
 
 

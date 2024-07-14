@@ -59,10 +59,6 @@ static void espnow_deinit(espnow_send_param_t *send_param);
 static bool has_receipt = false;
 static int send_status = -1;
 
-// For synchronously reading async data
-static uint8_t *synchro_data = NULL;
-static int synchro_data_len = 0;
-static robusto_peer_t *synchro_peer = NULL;
 
 rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
 {
@@ -279,10 +275,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     }
 
     peer->espnow_info.last_receive = r_millis();
-    // Is there *really* a need for a synchronized version like below..probably only for testing the comms layer at some initial situation?
-    synchro_data = data;
-    synchro_data_len = len;
-    synchro_peer = peer;
+
     if (is_heartbeat)
     {
         add_to_history(&peer->espnow_info, false, ROB_OK);
@@ -345,35 +338,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
 
     return rc;
 }
-int esp_now_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes)
-{
-#if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > -1
-    if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
-    {
-        ROB_LOGE("ESP-NOW", "ESP-NOW KILL SWITCH ON - Failing reading data");
-        r_delay(100);
-        return 0;
-    }
-#endif
-    if (synchro_data_len > 0)
-    {
-        *rcv_data = synchro_data;
-        *prefix_bytes = 0;
-        *peer = synchro_peer;
-        return synchro_data_len;
-    }
-    return 0;
-};
 
-void espnow_do_on_poll_cb(queue_context_t *q_context)
-{
-
-    robusto_peer_t *peer;
-    uint8_t *rcv_data;
-    uint8_t prefix_bytes;
-
-    esp_now_read_data(&rcv_data, &peer, &prefix_bytes);
-}
 
 void espnow_do_on_work_cb(media_queue_item_t *work_item)
 {

@@ -67,7 +67,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         return ROB_FAIL;
     }
     ROB_LOGW(presentation_log_prefix, ">> Sending a presentation %sto peer %s using %s.", is_reply ? "reply ": "", peer->name, media_type_to_str(media_types));
-    rob_log_bit_mesh(ROB_LOG_INFO, presentation_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     // If it is a reply, us failing to present ourselves should not affect the state of the peer
     e_peer_state failstate = peer->state;
     // If it wasn't a reply, it was an unknown peer, set it back to unknown.

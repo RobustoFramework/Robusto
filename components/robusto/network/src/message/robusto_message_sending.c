@@ -302,8 +302,11 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
             {
                 info->send_failures++;
                 ROB_LOGI(message_sending_log_prefix, ">> Retry %i failed.", send_retries + 1);
-                // Call the poll function do not spam the network
-                poll_callback(queue_context);
+                if (poll_callback) {
+                    // If the media is synchronous, call the poll function do not spam the network
+                    poll_callback(queue_context);
+                }
+
                 robusto_yield();
             }
             else
