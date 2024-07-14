@@ -90,6 +90,7 @@ rob_ret_val_t canbus_init_worker(work_callback work_cb, poll_callback poll_cb, c
     canbus_queue_context.first_queue_item_cb = &canbus_first_queueitem; 
     canbus_queue_context.remove_first_queueitem_cb = &canbus_remove_first_queue_item; 
     canbus_queue_context.insert_tail_cb = &canbus_insert_tail;
+    canbus_queue_context.insert_head_cb = NULL;
     canbus_queue_context.on_work_cb = work_cb; 
     canbus_queue_context.on_poll_cb = poll_cb;
     canbus_queue_context.max_task_count = 1;
