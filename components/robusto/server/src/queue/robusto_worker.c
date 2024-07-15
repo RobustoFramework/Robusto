@@ -203,7 +203,6 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
                  queue_name);
         return ROB_ERR_INIT_FAIL;
     }
-    q_context->count = 0;
     // Default if not set
     if (q_context->normal_max_count == 0)
     {
