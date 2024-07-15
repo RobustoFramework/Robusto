@@ -262,8 +262,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
         peer->espnow_info.last_peer_receive = parse_heartbeat(data, ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN);
     }
-
-    if ((data[ROBUSTO_CRC_LENGTH] & MSG_FRAGMENTED) == MSG_FRAGMENTED)
+    if ((data[ROBUSTO_CRC_LENGTH] & 0b00000111) == MSG_FRAGMENTED)
     {
         uint8_t *n_data = robusto_malloc(len);
         memcpy(n_data, data, len);
@@ -291,13 +290,15 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             has_receipt = true;
             return;
         }
-        // Send a receipt
-        uint8_t response[2];
-        response[0] = 0xff;
-        response[1] = 0x00;
-        // NOTE: We are calling esp_now_send directly here as we are calling it inside of the receive callback
-        if (esp_now_send(&peer->base_mac_address, &response, 2) != ROB_OK) {
-            ROB_LOGE(espnow_log_prefix, ">> espnow_recv_cb failed to send a receipt to %s.", peer->name);
+        if ((data[ROBUSTO_CRC_LENGTH] & 0b00000111) != MSG_NETWORK) {
+            // Unless it is a network message, send a receipt
+            uint8_t response[2];
+            response[0] = 0xff;
+            response[1] = 0x00;
+            // NOTE: We are calling esp_now_send directly here as we are calling it inside of the receive callback
+            if (esp_now_send(&peer->base_mac_address, &response, 2) != ROB_OK) {
+                ROB_LOGE(espnow_log_prefix, ">> espnow_recv_cb failed to send a receipt to %s.", peer->name);
+            }
         }
         if (!handled)
         {

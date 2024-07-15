@@ -135,9 +135,11 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
     
     if (q_context->count > q_context->normal_max_count) {
         if (!important) {
+            ROB_LOGI(q_context->log_prefix, "The queue is full, dropping normal message.");
             return ROB_ERR_QUEUE_FULL;
         } else 
         if (q_context->count > q_context->important_max_count) {
+            ROB_LOGE(q_context->log_prefix, "The queue is full, dropping important message.");
             return ROB_ERR_QUEUE_FULL;
         } 
     } 

@@ -105,6 +105,7 @@ void log_queue_context(queue_context_t *q_context)
     ROB_LOGI(robusto_worker_log_prefix, "max_task_count: %i", q_context->max_task_count);
     ROB_LOGI(robusto_worker_log_prefix, "first_queue_item_cb: %p", q_context->first_queue_item_cb);
     ROB_LOGI(robusto_worker_log_prefix, "insert_tail_cb: %p", q_context->insert_tail_cb);
+    ROB_LOGI(robusto_worker_log_prefix, "insert_head_cb: %p", q_context->insert_head_cb);
     ROB_LOGI(robusto_worker_log_prefix, "multitasking: %s", q_context->multitasking ? "true" : "false");
     ROB_LOGI(robusto_worker_log_prefix, "watchdog_timeout: %i seconds", q_context->watchdog_timeout);
     ROB_LOGI(robusto_worker_log_prefix, "---------------------------");
@@ -202,6 +203,7 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
                  queue_name);
         return ROB_ERR_INIT_FAIL;
     }
+    q_context->count = 0;
     // Default if not set
     if (q_context->normal_max_count == 0)
     {
@@ -226,6 +228,9 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
     strcpy(q_context->worker_task_name, queue_name);
     strcat(q_context->worker_task_name, " worker task");
 
+    if (!q_context->log_prefix) {
+        q_context->log_prefix = queue_name;
+    }
     /** Register the worker task.
      *
      * We are running it on Core 0, or PRO as it is called

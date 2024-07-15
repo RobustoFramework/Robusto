@@ -85,12 +85,12 @@ typedef enum e_msg_type
 {
     MSG_MESSAGE     = 0, // Normal messages
     MSG_STREAM      = 1, // TODO: How should we implement a stream interface over the existing?
-    MSG_NETWORK     = 2, // Network commands
-    MSG_HEARTBEAT   = 3, // The heartbeat, sent to peers to check if an idle connection works
-    MSG_FRAGMENTED   = 4, // Fragmented messaging
-    MSG_UNUSED_3    = 5,
-    MSG_UNUSED_4    = 6,
-    MSG_UNUSED_5    = 7
+    MSG_NETWORK     = 2, // Network messages, like presentations. No receipts.
+    MSG_HEARTBEAT   = 3, // The heartbeat, sent to peers to check if an idle connection works. No receipt.
+    MSG_FRAGMENTED  = 4, // Fragmented messaging
+    MSG_UNUSED_1    = 5,
+    MSG_UNUSED_2    = 6,
+    MSG_UNUSED_3    = 7
 } e_msg_type_t;
 
 

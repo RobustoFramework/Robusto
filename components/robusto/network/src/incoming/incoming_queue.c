@@ -102,6 +102,9 @@ rob_ret_val_t incoming_init_worker(incoming_callback_cb work_cb, char *_log_pref
     incoming_queue_context->on_work_cb = work_cb; 
     incoming_queue_context->on_poll_cb = NULL;
     incoming_queue_context->max_task_count = 1;
+    incoming_queue_context->max_task_count = 1;
+    incoming_queue_context->normal_max_count = 4;
+    incoming_queue_context->important_max_count = 7;
     // This queue cannot start processing items until we want the test to start
     incoming_queue_context->blocked = false;
     incoming_queue_context->multitasking = false;
