@@ -124,8 +124,8 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         // Heartbeats are one-way and doesn't wait for receipts
         rob_ret_val_t queue_ret_val = send_message_raw_internal(peer, media_type, hb_msg, hb_msg_len, NULL, 
             false, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none, false);
-        if (queue_ret_val != ROB_OK) {
-            // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
+        if (queue_ret_val != ROB_OK && queue_ret_val != ROB_ERR_QUEUE_FULL) {
+            // If we get a problem here that is not that the queue is full, there might be a more serious internal issue, it is immidiately considered a problem.
             ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %hhu, res %hi, ", peer->name, (uint8_t)media_type, queue_ret_val);
             set_state(peer, info, media_type, media_state_problem, media_problem_technical);
         }
