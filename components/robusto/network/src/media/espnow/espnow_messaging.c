@@ -135,11 +135,15 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete in time (2000 ms). Peer: %s", peer->name);
         return ROB_FAIL;
     }
+    #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
+    peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
+    return rc;
+    #else
     if (!receipt)
     {
         return rc;
     }
-
+    
     // We want to wait to make sure the transmission is received successfully.
     int32_t start = r_millis();
     while ((!has_receipt) && (r_millis() < start + 500))
@@ -165,6 +169,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         return ROB_ERR_NO_RECEIPT;
     }
     return rc;
+    #endif
 }
 
 /**
@@ -281,6 +286,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     }
     else
     {
+        #ifdef ROBUSTO_ESP_NOW_USE_RECEIPT        
         // It is a receipt, just update stats and return.
         if (len == 2 && data[0] == 0xff && data[1] == 0x00)
         {
@@ -300,6 +306,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
                 ROB_LOGE(espnow_log_prefix, ">> espnow_recv_cb failed to send a receipt to %s.", peer->name);
             }
         }
+        #endif
         if (!handled)
         {
             // Copy data a ESP-NOW frees it
