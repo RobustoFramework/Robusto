@@ -106,7 +106,8 @@ void set_state(robusto_peer_t *peer, robusto_media_t *info, e_media_type media_t
     {
         cb_on_state_change(peer, info, media_type, media_state, problem);
     }
-    ROB_LOGW(qos_state_log_prefix, "State change for %s, %s, state %u, problem %u", peer->name, media_type_to_str(media_type), media_state, problem);
+    ROB_LOGW(qos_state_log_prefix, "State change for %s, %s, state %u (%s), problem %u (%s)", peer->name, media_type_to_str(media_type), media_state, str_media_states[media_state], problem, str_media_problems[problem]);
+    
 }
 
 // Any state behavior
@@ -189,7 +190,8 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
 
     if (
         // Do we have problems sending (note that this is usually set when the problem occurr)
-        (last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_send < (last_heartbeat_time - HEARD_FROM_LIMIT)))
+        (last_heartbeat_time > HEARD_FROM_LIMIT) // We can't be booting
+        && (info->last_send < (last_heartbeat_time - HEARD_FROM_LIMIT)))
     {
         if (info->problem != media_problem_send_problem)
         {
@@ -201,8 +203,9 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
     }
     else if (
         // Do we have problem receiving from the peer?
-        (last_heartbeat_time > HEARD_FROM_LIMIT) && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
-    {
+        (last_heartbeat_time > HEARD_FROM_LIMIT) // We can't be booting
+        && (info->last_receive < last_heartbeat_time - HEARD_FROM_LIMIT))
+    {   // TODO: ESP-NOW always acks as part of WIFI standards, we will never know if we are unknown
         if (info->problem != media_problem_silence) 
         {
             ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
@@ -237,10 +240,12 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
     // We are receiving from, sending to and reaching the peer, and it is known. So if not before, it is now working.
     else if (info->state != media_state_working && (peer->state != PEER_UNKNOWN) && (info->state != media_state_recovering))
     {
-        ROB_LOGW(qos_state_log_prefix, "The peer %s, media type %s, state %u problem %u seem to be fixed now => changing state to working, info->last_state_change %llu.",
-                    peer->name, media_type_to_str(media_type), info->state, info->problem, info->last_state_change);
+        ROB_LOGW(qos_state_log_prefix, "The peer %s, media type %s, state %u (%s) problem %u (%s) seem to be fixed now => changing state to working, info->last_state_change %llu.",
+                    peer->name, media_type_to_str(media_type), info->state, str_media_states[info->state], info->problem, str_media_problems[info->problem], info->last_state_change);
         set_state(peer, info, media_type, media_state_working, media_problem_none);
     }
+
+    // TODO: Move all boot checks out and perhaps do not start this monitoring at all until a while after boot
 }
 
 //

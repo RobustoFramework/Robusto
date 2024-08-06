@@ -122,7 +122,6 @@ void runUnityTests(void *pvParameters)
 
     UNITY_BEGIN();
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
-    #if 0
 
     RUN_TEST(tst_millis);
     robusto_yield();
@@ -236,7 +235,7 @@ void runUnityTests(void *pvParameters)
 #endif
 
 /**
- * @brief Test direct communication between actuall boards using test loops.
+ * @brief Test direct communication between actual boards using test loops.
  * Here, each peer calls the next, and the last peer calling the first, closing the loop.
  * The next peer, and whether this peer begins and ends a loop, is defined in the config under Networking -> Chosen media -> Config -> Testing.
  */
@@ -275,7 +274,7 @@ void runUnityTests(void *pvParameters)
 #endif
 
 
-#endif
+#endif /* I2C */
 
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
@@ -310,7 +309,7 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
 #endif
 
-#endif
+#endif /* CAN bus*/
 
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
@@ -361,13 +360,11 @@ void runUnityTests(void *pvParameters)
 #endif
 
 
-#endif
+#endif /* ESP-NOW */
 
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
     r_delay(4000);
-    /* Asynchronous testing*/
-
 
 #if CONFIG_ROB_NETWORK_TEST_BLE_CALL_ADDR > -1 && defined(CONFIG_ROB_NETWORK_TEST_BLE_LOOP_INITIATOR)
     /* We will want to wait for BLE connections to establish */
@@ -416,31 +413,10 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
 #endif
 
+#endif /* BLE */
 
-
-#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 
-/* TODO: Decide: Should we even do any synchronous communication?
- All relevant MCU:s have the ability to use queues, if they can't, it is uncertain what sync mode adds
- now after we have developed the base tech for each media.
- */
-#if 0
-#if CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR != 0xFFFFFFFFFFFF - 1 && defined(CONFIG_ROB_NETWORK_TEST_LORA_LOOP_INITIATOR)
-    
-
-    RUN_TEST(tst_lora_message_send_message_sync);
-    robusto_yield();
-#endif
-    
-    RUN_TEST(tst_lora_message_receive_string_message_sync);
-    robusto_yield();
-
-#if CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR > -1 && !defined(CONFIG_ROB_NETWORK_TEST_LORA_LOOP_INITIATOR)
-    RUN_TEST(tst_lora_message_send_message_sync);
-    robusto_yield();
-#endif
-#endif
 /* Asynchronous testing*/
 #if CONFIG_ROB_NETWORK_TEST_LORA_CALL_ADDR != 0xFFFFFFFFFFFF - 1 && defined(CONFIG_ROB_NETWORK_TEST_LORA_LOOP_INITIATOR)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
@@ -474,7 +450,7 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
 #endif
 
-#endif
+#endif /* Asynchronous testing*/
 
 #endif
 
@@ -482,7 +458,6 @@ void runUnityTests(void *pvParameters)
      * @brief Test concurrency features, like tasks, workers and queues
      *
      */
-    #if 0
     RUN_TEST(tst_task);
     robusto_yield();
     RUN_TEST(tst_queue_start);
@@ -495,15 +470,15 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
     RUN_TEST(tst_queue_shutdown);
     robusto_yield();
-    #endif
 
-#endif
+
 #ifdef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
 
     r_delay(1000);
     RUN_TEST(tst_qos);
 
     robusto_yield();
+
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO) || defined(ARDUINO_ARCH_STM32)
 
 #if defined(CONFIG_ROBUSTO_NETWORK_QOS_INITIATOR)
@@ -522,9 +497,9 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_qos_start_sending_data);
     robusto_yield();
 #endif
-#endif
-#endif
-    
+#endif /* Only ESP-IDF, Arduino*/
+#endif /* Network QoS*/
+
     UNITY_END();
 
 #if defined(USE_ARDUINO) || defined(USE_ESPIDF)
