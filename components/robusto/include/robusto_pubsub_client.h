@@ -1,3 +1,5 @@
+#pragma once
+
 #include <robconfig.h>
 #include <inttypes.h>
 #include <robusto_pubsub.h>
