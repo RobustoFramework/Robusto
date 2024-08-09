@@ -145,7 +145,11 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         msg[0] = PUBSUB_DATA;
         memcpy(msg + 1, &topic->hash, 4);
         memcpy(msg + 5, data, data_length);
-        send_message_binary(subscriber->peer, PUBSUB_CLIENT_ID, 0, msg, data_length + 5, NULL);
+        rob_ret_val_t pubretval = send_message_binary(subscriber->peer, PUBSUB_CLIENT_ID, 0, msg, data_length + 5, NULL);
+        if (pubretval != ROB_OK) {
+            ROB_LOGW(pubsub_log_prefix, "Failed publishing  %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
+        }
+        
         robusto_free(msg);
     } else {
         ROB_LOGI(pubsub_log_prefix, "Internal error: Neither peer or callback set on one subscription in %s!", topic->name);
@@ -175,8 +179,27 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
     return ROB_OK;
 }
 
+#define SEND_LOGGED(prefix, peer, conversation_id, response, length)        \
+    do                                                                                                               \
+    {                                                                                             \
+        if (CONFIG_ROB_LOG_MAXIMUM_LEVEL >= ROB_LOG_WARN)                                                                                  \
+        {                                                                                                            \
+            rob_ret_val_t retval = send_message_binary(peer, PUBSUB_CLIENT_ID, conversation_id, response, length, NULL); \
+            if (retval != ROB_OK) {\
+                ROB_LOGW(pubsub_log_prefix, "%s to %s peer, conv id %i", prefix, peer->name, conversation_id);\
+            }\
+        }                                                                                                       \
+        else                                                                                                         \
+        {                                                                                                            \
+            send_message_binary(peer, PUBSUB_CLIENT_ID, conversation_id, response, length, NULL);    \
+        }    \
+                                                                                                      \
+    } while (0)\
+
+
 void incoming_callback(robusto_message_t *message) {
     ROB_LOGD(pubsub_log_prefix, "Pubsub incoming from %s.", message->peer->name);
+    rob_ret_val_t retval = ROB_FAIL;
     rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, message->binary_data, message->binary_data_length);
     // Register subscription/topic, answer with topic hash
     if (*message->binary_data == PUBSUB_SUBSCRIBE) {
@@ -186,7 +209,7 @@ void incoming_callback(robusto_message_t *message) {
         memcpy(response + 1, &topic_hash, 4);
         ROB_LOGI(pubsub_log_prefix, "Sending a subscription response to %s peer, conv id %u, hash %lu", message->peer->name, message->conversation_id, topic_hash);
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
-        send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
+        SEND_LOGGED("Failed sending a subscription response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_GET_TOPIC) {
         pubsub_server_topic_t * topic = robusto_pubsub_server_find_or_create_topic((char *)(message->binary_data + 1));
         uint8_t *response = robusto_malloc(5);
@@ -194,7 +217,7 @@ void incoming_callback(robusto_message_t *message) {
         memcpy(response + 1, &topic->hash, 4);
         ROB_LOGI(pubsub_log_prefix, "Sending a get topic response to %s peer, conv id %u, hash %lu", message->peer->name, message->conversation_id, topic->hash);
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
-        send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
+        SEND_LOGGED("Failed sending a get topic response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_UNSUBSCRIBE) {
         uint32_t topic_hash = robusto_pubsub_server_unsubscribe(message->peer, NULL, *(uint32_t *)(message->binary_data + 1));
         uint8_t *response = robusto_malloc(5);
@@ -202,7 +225,7 @@ void incoming_callback(robusto_message_t *message) {
         memcpy(response + 1, &topic_hash, 4);
         ROB_LOGI(pubsub_log_prefix, "Sending a unsubscription response to %s peer, conv id %u", message->peer->name, message->conversation_id);
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
-        send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
+        SEND_LOGGED("Failed sending a unsubscription response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_PUBLISH) {
         ROB_LOGI(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
         rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
@@ -213,7 +236,7 @@ void incoming_callback(robusto_message_t *message) {
             memcpy(response + 1, message->binary_data + 1, 4);
             ROB_LOGW(pubsub_log_prefix, "Sending an unknown topic message to %s peer, conv id %u", message->peer->name, message->conversation_id);
             rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
-            send_message_binary(message->peer, PUBSUB_CLIENT_ID, message->conversation_id, response, 5, NULL);
+            SEND_LOGGED("Failed sending an unknown topic message to ", message->peer, message->conversation_id, response, 5);
         }
         
     } else {

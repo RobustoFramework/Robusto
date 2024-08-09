@@ -113,9 +113,9 @@ extern "C"
         media_problem_send_problem,
         // The peer doesn't reach the PEER_KNOWN_INSECURE peer state.
         media_problem_unknown,
-        // The transportation medium is have a lot if traffic
+        // The transportation medium is having a lot of traffic
         media_problem_high_traffic,
-        // The media has problems due to intereference (strong signal while having issues)
+        // The media has problems due to interference (strong signal while having issues)
         media_problem_interference,
         // The media has problems that match patterns recognized from being deliberately jammed. (random transmission with a strong signal)
         media_problem_jammed,

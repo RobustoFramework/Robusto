@@ -15,8 +15,8 @@ static char *pubsub_client_log_prefix;
 static void incoming_callback(robusto_message_t *message);
 static void shutdown_callback();
 
-static subscribed_topic_t *first_subscribed_topic;
-static subscribed_topic_t *last_subscribed_topic;
+static subscribed_topic_t *first_subscribed_topic = NULL;
+static subscribed_topic_t *last_subscribed_topic = NULL;
 
 topic_state_cb *on_state_change_cb;
 
@@ -362,9 +362,11 @@ void create_topic_recovery_task(subscribed_topic_t *topic)
 
 void robusto_pubsub_check_topics()
 {
+
     subscribed_topic_t *curr_topic = first_subscribed_topic;
     while (curr_topic)
     {
+        ROB_LOGW(pubsub_client_log_prefix, "Checking %s, state %hu", curr_topic->topic_name, curr_topic->state);
         if (curr_topic->state == TOPIC_STATE_RECOVERING)
         {
             // Do nothing regardless of state to not disturb any existing recovery processes
@@ -376,6 +378,8 @@ void robusto_pubsub_check_topics()
             {
                 create_topic_recovery_task(curr_topic);
                 r_delay(5000);
+            } else {
+                ROB_LOGW(pubsub_client_log_prefix, "Will not recover the %s topic now, the %s peer has broader issues.", curr_topic->topic_name, curr_topic->peer->name);
             }
         }
 

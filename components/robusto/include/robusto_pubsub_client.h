@@ -1,5 +1,4 @@
 #pragma once
-
 #include <robconfig.h>
 #include <inttypes.h>
 #include <robusto_pubsub.h>
@@ -33,7 +32,7 @@ typedef enum
 
 typedef void(topic_state_cb)(subscribed_topic_t * topic);
 
-
+void set_topic_state(subscribed_topic_t *topic, topic_state_t state);
 
 struct subscribed_topic
 {   
