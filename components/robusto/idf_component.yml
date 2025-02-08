@@ -1,4 +1,4 @@
-version: "1.2.26"
+version: "2.0.0"
 description: "Robusto framework"
 url: "https://github.com/RobustoFramework"
 repository: "https://github.com/RobustoFramework/Robusto.git"
@@ -13,4 +13,4 @@ dependencies:
   espressif/esp_lvgl_port: "^2"
   espressif/esp_lcd_sh1107: "^1"
 maintainers:
-  "Nicklas Börjesson <nicklasb@gmail.com>"
+  - "Nicklas Börjesson <nicklasb@gmail.com>"
