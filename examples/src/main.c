@@ -185,7 +185,7 @@ void main_task(void *parameters)
     uint32_t counter = 0;
     struct timeval tv;
     struct timezone tz;
-    char datebuffer[80];
+    char* datebuffer = (char*)malloc(80);
     struct tm *gm;
 
     while (1)
@@ -194,11 +194,13 @@ void main_task(void *parameters)
         #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
         r_gettimeofday(&tv, &tz);
         gm = gmtime(&tv.tv_sec);
-        strftime(&datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
+        strftime(datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
         ROB_LOGI_STAY("Example", "Current RTC time = %s:%li", datebuffer, tv.tv_usec % 1000);
         #endif
     };
     #endif
+    
+    free(datebuffer);
 }
 
 

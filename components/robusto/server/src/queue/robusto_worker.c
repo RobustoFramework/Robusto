@@ -147,7 +147,7 @@ static void robusto_worker(queue_context_t *q_context)
                         sprintf(taskname, "%s_worker_%d", robusto_worker_log_prefix, q_context->task_count + 1);
                         /* To avoid congestion on Core 0, we act on non-immidiate requests on Core 1 (APP) */
                         alter_task_count(q_context, 1);
-                        rob_ret_val_t rc = robusto_create_task((TaskFunction_t)q_context->on_work_cb, q_context, taskname, &q_context->worker_task_handle, 1);
+                        rob_ret_val_t rc = robusto_create_task((TaskFunction_t)q_context->on_work_cb, q_context, taskname, (rob_task_handle_t **)&q_context->worker_task_handle, 1);
                         if (rc != ROB_OK)
                         {
                             ROB_LOGE(robusto_worker_log_prefix, ">> Failed creating work task, returned: %i (see projdefs.h)", rc);
@@ -244,7 +244,7 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
     ROB_LOGI(robusto_worker_log_prefix, "Register the worker task. Name: %s", q_context->worker_task_name);
     /* We obviously don't immidiately want to shutdown the worker just because someone haven't set shutdown to false. */
     q_context->shutdown = false;
-    int rc = robusto_create_task((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, &q_context->worker_task_handle, 0);
+    int rc = robusto_create_task((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, (rob_task_handle_t **)&q_context->worker_task_handle, 0);
     if (rc != ROB_OK)
     {
         ROB_LOGE(robusto_worker_log_prefix, "Failed creating worker task, returned: %i (see projdefs.h)", rc);

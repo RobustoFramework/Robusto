@@ -255,7 +255,7 @@ int build_strings_data(uint8_t **message, const char *format, ...)
         }
         else
         {
-            *message = robusto_realloc(*message, new_length);
+            *message = robusto_realloc((void *)message, new_length);
         }
 
         if (*message == NULL)

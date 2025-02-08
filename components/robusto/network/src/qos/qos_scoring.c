@@ -72,7 +72,7 @@ void scoring_shutdown_cb();
 static char scorings_name[19] = "scorings\x00";
 
 recurrence_t scoring = {
-    recurrence_name : &scorings_name,
+    recurrence_name : (char *)&scorings_name,
     skip_count : CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT, // TODO: Should scoring be done more often?
     skips_left : 0,
     recurrence_callback : &scoring_cb,

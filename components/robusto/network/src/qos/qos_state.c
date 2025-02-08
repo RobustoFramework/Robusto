@@ -61,7 +61,7 @@ rob_ret_val_t check_peer(robusto_peer_t *peer);
 
 on_state_change_t *cb_on_state_change = NULL;
 recurrence_t qos_state = {
-    recurrence_name : &qos_state_name,
+    recurrence_name : (char *)&qos_state_name,
     skip_count : CHECK_SKIP_COUNT,
     skips_left : 0,
     recurrence_callback : &qos_state_cb,
@@ -210,7 +210,7 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
         {
             ROB_LOGW(qos_state_log_prefix, "The peer %s and media type %s has not been heard from since (last_receive): %llu. last_heartbeat_time: %llu, info->last_state_change %llu. Mac:",
                      peer->name, media_type_to_str(media_type), info->last_receive, last_heartbeat_time, info->last_state_change);
-            rob_log_bit_mesh(ROB_LOG_WARN, qos_state_log_prefix, &(peer->base_mac_address), 6);
+            rob_log_bit_mesh(ROB_LOG_WARN, qos_state_log_prefix, (uint8_t *)&(peer->base_mac_address), 6);
             set_state(peer, info, media_type, media_state_problem, media_problem_silence);
         }
     }

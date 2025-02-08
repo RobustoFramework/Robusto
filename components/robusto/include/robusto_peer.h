@@ -251,7 +251,7 @@ extern "C"
     {
         uint32_t relation_id_incoming;
         uint32_t relation_id_outgoing;
-        uint8_t mac_address[ROBUSTO_MAC_ADDR_LEN];
+        rob_mac_address mac_address;
         uint8_t supported_media_types;
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
         uint8_t i2c_address;

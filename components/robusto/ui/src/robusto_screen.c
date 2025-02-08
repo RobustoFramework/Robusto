@@ -11,7 +11,7 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_interface.h"
-#include "driver/i2c.h"
+#include "driver/i2c_master.h"
 #endif
 
 #include "lvgl.h"
@@ -39,7 +39,7 @@
 #define LCD_PARAM_BITS 8
 
 #if defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_NONE)
-#define ROTATE_LVGL LV_DISP_ROT_NONE
+#define ROTATE_LVGL LV_DISP_ROTATION_0
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_90)
 #define ROTATE_LVGL LV_DISP_ROT_90
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_180)
@@ -67,36 +67,46 @@ rob_ret_val_t init_i2c()
 #ifdef USE_ESPIDF
 #ifdef CONFIG_ROBUSTO_UI_INIT_I2C
     ROB_LOGI(ui_log_prefix, "Init UI I2C.");
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SDA;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SCL;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = CONFIG_ROBUSTO_UI_I2C_FREQ_HZ;
-    conf.clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL;
-#if CONFIG_ROBUSTO_UI_GPIO_RST > -1
+    i2c_master_bus_config_t bus_conf;
+    bus_conf.sda_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SDA;
+    bus_conf.scl_io_num = (gpio_num_t)CONFIG_ROBUSTO_UI_GPIO_SCL;
+    bus_conf.i2c_port = (i2c_port_num_t)CONFIG_ROBUSTO_UI_I2C_PORT;
+    bus_conf.clk_source = I2C_CLK_SRC_DEFAULT;
+    bus_conf.glitch_ignore_cnt = 7,             // Filtering glitches
+    bus_conf.intr_priority = 0,                 // 0 = default
+    bus_conf.trans_queue_depth = 2,  // Maximum number of asynchronous transactions
+    bus_conf.flags.enable_internal_pullup = 1; // Enable internal pullups
+
+    i2c_master_bus_handle_t i2c_bus = NULL;
+    
+    if (i2c_new_master_bus(&bus_conf, &i2c_bus) != ESP_OK)
+    {
+        ROB_LOGE(ui_log_prefix, "Robusto screen: I2C init failed, bus creation failed.");
+        return ROB_ERR_INIT_FAIL;
+    }
+    
+    i2c_device_config_t dev_config;
+    dev_config.device_address = CONFIG_ROBUSTO_UI_I2C_HW_ADDR;
+    dev_config.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+    dev_config.scl_speed_hz = CONFIG_ROBUSTO_UI_I2C_FREQ_HZ;
+    //dev_config.scl_wait_us = 1000;
+    //dev_config.flags.disable_ack_check = 0;
+    
+    i2c_master_dev_handle_t i2c_dev = NULL;
+    if (i2c_master_bus_add_device(i2c_bus, &dev_config, &i2c_dev) != ESP_OK)
+    {
+        ROB_LOGE(ui_log_prefix, "Robusto screen: I2C init failed, device creation failed.");
+        return ROB_ERR_INIT_FAIL;
+    }
+ 
+    
+    #if CONFIG_ROBUSTO_UI_GPIO_RST > -1
     robusto_gpio_set_direction(CONFIG_ROBUSTO_UI_GPIO_RST, true);
     robusto_gpio_set_level(CONFIG_ROBUSTO_UI_GPIO_RST, 0);
     r_delay(20);
     robusto_gpio_set_level(CONFIG_ROBUSTO_UI_GPIO_RST, 1);
-#endif
-    i2c_param_config(CONFIG_ROBUSTO_UI_I2C_PORT, &conf);
-    esp_err_t install_retval = i2c_driver_install(CONFIG_ROBUSTO_UI_I2C_PORT, conf.mode, 0, 0, 0);
-
-    if (install_retval != ESP_OK)
-    {
-        if (install_retval == ESP_ERR_INVALID_ARG)
-        {
-            ROB_LOGE(ui_log_prefix, "Robusto screen: I2C init failed, invalid argument.");
-            return ROB_ERR_INVALID_ARG;
-        }
-        else
-        {
-            ROB_LOGE(ui_log_prefix, "Robusto screen: I2C init failed, driver installation error, already initialized by someone else?");
-            return ROB_ERR_INIT_FAIL;
-        }
-    }
+    #endif
+    
 
 #endif
 #endif

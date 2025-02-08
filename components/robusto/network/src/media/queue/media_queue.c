@@ -77,9 +77,9 @@ queue_context_t *create_media_queue(char *_log_prefix, char *queue_name,
     // Initialize the work queue
     STAILQ_INIT((new_media_q_t *)(new_queue_context->work_queue));
 
-    new_queue_context->first_queue_item_cb = &get_first_queueitem;
+    new_queue_context->first_queue_item_cb = (first_queueitem*)&get_first_queueitem;
     new_queue_context->remove_first_queueitem_cb = &remove_first_queue_item;
-    new_queue_context->insert_tail_cb = &insert_at_tail;
+    new_queue_context->insert_tail_cb = (insert_queue_item*)&insert_at_tail;
     new_queue_context->insert_head_cb = NULL;
     new_queue_context->on_work_cb = work_cb;
     new_queue_context->on_poll_cb = poll_cb;

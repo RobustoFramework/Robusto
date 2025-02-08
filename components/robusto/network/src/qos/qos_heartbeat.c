@@ -85,7 +85,7 @@ uint16_t calc_deka_ms_since(uint64_t since, uint64_t curr_time)
 uint64_t parse_heartbeat(uint8_t *data, uint8_t preamble_len)
 {
     // TODO: It seems like this can happen before initialization
-    uint16_t *retval = data + preamble_len;
+    uint16_t *retval = (uint16_t *)(data + preamble_len);
     uint64_t hb_time = r_millis() - (*retval * 10);
     // TODO: We need a multistage boot process that differs from initialisation and startup or whatevs. Runlevels?
     ROB_LOGD("Heartbeat", "parse_heartbeat data %02X %02X since = %i calculated time = %llu preamble_len %hhu", 

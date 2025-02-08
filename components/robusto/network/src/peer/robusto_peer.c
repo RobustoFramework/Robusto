@@ -191,7 +191,7 @@ void log_peer_info(char *_log_prefix, robusto_peer_t *peer)
 #endif
     ROB_LOGI(_log_prefix, "State:                 %u", peer->state);
     char mt_log[1000] = "";
-    list_media_types(peer->supported_media_types, &mt_log);
+    list_media_types(peer->supported_media_types, (char *) &mt_log);
     ROB_LOGI(_log_prefix, "Supported media types: %s", mt_log);
     
     ROB_LOGI(_log_prefix, "Relation id incoming:  %"PRIu32"", peer->relation_id_incoming);
@@ -216,7 +216,7 @@ void recover_relations() {
         ROB_LOGI(peer_log_prefix, "Adding stored peer, mac address %02X:%02X:%02X:%02X:%02X:%02X",
         relations[rel_idx].mac_address[0], relations[rel_idx].mac_address[1], relations[rel_idx].mac_address[2],
         relations[rel_idx].mac_address[3], relations[rel_idx].mac_address[4], relations[rel_idx].mac_address[5]);
-        new_peer = robusto_add_init_new_peer(NULL, relations[rel_idx].mac_address, relations[rel_idx].supported_media_types);
+        new_peer = robusto_add_init_new_peer(NULL, &relations[rel_idx].mac_address, relations[rel_idx].supported_media_types);
         #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
             new_peer->i2c_address = relations[rel_idx].i2c_address;
         #endif
@@ -492,18 +492,18 @@ void robusto_peer_init(char *_log_prefix)
     }
     
     #ifdef USE_ESPIDF
-        esp_read_mac(&(robusto_host.base_mac_address), ESP_MAC_WIFI_STA);
+        esp_read_mac((uint8_t *)&(robusto_host.base_mac_address), ESP_MAC_WIFI_STA);
         ROB_LOGI(peer_log_prefix, "robusto_peer_init() - WIFI base STA address:");
-        rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, &robusto_host.base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, (uint8_t *) &robusto_host.base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     #endif
 
     robusto_host.protocol_version = ROBUSTO_PROTOCOL_VERSION;
     robusto_host.min_protocol_version = ROBUSTO_PROTOCOL_VERSION_MIN;
     if (strlen(CONFIG_ROBUSTO_PEER_NAME) > (CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1)) {
-        strncpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME, CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1);
+        strncpy((char *)&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME, CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1);
         robusto_host.name[CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1] = 0x00;
     } else {
-        strcpy(&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME "\00");
+        strcpy((char *)&(robusto_host.name), CONFIG_ROBUSTO_PEER_NAME "\00");
     }
     #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     robusto_host.i2c_address = CONFIG_I2C_ADDR;

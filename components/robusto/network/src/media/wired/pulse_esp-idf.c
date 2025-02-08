@@ -32,57 +32,58 @@
 
 #include "pulse.h"
 #ifdef USE_ESPIDF
-#include "driver/timer.h"
+#include "driver/gptimer.h"
 // TODO: This is deprecated, should probably use the newer one
 #include "driver/gpio.h"
 /* PulseIn implementation for ESP-IDF */
 
 unsigned long robusto_pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
 {
-    timer_config_t config;
-    config.divider = 80; // 80 MHz timer clock
-    config.counter_dir = TIMER_COUNT_UP;
-    config.counter_en = TIMER_PAUSE;
-    config.alarm_en = TIMER_ALARM_EN;
-    config.intr_type = TIMER_INTR_LEVEL;
-    config.auto_reload = true;
-    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+    gptimer_handle_t gptimer = NULL;
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1000000, // 1 MHz, 1 tick = 1 microsecond
+    };
+    gptimer_new_timer(&timer_config, &gptimer);
 
     gpio_set_direction(pin, GPIO_MODE_INPUT);
 
-    timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-    timer_start(TIMER_GROUP_0, TIMER_0);
+    gptimer_start(gptimer);
 
-    unsigned long startTime;
-    unsigned long currTime;
-    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &startTime);
+    uint64_t startTime;
+    uint64_t currTime;
+    gptimer_get_raw_count(gptimer, &startTime);
 
     while(gpio_get_level(pin) != state)
     {
-        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &currTime);
+        gptimer_get_raw_count(gptimer, &currTime);
         if((currTime - startTime) > timeout)
         {
-            timer_pause(TIMER_GROUP_0, TIMER_0);
+            gptimer_stop(gptimer);
+            gptimer_del_timer(gptimer);
             return 0;
         }
     }
 
-    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &startTime);
+    gptimer_get_raw_count(gptimer, &startTime);
 
     while(gpio_get_level(pin) == state)
     {
-        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &currTime);
+        gptimer_get_raw_count(gptimer, &currTime);
         if((currTime - startTime) > timeout)
         {
-            timer_pause(TIMER_GROUP_0, TIMER_0);
+            gptimer_stop(gptimer);
+            gptimer_del_timer(gptimer);
             return 0;
         }
     }
 
-    unsigned long endTime;
-    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &endTime);
+    uint64_t endTime;
+    gptimer_get_raw_count(gptimer, &endTime);
 
-    timer_pause(TIMER_GROUP_0, TIMER_0);
+    gptimer_stop(gptimer);
+    gptimer_del_timer(gptimer);
 
     return (endTime - startTime);
 }

@@ -6,11 +6,11 @@ license: "BSD-2-Clause"
 dependencies:
   # Required IDF version
   idf: ">=4.1"
-  espressif/esp_modem: "^1.1.0"
-  jgromes/radiolib: "^6.4.2"
+  espressif/esp_modem: "^1"
+  jgromes/radiolib: "^6.4"
   # Screen support
-  lvgl/lvgl: "~8.3.0" 
-  espressif/esp_lvgl_port: "^1.4.0"
-  espressif/esp_lcd_sh1107: "^1.1.0"
+  lvgl/lvgl: "^9" 
+  espressif/esp_lvgl_port: "^2"
+  espressif/esp_lcd_sh1107: "^1"
 maintainers:
   "Nicklas Börjesson <nicklasb@gmail.com>"

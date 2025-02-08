@@ -353,7 +353,7 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
         {
             ROB_LOGW(message_sending_log_prefix, "Will try sending using %s instead.", media_type_to_str(next_media_type));
             // Another media found, try sending using that instead
-            queue_state *new_state = (uint8_t *)robusto_malloc(sizeof(queue_state));
+            queue_state *new_state = (queue_state *)robusto_malloc(sizeof(queue_state));
             robusto_set_queue_state_trying(queue_item->state);
             rob_ret_val_t retry_retval;
             rob_ret_val_t retry_res = send_message_raw_internal(queue_item->peer, next_media_type, queue_item->data, queue_item->data_length, new_state, queue_item->receipt, queue_item->queue_item_type, queue_item->depth, queue_item->exclude_media, queue_item->important);

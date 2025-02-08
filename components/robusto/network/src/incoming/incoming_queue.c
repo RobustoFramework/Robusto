@@ -99,7 +99,7 @@ rob_ret_val_t incoming_init_worker(incoming_callback_cb work_cb, char *_log_pref
     incoming_queue_context->remove_first_queueitem_cb = incoming_remove_first_queue_item; 
     incoming_queue_context->insert_tail_cb = incoming_insert_tail;
     incoming_queue_context->insert_head_cb = NULL;
-    incoming_queue_context->on_work_cb = work_cb; 
+    incoming_queue_context->on_work_cb = (work_callback *) work_cb; 
     incoming_queue_context->on_poll_cb = NULL;
     incoming_queue_context->max_task_count = 1;
     incoming_queue_context->max_task_count = 1;

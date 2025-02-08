@@ -233,7 +233,7 @@ uint8_t *kconfig_mac_to_6_bytes(uint64_t mac_kconfig) {
     dest[2] = (mac_kconfig >> (8*3)) & 0xff;
     dest[3] = (mac_kconfig >> (8*2)) & 0xff;
     dest[4] = (mac_kconfig >> (8)) & 0xff;
-    dest[5] = (uint8_t *)mac_kconfig;
+    dest[5] = mac_kconfig & 0xff;
 
     return dest;
 }

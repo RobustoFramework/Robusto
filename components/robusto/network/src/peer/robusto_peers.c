@@ -173,12 +173,12 @@ robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address)
         if (memcmp((uint8_t *)&(peer->base_mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN) == 0)
         {
             ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_base_mac_address found:");
-            rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
+            rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, (uint8_t *) mac_address, ROBUSTO_MAC_ADDR_LEN);
             return peer;
         }
     }
     ROB_LOGD(peers_log_prefix, "robusto_peers_find_peer_by_base_mac_address NOT found:");
-    rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, peers_log_prefix, (uint8_t *) mac_address, ROBUSTO_MAC_ADDR_LEN);
     return NULL;
 }
 
@@ -319,7 +319,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
             memcpy(&peer->name, name, CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1);
             peer->name[CONFIG_ROBUSTO_PEER_NAME_LENGTH - 1] = 0x00;
         } else {
-            strcpy(&peer->name, name);
+            strcpy((char *)&peer->name, name);
         }
         
     }
@@ -354,7 +354,7 @@ robusto_peer_t * robusto_add_init_new_peer(const char *peer_name, rob_mac_addres
         peer->supported_media_types = media_types;
         
         ROB_LOGI(peers_log_prefix, "Supported media types %hhu, Mac:", peer->supported_media_types);
-        rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, mac_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, (uint8_t *)mac_address, ROBUSTO_MAC_ADDR_LEN);
 
         init_supported_media_types(peer);
         ROB_LOGD(peers_log_prefix, "Peer added: %s", peer->name);
@@ -382,11 +382,11 @@ robusto_peer_t * robusto_add_init_new_peer(const char *peer_name, rob_mac_addres
  */
 robusto_peer_t *add_peer_by_mac_address(char *peer_name, const uint8_t *mac_address, robusto_media_types media_types)
 {
-    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_address);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)mac_address);
     if (peer) {
         return peer;
     }
-    peer = robusto_add_init_new_peer(peer_name, mac_address, media_types);
+    peer = robusto_add_init_new_peer(peer_name, (rob_mac_address *)mac_address, media_types);
     if (peer->state < PEER_PRESENTING) {
         // TODO: This should be able to handle trying with several media types
         robusto_send_presentation(peer, media_types, false, presentation_add);
