@@ -71,7 +71,7 @@ ble_peer_find_robusto_peer_by_ble_addr(rob_mac_address *mac_address)
 {
     
     uint8_t reversed_address[ROBUSTO_MAC_ADDR_LEN];
-    ble_to_base_mac_address(mac_address, &reversed_address);
+    ble_to_base_mac_address((uint8_t *)mac_address, (uint8_t *)&reversed_address);
 
     return robusto_peers_find_peer_by_base_mac_address(&reversed_address);
 
@@ -828,7 +828,7 @@ int ble_peer_add(uint16_t conn_handle, struct ble_gap_conn_desc desc)
     }
     
     ROB_LOGI(ble_peer_log_prefix, "BLE MAC address (peer_ota_addr = reversed max address + 2):");
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, &(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_peer_log_prefix, (uint8_t *)&(desc.peer_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
 
     peer = os_memblock_get(&ble_peer_pool);
     if (peer == NULL)

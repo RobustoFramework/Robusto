@@ -115,7 +115,7 @@ void i2c_do_on_poll_cb(queue_context_t *q_context)
 
     uint8_t *rcv_data = NULL;
     robusto_peer_t *peer = NULL;
-    uint8_t prefix_bytes = NULL;
+    uint8_t prefix_bytes = 0;
     i2c_read_data(&rcv_data, &peer, &prefix_bytes);
 
 

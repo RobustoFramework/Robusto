@@ -71,9 +71,10 @@ menu "Conductor configuration"
                 hex "The MAC-address of the conductor, a 6-byte hex value"
                 depends on !ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
                 range 0x000000000000 0xFFFFFFFFFFFF
+                default 0x000000000000
                 help
                     This is the MAC-address of the conductor
-                    Write it as a large hexadecimal number, for example 0x01AB11BB12BC (6*8 bits)
+                    Write it as a large hexadecimal number, for example 0x01AB11BB12BC : 6*8 bits
         
             config ROBUSTO_CONDUCTOR_RETRY_WAIT_S
                 int "Retry delay"

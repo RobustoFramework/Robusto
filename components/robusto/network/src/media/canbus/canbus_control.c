@@ -70,7 +70,7 @@ void robusto_canbus_start(char * _log_prefix) {
     canbus_compat_messaging_start();
 
     ROB_LOGI(canbus_log_prefix, "Starting CAN bus worker");
-    if (canbus_init_worker(&canbus_do_on_work_cb, &canbus_do_on_poll_cb, canbus_log_prefix) != ROB_OK)
+    if (canbus_init_worker((work_callback *)&canbus_do_on_work_cb, (poll_callback *)&canbus_do_on_poll_cb, canbus_log_prefix) != ROB_OK)
     {
        ROB_LOGE(canbus_log_prefix, "Failed initializing CAN bus"); 
        return;

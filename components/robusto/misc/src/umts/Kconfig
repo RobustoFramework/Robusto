@@ -6,6 +6,7 @@ config ROBUSTO_UMTS_SERVER
             The UMTS gateway allows access to the cellular network and presents two services:
             1. Sending MQTT messages to a predefined server
             2. Sending SMS messages to a specified recipient
+            Note: Needs ROBUSTO_UMTS_SERVER to be enabled.
 
     menu "UMTS gateway configuration"
         depends on ROBUSTO_UMTS_SERVER

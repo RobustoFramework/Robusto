@@ -122,7 +122,7 @@ void recover_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_he
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (media_type == robusto_mt_lora)
     {
-        create_recovery_task(peer, info, last_heartbeat, media_type, &lora_recover);
+        create_recovery_task(peer, info, last_heartbeat, media_type, (TaskFunction_t)&lora_recover);
         return;
     } 
 #endif

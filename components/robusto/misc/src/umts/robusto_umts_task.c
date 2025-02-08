@@ -405,7 +405,7 @@ void robusto_umts_start(char *_log_prefix)
 
     ROB_LOGI(umts_task_log_prefix, "* Preferred mode selection; Automatic");
 
-    err = esp_modem_at(umts_dce, "AT+CNMP=38", &res, 15000);
+    err = esp_modem_at(umts_dce, "AT+CNMP=38", (char *)&res, 15000);
     if (err != ESP_OK)
     {
         ROB_LOGW(umts_task_log_prefix, "esp_modem_at CNMP=38 failed with error:  %i", err);
@@ -420,7 +420,7 @@ void robusto_umts_start(char *_log_prefix)
 #endif
 
     ROB_LOGI(umts_task_log_prefix, "* Preferred selection between CAT-M and NB-IoT");
-    err = esp_modem_at(umts_dce, "AT+CMNB=1", &res, 15000);
+    err = esp_modem_at(umts_dce, "AT+CMNB=1", (char *)&res, 15000);
     if (err != ESP_OK)
     {
         ROB_LOGW(umts_task_log_prefix, "esp_modem_at CMNB=1 failed with error:  %i", err);
@@ -499,7 +499,7 @@ signal_quality:
     ROB_LOGI(umts_task_log_prefix, "Checking registration.");
     // char res[100];
     bool registered = false;
-    err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);
+    err = esp_modem_at(umts_dce, "AT+CREG?", (char *)&res, 20000);
     if (err != ESP_OK)
     {
         ROB_LOGE(umts_task_log_prefix, "esp_modem_at CREG failed with error:  %i", err);
@@ -520,7 +520,7 @@ signal_quality:
     if (!registered)
     {
         ROB_LOGW(umts_task_log_prefix, "We are not registered, start registering using AT+COPS=0 (auto select operator).");
-        err = esp_modem_at(umts_dce, "AT+COPS=0", &res, 120000);
+        err = esp_modem_at(umts_dce, "AT+COPS=0", (char *)&res, 120000);
         if (err != ESP_OK)
         {
             ROB_LOGE(umts_task_log_prefix, "esp_modem_at AT+COPS=0 failed with error:  %i", err);
@@ -534,7 +534,7 @@ signal_quality:
     
     while (!registered)
     {
-        err = esp_modem_at(umts_dce, "AT+CREG?", &res, 20000);
+        err = esp_modem_at(umts_dce, "AT+CREG?", (char *)&res, 20000);
         if (err != ESP_OK)
         {
             ROB_LOGE(umts_task_log_prefix, "esp_modem_at CREG failed with error:  %i", err);

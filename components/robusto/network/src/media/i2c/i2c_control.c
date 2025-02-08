@@ -56,7 +56,7 @@
 #error "I2C - An I2C address must be set in menuconfig!"
 #endif
 
-const char * i2c_log_prefix;
+char * i2c_log_prefix;
 
 
 void robusto_i2c_stop() {
@@ -70,7 +70,7 @@ void robusto_i2c_start(char * _log_prefix) {
     i2c_compat_messaging_start();
 
     ROB_LOGI(i2c_log_prefix, "Starting I2C worker");
-    if (i2c_init_worker(&i2c_do_on_work_cb, &i2c_do_on_poll_cb, i2c_log_prefix) != ROB_OK)
+    if (i2c_init_worker((work_callback *)&i2c_do_on_work_cb, (poll_callback *)&i2c_do_on_poll_cb, i2c_log_prefix) != ROB_OK)
     {
        ROB_LOGE(i2c_log_prefix, "Failed initializing I2C"); 
        return;

@@ -81,18 +81,18 @@ void ble_on_disc_complete(const struct ble_peer *peer, int status, void *arg)
         return;
     }
     ROB_LOGI(ble_global_log_prefix, "ble_on_disc_complete");
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, &(peer->desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, (uint8_t *)&(peer->desc.our_ota_addr.val), ROBUSTO_MAC_ADDR_LEN);
 
     // Find out a base mac address from the reversed one
     rob_mac_address *reversed_address = robusto_malloc(ROBUSTO_MAC_ADDR_LEN);
-    ble_to_base_mac_address(&(peer->desc.peer_ota_addr.val), reversed_address);
+    ble_to_base_mac_address((uint8_t *)&(peer->desc.peer_ota_addr.val), (uint8_t *)reversed_address);
     ROB_LOGI(ble_global_log_prefix, "reversed address, based on peer_ota_addr");
-    rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, reversed_address, ROBUSTO_MAC_ADDR_LEN);
+    rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, (uint8_t *)reversed_address, ROBUSTO_MAC_ADDR_LEN);
 
     ROB_LOGI(ble_global_log_prefix, "Checking BLE peer for a robusto compatible service. UUID:");
     ble_uuid128_t *uuid = create_mac_on_sec_test_uuid(reversed_address);
     rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, uuid->value, 16);
-    if (ble_peer_svc_find_uuid(peer, uuid))
+    if (ble_peer_svc_find_uuid(peer, (ble_uuid_t *)uuid))
     {
         /* Remember peer. */
         ROB_LOGI(ble_global_log_prefix, "Peer had the SPP-service, adding as Robusto peer");
@@ -105,7 +105,7 @@ void ble_on_disc_complete(const struct ble_peer *peer, int status, void *arg)
     else
     {
         ROB_LOGI(ble_global_log_prefix, "Peer didn't have the SPP-service, will not add as Robusto peer:");
-        rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, reversed_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix, (uint8_t *)reversed_address, ROBUSTO_MAC_ADDR_LEN);
     }
     robusto_free(reversed_address);
     robusto_free(uuid);
@@ -215,7 +215,7 @@ rob_ret_val_t ble_send_message_raw(robusto_peer_t *peer, uint8_t *data, uint32_t
                     rob_log_bit_mesh(ROB_LOG_INFO, ble_global_log_prefix,data, data_length);
                 }
                 
-                ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, ble_send_cb, NULL);
+                ret = ble_gattc_write_flat(peer->ble_conn_handle, get_ble_spp_svc_gatt_read_val_handle(), data, data_length, (void *)&ble_send_cb, NULL);
             }
                  
             if ((ret == ESP_OK) && (!robusto_waitfor_int_change(&send_status, 10000))) {

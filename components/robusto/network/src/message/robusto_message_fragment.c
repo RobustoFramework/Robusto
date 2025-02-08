@@ -483,7 +483,7 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *
  * @param len The length of the data
  * @param fragment_size The size of the fragment of the media
  */
-bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     bool receipt = false;
     switch (data[ROBUSTO_CRC_LENGTH + 1])

@@ -135,7 +135,7 @@ uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_s
     return ROB_OK;
 }
 
-rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint* data, int data_length) {
+rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, int data_length) {
     if (subscriber->local_callback) {
         ROB_LOGI(pubsub_log_prefix, "Publishing %s to callback", topic->name);
         subscriber->local_callback(data, data_length);

@@ -55,7 +55,7 @@ void robusto_lora_start()
     ROB_LOGI(lora_log_prefix, "Starting LoRa");
     init_radiolib();
 
-    if (lora_init_worker(&lora_do_on_work_cb, &lora_do_on_poll_cb, lora_log_prefix) != ROB_OK)
+    if (lora_init_worker((work_callback *)&lora_do_on_work_cb, (poll_callback *)&lora_do_on_poll_cb, lora_log_prefix) != ROB_OK)
     {
         ROB_LOGE(lora_log_prefix, "Failed starting LoRa worker");
         return;

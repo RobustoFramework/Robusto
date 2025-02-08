@@ -67,7 +67,7 @@ esp_now_peer_info_t* espnow_add_peer(uint8_t *mac_adress)
     if (esp_now_peer == NULL)
     {
         ROB_LOGE(espnow_peer_log_prefix, "Malloc peer information fail");
-        return ESP_FAIL;
+        return NULL;
     }
     
     memset(esp_now_peer, 0, sizeof(esp_now_peer_info_t));
@@ -107,7 +107,7 @@ void espnow_stat_reset(void) {
 void espnow_peer_init_peer(robusto_peer_t *peer)
 {
     memset(peer->espnow_info.failure_rate_history, 0, sizeof(float) * FAILURE_RATE_HISTORY_LENGTH);
-    espnow_add_peer(&peer->base_mac_address);
+    espnow_add_peer((uint8_t *)&peer->base_mac_address);
     peer_stat_reset(&peer->espnow_info);
     set_state(peer, &peer->espnow_info, robusto_mt_espnow, media_state_initiating, media_problem_none);
 }

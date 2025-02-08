@@ -208,7 +208,7 @@ fragmented_message_t * get_last_frag_message();
  * @param receipt Wait for a receipt
  * @return typedef The return value
  */
-typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt);
+typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t len, bool receipt);
 
 /**
  * @brief Handle incoming fragmented messaged
@@ -222,7 +222,7 @@ typedef rob_ret_val_t cb_send_message(robusto_peer_t *peer, const uint8_t *data,
  * @return If true, send receipt (used in initialisation, but not with parts)
  */
 
-bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
+bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message * send_message);
 
 
 /**

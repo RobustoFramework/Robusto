@@ -66,14 +66,14 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     // TODO: Recommend more wifi TX buffers and add warning if not enabled
     
     ROB_LOGD(espnow_log_prefix, "esp_now_send_check, sending %lu bytes.", data_length);
-    int rc = esp_now_send(&peer->base_mac_address, data, data_length);
+    int rc = esp_now_send((uint8_t *)&peer->base_mac_address, data, data_length);
     send_status = -1;
     has_receipt = false;
 
     if (rc != ESP_OK)
     {
         ROB_LOGE(espnow_log_prefix, "Mac address:");
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, &peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, (uint8_t*)&peer->base_mac_address, ROBUSTO_MAC_ADDR_LEN);
         if (rc == ESP_ERR_ESPNOW_NOT_INIT)
         {
             ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NOT_INIT");
@@ -199,7 +199,7 @@ static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status
     {
         ROB_LOGW(espnow_log_prefix, ">> In espnow_send_cb, send failure, mac address:");
         rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, mac_addr, ROBUSTO_MAC_ADDR_LEN);
-        robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(mac_addr);
+        robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)mac_addr);
         if (peer)
         {
             // Yes, this is counted doubly, but this should not happen, we probably have some kind of issue
@@ -236,7 +236,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         return;
     }
 
-    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address(esp_now_info->src_addr);
+    robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)esp_now_info->src_addr);
     if (peer != NULL)
     {
         ROB_LOGD(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
@@ -257,7 +257,7 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
             return;
         }
 
-        peer = robusto_add_init_new_peer(NULL, esp_now_info->src_addr, robusto_mt_espnow);
+        peer = robusto_add_init_new_peer(NULL, (rob_mac_address *)esp_now_info->src_addr, robusto_mt_espnow);
     }
 
     bool is_heartbeat = data[ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT;

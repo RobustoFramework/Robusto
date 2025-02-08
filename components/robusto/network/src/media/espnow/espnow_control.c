@@ -111,7 +111,7 @@ void robusto_espnow_start() {
     espnow_messaging_init(espnow_log_prefix);
     espnow_peer_init(espnow_log_prefix);
 
-    if (espnow_init_worker(espnow_do_on_work_cb, NULL, espnow_log_prefix) != ROB_OK)
+    if (espnow_init_worker((work_callback *)espnow_do_on_work_cb, NULL, espnow_log_prefix) != ROB_OK)
     {
         ROB_LOGE(espnow_log_prefix, "Failed initializing ESP-NOW worker");
         return;

@@ -68,7 +68,7 @@ void ble_do_on_work_cb(media_queue_item_t *work_item) {
 
 void ble_sync_callback(void) {
    ble_spp_server_on_sync();
-    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 5000)) {
+    if (!robusto_waitfor_byte((uint8_t *)ble_server_get_state_ptr(), robusto_ble_advertising, 5000)) {
         ROB_LOGW(ble_init_log_prefix, "BLE never started to advertise, will still start the client, state = %hu.", *ble_server_get_state_ptr());  
     }
    ROB_LOGW(ble_init_log_prefix, "BLE is now advertising, lets start discovering others.");
@@ -89,7 +89,7 @@ void robusto_ble_init(char *_log_prefix)
     ROB_LOGI(ble_init_log_prefix, "Initialising BLE..");
 
     ROB_LOGI(ble_init_log_prefix, "Initialize BLE queue (stopped).");
-    ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", &ble_do_on_work_cb, &ble_do_on_poll_cb);
+    ble_media_queue = create_media_queue(ble_init_log_prefix, "BLE worker", (work_callback *)&ble_do_on_work_cb, (poll_callback *)&ble_do_on_poll_cb);
     if (!ble_media_queue) {
         ROB_LOGE(ble_init_log_prefix, "Failed to create the BLE media queue. Shutting down BLE, Robusto will report that it is an invalid media type.");
         return;
@@ -163,7 +163,7 @@ void robusto_ble_init(char *_log_prefix)
     /* Start the thread for the host stack, pass the client task which nimble_port_run */
     nimble_port_freertos_init(&ble_host_task);
 
-    if (!robusto_waitfor_byte(ble_server_get_state_ptr(), robusto_ble_advertising, 15000)) {
+    if (!robusto_waitfor_byte((uint8_t *)ble_server_get_state_ptr(), robusto_ble_advertising, 15000)) {
         ROB_LOGE(ble_init_log_prefix, "BLE never started to advertise, state = %hu.", *ble_server_get_state_ptr());  
         robusto_ble_shutdown();
         return;  

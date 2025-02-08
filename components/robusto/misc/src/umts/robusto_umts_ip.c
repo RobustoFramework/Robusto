@@ -4,6 +4,11 @@
 #include "freertos/event_groups.h"
 
 #include <esp_netif.h>
+
+#ifndef CONFIG_PPP_SUPPORT
+#error "The Robusto UMTS server requires PPP support. Please enable CONFIG_PPP_SUPPORT."
+#endif
+
 #include <esp_netif_ppp.h>
 
 #include <esp_modem_api.h>

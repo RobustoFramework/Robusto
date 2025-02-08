@@ -33,7 +33,7 @@ static network_service_t conductor_client_service = {
     .service_name = "Conductor client service",
     .incoming_callback = &on_incoming_conductor_client,
     .service_id = ROBUSTO_CONDUCTOR_CLIENT_SERVICE_ID,
-    .shutdown_callback = &on_shutting_down_conductor_client,
+    .shutdown_callback = (shutdown_cb *)&on_shutting_down_conductor_client,
 };
 
 void on_shutting_down_conductor_client(robusto_message_t *message)
@@ -163,7 +163,7 @@ void robusto_add_conductor() {
             main_conductor_peer = add_peer_by_i2c_address("CONDUCTOR_MAIN", CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS)
         }
     #else
-        main_conductor_peer = robusto_peers_find_peer_by_base_mac_address(kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS));
+        main_conductor_peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS));
         if (!main_conductor_peer) {
             main_conductor_peer = add_peer_by_mac_address("CONDUCTOR_MAIN", kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS), media_type);
         }

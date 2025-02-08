@@ -47,7 +47,7 @@ static network_service_t conductor_server_service = {
     .service_name = "Conductor server service",
     .incoming_callback = &on_incoming_conductor_server,
     .service_id = ROBUSTO_CONDUCTOR_SERVER_SERVICE_ID,
-    .shutdown_callback = &on_shutting_down_conductor_server,
+    .shutdown_callback = (shutdown_cb *) &on_shutting_down_conductor_server,
 };
 
 void on_shutting_down_conductor_server(robusto_message_t *message)

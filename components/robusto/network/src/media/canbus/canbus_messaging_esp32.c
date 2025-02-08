@@ -427,7 +427,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
         if (packet_count_index > 1)
         {
             // if there is more than one packet, add the data to a new in-flight and return
-            int res_start = start_in_flight(source, packet_count_index, &message.data, message.data_length_code);
+            int res_start = start_in_flight(source, packet_count_index, message.data, message.data_length_code);
             if (res_start > 0)
             {
                 return ROB_OK;
@@ -451,7 +451,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
 
         ROB_LOGD(canbus_messaging_log_prefix, "Parsed packet index %u", packet_count_index);
 
-        int res_add = add_to_in_flight(source, packet_count_index, &message.data, message.data_length_code);
+        int res_add = add_to_in_flight(source, packet_count_index, message.data, message.data_length_code);
         if (res_add == ERR_INVALID_PACKAGE_INDEX)
         {
             return ROB_FAIL;

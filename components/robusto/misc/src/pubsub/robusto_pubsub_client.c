@@ -323,7 +323,7 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
 void recover_topic(subscribed_topic_t *topic)
 {
     robusto_pubsub_client_get_topic(topic->peer, topic->topic_name, topic->callback, topic->display_offset);
-    if (topic->state == TOPIC_STATE_PROBLEM && !robusto_waitfor_byte_change(&topic->state, 1000) != ROB_OK)
+    if (topic->state == TOPIC_STATE_PROBLEM && !robusto_waitfor_byte_change((uint8_t *)&topic->state, 1000) != ROB_OK)
     {
         ROB_LOGE(pubsub_client_log_prefix, "Failed to recover %s using the %s peer", topic->topic_name, topic->peer->name);
         topic->state = TOPIC_STATE_PROBLEM;
@@ -353,7 +353,7 @@ void create_topic_recovery_task(subscribed_topic_t *topic)
              topic->topic_name, topic->peer->name);
     char *task_name;
     robusto_asprintf(&task_name, "Recovery task task for %s topic, peer %s", topic->topic_name, topic->peer->name);
-    if (robusto_create_task(&recover_topic, topic, task_name, NULL, 0) != ROB_OK)
+    if (robusto_create_task((TaskFunction_t)&recover_topic, topic, task_name, NULL, 0) != ROB_OK)
     {
         ROB_LOGE(pubsub_client_log_prefix, "Failed creating a recovery task for %s topic, peer %s", topic->topic_name, topic->peer->name);
     }

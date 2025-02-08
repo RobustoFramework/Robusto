@@ -87,9 +87,9 @@ rob_ret_val_t canbus_init_worker(work_callback work_cb, poll_callback poll_cb, c
     // Initialize the work queue
     STAILQ_INIT(&canbus_work_q);
 
-    canbus_queue_context.first_queue_item_cb = &canbus_first_queueitem; 
-    canbus_queue_context.remove_first_queueitem_cb = &canbus_remove_first_queue_item; 
-    canbus_queue_context.insert_tail_cb = &canbus_insert_tail;
+    canbus_queue_context.first_queue_item_cb = (first_queueitem *)&canbus_first_queueitem; 
+    canbus_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&canbus_remove_first_queue_item; 
+    canbus_queue_context.insert_tail_cb = (insert_queue_item *)&canbus_insert_tail;
     canbus_queue_context.insert_head_cb = NULL;
     canbus_queue_context.on_work_cb = work_cb; 
     canbus_queue_context.on_poll_cb = poll_cb;

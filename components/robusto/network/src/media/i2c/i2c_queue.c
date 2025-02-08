@@ -87,9 +87,9 @@ rob_ret_val_t i2c_init_worker(work_callback work_cb, poll_callback poll_cb, char
     // Initialize the work queue
     STAILQ_INIT(&i2c_work_q);
 
-    i2c_queue_context.first_queue_item_cb = i2c_first_queueitem; 
-    i2c_queue_context.remove_first_queueitem_cb = &i2c_remove_first_queue_item; 
-    i2c_queue_context.insert_tail_cb = &i2c_insert_tail;
+    i2c_queue_context.first_queue_item_cb = (first_queueitem *)&i2c_first_queueitem; 
+    i2c_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&i2c_remove_first_queue_item; 
+    i2c_queue_context.insert_tail_cb = (insert_queue_item *)&i2c_insert_tail;
     i2c_queue_context.insert_head_cb = NULL;
     i2c_queue_context.on_work_cb = work_cb; 
     i2c_queue_context.on_poll_cb = poll_cb;

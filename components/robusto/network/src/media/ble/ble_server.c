@@ -26,7 +26,7 @@ static uint8_t ble_srv_state = robusto_ble_stopped;
 static int ble_spp_server_gap_event(struct ble_gap_event *event, void *arg);
 
 ble_server_state_t *ble_server_get_state_ptr() {
-    return &ble_srv_state;
+    return (ble_server_state_t *)&ble_srv_state;
 }
 
 

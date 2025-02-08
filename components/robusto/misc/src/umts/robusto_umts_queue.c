@@ -26,7 +26,7 @@ static char *umts_queue_log_prefix;
 STAILQ_HEAD(umts_work_q, umts_queue_item) umts_work_q;
 
 struct umts_queue_item_t *umts_first_queueitem() {
-    return STAILQ_FIRST(&umts_work_q); 
+    return (struct umts_queue_item_t *) STAILQ_FIRST(&umts_work_q); 
 }
 
 
@@ -38,13 +38,14 @@ void umts_insert_tail(umts_queue_item_t *new_item) {
 }
 
 rob_ret_val_t umts_safe_add_work_queue(umts_queue_item_t *new_item) {   
-    return safe_add_work_queue(&umts_queue_context, new_item);
+    return safe_add_work_queue(&umts_queue_context, new_item, false);
 }
 void umts_cleanup_queue_task(umts_queue_item_t *queue_item) {
     if (queue_item != NULL)
     {
-        robusto_message_free(queue_item->topic);
-        robusto_message_free(queue_item->data);
+        robusto_free(queue_item->topic);
+        robusto_free(queue_item->data);
+        robusto_free(queue_item->state);
         robusto_free(queue_item);
     }
     cleanup_queue_task(&umts_queue_context);
@@ -65,9 +66,9 @@ rob_ret_val_t umts_init_queue(work_callback work_cb, char *_log_prefix)
     // Initialize the work queue
     STAILQ_INIT(&umts_work_q);
 
-    umts_queue_context.first_queue_item_cb = &umts_first_queueitem; 
-    umts_queue_context.remove_first_queueitem_cb = &umts_remove_first_queue_item; 
-    umts_queue_context.insert_tail_cb = &umts_insert_tail;
+    umts_queue_context.first_queue_item_cb = (first_queueitem *)&umts_first_queueitem; 
+    umts_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&umts_remove_first_queue_item; 
+    umts_queue_context.insert_tail_cb = (insert_queue_item *)&umts_insert_tail;
     umts_queue_context.insert_head_cb = NULL;
     umts_queue_context.on_work_cb = work_cb; 
     umts_queue_context.max_task_count = 1;

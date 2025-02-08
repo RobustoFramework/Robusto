@@ -136,7 +136,7 @@ void robusto_umts_init(char *_log_prefix)
     umts_event_group = xEventGroupCreate();
     xEventGroupClearBits(umts_event_group, GSM_CONNECT_BIT | GSM_GOT_DATA_BIT | GSM_SHUTTING_DOWN_BIT);
 
-    umts_init_queue(&umts_do_on_work_cb, umts_log_prefix);
+    umts_init_queue((work_callback *)&umts_do_on_work_cb, umts_log_prefix);
 
     ROB_LOGI(umts_log_prefix, "* Registering GSM main task...");
     int rc = xTaskCreatePinnedToCore((TaskFunction_t)robusto_umts_start, "UMTS main task", /*8192*/ /*16384*/ 32768,
