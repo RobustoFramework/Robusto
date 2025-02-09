@@ -1,4 +1,5 @@
 #include "init_pmu.hpp"
+#ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #ifdef USE_ESPIDF
 #include <stdio.h>
 #include <cstring>
@@ -86,4 +87,4 @@ static void pmu_hander_task(void *args)
 
 #endif
 
-
+#endif
