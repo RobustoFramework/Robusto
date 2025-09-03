@@ -22,7 +22,7 @@
 void tst_make_strings_message(void) {
     uint8_t *tst_strings_res;
 //    rob_log_bit_mesh(ROB_LOG_INFO, "test_make_strings_message input", (uint8_t*)&tst_strings, sizeof(tst_strings));
-    int tst_msg_length = robusto_make_multi_message_internal(MSG_MESSAGE, 1, 0, (uint8_t *)&tst_strings, sizeof(tst_strings), NULL, NULL, &tst_strings_res);
+    int tst_msg_length = robusto_make_multi_message_internal(MSG_MESSAGE, 1, 0, (uint8_t *)&tst_strings, sizeof(tst_strings), NULL, 0, &tst_strings_res);
     rob_log_bit_mesh(ROB_LOG_INFO, "tst_make_strings_message", tst_strings_res, tst_msg_length);
     
     TEST_ASSERT_EQUAL_INT_MESSAGE(ROBUSTO_PREFIX_BYTES +  ROBUSTO_CRC_LENGTH + sizeof(tst_strings_match), tst_msg_length, "The length of the strings message doesn't match");
@@ -39,7 +39,7 @@ void tst_make_strings_message(void) {
 void tst_make_binary_message(void) {
     uint8_t *tst_binary_res;
 //    rob_log_bit_mesh(ROB_LOG_INFO, "test_make_binary_message", (uint8_t*)&tst_binary, sizeof(tst_binary));
-    int tst_msg_length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, NULL, NULL, (uint8_t*) &tst_binary, sizeof(tst_binary), &tst_binary_res);
+    int tst_msg_length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, NULL, 0, (uint8_t*) &tst_binary, sizeof(tst_binary), &tst_binary_res);
     TEST_ASSERT_EQUAL_INT_MESSAGE(ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH + sizeof(tst_binary_match), tst_msg_length, "The length of the binary message doesn't match");
     TEST_ASSERT_EQUAL_UINT8_ARRAY_MESSAGE((uint8_t*)(&tst_binary_match), tst_binary_res + ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH, tst_msg_length - ROBUSTO_PREFIX_BYTES - ROBUSTO_CRC_LENGTH, "The binary message content doesn't match");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(
@@ -123,7 +123,7 @@ void tst_build_strings_data(void)
  * 
  */
 void tst_calc_message_crc(void) {
-    uint32_t crc = robusto_crc32(0, &tst_multi_conv_match, 17);
+    uint32_t crc = robusto_crc32(0, (uint8_t *)&tst_multi_conv_match, 17);
     TEST_ASSERT_EQUAL_UINT32(3601290074UL, crc);
 }
 

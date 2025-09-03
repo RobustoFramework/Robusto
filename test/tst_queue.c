@@ -33,7 +33,7 @@ void sample_poll_callback(void *q_context) {
 void tst_queue_start(void) {
     ROB_LOGI("Test", "In tst_queue_start");
 
-    sample_init_worker(sample_work_callback, sample_poll_callback, "sample_queue");
+    sample_init_worker((sample_queue_callback *)&sample_work_callback, sample_poll_callback, "sample_queue");
     ROB_LOGI("Test", "Worker started");
     TEST_ASSERT_TRUE(true);
 }
