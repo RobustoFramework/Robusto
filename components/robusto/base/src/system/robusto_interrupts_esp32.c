@@ -78,9 +78,17 @@ uint8_t digitalPinToGPIO(uint8_t pin) {
       case 18: return GPIO_NUM_18;
       case 19: return GPIO_NUM_19;
       case 21: return GPIO_NUM_21;
+      // These are not always available
+      #ifdef GPIO_NUM_22
       case 22: return GPIO_NUM_22;
+      #endif
+      #ifdef GPIO_NUM_23
       case 23: return GPIO_NUM_23;
+      #endif
+      #ifdef GPIO_NUM_25
       case 25: return GPIO_NUM_25;
+      #endif
+
       case 26: return GPIO_NUM_26;
       case 27: return GPIO_NUM_27;
       /* Not exposed 

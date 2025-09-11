@@ -65,7 +65,7 @@ rob_ret_val_t mock_after_comms(bool is_sending, bool first_call)
     return ROB_OK;
 }
 
-rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, uint32_t data_length, bool receipt);
+rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, uint32_t data_length, bool receipt)
 {
 
     if (strcmp(peer->name, MOCK_PEERNAME_0) != 0)
@@ -78,7 +78,7 @@ rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, uint32_t dat
     {
         peer->mock_info.last_sent_heartbeat = r_millis();
     }
-    ROB_LOGI("MOCK", "mock_send_message: Mock sending %d bytes to peer %s", data_length, peer->name);
+    ROB_LOGI("MOCK", "mock_send_message: Mock sending %lu bytes to peer %s", data_length, peer->name);
     rob_log_bit_mesh(ROB_LOG_INFO, "MOCK", data, data_length);
     return ret;
 }
