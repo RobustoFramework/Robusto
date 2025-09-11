@@ -64,7 +64,7 @@ void ROBUSTO_NETWORK_MOCK_TESTING_init(char * _log_prefix) {
     mock_messaging_init(mock_log_prefix);
     
     ROB_LOGI(mock_log_prefix, "Starting the mock worker.");
-    if (mock_init_worker(&mock_do_on_work_cb, &mock_do_on_poll_cb, mock_log_prefix) != ROB_OK)
+    if (mock_init_worker((work_callback *)&mock_do_on_work_cb, (poll_callback *)&mock_do_on_poll_cb, mock_log_prefix) != ROB_OK)
     {
        ROB_LOGE(mock_log_prefix, "Failed initializing mock worker!"); 
        return;

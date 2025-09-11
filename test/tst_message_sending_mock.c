@@ -31,7 +31,7 @@ void init_defs_mock()
     {
         return;
     }
-    robusto_peer_t * test_peer_mock = robusto_add_init_new_peer("TEST_MOCK", kconfig_mac_to_6_bytes(11), robusto_mt_mock);
+    robusto_peer_t * test_peer_mock = robusto_add_init_new_peer("TEST_MOCK", (rob_mac_address *)kconfig_mac_to_6_bytes(11), robusto_mt_mock);
     ROB_LOGI("TEST", "ADDED TEST_MOCK");
     test_peer_mock->protocol_version = 0;
     test_peer_mock->relation_id_incoming = TST_RELATIONID_01;
@@ -74,7 +74,7 @@ void tst_async_mock_send_message(void)
 
     //  rob_log_bit_mesh(ROB_LOG_INFO, "test_make_strings_message input", (uint8_t*)&tst_strings, sizeof(tst_strings));
 
-    int tst_strings_length = robusto_make_strings_message(MSG_MESSAGE, 1, 0, (uint8_t *)&tst_strings, 8, &tst_strings_msg);
+    int tst_strings_length = robusto_make_multi_message_internal(MSG_MESSAGE, 1, 0, (uint8_t *)&tst_strings, 8, NULL, 0, &tst_strings_msg);
     set_message_expectation(MMI_STRINGS);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     robusto_peer_t * test_peer_mock = robusto_peers_find_peer_by_name("TEST_MOCK");

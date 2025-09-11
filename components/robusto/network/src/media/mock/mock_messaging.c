@@ -65,6 +65,25 @@ rob_ret_val_t mock_after_comms(bool is_sending, bool first_call)
     return ROB_OK;
 }
 
+rob_ret_val_t mock_send_message(robusto_peer_t *peer,uint8_t *data, uint32_t data_length, bool receipt);
+{
+
+    if (strcmp(peer->name, MOCK_PEERNAME_0) != 0)
+    {
+        ROB_LOGE("MOCK", "mock_send_message: The peer name it not '%s', but '%s'", MOCK_PEERNAME_0, peer->name);
+    }
+    rob_ret_val_t ret = ROB_OK;
+    peer->mock_info.last_send = r_millis();
+    if (receipt)
+    {
+        peer->mock_info.last_sent_heartbeat = r_millis();
+    }
+    ROB_LOGI("MOCK", "mock_send_message: Mock sending %d bytes to peer %s", data_length, peer->name);
+    rob_log_bit_mesh(ROB_LOG_INFO, "MOCK", data, data_length);
+    return ret;
+}
+
+
 
 rob_ret_val_t mock_read_receipt(robusto_peer_t *peer, uint8_t **dest_data)
 {
@@ -90,7 +109,7 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     int length = 0;
     if ((message_expectation == MMI_STRINGS) || (message_expectation == MMI_STRINGS_ASYNC))
     {   
-        length = robusto_make_strings_message(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_strings, 8, rcv_data);
+        length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_strings, 8, NULL, 0, rcv_data);
         *peer = robusto_peers_find_peer_by_name("TEST_MOCK");
         if ((*peer) != NULL) {
             (*peer)->mock_info.last_receive = r_millis();
@@ -101,15 +120,15 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     }
     else if (message_expectation == MMI_BINARY)
     {
-        length = robusto_make_binary_message(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_binary, 4, rcv_data);
+        length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, NULL, 0, (uint8_t *)&mock_binary, 4, rcv_data);
     }
     else if (message_expectation == MMI_SERVICE)
     {
-        length = robusto_make_binary_message(MSG_MESSAGE, 1959, 0, (uint8_t *)&mock_binary, 4, rcv_data);
+        length = robusto_make_multi_message_internal(MSG_MESSAGE, 1959, 0, NULL, 0, (uint8_t *)&mock_binary, 4, rcv_data);
     }
     else if (message_expectation == MMI_MULTI)
     {
-        length = robusto_make_multi_message(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_strings, 8, (uint8_t *)&mock_binary, 4, rcv_data);
+        length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_strings, 8, (uint8_t *)&mock_binary, 4, rcv_data);
     }
     else if (message_expectation == MMI_BINARY_RESTRICTED)
     {
