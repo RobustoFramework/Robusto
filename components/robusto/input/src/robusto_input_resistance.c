@@ -42,8 +42,10 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
         ROB_LOGE(input_log_prefix, "adc_cali_check_scheme failed with the %i error code.", sch_res);
         return ROB_FAIL;
     }
+#if ADC_CALI_SCHEME_VER_LINE_FITTING
     if (scheme_mask == ADC_CALI_SCHEME_VER_LINE_FITTING)
     {
+
         adc_cali_line_fitting_config_t line_fitting_config = {
             .unit_id = _adc_unit,
             .atten = ADC_ATTEN_DB_11,
@@ -54,26 +56,26 @@ rob_ret_val_t adc_calibration_init(adc_unit_t _adc_unit, adc_channel_t _adc_chan
             ROB_LOGE(input_log_prefix, "adc_cali_create_scheme_line_fitting failed with the %i error code.", lf_res);
             return ROB_FAIL;
         }
+
     }
-    else if (scheme_mask == ADC_CALI_SCHEME_VER_CURVE_FITTING)
+    else
+#elif ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+
+    if (scheme_mask == ADC_CALI_SCHEME_VER_CURVE_FITTING)
     {
-#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
         adc_cali_curve_fitting_config_t curve_fitting_config = {
-            .unit_id = adc_unit,
-            .chan = adc_channel,
+            .unit_id = _adc_unit,
+            .chan = _adc_channel,
             .atten = ADC_ATTEN_DB_11,
             .bitwidth = ADC_BITWIDTH_DEFAULT};
-        esp_err_t cf_res = adc_cali_create_scheme_curve_fitting(&curve_fitting_config, cali_handle);
+        esp_err_t cf_res = adc_cali_create_scheme_curve_fitting(&curve_fitting_config, _cali_handle);
         if (cf_res != ESP_OK)
         {
             ROB_LOGE(input_log_prefix, "adc_cali_create_scheme_curve_fitting failed with the %i error code.", cf_res);
         }
-#else
-        ROB_LOGE(input_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %s",
-                 scheme_mask == 0 ? "Line" : "Curve");
-#endif
     }
     else
+#endif
     {
         ROB_LOGE(input_log_prefix, "Error, unsupported calibration scheme returned by adc_cali_check_scheme: %u", scheme_mask);
         return ROB_FAIL;

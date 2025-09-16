@@ -147,6 +147,8 @@ void robusto_add_conductor() {
         e_media_type media_type = robusto_mt_lora;
     #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C)
         e_media_type media_type = robusto_mt_i2c;
+    #elif defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING)
+        e_media_type media_type = robusto_mt_mock;
     #else
         #error "No media type selected for initial contact with the conductor."
     #endif

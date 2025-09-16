@@ -25,12 +25,12 @@ resistance_mapping_t resistances[6] = {
 
 resistor_monitor_t *monitor = NULL;
 
-void callback_buttons_press(uint32_t buttons)
+void callback_buttons_press(uint32_t buttons, float voltage)
 {
     // Button 2 and 4 are pressed simultaneously
 
     pushed_2_5 = buttons == 2 + 16;
-    ROB_LOGI("adc", "test: Got a button event %lu", buttons);
+    ROB_LOGI("adc", "test: Got a button event %lu with voltage %f", buttons, voltage);
 };
 
 void init_resistance_mappings()
@@ -39,7 +39,7 @@ void init_resistance_mappings()
         return;
     }
     monitor = robusto_malloc(sizeof(resistor_monitor_t));
-    monitor->mappings = &resistances;
+    monitor->mappings = resistances;
     monitor->mapping_count = 6;
     monitor->ladder_exclude_count = 0;
     monitor->callback = &callback_buttons_press;
