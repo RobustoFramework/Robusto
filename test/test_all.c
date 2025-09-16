@@ -181,6 +181,7 @@ void runUnityTests(void *pvParameters)
     /* TODO: This adds the TEST_MOCK peer, perhaps this should not be done in the test*/
 
     init_defs_mock();
+    
 
     ROB_LOGW("TEST", "Done waiting.");
 

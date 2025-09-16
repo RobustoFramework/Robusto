@@ -48,8 +48,8 @@
 
 char mock_strings[8] = MOCK_STRINGS;
 char mock_binary[4] = MOCK_BINARY;
-#define MOCK_PEERNAME_0 "PEER0\x00"
-#define MOCK_PEERNAME_1 "PEER1\x00"
+#define MOCK_PEERNAME_0 "TEST_MOCK_1\x00"
+#define MOCK_PEERNAME_1 "TEST_MOCK_2\x00"
 char mock_peername_0[6] = MOCK_PEERNAME_0;
 char mock_peername_1[6] = MOCK_PEERNAME_1;
 
@@ -110,11 +110,11 @@ int mock_read_data(uint8_t **rcv_data, robusto_peer_t **peer)
     if ((message_expectation == MMI_STRINGS) || (message_expectation == MMI_STRINGS_ASYNC))
     {   
         length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, (uint8_t *)&mock_strings, 8, NULL, 0, rcv_data);
-        *peer = robusto_peers_find_peer_by_name("TEST_MOCK");
+        *peer = robusto_peers_find_peer_by_name("TEST_MOCK_1");
         if ((*peer) != NULL) {
             (*peer)->mock_info.last_receive = r_millis();
         } else {
-            ROB_LOGE("MOCK", "TEST_MOCK not found!");
+            ROB_LOGE("MOCK", "TEST_MOCK_1 not found!");
         }
 
     }
