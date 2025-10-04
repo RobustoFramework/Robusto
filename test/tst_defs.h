@@ -21,7 +21,7 @@ extern char tst_multi_conv_match[17];
 extern char tst_hi[17];
 
 
-#define ROBUSTO_MAC_ADDRESS_BASE "\x00\x00\x00\x00\x00\x00"
+#define ROBUSTO_MAC_ADDRESS_BASE "\x00\x00\x00\x00\x00\x00\x00\x00"
 
 #define TST_RELATIONID_01 0x0CD2F6F9 // CRC32 of 000000000000 000000000001 (first adress 0 and second 1)
 #define TST_PEERNAME_0 "PEER0\x00"

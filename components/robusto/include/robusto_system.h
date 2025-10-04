@@ -73,7 +73,7 @@ void * robusto_malloc(size_t size);
  * @param size  Number of bytes to allocate
  * @return void* Pointer to the re-allocated memory
  */
-void * robusto_realloc(void **ptr, size_t size);
+void * robusto_realloc(void *ptr, size_t size);
 
 /**
  * @brief Deallocates the memory at the pointer

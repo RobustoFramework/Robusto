@@ -70,7 +70,7 @@ rob_ret_val_t sample_init_worker(sample_queue_callback work_cb, poll_callback po
     sample_queue_context->first_queue_item_cb = sample_first_queueitem; 
     sample_queue_context->remove_first_queueitem_cb = sample_remove_first_queue_item; 
     sample_queue_context->insert_tail_cb = sample_insert_tail;
-    sample_queue_context->on_work_cb = work_cb; 
+    sample_queue_context->on_work_cb = (work_callback*) work_cb; 
     sample_queue_context->on_poll_cb = poll_cb;
     sample_queue_context->max_task_count = 1;
     // This queue cannot start processing items until we want the test to start

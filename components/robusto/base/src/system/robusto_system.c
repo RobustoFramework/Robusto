@@ -84,7 +84,7 @@ void *robusto_malloc(size_t size)
 #endif
 }
 
-void *robusto_realloc(void **ptr, size_t size)
+void *robusto_realloc(void *ptr, size_t size)
 {
 #ifdef USE_ESPIDF
     return heap_caps_realloc(ptr, size, MALLOC_CAP_8BIT);

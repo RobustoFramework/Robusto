@@ -20,7 +20,7 @@ void qos_init_defs() {
 	if(remote_peer != NULL) {
 		return;
 	}
-	remote_peer = robusto_add_init_new_peer("TEST_QOS", kconfig_mac_to_6_bytes(ROBUSTO_MAC_ADDRESS_BASE), robusto_mt_lora);
+	remote_peer = robusto_add_init_new_peer("TEST_QOS", (rob_mac_address *)kconfig_mac_to_6_bytes(*(uint64_t *)&ROBUSTO_MAC_ADDRESS_BASE), robusto_mt_lora);
 
 	remote_peer->protocol_version = 0;
 	remote_peer->relation_id_outgoing =	TST_RELATIONID_01;

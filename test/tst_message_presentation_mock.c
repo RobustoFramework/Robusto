@@ -10,8 +10,11 @@
 static bool async_receive_flag = false;
 
 static robusto_peer_t *incoming_peer = NULL;
+/* Not used in the mock currently */
+/*
 static uint8_t *reply_msg = NULL;
 static uint16_t reply_msg_length = 0;
+*/
 
 bool on_new_peer(robusto_peer_t * _peer) {
     incoming_peer = _peer;
