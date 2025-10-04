@@ -35,7 +35,7 @@ rob_ret_val_t callback_response_message(robusto_peer_t *peer, const uint8_t *dat
 
     ROB_LOGI(FRAG_TAG,"Got response, call %lu", call_counter);
     //rob_log_bit_mesh(ROB_LOG_INFO, FRAG_TAG, data, len);
-    handle_fragmented(peer, robusto_mt_mock, data, len, TST_FRAG_SIZE, &callback_response_message);
+    handle_fragmented(peer, robusto_mt_mock, data, len, TST_FRAG_SIZE, (cb_send_message *)&callback_response_message);
     call_counter++;
     return ROB_OK;
 }
@@ -48,7 +48,7 @@ rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, i
         // We need to copy here so we can free the data on both ends as normal.
         uint8_t * tmp_data = robusto_malloc(len);
         memcpy(tmp_data, data, len);
-        handle_fragmented(peer, robusto_mt_mock, tmp_data, len, TST_FRAG_SIZE, &callback_response_message);
+        handle_fragmented(peer, robusto_mt_mock, tmp_data, len, TST_FRAG_SIZE, (cb_send_message *)&callback_response_message);
     }
     
     call_counter ++;
@@ -73,10 +73,10 @@ void fake_message() {
     memset(test_data + 800, 4, 200);
     uint8_t * msg;
 
-    uint32_t msg_length = robusto_make_binary_message(MSG_MESSAGE, 0, 0, test_data, TST_DATA_SIZE, &msg);
+    uint32_t msg_length = robusto_make_multi_message_internal(MSG_MESSAGE, 0, 0, test_data, TST_DATA_SIZE, NULL, 0, &msg);
     call_counter = 0;
     async_receive_flag = false;
-    rob_ret_val_t res = send_message_fragmented(peer, robusto_mt_mock, msg  + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES, TST_FRAG_SIZE, &callback_send_message);
+    rob_ret_val_t res = send_message_fragmented(peer, robusto_mt_mock, msg  + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES, TST_FRAG_SIZE, (cb_send_message *)&callback_send_message);
     ROB_LOGI("Test", "tst_fragmentation_complete");
    if (robusto_waitfor_bool(&async_receive_flag, 10000)) {
         ROB_LOGI("Test", "tst_fragmentation_complete: Async receive flag was set to true.");

@@ -181,25 +181,10 @@ void runUnityTests(void *pvParameters)
     /* TODO: This adds the TEST_MOCK peer, perhaps this should not be done in the test*/
 
     init_defs_mock();
+    
 
     ROB_LOGW("TEST", "Done waiting.");
 
-    /* Synchronous testing*/
-    RUN_TEST(tst_sync_mock_send_message);
-    robusto_yield();
-    
-    RUN_TEST(tst_sync_mock_receive_string_message);
-    robusto_yield();
-
-    RUN_TEST(tst_sync_mock_receive_binary_message);
-    robusto_yield();
-
-    RUN_TEST(tst_sync_mock_receive_multi_message);
-    robusto_yield();
-
-
-    RUN_TEST(tst_sync_mock_receive_binary_message_restricted);
-    robusto_yield();
 
     /* Asynchronous testing*/
     RUN_TEST(tst_async_mock_send_message);

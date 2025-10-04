@@ -26,7 +26,7 @@ void tst_bit_logging(void)
 {
     // char data[9] = "ABCDEFGH\0";
     char data[6] = "\x00\x0F\xF0\x0F\xAA\x00";
-    rob_log_bit_mesh(ROB_LOG_INFO, "Test_Tag", &data, sizeof(data) - 1);
+    rob_log_bit_mesh(ROB_LOG_INFO, "Test_Tag", (uint8_t *)&data, sizeof(data) - 1);
 
     strcpy(data, "\xFF\xF0\xBC\xBC\xBC\x00");
 

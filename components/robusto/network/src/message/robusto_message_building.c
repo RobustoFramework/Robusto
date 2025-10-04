@@ -230,6 +230,7 @@ int build_strings_data(uint8_t **message, const char *format, ...)
     char *curr_format;
     for (int k = 0; k < format_count; k++)
     {
+
         curr_format = (char *)(format_array[k]);
         // Is there any formatting at all in the format string?
         if (strchr(curr_format, '%') != NULL)
@@ -248,14 +249,13 @@ int build_strings_data(uint8_t **message, const char *format, ...)
         new_length += value_length + 1;
 
         // TODO: See if realloc has any significant performance impact, if so an allocations strategy might be useful
-
         if (k == 0)
         {
             *message = robusto_malloc(new_length);
         }
         else
         {
-            *message = robusto_realloc((void *)message, new_length);
+            *message = robusto_realloc((void *)*message, new_length);
         }
 
         if (*message == NULL)
@@ -265,13 +265,13 @@ int build_strings_data(uint8_t **message, const char *format, ...)
             goto cleanup;
         };
         memcpy((*message) + curr_pos, value_str, value_length);
-
         (*message)[new_length - 1] = (uint8_t)0x00;
         ROB_LOGD(message_building_log_prefix, "Message: %s, value_str: %s, new_length: %i.", (char *)*message, value_str, (int)new_length);
         robusto_free(value_str);
         value_str = NULL;
         curr_pos = new_length;
     }
+
     rob_log_bit_mesh(ROB_LOG_DEBUG, message_building_log_prefix, *message, new_length);
 cleanup:
     va_end(arg);
