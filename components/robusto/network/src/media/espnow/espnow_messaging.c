@@ -178,7 +178,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
  * @param mac_addr The macaddress of the peer
  * @param status the
  */
-static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
 {
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > -1
     if (robusto_gpio_get_level(CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH) == true)
@@ -198,8 +198,8 @@ static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status
     if (status == ESP_NOW_SEND_FAIL)
     {
         ROB_LOGW(espnow_log_prefix, ">> In espnow_send_cb, send failure, mac address:");
-        rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, mac_addr, ROBUSTO_MAC_ADDR_LEN);
-        robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)mac_addr);
+        rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, tx_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
+        robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)tx_info->src_addr);
         if (peer)
         {
             // Yes, this is counted doubly, but this should not happen, we probably have some kind of issue
