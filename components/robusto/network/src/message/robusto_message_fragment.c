@@ -315,6 +315,14 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
     uint32_t curr_frag_size = curr_frag_size = frag_msg->fragment_size;
 
     robusto_media_t *info = get_media_info(peer, media_type);
+
+    // Allocate a buffer big enough for the largest fragment
+    buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
+    // We always send the same hash, as an identifier
+    memcpy(buffer, &frag_msg->hash, 4);
+    buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
+    buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
+
     for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
         if (frag_msg->abort_transmission)
@@ -324,11 +332,6 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
         // QoS will disturb sending like this
         info->postpone_qos = true;
 
-        buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
-        // We always send the same hash, as an identifier
-        memcpy(buffer, &frag_msg->hash, 4);
-        buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
-        buffer[ROBUSTO_CRC_LENGTH + 1] = FRAG_MESSAGE;
         if (frag_msg->received_fragments[curr_fragment] == 1)
         {
             ROB_LOGD(fragmentation_log_prefix, "Skipping part %lu", curr_fragment);
@@ -365,6 +368,7 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         robusto_yield();
     }
+    robusto_free(buffer);
     frag_msg->state = ROB_ST_DONE;
 }
 
@@ -440,7 +444,7 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
 
 void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
-    ROB_LOGI(fragmentation_log_prefix, "In handle_frag_result");
+    ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
     rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
@@ -450,11 +454,11 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *
     int16_t result;
     memcpy(&result, data + ROBUSTO_CRC_LENGTH + 2, 2);
 
-    ROB_LOGI(fragmentation_log_prefix, "result: %" PRIi16, result);
+    ROB_LOGD(fragmentation_log_prefix, "result: %" PRIi16, result);
     switch (result)
     {
     case ROB_OK:
-        ROB_LOGI(fragmentation_log_prefix, "Receiver reports successful transmission.");
+        ROB_LOGD(fragmentation_log_prefix, "Receiver reports successful transmission.");
         frag_msg->state = ROB_ST_SUCCEEDED;
         break;
     case ROB_FAIL:
@@ -574,8 +578,8 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     uint32_t msg_hash = robusto_crc32(0, buffer + 4, 18);
     memcpy(buffer, &msg_hash, 4);
 
-    ROB_LOGI(fragmentation_log_prefix, "Sending a fragment request:");
-    rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, buffer, ROBUSTO_CRC_LENGTH + 18);
+    ROB_LOGD(fragmentation_log_prefix, "Sending a fragment request:");
+    rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, buffer, ROBUSTO_CRC_LENGTH + 18);
 
     if (send_message(peer, buffer, ROBUSTO_CRC_LENGTH + 18, true) != ROB_OK)
     {
