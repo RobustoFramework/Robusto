@@ -66,6 +66,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     // TODO: Recommend more wifi TX buffers and add warning if not enabled
     
     ROB_LOGD(espnow_log_prefix, "esp_now_send_check, sending %lu bytes.", data_length);
+
     int rc = esp_now_send((uint8_t *)&peer->base_mac_address, data, data_length);
     send_status = -1;
     has_receipt = false;
@@ -132,7 +133,9 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         return ROB_FAIL;
     }
     if (send_status < 0) {
-        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete in time (2000 ms). Peer: %s", peer->name);
+        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete in time (2000 ms). Peer: %s Data length: %lu", peer->name, data_length);
+        // Print a stack trace
+        ROB_LOG_STACK_TRACE(3);
         return ROB_FAIL;
     }
     #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
