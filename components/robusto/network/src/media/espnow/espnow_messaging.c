@@ -121,6 +121,12 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
+    #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
+    // We interpret no receipt request as fire-and-forget in ESP-NOW as there is built in acknowledgement.
+    if (!receipt)
+    {
+        return rc;
+    }
     // We will wait here until the message was sent, for 2 seconds
     int32_t start_send = r_millis();
     while ((send_status < 0) && (r_millis() < start_send + 2000))
@@ -138,7 +144,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         ROB_LOG_STACK_TRACE(3);
         return ROB_FAIL;
     }
-    #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
+
     peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
     return rc;
     #else
