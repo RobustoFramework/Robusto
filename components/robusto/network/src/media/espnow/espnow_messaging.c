@@ -52,7 +52,7 @@
 
 static char *espnow_log_prefix;
 
-#define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN_V2 - 10)
+#define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN - 10)
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
@@ -246,10 +246,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     else
     {
         /* We didn't find the peer */
-        ROB_LOGW(espnow_log_prefix, "<< espnow_recv_cb got a message from an unknown peer. Data:");
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, data, len);
-        ROB_LOGI(espnow_log_prefix, "<< Mac address:");
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
+        ROB_LOGI(espnow_log_prefix, "<< espnow_recv_cb got a message from an unknown peer.");
+        ROB_LOGD(espnow_log_prefix, "<< Data:");
+        rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
+        ROB_LOGD(espnow_log_prefix, "<< Mac address:");
+        rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
         if (data[ROBUSTO_CRC_LENGTH] != 0x42)
         {
             // If it is unknown, and not a presentation, disregard
@@ -331,9 +332,9 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
     }
 #endif
 
-    if (data_length > (ESP_NOW_MAX_DATA_LEN_V2 - ROBUSTO_PREFIX_BYTES - 10))
+    if (data_length > (ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10))
     {
-        ROB_LOGI(espnow_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, ESP_NOW_MAX_DATA_LEN_V2 - ROBUSTO_PREFIX_BYTES - 10);
+        ROB_LOGI(espnow_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, ESP_NOW_MAX_DATA_LEN - ROBUSTO_PREFIX_BYTES - 10);
         return send_message_fragmented(peer, robusto_mt_espnow, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
     }
 
