@@ -138,7 +138,7 @@ uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_s
 rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, int data_length) {
     if (subscriber->local_callback) {
         ROB_LOGI(pubsub_log_prefix, "Publishing %s to callback", topic->name);
-        subscriber->local_callback(data, data_length);
+        return  subscriber->local_callback(data, data_length);
     } else if (subscriber->peer) {
         ROB_LOGI(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
         uint8_t *msg = robusto_malloc(data_length + 5);
@@ -147,15 +147,15 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         memcpy(msg + 5, data, data_length);
         rob_ret_val_t pubretval = send_message_binary(subscriber->peer, PUBSUB_CLIENT_ID, 0, msg, data_length + 5, NULL);
         if (pubretval != ROB_OK) {
-            ROB_LOGW(pubsub_log_prefix, "Failed publishing  %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
+            ROB_LOGW(pubsub_log_prefix, "Failed publishing %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
         }
         
         robusto_free(msg);
+        return pubretval;
     } else {
         ROB_LOGI(pubsub_log_prefix, "Internal error: Neither peer or callback set on one subscription in %s!", topic->name);
         return ROB_FAIL;
     }
-    return ROB_OK;
 }
 
 rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, uint16_t data_length) {
@@ -168,13 +168,17 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
         return ROB_ERR_INVALID_ID;
     }
     int pub_count = 0;
+    int fail_count = 0;
     pubsub_server_subscriber_t *curr_subscriber = curr_topic->first_subscriber;
     while (curr_subscriber) {
-        publish_topic(curr_topic, curr_subscriber, data, data_length);
-        curr_subscriber = curr_subscriber->next;
+        if (publish_topic(curr_topic, curr_subscriber, data, data_length) != ROB_OK) {
+            fail_count++;
+        }
         pub_count++;
+        curr_subscriber = curr_subscriber->next;
+        
     }
-    ROB_LOGD(pubsub_log_prefix, "Published to the %i subscribers of %s.", pub_count, curr_topic->name);
+    ROB_LOGI(pubsub_log_prefix, "Published to the %i subscribers of %s, failed in %i cases.", pub_count, curr_topic->name, fail_count);
     // If successful, return rob_ok.
     return ROB_OK;
 }
