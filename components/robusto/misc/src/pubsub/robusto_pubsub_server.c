@@ -199,7 +199,7 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
 
 void incoming_callback(robusto_message_t *message) {
     ROB_LOGD(pubsub_log_prefix, "Pubsub incoming from %s.", message->peer->name);
-    rob_ret_val_t retval = ROB_FAIL;
+
     rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, message->binary_data, message->binary_data_length);
     // Register subscription/topic, answer with topic hash
     if (*message->binary_data == PUBSUB_SUBSCRIBE) {

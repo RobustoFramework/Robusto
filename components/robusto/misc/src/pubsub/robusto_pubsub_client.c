@@ -366,10 +366,9 @@ void robusto_pubsub_check_topics()
     subscribed_topic_t *curr_topic = first_subscribed_topic;
     while (curr_topic)
     {
-        ROB_LOGW(pubsub_client_log_prefix, "Checking %s, state %hu", curr_topic->topic_name, curr_topic->state);
         if (curr_topic->state == TOPIC_STATE_RECOVERING)
         {
-            // Do nothing regardless of state to not disturb any existing recovery processes
+            ROB_LOGW(pubsub_client_log_prefix, "Topic %s is recovering", curr_topic->topic_name);
         }
         else if ((curr_topic->state == TOPIC_STATE_PROBLEM) || (curr_topic->state == TOPIC_STATE_UNKNOWN))
         {
