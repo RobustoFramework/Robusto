@@ -36,6 +36,13 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+
+void compat_rob_log_stack_trace(int levels)
+{
+    printf("Stack trace not implemented on native platform.\n");
+    fflush(stdout);
+}
+
 // On the native platform, there is no need for the sparse mode.
 void compat_rob_log_write_sparse(const char *tag, const char *format)
 {

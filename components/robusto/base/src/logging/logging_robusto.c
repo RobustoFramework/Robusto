@@ -38,6 +38,7 @@
 #define ROW_LEN (8 * 9) + 1
 #define ASCII_CODE_SPACE 32
 
+
 void rob_log_write(rob_log_level_t level,
                    const char *tag,
                    const char *format, ...)

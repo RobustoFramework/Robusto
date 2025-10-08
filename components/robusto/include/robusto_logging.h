@@ -71,7 +71,7 @@ typedef enum
 
 void rob_log_write(rob_log_level_t level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
 void compat_rob_log_writev(rob_log_level_t level, const char* tag, const char* format, va_list args);
-
+void compat_rob_log_stack_trace(int levels);
 
 void r_init_logging();
 
@@ -160,6 +160,10 @@ void r_init_logging();
 #define ROB_LOGD(tag, format, ...) do {} while (0)
 #define ROB_LOGV(tag, format, ...) do {} while (0)
 #endif
+
+
+// Print a stack trace of the current call stack
+#define ROB_LOG_STACK_TRACE(levels) compat_rob_log_stack_trace(levels)
 
 void rob_log_bit_mesh(rob_log_level_t level,
                    const char *tag,

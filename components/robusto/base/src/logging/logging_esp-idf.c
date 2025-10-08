@@ -35,7 +35,13 @@
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE 
 
 #include <esp_log.h>
+#include <esp_debug_helpers.h>
 
+// Print a stack trace using esp_backtrace_print() in esp_debug_helpers.h
+void compat_rob_log_stack_trace(int levels)
+{
+    esp_backtrace_print(levels);
+}
 
 void compat_rob_log_writev(rob_log_level_t level, const char *tag, const char *format, va_list args)
 {

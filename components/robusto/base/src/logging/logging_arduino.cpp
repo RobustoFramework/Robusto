@@ -35,6 +35,15 @@
 #include <Arduino.h>
 #include <stdio.h>
 
+
+// Print a stack trace using arduino functionality
+void compat_rob_log_stack_trace(int levels)
+{
+    Serial.print("Stack trace not implemented on Arduino.\n");
+    Serial.flush();
+}
+
+
 void compat_rob_log_writev(rob_log_level_t level, const char* tag, const char* format, va_list args) 
 {
     char msg[256];
