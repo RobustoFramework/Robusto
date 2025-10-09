@@ -180,7 +180,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
         data_length: %lu bytes, fragment_count: %lu, fragment_size: %lu, hash: %lu.",
              frag_msg->receive_buffer_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
     /* When the frag_msg was created, a non-used element */
-    frag_msg->start_time = r_millis();
+    frag_msg->start_time = (uint32_t)r_millis();
 
     last_frag_msg = frag_msg;
     media->last_receive = r_millis();
@@ -360,14 +360,13 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         if (SKIP_FRAGMENT_TEST)
         {
-            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
+            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false) != ROB_OK)
             {
                 // TODO: We till need to handle failed sends
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
             }
         }
 
-        robusto_yield();
     }
     robusto_free(buffer);
     // The response may be really quick, so we only set to done if none of the result states are set
