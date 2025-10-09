@@ -214,7 +214,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
             missing[ROBUSTO_CRC_LENGTH + 2 + missing_counter] = frag_msg->received_fragments[missing_counter];
         }
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
-        send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, false);
+        send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, true);
         return;
     }
     else
@@ -360,8 +360,9 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         if (SKIP_FRAGMENT_TEST)
         {
-            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false) != ROB_OK)
+            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
             {
+                // TODO: We till need to handle failed sends
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
             }
         }
@@ -369,7 +370,11 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
         robusto_yield();
     }
     robusto_free(buffer);
-    frag_msg->state = ROB_ST_DONE;
+    // The response may be really quick, so we only set to done if none of the result states are set
+    if (frag_msg->state < ROB_ST_DONE) {
+        frag_msg->state = ROB_ST_DONE;
+    }
+    
 }
 
 /**
@@ -444,7 +449,7 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
 
 void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
-    ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
+    ROB_LOGI(fragmentation_log_prefix, "In handle_frag_result");
     rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
@@ -458,11 +463,11 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *
     switch (result)
     {
     case ROB_OK:
-        ROB_LOGD(fragmentation_log_prefix, "Receiver reports successful transmission.");
+        ROB_LOGI(fragmentation_log_prefix, "Receiver reports successful transmission, frag start time: %lu.", frag_msg->start_time);
         frag_msg->state = ROB_ST_SUCCEEDED;
         break;
     case ROB_FAIL:
-        ROB_LOGE(fragmentation_log_prefix, "Receiver reports unsuccessful successful transmission.");
+        ROB_LOGE(fragmentation_log_prefix, "Receiver reports unsuccessful successful transmission, frag start time: %lu.", frag_msg->start_time);
         frag_msg->state = ROB_ST_FAILED;
         break;
     case ROB_ERR_WRONG_CRC:
@@ -589,6 +594,8 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     }
 
     send_fragments(peer, media_type, frag_msg, send_message);
+    ROB_LOGD(fragmentation_log_prefix, "Waiting for fragmented message to complete, current state: %u, start time: %lu", frag_msg->state, frag_msg->start_time);
+    
     uint32_t starttime;
     // A state machine that handles the probes
     while (1)
