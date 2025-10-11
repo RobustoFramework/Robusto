@@ -145,6 +145,12 @@ int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t serv
     }
     ROB_LOGD(message_building_log_prefix, "Allocating %lu bytes for message.", message_length);
     *dest_message = robusto_malloc(message_length);
+    // Check that the allocation worked
+    if (*dest_message == NULL)
+    {
+        ROB_LOGE(message_building_log_prefix, "robusto_malloc failed.");
+        return -ROB_ERR_OUT_OF_MEMORY;
+    }
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);
     uint8_t base_offset = ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN;

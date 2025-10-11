@@ -76,6 +76,7 @@ void remove_fragmented_message(fragmented_message_t *frag_msg)
     {
         last_frag_msg = NULL;
     }
+    robusto_free(frag_msg->received_fragments);
     robusto_free(frag_msg);
 }
 
@@ -324,6 +325,7 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
     {
         if (frag_msg->abort_transmission)
         {
+            robusto_free(buffer);
             return;
         }
         // QoS will disturb sending like this
@@ -446,7 +448,7 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
 void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
-    rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, data, len);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
     fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
     if (!frag_msg)
     {

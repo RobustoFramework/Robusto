@@ -126,7 +126,7 @@ void robusto_watchdog_set_timeout(int watchdog_timeout) {
 void robusto_yield(void) {
     // TODO: This should be used instead of r_delay in approximately a million places. Plz fix.
 #if defined(USE_ESPIDF)
-    vTaskDelay(portTICK_PERIOD_MS);
+    vTaskDelay(1);
 #elif defined(ARDUINO_ARCH_RP2040)
     vTaskDelay(1);
 #elif defined(ARDUINO_ARCH_STM32)    

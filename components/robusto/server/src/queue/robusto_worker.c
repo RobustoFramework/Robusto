@@ -119,6 +119,7 @@ static void robusto_worker(queue_context_t *q_context)
     robusto_watchdog_set_timeout(q_context->watchdog_timeout);
 
     void *curr_work = NULL;
+    uint8_t yield_counter = 0;
 
     for (;;)
     {
@@ -171,14 +172,20 @@ static void robusto_worker(queue_context_t *q_context)
                 }
                 robusto_yield();
             }
-        }
 
-        /* If defined, call the poll callback. */
+        
+        }
+        // Only yield every 10th time, to avoid minimize latency
+        if (++yield_counter >= 10) {
+            robusto_yield();   
+            /* If defined, call the poll callback. */
+
+            yield_counter = 0;
+        }
         if (q_context->on_poll_cb != NULL)
         {
             q_context->on_poll_cb(q_context);
-        }
-        robusto_yield();
+        }  
     }
     ROB_LOGI(robusto_worker_log_prefix, "Worker task %s shut down, deleting task.", q_context->worker_task_name);
     // TODO: Should there be some freeing of semaphore here?

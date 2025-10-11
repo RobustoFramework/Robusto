@@ -241,8 +241,12 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
         media_type = force_media_type;
     }
 
-    uint32_t message_length = robusto_make_multi_message_internal(MSG_MESSAGE, service_id, conversation_id,
+    int message_length = robusto_make_multi_message_internal(MSG_MESSAGE, service_id, conversation_id,
                                                                   strings_data, strings_length, binary_data, binary_length, &dest_message);
+    if (message_length < 0) {
+        ROB_LOGE(message_sending_log_prefix, "Error creating heartbeat message to %s using %s, res %i", peer->name, media_type_to_str(media_type), message_length);
+        goto fail;
+    }
 
     if (send_message_raw(peer, media_type, dest_message, message_length, state, true) != ROB_OK)
     {

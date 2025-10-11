@@ -121,6 +121,13 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
         
         deka_ms_diff = calc_deka_ms_since(info->last_receive, curr_time);
         int hb_msg_len = robusto_make_multi_message_internal(MSG_HEARTBEAT, 0, 0, NULL, 0, (uint8_t *)&deka_ms_diff, 2, &hb_msg);
+        // Handle negative return values as errors
+        if (hb_msg_len < 0) {
+            ROB_LOGE(heartbeat_log_prefix, "Error creating heartbeat message to %s using %s, res %i", peer->name, media_type_to_str(media_type), hb_msg_len);
+            set_state(peer, info, media_type, media_state_problem, media_problem_technical);
+            return;
+        }
+
         // Heartbeats are one-way and doesn't wait for receipts
         rob_ret_val_t queue_ret_val = send_message_raw_internal(peer, media_type, hb_msg, hb_msg_len, NULL, 
             false, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none, false);
