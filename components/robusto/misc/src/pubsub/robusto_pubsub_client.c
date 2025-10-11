@@ -144,7 +144,7 @@ subscribed_topic_t *find_subscribed_topic_by_name(char *topic_name)
 }
 void incoming_callback(robusto_message_t *message)
 {
-    ROB_LOGI(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
+    ROB_LOGD(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
     rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
     if (*message->binary_data == PUBSUB_PUBLISH_UNKNOWN_TOPIC)
     {
@@ -211,7 +211,7 @@ void incoming_callback(robusto_message_t *message)
     else
     {
         ROB_LOGE(pubsub_client_log_prefix, "Unhandled pub sub byte %hu!", *message->binary_data);
-        rob_log_bit_mesh(ROB_LOG_INFO, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
+        rob_log_bit_mesh(ROB_LOG_ERROR, pubsub_client_log_prefix, message->binary_data, message->binary_data_length);
     }
 }
 

@@ -343,7 +343,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
 
     if (data_length > (ESP_NOW_MAX_DATA_LEN_V2 - ROBUSTO_PREFIX_BYTES - 10))
     {
-        ROB_LOGI(espnow_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, ESP_NOW_MAX_DATA_LEN_V2 - ROBUSTO_PREFIX_BYTES - 10);
+        ROB_LOGD(espnow_log_prefix, "Data length %lu is more than cutoff at %i bytes, sending fragmented", data_length, ESP_NOW_MAX_DATA_LEN_V2 - ROBUSTO_PREFIX_BYTES - 10);
         return send_message_fragmented(peer, robusto_mt_espnow, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, ESPNOW_FRAGMENT_SIZE, &esp_now_send_check);
     }
 

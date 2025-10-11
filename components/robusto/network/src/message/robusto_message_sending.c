@@ -123,7 +123,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (media_type == robusto_mt_lora)
     {
-        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using LoRa..", data_length);
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using LoRa..", data_length);
         queue_ctx = lora_get_queue_context();
         // retval = lora_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
@@ -132,7 +132,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     if (media_type == robusto_mt_ble)
     {
         // TODO: Make all log messages reflect direction using >> or << where applicable
-        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using BLE..", data_length);
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using BLE..", data_length);
         queue_ctx = ble_get_queue_context();
         // retval = espnow_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
@@ -141,7 +141,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     if (media_type == robusto_mt_espnow)
     {
         // TODO: Make all log messages reflect direction using >> or << where applicable
-        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using ESP-NOW..", data_length);
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using ESP-NOW..", data_length);
         queue_ctx = espnow_get_queue_context();
         // retval = espnow_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
@@ -149,7 +149,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     if (media_type == robusto_mt_i2c)
     {
-        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using I2C..", data_length);
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using I2C..", data_length);
         queue_ctx = i2c_get_queue_context();
         // retval = i2c_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }
@@ -157,7 +157,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
     if (media_type == robusto_mt_canbus)
     {
-        ROB_LOGI(message_sending_log_prefix, ">> Sending %lu bytes using CAN bus..", data_length);
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using CAN bus..", data_length);
         queue_ctx = canbus_get_queue_context();
         // retval = canbus_safe_add_work_queue(peer, data, data_length, state, heartbeat, receipt);
     }

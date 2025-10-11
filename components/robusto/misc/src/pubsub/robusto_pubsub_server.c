@@ -137,10 +137,10 @@ uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_s
 
 rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, int data_length) {
     if (subscriber->local_callback) {
-        ROB_LOGI(pubsub_log_prefix, "Publishing %s to callback", topic->name);
+        ROB_LOGD(pubsub_log_prefix, "Publishing %s to callback", topic->name);
         return  subscriber->local_callback(data, data_length);
     } else if (subscriber->peer) {
-        ROB_LOGI(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
+        ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
         uint8_t *msg = robusto_malloc(data_length + 5);
         msg[0] = PUBSUB_DATA;
         memcpy(msg + 1, &topic->hash, 4);
@@ -153,7 +153,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         robusto_free(msg);
         return pubretval;
     } else {
-        ROB_LOGI(pubsub_log_prefix, "Internal error: Neither peer or callback set on one subscription in %s!", topic->name);
+        ROB_LOGE(pubsub_log_prefix, "Internal error: Neither peer nor callback set on one subscription in %s!", topic->name);
         return ROB_FAIL;
     }
 }
@@ -176,9 +176,10 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
         }
         pub_count++;
         curr_subscriber = curr_subscriber->next;
-        
     }
-    ROB_LOGI(pubsub_log_prefix, "Published to the %i subscribers of %s, failed in %i cases.", pub_count, curr_topic->name, fail_count);
+    if (fail_count > 0) {
+        ROB_LOGW(pubsub_log_prefix, "Published to the %i subscribers of %s, failed in %i cases.", pub_count, curr_topic->name, fail_count);
+    } 
     // If successful, return rob_ok.
     return ROB_OK;
 }
@@ -204,7 +205,7 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
 void incoming_callback(robusto_message_t *message) {
     ROB_LOGD(pubsub_log_prefix, "Pubsub incoming from %s.", message->peer->name);
 
-    rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, message->binary_data, message->binary_data_length);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data, message->binary_data_length);
     // Register subscription/topic, answer with topic hash
     if (*message->binary_data == PUBSUB_SUBSCRIBE) {
         uint32_t topic_hash = robusto_pubsub_server_subscribe(message->peer, NULL, (char *)(message->binary_data + 1));
@@ -212,7 +213,7 @@ void incoming_callback(robusto_message_t *message) {
         response[0] = PUBSUB_SUBSCRIBE_RESPONSE;
         memcpy(response + 1, &topic_hash, 4);
         ROB_LOGI(pubsub_log_prefix, "Sending a subscription response to %s peer, conv id %u, hash %lu", message->peer->name, message->conversation_id, topic_hash);
-        rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
+        //rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
         SEND_LOGGED("Failed sending a subscription response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_GET_TOPIC) {
         pubsub_server_topic_t * topic = robusto_pubsub_server_find_or_create_topic((char *)(message->binary_data + 1));
@@ -231,7 +232,7 @@ void incoming_callback(robusto_message_t *message) {
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
         SEND_LOGGED("Failed sending a unsubscription response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_PUBLISH) {
-        ROB_LOGI(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
+        ROB_LOGD(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
         rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
         // We only respond if it is an invalid topic hash
         if (robusto_pubsub_server_publish( *(uint32_t *)(message->binary_data + 1), message->binary_data + 5, message->binary_data_length - 5) == ROB_ERR_INVALID_ID) {
