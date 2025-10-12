@@ -133,7 +133,25 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
         return ROB_ERR_MUTEX;
     } 
     
-    if (q_context->count > q_context->normal_max_count) {
+    
+
+    if (q_context->count > q_context->normal_max_count && q_context->item_drop_cb != NULL) {
+        /* If the queue is full, for each item in the STAILQ, call item_drop_cb and if it returns true, drop the item */
+        // Use the STAILQ_FOREACH_SAFE macro to iterate and remove items safely
+        work_queue_item_t *item, *temp_item;
+        STAILQ_FOREACH_SAFE(item, (STAILQ_HEAD(, queue_item) *)q_context->work_queue, items, temp_item) {
+            if (q_context->item_drop_cb(item)) {
+                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping item.", q_context->count);
+                STAILQ_REMOVE((STAILQ_HEAD(, queue_item) *)q_context->work_queue, item, queue_item, items);
+                robusto_free(item);
+                q_context->count--;
+            } else {
+                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, but item_drop_cb returned false, keeping item.", q_context->count);
+                break;
+            }
+        }
+
+
         if (!important) {
             ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping normal message.", q_context->count);
             return ROB_ERR_QUEUE_FULL;

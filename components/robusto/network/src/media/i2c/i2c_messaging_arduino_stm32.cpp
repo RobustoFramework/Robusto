@@ -176,7 +176,7 @@ rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
 #ifndef ARDUINO_ARCH_STM32
             i2c_set_master(false, false);
 #endif
-            return -ROB_ERR_SEND_FAIL;
+            return ROB_ERR_SEND_FAIL;
         }
     }
     else

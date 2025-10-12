@@ -288,7 +288,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
         {
             *new_peer = peer;
             ROB_LOGW(peers_log_prefix, "robusto_peers_peer_add() Peer with this name already existed -  %s ", name);
-            return -ROB_ERR_PEER_EXISTS;
+            return ROB_ERR_PEER_EXISTS;
         }
     }
 
@@ -298,7 +298,7 @@ rob_ret_val_t robusto_peers_peer_add(const char *name, robusto_peer_t ** new_pee
         *new_peer = NULL;
         ROB_LOGE(peers_log_prefix, "robusto_peers_peer_add() - Out of memory!");
         /* Out of memory. */
-        return -ROB_ERR_OUT_OF_MEMORY;
+        return ROB_ERR_OUT_OF_MEMORY;
     }
     memset(peer, 0, sizeof(robusto_peer_t));
     peer->peer_handle = _peer_handle_incrementor_++;

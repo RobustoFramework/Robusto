@@ -149,7 +149,7 @@ int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t serv
     if (*dest_message == NULL)
     {
         ROB_LOGE(message_building_log_prefix, "robusto_malloc failed.");
-        return -ROB_ERR_OUT_OF_MEMORY;
+        return _OUT_OF_MEMORY;
     }
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);
@@ -267,7 +267,7 @@ int build_strings_data(uint8_t **message, const char *format, ...)
         if (*message == NULL)
         {
             ROB_LOGE(message_building_log_prefix, "(Re)alloc failed.");
-            new_length = -ROB_ERR_OUT_OF_MEMORY;
+            new_length = ROB_ERR_OUT_OF_MEMORY;
             goto cleanup;
         };
         memcpy((*message) + curr_pos, value_str, value_length);

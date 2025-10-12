@@ -112,7 +112,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         {
             ROB_LOGE(espnow_log_prefix, "ESP-NOW unknown error: %i", rc);
         }
-        rc = -ROB_ERR_SEND_FAIL;
+        rc = ROB_ERR_SEND_FAIL;
         add_to_history(&peer->espnow_info, true, rc);
         return rc;
     }
@@ -351,7 +351,7 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
     int rc = esp_now_send_check(peer, data + ROBUSTO_PREFIX_BYTES, data_length - ROBUSTO_PREFIX_BYTES, receipt);
     if (rc != ESP_OK)
     {
-        return -ROB_ERR_SEND_FAIL;
+        return ROB_ERR_SEND_FAIL;
     }
 
     return rc;

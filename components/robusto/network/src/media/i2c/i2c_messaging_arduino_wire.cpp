@@ -127,7 +127,7 @@ rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
             ROB_LOGW(i2c_wire_messaging_log_prefix, "I2C Master - >> SDA was low, seems we have to listen first..");
             i2c_set_master(false, false);
 
-            return -ROB_ERR_SEND_FAIL;
+            return ROB_ERR_SEND_FAIL;
         }
     }
     else

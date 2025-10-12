@@ -97,6 +97,8 @@ void robusto_free(void *ptr)
 {
     if (ptr != NULL) {
         free(ptr);
+    } else {
+        ROB_LOGW(system_log_prefix, "robusto_free called with NULL pointer.");
     }
     
 }
