@@ -106,6 +106,10 @@ void robusto_set_queue_state_trying(queue_state *state) {
     *state[0] = QUEUE_STATE_TRYING_MEDIAS;  
 };
 
+void robusto_set_queue_state_dropped(queue_state *state) {
+    if (state == NULL) { return; }
+    *state[0] = QUEUE_STATE_DROPPED;
+};
 
 bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_ret_val_t *return_value) {
     if (state == NULL) { return false; }

@@ -148,8 +148,8 @@ int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t serv
     // Check that the allocation worked
     if (*dest_message == NULL)
     {
-        ROB_LOGE(message_building_log_prefix, "robusto_malloc failed.");
-        return _OUT_OF_MEMORY;
+        ROB_LOGE(message_building_log_prefix, "robusto_make_multi_message_internal: robusto_malloc of %lu bytes failed.", message_length);
+        return ROB_ERR_OUT_OF_MEMORY;
     }
     (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH] = robusto_encode_message_context(&context);
     ROB_LOGD(message_building_log_prefix, "Context %hu", (*dest_message)[ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH]);

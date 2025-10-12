@@ -244,7 +244,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
     int message_length = robusto_make_multi_message_internal(MSG_MESSAGE, service_id, conversation_id,
                                                                   strings_data, strings_length, binary_data, binary_length, &dest_message);
     if (message_length < 0) {
-        ROB_LOGE(message_sending_log_prefix, "Error creating heartbeat message to %s using %s, res %i", peer->name, media_type_to_str(media_type), message_length);
+        ROB_LOGE(message_sending_log_prefix, "Error creating message to %s using %s, res %i", peer->name, media_type_to_str(media_type), message_length);
         goto fail;
     }
 
@@ -258,7 +258,9 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
     }
 fail:
     // TODO: Establish a practice for all functions and queues, when is who responsible for freeing
-    robusto_free(dest_message);
+    if (dest_message != NULL) {
+        robusto_free(dest_message);
+    }
     robusto_set_queue_state_queued_on_ok(state, ROB_FAIL);
     return ROB_FAIL;
 }

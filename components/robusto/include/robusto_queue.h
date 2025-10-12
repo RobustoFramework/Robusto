@@ -144,7 +144,7 @@ extern "C"
     typedef void(remove_first_queueitem)(queue_context_t *q_context);
 
     typedef void(insert_queue_item)(queue_context_t *q_context, void *new_item);
-
+    typedef bool(drop_full_cb)(void *new_item);
     typedef void(work_callback)(void *q_work_item);
 
     typedef void(poll_callback)(void *q_context);
@@ -186,6 +186,8 @@ extern "C"
         uint8_t normal_max_count;
         /* The current number of items where important items are dropped */
         uint8_t important_max_count;
+        /* Callback for dropping when the queue is full */
+        drop_full_cb *item_drop_cb;
         /* If set, the queue will not process any items */
         bool blocked;
         /* If set, worker will shut down */
@@ -213,36 +215,43 @@ extern "C"
      */
 
     /**
-     * @brief Sets a Robusto flag to failed .
+     * @brief Sets a Robusto queue state to failed.
      *
-     * @param flag A pointer to the flag
-     * @param return_value A pointer to where to store the return value. Can be null.
+     * @param state A pointer to the state
      */
     void robusto_set_queue_state_result(queue_state *state, rob_ret_val_t return_value);
 
     /**
      * @brief If the result value is OK, it sets the flag to queued
      *
-     * @param flag The flag
+     * @param state A pointer to the state
      * @param retval The return value of the attempt to add it to a queue
      * @return rob_ret_val_t passing on the retval
      */
     rob_ret_val_t robusto_set_queue_state_queued_on_ok(queue_state *state, rob_ret_val_t retval);
 
     /**
-     * @brief Sets a Robusto flag to running.
+     * @brief Sets a Robusto queue state to running.
      *
-     * @param flag A pointer to the flag
+     * @param state A pointer to the state
      */
     void robusto_set_queue_state_running(queue_state *state);
 
     /**
-     * @brief Sets a Robusto flag to trying.
+     * @brief Sets a Robusto queue state to trying.
      *
-     * @param flag A pointer to the flag
+     * @param state A pointer to the state
      */
     void robusto_set_queue_state_trying(queue_state *state);
 
+
+    /**
+     * @brief Sets a Robusto queue state to dropped.
+     *
+     * @param state A pointer to the state
+     */
+    void robusto_set_queue_state_dropped(queue_state *state);
+    
     /**
      * @brief Wait for robusto flag to either timeout, fail or succeed
      * (Basically we wait for a byte to change value from 0x0f or 0xf0 to something else)

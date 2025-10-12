@@ -78,6 +78,12 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
     }
     uint8_t *msg;
     int msg_len = robusto_make_presentation(peer, &msg, is_reply, reason);
+    if (msg_len < 0)
+    {
+        ROB_LOGE(presentation_log_prefix, ">> Failed making presentation message.");
+        peer->state = failstate; 
+        return ROB_FAIL;
+    }
     ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
     rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
