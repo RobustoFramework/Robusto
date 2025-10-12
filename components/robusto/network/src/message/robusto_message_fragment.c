@@ -220,7 +220,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
     }
     else
     {
-        // Last, check hash and
+        // Last, check hash and reply with result
         if (frag_msg->hash != robusto_crc32(0, frag_msg->receive_buffer, frag_msg->receive_buffer_length))
         {
             ROB_LOGE(fragmentation_log_prefix, "The full message did not match with the hash");
@@ -235,10 +235,10 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
             send_result(peer, frag_msg, ROB_OK, send_message);
 
             add_to_history(get_media_info(peer, media_type), false, robusto_handle_incoming(frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, media_type, 0));
-
             remove_fragmented_message(frag_msg);
             return;
         }
+        
     }
 }
 void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
@@ -534,6 +534,7 @@ rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fra
 
     send_message(peer, msg_frag_check, ROBUSTO_CRC_LENGTH + 2, false);
     // TODO: We should probably free data here as well. And duplicate the data in the test send_message call back.
+    robusto_free(msg_frag_check);
     return ROB_OK;
 }
 /**

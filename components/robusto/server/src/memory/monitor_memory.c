@@ -84,6 +84,10 @@ struct history_item
 };
 struct history_item history[CONFIG_ROBUSTO_MONITOR_HISTORY_LENGTH];
 
+/* Reporting state: track last reported memory to compute user-facing delta */
+static uint64_t last_reported_mem = 0;
+static bool last_reported_set = false;
+
 /**
  * @brief The actual sampling of data
  * 
@@ -91,7 +95,7 @@ struct history_item history[CONFIG_ROBUSTO_MONITOR_HISTORY_LENGTH];
 void monitor_memory_cb()
 {
     uint64_t curr_mem_avail = get_free_mem();
-    int64_t delta_mem_avail = 0;
+    int64_t delta_mem_avail = 0; /* This will be computed from last_reported_mem for reporting */
 
     if (curr_mem_avail > most_memory_available)
     {
@@ -128,7 +132,7 @@ void monitor_memory_cb()
     {
         /* We actually have HISTORY_LENGTH + 1 samples */
         avg_mem_avail = (float)agg_avail / (CONFIG_ROBUSTO_MONITOR_HISTORY_LENGTH + 1);
-        delta_mem_avail = history[0].memory_available - history[1].memory_available;
+        /* Note: delta for reporting is calculated against last_reported_mem below */
     }
     // At a specified point, stored it for future reference
     if (sample_count == CONFIG_ROBUSTO_MONITOR_FIRST_AVG_POINT)
@@ -151,7 +155,16 @@ void monitor_memory_cb()
         // TODO: Implement warning callback!
         level = ROB_LOG_WARN;
     }
+    /* Compute delta against the last reported value (not last sample), for user-facing reporting */
+    if (last_reported_set) {
+        delta_mem_avail = (int64_t)curr_mem_avail - (int64_t)last_reported_mem;
+    } else {
+        delta_mem_avail = 0;
+    }
+
     sample_count++;
+    /* Determine if this report will actually be emitted at the configured log level */
+    bool will_log = (ROB_LOG_LOCAL_LEVEL >= (rob_log_level_t)level);
     #ifdef CONFIG_SPIRAM
     ROB_LOG_LEVEL(level, memory_monitor_log_prefix, "Monitor reporting on available resources. Memory:\nCurrently: %llu, avg mem: %.0f bytes. \nDeltas - Avg vs 1st: %.0f, Last vs now: %lli. \nExtremes - Least: %llu, Most(before init): %llu. SPI ram: %llu. ",
                   curr_mem_avail, avg_mem_avail, avg_mem_avail - first_average_memory_available, delta_mem_avail, least_memory_available, most_memory_available, get_free_mem_spi());
@@ -159,6 +172,12 @@ void monitor_memory_cb()
     ROB_LOG_LEVEL(level, memory_monitor_log_prefix, "Monitor reporting on available resources. Memory:\nCurrently: %llu, avg mem: %.0f bytes. \nDeltas - Avg vs 1st: %.0f, Last vs now: %lli. \nExtremes - Least: %llu, Most(before init): %llu. ",
                   curr_mem_avail, avg_mem_avail, avg_mem_avail - first_average_memory_available, delta_mem_avail, least_memory_available, most_memory_available);
     #endif
+
+    /* Update last reported baseline after printing only if it was actually visible at current log level */
+    if (will_log) {
+        last_reported_mem = curr_mem_avail;
+        last_reported_set = true;
+    }
 }
 
 void monitor_memory_shutdown_cb()
