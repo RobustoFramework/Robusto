@@ -128,6 +128,7 @@ void send_result(robusto_peer_t *peer, fragmented_message_t *frag_msg, rob_ret_v
     int16_t tmp_retval = return_value;
     memcpy(buffer + ROBUSTO_CRC_LENGTH + 2, &tmp_retval, sizeof(int16_t));
     send_message(peer, buffer, ROBUSTO_CRC_LENGTH + 2 + sizeof(int16_t), false);
+    robusto_free(buffer);
 }
 
 /**
