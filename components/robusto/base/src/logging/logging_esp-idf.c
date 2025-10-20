@@ -50,7 +50,7 @@ void compat_rob_log_writev(rob_log_level_t level, const char *tag, const char *f
 // On the ESP platform, there is no need for the sparse mode.
 void compat_rob_log_write_sparse(const char *tag, const char *format)
 {
-    va_list arg_list;
+    va_list arg_list = {0};
     compat_rob_log_writev(ROB_LOG_LOCAL_LEVEL, tag, format, arg_list);
 }
 #endif
