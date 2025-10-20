@@ -127,9 +127,12 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     {
         return rc;
     }
-    // We will wait here until the message was sent, for 2 seconds
+    // We will wait here until the message was sent.
+    // We assume 1 mbit/s speed for ESP-NOW which is ~125 kB/s, so a 250 byte message should be sent in 1 ms
+    // so we calculate the maximum wait time
+    int32_t wait_time = (data_length / 125) + 20; // +20 ms for the Robusto response
     int32_t start_send = r_millis();
-    while ((send_status < 0) && (r_millis() < start_send + 2000))
+    while ((send_status < 0) && (r_millis() < start_send + wait_time))
     {
         robusto_yield();
     }
