@@ -142,7 +142,13 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
     } else if (subscriber->peer) {
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
         // Reallocate data to add the topic hash in front
-        uint8_t *msg = robusto_realloc(data, data_length + 5);
+        uint8_t *msg = NULL;
+        // We move the data to SPI if possible to not waste RAM
+        if (data_length > 500) {
+            msg = robusto_spi_realloc(data, data_length + 5);
+        } else {
+            msg = robusto_realloc(data, data_length + 5);
+        }
         if (!msg) {
             ROB_LOGE(pubsub_log_prefix, "Failed reallocating memory to publish %s to peer %s.", topic->name, subscriber->peer->name);
             return ROB_ERR_OUT_OF_MEMORY;
