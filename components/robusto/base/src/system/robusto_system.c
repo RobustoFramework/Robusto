@@ -84,6 +84,21 @@ void *robusto_malloc(size_t size)
 #endif
 }
 
+void *robusto_spi_malloc(size_t size)
+{
+#ifdef USE_ESPIDF
+    void *ptr = heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
+    if (!ptr) {
+        ROB_LOGW(system_log_prefix, "robusto_spi_realloc failed to realloc %u bytes.", (unsigned)size);
+        return robusto_malloc(size);
+    } else {
+        return ptr;
+    }
+#else
+    return robusto_malloc(size);
+#endif
+}
+
 void *robusto_realloc(void *ptr, size_t size)
 {
 #ifdef USE_ESPIDF
@@ -92,6 +107,24 @@ void *robusto_realloc(void *ptr, size_t size)
     return realloc(ptr, size);
 #endif
 }
+
+void *robusto_spi_realloc(void *ptr, size_t size)
+{
+#ifdef USE_ESPIDF
+    void *new_ptr = heap_caps_realloc(ptr, size, MALLOC_CAP_SPIRAM);
+    if (!new_ptr) {
+        ROB_LOGW(system_log_prefix, "robusto_spi_realloc failed to realloc %u bytes.", (unsigned)size);
+        return robusto_realloc(new_ptr, size);
+    } else {
+        return new_ptr;
+    }
+#else
+    #warning  "robusto_spi_realloc is not implemented for this platform, using normal realloc."
+    return realloc(ptr, size);
+#endif
+}
+
+
 
 void robusto_free(void *ptr)
 {

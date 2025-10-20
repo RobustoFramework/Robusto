@@ -66,14 +66,32 @@ void robusto_led_blink(uint16_t on_delay, uint16_t off_delay, uint16_t count);
  * @return void* Pointer to the allocated memory
  */
 void * robusto_malloc(size_t size);
+
 /**
- * @brief A proxy for rermalloc() for Rubusto
+ * @brief A proxy for malloc() for Robusto SPI RAM, falls back to normal malloc if SPI RAM allocation fails.
+ * 
+ * @param size Number of bytes to allocate
+ * @return void* Pointer to the allocated memory
+ */
+void * robusto_spi_malloc(size_t size);
+
+/**
+ * @brief A proxy for realloc() for Rubusto
  * 
  * @param ptr Pointer to the memory to be reallocate
  * @param size  Number of bytes to allocate
  * @return void* Pointer to the re-allocated memory
  */
 void * robusto_realloc(void *ptr, size_t size);
+
+/**
+ * @brief A proxy for realloc() for Robusto SPI RAM, falls back to normal realloc if SPI RAM allocation fails.
+ * 
+ * @param ptr Pointer to the memory to be reallocate
+ * @param size  Number of bytes to allocate
+ * @return void* Pointer to the re-allocated memory
+ */
+void *robusto_spi_realloc(void *ptr, size_t size);
 
 /**
  * @brief Deallocates the memory at the pointer
