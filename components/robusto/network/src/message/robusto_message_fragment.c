@@ -360,7 +360,7 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         if (SKIP_FRAGMENT_TEST)
         {
-            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false) != ROB_OK)
+            if (send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true) != ROB_OK)
             {
                 // TODO: We till need to handle failed sends
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
