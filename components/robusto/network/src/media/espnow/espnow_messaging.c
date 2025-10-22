@@ -90,7 +90,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         else if (rc == ESP_ERR_ESPNOW_NO_MEM)
         {
             ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Will delay a short while to let it free its memory.");
-            r_delay(3000);
+            r_delay(300);
         }
         else if (rc == ESP_ERR_ESPNOW_FULL)
         {
@@ -142,7 +142,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         return ROB_FAIL;
     }
     if (send_status < 0) {
-        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete in time (2000 ms). Peer: %s Data length: %lu", peer->name, data_length);
+        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete within wait time (%lu ms). Peer: %s Data length: %lu", wait_time, peer->name, data_length);
         // Print a stack trace
         ROB_LOG_STACK_TRACE(3);
         return ROB_FAIL;
