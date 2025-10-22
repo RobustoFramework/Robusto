@@ -219,7 +219,7 @@ void shutdown_callback()
 {
 }
 
-rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t *topic, uint8_t *data, int16_t data_length)
+rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t *topic, uint8_t *data, uint32_t data_length)
 {
 
     if ((topic->peer != NULL) && (topic->peer->state != PEER_UNKNOWN))
@@ -291,7 +291,7 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
     uint16_t conversation_id = pubsub_conversation_id++;
     new_topic->conversation_id = conversation_id;
     char *msg;
-    uint16_t data_length = asprintf(&msg, " %s", topic_name) + 1;
+    uint32_t data_length = asprintf(&msg, " %s", topic_name) + 1;
     if (subscription_callback)
     {
         msg[0] = PUBSUB_SUBSCRIBE;
