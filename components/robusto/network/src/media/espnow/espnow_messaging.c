@@ -89,7 +89,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         }
         else if (rc == ESP_ERR_ESPNOW_NO_MEM)
         {
-            ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Will delay a short while to let it free its memory.");
+            ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Available memory: %u bytes. Will delay a short while to let it free its memory.", heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
             r_delay(300);
         }
         else if (rc == ESP_ERR_ESPNOW_FULL)
@@ -130,7 +130,7 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     // We will wait here until the message was sent.
     // We assume 1 mbit/s speed for ESP-NOW which is ~125 kB/s, so a 250 byte message should be sent in 1 ms
     // so we calculate the maximum wait time
-    int32_t wait_time = (data_length / 125) + 20; // +20 ms for the Robusto response
+    int32_t wait_time = (data_length / 125) + 30; // +30 ms for the Robusto response
     int32_t start_send = r_millis();
     while ((send_status < 0) && (r_millis() < start_send + wait_time))
     {
