@@ -135,7 +135,7 @@ uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_s
     return ROB_OK;
 }
 
-rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, int data_length) {
+rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, uint32_t data_length) {
     if (subscriber->local_callback) {
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to callback", topic->name);
         return  subscriber->local_callback(data, data_length);
@@ -170,7 +170,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
     }
 }
 
-rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, uint16_t data_length) {
+rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, uint32_t data_length) {
 
     pubsub_server_topic_t * curr_topic = find_topic_by_hash(topic_hash);
 

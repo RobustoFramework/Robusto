@@ -47,7 +47,7 @@ extern "C"
 {
 #endif
 
-typedef rob_ret_val_t (pubsub_server_subscriber_callback)(uint8_t *data, uint16_t data_length);
+typedef rob_ret_val_t (pubsub_server_subscriber_callback)(uint8_t *data, uint32_t data_length);
 
 typedef struct pubsub_server_subscriber pubsub_server_subscriber_t;
 
@@ -116,7 +116,7 @@ pubsub_server_topic_t * robusto_pubsub_server_find_or_create_topic(char * name);
  * @param data_length The length of the data
  * @return rob_ret_val_t ROB_OK if successful
  */
-rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, uint16_t data_length);
+rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, uint32_t data_length);
 
 /**
  * @brief Start the pubsub service

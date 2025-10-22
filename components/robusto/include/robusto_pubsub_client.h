@@ -14,7 +14,7 @@ extern "C"
 
 
 typedef struct subscribed_topic subscribed_topic_t;
-typedef void(subscription_cb)(subscribed_topic_t * topic, uint8_t * data, uint16_t data_length);
+typedef void(subscription_cb)(subscribed_topic_t * topic, uint8_t * data, uint32_t data_length);
 
 typedef enum 
 {
@@ -81,7 +81,7 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t * peer, char 
  * @param data_length The length of the data
  * @return rob_ret_val_t Success of publication
  */
-rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t * topic, uint8_t * data, int16_t data_length);
+rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t * topic, uint8_t * data, uint32_t data_length);
 /**
  * @brief Start receiving data
  * 
