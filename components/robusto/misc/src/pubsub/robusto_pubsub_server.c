@@ -157,7 +157,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         memmove(msg + 5, msg, data_length);
         msg[0] = PUBSUB_DATA;
         memcpy(msg + 1, &topic->hash, 4);
-        memcpy(msg + 5, data, data_length);
+
         rob_ret_val_t pubretval = send_message_binary(subscriber->peer, PUBSUB_CLIENT_ID, 0, msg, data_length + 5, NULL);
         if (pubretval != ROB_OK) {
             ROB_LOGW(pubsub_log_prefix, "Failed publishing %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
