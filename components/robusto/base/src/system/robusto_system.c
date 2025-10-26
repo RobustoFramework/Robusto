@@ -114,7 +114,7 @@ void *robusto_spi_realloc(void *ptr, size_t size)
     void *new_ptr = heap_caps_realloc(ptr, size, MALLOC_CAP_SPIRAM);
     if (!new_ptr) {
         ROB_LOGW(system_log_prefix, "robusto_spi_realloc failed to realloc %u bytes.", (unsigned)size);
-        return robusto_realloc(new_ptr, size);
+        return robusto_realloc(ptr, size);
     } else {
         return new_ptr;
     }
