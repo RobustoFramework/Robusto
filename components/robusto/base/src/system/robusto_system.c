@@ -89,7 +89,7 @@ void *robusto_spi_malloc(size_t size)
 #ifdef USE_ESPIDF
     void *ptr = heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
     if (!ptr) {
-        ROB_LOGW(system_log_prefix, "robusto_spi_realloc failed to realloc %u bytes.", (unsigned)size);
+        ROB_LOGW(system_log_prefix, "robusto_spi_malloc failed to allocate %u bytes.", (unsigned)size);
         return robusto_malloc(size);
     } else {
         return ptr;
