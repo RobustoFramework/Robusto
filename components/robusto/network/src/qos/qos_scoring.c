@@ -42,7 +42,7 @@
 #include <robusto_media.h>
 #include <robusto_retval.h>
 #include <robusto_peer.h>
-
+#include <robusto_time.h>
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
 #include "../media/i2c/i2c_messaging.h"

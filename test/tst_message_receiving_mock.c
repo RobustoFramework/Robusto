@@ -7,6 +7,7 @@
 #include <robusto_message.h>
 #include <robusto_incoming.h>
 #include <robusto_concurrency.h>
+#include <robusto_time.h>
 
 static bool async_receive_flag = false;
 static incoming_queue_item_t *incoming_item = NULL;

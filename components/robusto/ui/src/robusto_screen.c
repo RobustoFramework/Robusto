@@ -2,7 +2,8 @@
 #ifdef CONFIG_ROBUSTO_UI
 
 #include <robusto_logging.h>
-#include <robusto_system.h>
+#include <robusto_system.h
+#include <robusto_time.h>
 #ifdef USE_ESPIDF
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"

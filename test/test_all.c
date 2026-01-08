@@ -8,6 +8,7 @@
 #include <robusto_network_init.h>
 #include <robusto_server_init.h>
 #include <robusto_concurrency.h>
+#include <robusto_time.h>
 /* Test */
 
 #include "tst_time.h"

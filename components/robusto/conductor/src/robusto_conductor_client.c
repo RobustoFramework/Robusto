@@ -19,7 +19,7 @@
 #include <robusto_message.h>
 #include <robusto_network_service.h>
 #include <inttypes.h>
-
+#include <robusto_time.h>
 static char *conductor_log_prefix;
 
 ROB_RTC_DATA_ATTR int availability_retry_count;

@@ -34,6 +34,7 @@
 #include <robconfig.h>
 #include <robusto_retval.h>
 #include "sys/time.h"
+#include <robusto_time.h>
 
 #ifdef __cplusplus
 extern "C"

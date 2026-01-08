@@ -35,7 +35,7 @@
 #include <robusto_retval.h>
 #include <robusto_system.h>
 #include <string.h>
-
+#include <robusto_time.h>
 /* All state function doesn't to anything if the state pointer is null */
 
 void robusto_set_queue_state_result(queue_state *state, rob_ret_val_t return_value) {

@@ -26,7 +26,7 @@
 
 #include "robusto_umts_def.h"
 #include <robusto_conductor.h>
-
+#include <robusto_time.h>
 
 static char *umts_ip_log_prefix;
 esp_netif_t *umts_ip_esp_netif = NULL;

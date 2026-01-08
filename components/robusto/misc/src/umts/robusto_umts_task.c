@@ -23,6 +23,7 @@
 #endif
 
 #include <string.h>
+#include <robusto_time.h>
 
 TaskHandle_t umts_modem_setup_task;
 esp_modem_dce_t *umts_dce = NULL;

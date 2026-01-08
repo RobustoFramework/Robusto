@@ -4,7 +4,7 @@
 
 #include <robusto_umts.h>
 #include <robusto_logging.h>
-
+#include <robusto_time.h>
 #ifdef CONFIG_ROBUSTO_CONDUCTOR_SERVER
 #include <robusto_conductor.h>
 #endif

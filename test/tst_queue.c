@@ -13,6 +13,7 @@
 
 #include <robusto_logging.h>
 #include "sample_queue.h"
+#include <robusto_time.h>
 
 int poll_count = 0;
 int work_value = 0;

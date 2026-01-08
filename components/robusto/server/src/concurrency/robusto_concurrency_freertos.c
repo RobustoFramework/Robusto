@@ -32,6 +32,7 @@
 
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO)
 #include <robusto_logging.h>
+#include <robusto_time.h>
 #ifdef USE_ARDUINO
 #include <Arduino.h>
 #include <FreeRTOS.h>

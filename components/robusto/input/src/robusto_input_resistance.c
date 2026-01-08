@@ -4,7 +4,7 @@
 #include <robusto_logging.h>
 #include <robusto_repeater.h>
 #include <robusto_logging.h>
-
+#include <robusto_time.h>
 #ifdef USE_ESPIDF
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
