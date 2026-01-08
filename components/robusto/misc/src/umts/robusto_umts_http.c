@@ -12,6 +12,7 @@
 #include "esp_http_client.h"
 #include <robusto_sleep.h>
 #include <cJSON.h>
+#include <robusto_time.h>
 
 #ifdef CONFIG_ROBUSTO_FLASH_SPIFFS
 #include <robusto_flash.h>

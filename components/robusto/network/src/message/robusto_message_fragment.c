@@ -35,7 +35,7 @@
 #include <robusto_incoming.h>
 #include <robusto_qos.h>
 #include <robusto_states.h>
-
+#include <robusto_time.h>
 #ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>

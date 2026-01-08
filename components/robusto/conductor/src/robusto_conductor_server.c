@@ -19,7 +19,7 @@
 #include <robusto_network_service.h>
 #include <string.h>
 #include <inttypes.h>
-
+#include <robusto_time.h>
 #define CYCLE_TIME_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_CYCLE_TIME_S * 1000
 #define AWAKE_TIME_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_AWAKE_TIME_S * 1000
 #define SERVER_MARGIN_MS CONFIG_ROBUSTO_CONDUCTOR_SERVER_MARGIN_S * 1000

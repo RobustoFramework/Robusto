@@ -40,6 +40,7 @@
 #include <robusto_media.h>
 #include <robusto_qos.h>
 #include <inttypes.h>
+#include <robusto_time.h>
 
 #ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>

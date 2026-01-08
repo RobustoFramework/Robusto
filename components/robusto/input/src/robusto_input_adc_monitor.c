@@ -6,6 +6,7 @@
 #include <robusto_system.h>
 #include <inttypes.h>
 #include <math.h>
+#include <robusto_time.h>
 
 #ifdef USE_ESPIDF
 #include "freertos/FreeRTOS.h"

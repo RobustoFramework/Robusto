@@ -42,6 +42,7 @@
 #include <robusto_logging.h>
 #include <robusto_repeater.h>
 #include "qos_recovery.h"
+#include <robusto_time.h>
 
 static char *qos_state_log_prefix;
 

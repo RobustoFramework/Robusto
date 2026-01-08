@@ -7,6 +7,7 @@
 #include <robusto_pubsub.h>
 #include <robusto_queue.h>
 #include <string.h>
+#include <robusto_time.h>
 
 static uint16_t pubsub_conversation_id = 1;
 

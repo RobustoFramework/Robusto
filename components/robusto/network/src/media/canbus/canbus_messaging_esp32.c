@@ -9,6 +9,7 @@
 #include <driver/gpio.h>
 #include <driver/twai.h>
 #include <string.h>
+#include <robusto_time.h>
 
 #define CANBUS_ADDR_LEN 1
 #define CANBUS_MAX_IN_FLIGHT 5

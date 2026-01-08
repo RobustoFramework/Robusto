@@ -39,7 +39,7 @@
 #include <robusto_incoming.h>
 #include <inttypes.h>
 #include <string.h>
-
+#include <robusto_time.h>
 #include "mock_queue.h"
 
 // TODO: This is test data, question is if mock messaging should be in the components at all.
