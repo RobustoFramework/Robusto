@@ -155,23 +155,20 @@ void r_init_logging();
 #define ROB_LOGI_STAY(tag, format, ...) rob_log_write(ROB_LOG_INFO, tag, ROB_LOG_FORMAT_NO_NL(I, format), ROB_LOG_TIME_SRC, tag, ##__VA_ARGS__)
 // Print a stack trace of the current call stack
 #define ROB_LOG_STACK_TRACE(levels) compat_rob_log_stack_trace(levels)
-#else
+#else // ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
 #define ROB_LOGE(tag, format, ...) do {} while (0)
 #define ROB_LOGW(tag, format, ...) do {} while (0)
 #define ROB_LOGI(tag, format, ...) do {} while (0)
 #define ROB_LOGD(tag, format, ...) do {} while (0)
 #define ROB_LOGV(tag, format, ...) do {} while (0)
 #define ROB_LOG_STACK_TRACE(levels) do {} while (0)
+#define ROB_LOG_LEVEL(level, tag, format, ...) do {} while (0)
+#define ROB_LOGI_STAY(tag, format, ...) do {} while (0)
 #endif // ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
-
-
-
 
 void rob_log_bit_mesh(rob_log_level_t level,
                    const char *tag,
                    uint8_t * data, int data_len);
-
-
 
 #ifdef __cplusplus
 } /* extern "C" */
