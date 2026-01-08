@@ -57,6 +57,7 @@ void rob_log_bit_mesh(rob_log_level_t level,
                       const char *tag,
                       uint8_t *data, int data_len)
 {
+    #if (ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE)
     if (ROB_LOG_LOCAL_LEVEL >= level)
     {
         unsigned int curr_pos = 0;
@@ -110,4 +111,5 @@ void rob_log_bit_mesh(rob_log_level_t level,
             curr_pos = curr_pos + 8;
         } while (curr_pos < data_len);
     }
+    #endif
 }

@@ -37,7 +37,7 @@
 #include <robusto_logging.h>
 #include <robusto_init_internal.h>
 #include <robusto_sys_queue.h>
-
+#include <robusto_time.h>
 typedef struct service
 {
     init_callback_t *init_cb;
