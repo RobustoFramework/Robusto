@@ -183,6 +183,21 @@ robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address)
 }
 
 robusto_peer_t *
+robusto_peers_find_peer_by_base_mac_address_silent(rob_mac_address *mac_address)
+{
+    robusto_peer_t *peer;
+
+    SLIST_FOREACH(peer, &robusto_peers, next)
+    {
+        if (memcmp((uint8_t *)&(peer->base_mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN) == 0)
+        {
+            return peer;
+        }
+    }
+    return NULL;
+}
+
+robusto_peer_t *
 robusto_peers_find_peer_by_relation_id_incoming(uint32_t incoming_relation_id)
 {
     robusto_peer_t *peer;

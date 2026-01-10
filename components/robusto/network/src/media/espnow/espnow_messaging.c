@@ -36,11 +36,6 @@
 #include "espnow_messaging.h"
 #include "espnow_queue.h"
 
-#if 0
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <freertos/queue.h>
-#endif
 #include <robusto_logging.h>
 #include <robusto_system.h>
 #include <robusto_message.h>
@@ -202,16 +197,21 @@ void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t st
     }
 #endif
     send_status = status;
-
     if (status == ESP_NOW_SEND_SUCCESS)
     {
-        ROB_LOGD(espnow_log_prefix, ">> In espnow_send_cb, send success.");
+        ROB_LOGD_ISR(espnow_log_prefix, ">> In espnow_send_cb, send success.");
     }
 
     if (status == ESP_NOW_SEND_FAIL)
     {
-        ROB_LOGW(espnow_log_prefix, ">> In espnow_send_cb, send failure, mac address:");
-        rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, tx_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
+        ROB_LOGW_ISR(espnow_log_prefix,
+                     ">> In espnow_send_cb, send failure, src %02x:%02x:%02x:%02x:%02x:%02x",
+                     tx_info->src_addr[0],
+                     tx_info->src_addr[1],
+                     tx_info->src_addr[2],
+                     tx_info->src_addr[3],
+                     tx_info->src_addr[4],
+                     tx_info->src_addr[5]);
         robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)tx_info->src_addr);
         if (peer)
         {
@@ -220,7 +220,7 @@ void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t st
         }
         else
         {
-            ROB_LOGE(espnow_log_prefix, "espnow_send_cb() - no peer found matching dest_mac_address.");
+            ROB_LOGE_ISR(espnow_log_prefix, "espnow_send_cb() - no peer found matching dest_mac_address.");
         }
     }
 }
@@ -400,6 +400,7 @@ static void espnow_deinit(espnow_send_param_t *send_param)
 void espnow_messaging_init(char *_log_prefix)
 {
     espnow_log_prefix = _log_prefix;
+    rob_log_isr_init();
     espnow_init();
 }
 

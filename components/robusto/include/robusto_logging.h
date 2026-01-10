@@ -37,6 +37,7 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define ROB_LOG_LOCAL_LEVEL CONFIG_ROB_LOG_MAXIMUM_LEVEL
 
@@ -72,6 +73,19 @@ typedef enum
 void rob_log_write(rob_log_level_t level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
 void compat_rob_log_writev(rob_log_level_t level, const char* tag, const char* format, va_list args);
 void compat_rob_log_stack_trace(int levels);
+#ifdef USE_ESPIDF
+bool rob_log_isr_enqueue(rob_log_level_t level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
+void rob_log_isr_init(void);
+#else
+static inline bool rob_log_isr_enqueue(rob_log_level_t level, const char *tag, const char *format, ...)
+{
+    (void)level;
+    (void)tag;
+    (void)format;
+    return false;
+}
+static inline void rob_log_isr_init(void) {}
+#endif
 
 void r_init_logging();
 
@@ -155,20 +169,36 @@ void r_init_logging();
 #define ROB_LOGI_STAY(tag, format, ...) rob_log_write(ROB_LOG_INFO, tag, ROB_LOG_FORMAT_NO_NL(I, format), ROB_LOG_TIME_SRC, tag, ##__VA_ARGS__)
 // Print a stack trace of the current call stack
 #define ROB_LOG_STACK_TRACE(levels) compat_rob_log_stack_trace(levels)
-#else // ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
+
+#define ROB_LOGE_ISR(tag, format, ...) rob_log_isr_enqueue(ROB_LOG_ERROR, tag, format, ##__VA_ARGS__)
+#define ROB_LOGW_ISR(tag, format, ...) rob_log_isr_enqueue(ROB_LOG_WARN, tag, format, ##__VA_ARGS__)
+#define ROB_LOGI_ISR(tag, format, ...) rob_log_isr_enqueue(ROB_LOG_INFO, tag, format, ##__VA_ARGS__)
+#define ROB_LOGD_ISR(tag, format, ...) rob_log_isr_enqueue(ROB_LOG_DEBUG, tag, format, ##__VA_ARGS__)
+#define ROB_LOGV_ISR(tag, format, ...) rob_log_isr_enqueue(ROB_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+#else
 #define ROB_LOGE(tag, format, ...) do {} while (0)
 #define ROB_LOGW(tag, format, ...) do {} while (0)
 #define ROB_LOGI(tag, format, ...) do {} while (0)
 #define ROB_LOGD(tag, format, ...) do {} while (0)
 #define ROB_LOGV(tag, format, ...) do {} while (0)
 #define ROB_LOG_STACK_TRACE(levels) do {} while (0)
-#define ROB_LOG_LEVEL(level, tag, format, ...) do {} while (0)
-#define ROB_LOGI_STAY(tag, format, ...) do {} while (0)
+#define rob_log_isr_enqueue(level, tag, format, ...) (false)
+#define rob_log_isr_init() do {} while (0)
+#define ROB_LOGE_ISR(tag, format, ...) do {} while (0)
+#define ROB_LOGW_ISR(tag, format, ...) do {} while (0)
+#define ROB_LOGI_ISR(tag, format, ...) do {} while (0)
+#define ROB_LOGD_ISR(tag, format, ...) do {} while (0)
+#define ROB_LOGV_ISR(tag, format, ...) do {} while (0)
 #endif // ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
+
+
+
 
 void rob_log_bit_mesh(rob_log_level_t level,
                    const char *tag,
                    uint8_t * data, int data_len);
+
+
 
 #ifdef __cplusplus
 } /* extern "C" */

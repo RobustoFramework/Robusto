@@ -2,7 +2,7 @@
 #ifdef CONFIG_ROBUSTO_UI
 
 #include <robusto_logging.h>
-#include <robusto_system.h
+#include <robusto_system.h>
 #include <robusto_time.h>
 #ifdef USE_ESPIDF
 #include <stdio.h>
@@ -40,13 +40,13 @@
 #define LCD_PARAM_BITS 8
 
 #if defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_NONE)
-#define ROTATE_LVGL LV_DISP_ROT_NONE
+#define ROTATE_LVGL LV_DISPLAY_ROTATION_0
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_90)
-#define ROTATE_LVGL LV_DISP_ROT_90
+#define ROTATE_LVGL LV_DISPLAY_ROTATION_90
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_180)
-#define ROTATE_LVGL LV_DISP_ROT_180
+#define ROTATE_LVGL LV_DISPLAY_ROTATION_180
 #elif defined(CONFIG_ROBUSTO_UI_LVGL_ROTATION_270)
-#define ROTATE_LVGL LV_DISP_ROT_270
+#define ROTATE_LVGL LV_DISPLAY_ROTATION_270
 #endif
 
 lv_disp_t *disp = NULL;

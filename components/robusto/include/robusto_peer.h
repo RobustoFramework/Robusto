@@ -173,6 +173,10 @@ extern "C"
      * @return robusto_peer_t* The matching peer
      */
     robusto_peer_t *robusto_peers_find_peer_by_base_mac_address(rob_mac_address *mac_address);
+    /**
+     * @brief Find peer by MAC without emitting any logs (ISR-safe helper)
+     */
+    robusto_peer_t *robusto_peers_find_peer_by_base_mac_address_silent(rob_mac_address *mac_address);
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     /**
