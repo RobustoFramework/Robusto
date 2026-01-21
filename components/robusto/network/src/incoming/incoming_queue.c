@@ -94,6 +94,10 @@ rob_ret_val_t incoming_init_worker(incoming_callback_cb work_cb, char *_log_pref
     // Initialize the work queue
     STAILQ_INIT(&incoming_work_q);
     incoming_queue_context = malloc(sizeof(queue_context_t));
+    if (!incoming_queue_context) {
+        return ROB_ERR_INIT_FAIL;
+    }
+    memset(incoming_queue_context, 0, sizeof(queue_context_t));
 
     incoming_queue_context->first_queue_item_cb = incoming_first_queueitem; 
     incoming_queue_context->remove_first_queueitem_cb = incoming_remove_first_queue_item; 
@@ -111,6 +115,7 @@ rob_ret_val_t incoming_init_worker(incoming_callback_cb work_cb, char *_log_pref
     incoming_queue_context->watchdog_timeout = 7;
     incoming_queue_context->shutdown = false;
     incoming_queue_context->log_prefix = _log_prefix;
+    incoming_queue_context->work_queue = &incoming_work_q;
 
     return init_work_queue(incoming_queue_context, _log_prefix, "Incoming queue");      
 }
