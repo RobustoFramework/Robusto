@@ -465,18 +465,7 @@ CONFIG_APPTRACE_LOCK_ENABLE=y
 # Driver Configurations
 #
 
-#
-# Legacy ADC Configuration
-#
-CONFIG_ADC_DISABLE_DAC=y
-# CONFIG_ADC_SUPPRESS_DEPRECATE_WARN is not set
 
-#
-# Legacy ADC Calibration Configuration
-#
-CONFIG_ADC_CAL_EFUSE_TP_ENABLE=y
-CONFIG_ADC_CAL_EFUSE_VREF_ENABLE=y
-CONFIG_ADC_CAL_LUT_ENABLE=y
 # CONFIG_ADC_CALI_SUPPRESS_DEPRECATE_WARN is not set
 # end of Legacy ADC Calibration Configuration
 # end of Legacy ADC Configuration

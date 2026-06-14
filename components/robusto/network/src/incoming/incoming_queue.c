@@ -38,7 +38,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #endif
-
+#include <string.h>
 #include <robusto_logging.h>
 
 // The queue context

@@ -64,6 +64,6 @@ idf_component_register(
         # Screen
         esp_lcd
         # UMTS (note the esp_modem dependency)
-        mqtt esp_netif esp_modem esp_http_client esp-tls json 
+        esp_netif esp_modem esp_http_client esp-tls 
                                                                       
 )

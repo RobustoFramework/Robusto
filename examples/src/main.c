@@ -182,11 +182,15 @@ void main_task(void *parameters)
     };
     
     #else
+    #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
     uint32_t counter = 0;
     struct timeval tv;
     struct timezone tz;
-    char* datebuffer = (char*)malloc(80);
     struct tm *gm;
+    char* datebuffer = (char*)malloc(80);
+    #endif
+    
+    
 
     while (1)
     {
@@ -199,8 +203,9 @@ void main_task(void *parameters)
         #endif
     };
     #endif
-    
+    #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
     free(datebuffer);
+    #endif
 }
 
 

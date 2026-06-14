@@ -12,5 +12,7 @@ dependencies:
   lvgl/lvgl: "^9" 
   espressif/esp_lvgl_port: "^2"
   espressif/esp_lcd_sh1107: "^1"
+  espressif/mqtt: "^1"
+  espressif/cjson: "^1"
 maintainers:
   - "Nicklas Börjesson <nicklasb@gmail.com>"
