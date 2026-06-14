@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -23,6 +24,7 @@ TYPE_RE = re.compile(r"^\s*(bool|boolean|tristate|int|hex|string)\b")
 DEFAULT_RE = re.compile(r"^\s*default(?:\s+(.*))?$")
 SDKCONFIG_SET_RE = re.compile(r"^CONFIG_([A-Za-z0-9_]+)=(.*)$")
 SDKCONFIG_UNSET_RE = re.compile(r"^# CONFIG_([A-Za-z0-9_]+) is not set$")
+SDKCONFIG_RENAME_RE = re.compile(r"^CONFIG_([A-Za-z0-9_]+)\s+CONFIG_([A-Za-z0-9_]+)\b")
 
 DEFAULT_EXCLUDED_DIRS = {
     ".git",
@@ -36,6 +38,10 @@ DEFAULT_LOCAL_PREFIXES = (
     "ROBUSTO_",
     "ROB_",
 )
+
+KNOWN_DEPRECATED_SYMBOLS = {
+    "BOOTLOADER_COMPILER_OPTIMIZATION_NONE": "BOOTLOADER_COMPILER_OPTIMIZATION_DEBUG",
+}
 
 
 @dataclass
@@ -110,6 +116,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not print per-file OK lines."
     )
+    parser.add_argument(
+        "--sdkconfig-rename",
+        action="append",
+        type=Path,
+        help="ESP-IDF sdkconfig.rename file to use for deprecated symbol checks. May be repeated.",
+    )
     return parser.parse_args()
 
 
@@ -150,13 +162,14 @@ def discover_kconfig_files(root: Path, include_build: bool) -> list[Path]:
 def discover_sdkconfig_files(root: Path, include_build: bool) -> list[Path]:
     files: list[Path] = []
     generated_suffixes = {".cmake", ".h", ".json"}
+    ignored_suffixes = {".old", ".bak", ".defaults"}
     for pattern in ("sdkconfig*", ".config*"):
         for path in root.rglob(pattern):
             if not path.is_file():
                 continue
             if is_under_excluded_dir(path, root, include_build):
                 continue
-            if path.suffix.lower() in generated_suffixes:
+            if path.suffix.lower() in generated_suffixes | ignored_suffixes:
                 continue
             if path.name == "sdkconfig" or path.name.startswith("sdkconfig.") or path.name.startswith(".config"):
                 files.append(path)
@@ -303,6 +316,43 @@ def parse_sdkconfig(path: Path) -> list[SdkconfigEntry]:
     return entries
 
 
+def default_sdkconfig_rename_files(root: Path) -> list[Path]:
+    candidates = []
+
+    idf_path = os.environ.get("IDF_PATH")
+    if idf_path:
+        candidates.append(Path(idf_path) / "sdkconfig.rename")
+
+    candidates.extend(
+        [
+            root / "sdkconfig.rename",
+            Path.home() / ".platformio" / "packages" / "framework-espidf" / "sdkconfig.rename",
+        ]
+    )
+
+    seen: set[Path] = set()
+    existing = []
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        if resolved in seen or not resolved.is_file():
+            continue
+        seen.add(resolved)
+        existing.append(resolved)
+    return existing
+
+
+def load_deprecated_symbols(rename_files: Iterable[Path]) -> dict[str, str]:
+    symbols = dict(KNOWN_DEPRECATED_SYMBOLS)
+    for path in rename_files:
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            match = SDKCONFIG_RENAME_RE.match(line)
+            if match:
+                symbols[match.group(1)] = match.group(2)
+    return symbols
+
+
 def is_local_symbol(name: str, prefixes: Iterable[str]) -> bool:
     return any(name.startswith(prefix) for prefix in prefixes)
 
@@ -388,14 +438,111 @@ def validate_definitions(symbols: dict[str, SymbolInfo]) -> list[Finding]:
     return findings
 
 
+def validate_deprecated_compatibility_block(sdkconfig_file: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    for line_number, line in enumerate(sdkconfig_file.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if line.strip() == "# Deprecated options for backward compatibility":
+            findings.append(
+                Finding(
+                    severity="ERROR",
+                    source=sdkconfig_file,
+                    line=line_number,
+                    message="remove stale ESP-IDF deprecated compatibility block",
+                )
+            )
+            break
+    return findings
+
+
+def load_esp_idf_kconfig(root: Path, sdkconfig_file: Path):
+    env_name = env_name_from_sdkconfig(sdkconfig_file)
+    if not env_name:
+        return None
+
+    config_env_path = root / ".pio" / "build" / env_name / "config.env"
+    if not config_env_path.is_file():
+        return None
+
+    try:
+        from esp_kconfiglib import Kconfig
+    except ImportError:
+        return None
+
+    try:
+        config_env = json.loads(config_env_path.read_text(encoding="utf-8", errors="replace"))
+    except json.JSONDecodeError:
+        return None
+
+    idf_path = Path(config_env.get("IDF_PATH", ""))
+    kconfig_path = idf_path / "Kconfig"
+    if not kconfig_path.is_file():
+        return None
+
+    previous_env = os.environ.copy()
+    try:
+        os.environ.update({key: str(value) for key, value in config_env.items()})
+        os.environ.setdefault("IDF_MINIMAL_BUILD", "n")
+        parser_version = int(os.environ.get("KCONFIG_PARSER_VERSION", "1"))
+        return Kconfig(str(kconfig_path), parser_version=parser_version, print_report=False)
+    finally:
+        os.environ.clear()
+        os.environ.update(previous_env)
+
+
+def validate_esp_idf_choice_entries(root: Path, sdkconfig_file: Path, entries: Iterable[SdkconfigEntry]) -> list[Finding]:
+    kconfig = load_esp_idf_kconfig(root, sdkconfig_file)
+    if not kconfig:
+        return []
+
+    choices: dict[object, list[SdkconfigEntry]] = {}
+    for entry in entries:
+        symbol = kconfig.syms.get(entry.name)
+        if symbol is None or symbol.choice is None:
+            continue
+        if not entry.unset and entry.value != "n":
+            continue
+        choices.setdefault(symbol.choice, []).append(entry)
+
+    findings = []
+    for choice, choice_entries in choices.items():
+        if not choice_entries:
+            continue
+        if choice.selection is None and all(entry.unset or entry.value == "n" for entry in choice_entries):
+            symbol_names = ", ".join(f"CONFIG_{entry.name}" for entry in choice_entries[:5])
+            if len(choice_entries) > 5:
+                symbol_names += f", ... +{len(choice_entries) - 5} more"
+            findings.append(
+                Finding(
+                    severity="ERROR",
+                    source=sdkconfig_file,
+                    line=choice_entries[0].line,
+                    message=f"choice has only unset/n saved entries ({symbol_names}); remove stale choice lines or select a valid option",
+                )
+            )
+    return findings
+
+
 def validate_sdkconfig(
     entries: Iterable[SdkconfigEntry],
     symbols: dict[str, SymbolInfo],
     show_unknown: str,
     local_prefixes: Iterable[str],
+    deprecated_symbols: dict[str, str],
 ) -> list[Finding]:
     findings: list[Finding] = []
     for entry in entries:
+        replacement = deprecated_symbols.get(entry.name)
+        if replacement:
+            findings.append(
+                Finding(
+                    severity="ERROR",
+                    source=entry.source,
+                    line=entry.line,
+                    message=f"CONFIG_{entry.name} is deprecated; remove this stale line or use CONFIG_{replacement}",
+                )
+            )
+            continue
+
         symbol = symbols.get(entry.name)
         if not symbol:
             if show_unknown == "all" or (show_unknown == "local" and is_local_symbol(entry.name, local_prefixes)):
@@ -445,6 +592,9 @@ def main() -> int:
     print(f"Workspace symbols: {len(workspace_symbols)}")
     print(f"sdkconfig files: {len(sdkconfig_files)}")
 
+    rename_files = [path if path.is_absolute() else root / path for path in args.sdkconfig_rename] if args.sdkconfig_rename else default_sdkconfig_rename_files(root)
+    deprecated_symbols = load_deprecated_symbols(rename_files)
+
     all_findings = validate_definitions(workspace_symbols)
 
     for sdkconfig_file in sdkconfig_files:
@@ -456,8 +606,10 @@ def main() -> int:
 
         generated_symbols = load_generated_menu_symbols(root, sdkconfig_file)
         symbols = merge_generated_symbols(workspace_symbols, generated_symbols)
+        findings = validate_deprecated_compatibility_block(sdkconfig_file)
         entries = parse_sdkconfig(sdkconfig_file)
-        findings = validate_sdkconfig(entries, symbols, args.show_unknown, args.local_prefix)
+        findings.extend(validate_esp_idf_choice_entries(root, sdkconfig_file, entries))
+        findings.extend(validate_sdkconfig(entries, symbols, args.show_unknown, args.local_prefix, deprecated_symbols))
         all_findings.extend(findings)
 
         if not findings and not args.quiet_ok:
