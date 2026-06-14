@@ -60,7 +60,7 @@
 #include <sdkconfig.h>
 #else
 #ifdef USE_NATIVE
-#include "config/robconfig_.h"
+#include "robconfig_.h"
 #else
 #include <robconfig_.h>
 #endif

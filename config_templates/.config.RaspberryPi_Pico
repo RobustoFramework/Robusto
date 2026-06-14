@@ -39,7 +39,6 @@ CONFIG_ROB_RECEIPT_TIMEOUT_MS=100
 #
 # Base system configuration
 #
-CONFIG_ROB_SYNCHRONOUS_MODE=y
 # CONFIG_ROB_LOG_LEVEL_NONE is not set
 # CONFIG_ROB_LOG_LEVEL_ERROR is not set
 # CONFIG_ROB_LOG_LEVEL_WARN is not set
@@ -54,7 +53,6 @@ CONFIG_ROB_BLINK_GPIO=22
 # Testing & simulation
 #
 # CONFIG_ROBUSTO_NETWORK_MOCK_TESTING is not set
-# CONFIG_ROB_SIM is not set
 CONFIG_ROBUSTO_NETWORK_INTEGRATION_TESTING=y
 # end of Testing & simulation
 # end of Robusto Configuration

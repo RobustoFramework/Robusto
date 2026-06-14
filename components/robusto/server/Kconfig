@@ -51,7 +51,8 @@ endmenu
 menu "Worker Task"
 	config ROBUSTO_WORKER_TASK_STACK_SIZE
 		int "Stack size for Robusto worker tasks"
+		default 0
 		help
-			If set, sets the stack size for Robusto worker tasks. 
+			If set greater than 0, sets the stack size for Robusto worker tasks.
 			This can be useful to avoid stack overflows when parsing/handling large payloads.
 endmenu

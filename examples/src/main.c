@@ -75,7 +75,7 @@
 #endif
 #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
 #include "../camera/camera.h"
-#endif
+ #endif
 
 #ifndef CONFIG_ROBUSTO_EXAMPLE_HELLO_CLIENT
 #include <time.h>
