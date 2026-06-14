@@ -51,17 +51,20 @@ static char *mock_worker_log_prefix;
 STAILQ_HEAD(mock_work_q, media_queue_item) 
 mock_work_q;
 
-void *mock_first_queueitem() 
+void *mock_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&mock_work_q); 
 }
 
-void mock_remove_first_queue_item(){
+void mock_remove_first_queue_item(queue_context_t *q_context){
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&mock_work_q, items);
 }
 
-void mock_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL(&mock_work_q, new_item, items);
+void mock_insert_tail(queue_context_t * q_context, void *new_item) { 
+    (void)q_context;
+    STAILQ_INSERT_TAIL(&mock_work_q, (media_queue_item_t *)new_item, items);
 }
 
 
@@ -96,7 +99,7 @@ rob_ret_val_t mock_init_worker(work_callback work_cb, poll_callback poll_cb, cha
 
     mock_queue_context->first_queue_item_cb = mock_first_queueitem; 
     mock_queue_context->remove_first_queueitem_cb = mock_remove_first_queue_item; 
-    mock_queue_context->insert_tail_cb =(insert_queue_item *)&mock_insert_tail;
+    mock_queue_context->insert_tail_cb = mock_insert_tail;
     mock_queue_context->insert_head_cb = NULL;
     mock_queue_context->on_work_cb = work_cb; 
     mock_queue_context->on_poll_cb = poll_cb;

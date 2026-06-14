@@ -46,16 +46,19 @@ static char *canbus_worker_log_prefix;
 STAILQ_HEAD(canbus_work_q, media_queue_item ) 
 canbus_work_q;
 
-media_queue_item_t *canbus_first_queueitem() 
+void *canbus_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&canbus_work_q); 
 }
 
-void canbus_remove_first_queue_item(){
+void canbus_remove_first_queue_item(queue_context_t *q_context){
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&canbus_work_q, items);
 }
-void canbus_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL(&canbus_work_q, new_item, items);
+void canbus_insert_tail(queue_context_t * q_context, void *new_item) { 
+    (void)q_context;
+    STAILQ_INSERT_TAIL(&canbus_work_q, (media_queue_item_t *)new_item, items);
 }
 
 queue_context_t *canbus_get_queue_context() {
@@ -87,9 +90,9 @@ rob_ret_val_t canbus_init_worker(work_callback work_cb, poll_callback poll_cb, c
     // Initialize the work queue
     STAILQ_INIT(&canbus_work_q);
 
-    canbus_queue_context.first_queue_item_cb = (first_queueitem *)&canbus_first_queueitem; 
-    canbus_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&canbus_remove_first_queue_item; 
-    canbus_queue_context.insert_tail_cb = (insert_queue_item *)&canbus_insert_tail;
+    canbus_queue_context.first_queue_item_cb = canbus_first_queueitem; 
+    canbus_queue_context.remove_first_queueitem_cb = canbus_remove_first_queue_item; 
+    canbus_queue_context.insert_tail_cb = canbus_insert_tail;
     canbus_queue_context.insert_head_cb = NULL;
     canbus_queue_context.on_work_cb = work_cb; 
     canbus_queue_context.on_poll_cb = poll_cb;

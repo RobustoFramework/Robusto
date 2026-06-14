@@ -54,7 +54,7 @@ idf_component_register(
     
     REQUIRES 
         # Base
-        driver esp_timer nvs_flash 
+        driver esp_driver_gpio esp_driver_gptimer esp_timer nvs_flash 
         # Flash
         spiffs vfs
         # Networking dependecies

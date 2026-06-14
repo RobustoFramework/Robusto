@@ -55,7 +55,7 @@ void rob_log_write(rob_log_level_t level,
 // TODO: Move rob_log_bit_mesh into a macro instead so we don't need this.
 void rob_log_bit_mesh(rob_log_level_t level,
                       const char *tag,
-                      uint8_t *data, int data_len)
+                      const uint8_t *data, int data_len)
 {
     #if (ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE)
     if (ROB_LOG_LOCAL_LEVEL >= level)

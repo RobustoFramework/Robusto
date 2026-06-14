@@ -196,7 +196,7 @@ void r_init_logging();
 
 void rob_log_bit_mesh(rob_log_level_t level,
                    const char *tag,
-                   uint8_t * data, int data_len);
+                   const uint8_t * data, int data_len);
 
 
 

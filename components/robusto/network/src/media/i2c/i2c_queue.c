@@ -47,16 +47,19 @@ static char *i2c_worker_log_prefix;
 STAILQ_HEAD(i2c_work_q, media_queue_item) 
 i2c_work_q;
 
-media_queue_item_t *i2c_first_queueitem() 
+void *i2c_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&i2c_work_q); 
 }
 
-void i2c_remove_first_queue_item(){
+void i2c_remove_first_queue_item(queue_context_t *q_context){
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&i2c_work_q, items);
 }
-void i2c_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL(&i2c_work_q, new_item, items);
+void i2c_insert_tail(queue_context_t * q_context, void *new_item) { 
+    (void)q_context;
+    STAILQ_INSERT_TAIL(&i2c_work_q, (media_queue_item_t *)new_item, items);
 }
 
 void i2c_cleanup_queue_task(media_queue_item_t *queue_item) {
@@ -87,9 +90,9 @@ rob_ret_val_t i2c_init_worker(work_callback work_cb, poll_callback poll_cb, char
     // Initialize the work queue
     STAILQ_INIT(&i2c_work_q);
 
-    i2c_queue_context.first_queue_item_cb = (first_queueitem *)&i2c_first_queueitem; 
-    i2c_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&i2c_remove_first_queue_item; 
-    i2c_queue_context.insert_tail_cb = (insert_queue_item *)&i2c_insert_tail;
+    i2c_queue_context.first_queue_item_cb = i2c_first_queueitem; 
+    i2c_queue_context.remove_first_queueitem_cb = i2c_remove_first_queue_item; 
+    i2c_queue_context.insert_tail_cb = i2c_insert_tail;
     i2c_queue_context.insert_head_cb = NULL;
     i2c_queue_context.on_work_cb = work_cb; 
     i2c_queue_context.on_poll_cb = poll_cb;

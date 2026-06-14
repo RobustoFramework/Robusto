@@ -46,8 +46,9 @@ static char *espnow_worker_log_prefix;
 STAILQ_HEAD(espnow_work_q, media_queue_item ) 
 espnow_work_q;
 
-media_queue_item_t *espnow_first_queueitem() 
+void *espnow_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&espnow_work_q); 
 }
 
@@ -55,13 +56,13 @@ void espnow_remove_first_queue_item(queue_context_t * q_context){
     STAILQ_REMOVE_HEAD(&espnow_work_q, items);
     q_context->count--;
 }
-void espnow_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL(&espnow_work_q, new_item, items);
+void espnow_insert_tail(queue_context_t * q_context, void *new_item) { 
+    STAILQ_INSERT_TAIL(&espnow_work_q, (media_queue_item_t *)new_item, items);
     q_context->count++;
 }
 
-void espnow_insert_head(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_HEAD(&espnow_work_q, new_item, items);
+void espnow_insert_head(queue_context_t * q_context, void *new_item) { 
+    STAILQ_INSERT_HEAD(&espnow_work_q, (media_queue_item_t *)new_item, items);
     q_context->count++;
 }
 
@@ -94,10 +95,10 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     // Initialize the work queue
     STAILQ_INIT(&espnow_work_q);
 
-    espnow_queue_context.first_queue_item_cb = (first_queueitem *)&espnow_first_queueitem; 
-    espnow_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&espnow_remove_first_queue_item; 
-    espnow_queue_context.insert_tail_cb = (insert_queue_item *)&espnow_insert_tail;
-    espnow_queue_context.insert_head_cb = (insert_queue_item *)&espnow_insert_head;
+    espnow_queue_context.first_queue_item_cb = espnow_first_queueitem; 
+    espnow_queue_context.remove_first_queueitem_cb = espnow_remove_first_queue_item; 
+    espnow_queue_context.insert_tail_cb = espnow_insert_tail;
+    espnow_queue_context.insert_head_cb = espnow_insert_head;
     espnow_queue_context.on_work_cb = work_cb; 
     espnow_queue_context.on_poll_cb = poll_cb;
     espnow_queue_context.max_task_count = 1;
