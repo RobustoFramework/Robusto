@@ -251,7 +251,12 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
     ROB_LOGI(robusto_worker_log_prefix, "Register the worker task. Name: %s", q_context->worker_task_name);
     /* We obviously don't immidiately want to shutdown the worker just because someone haven't set shutdown to false. */
     q_context->shutdown = false;
+    /* If the config is defined, use a stack of that size for queue workers to avoid overflow when parsing/handling payloads. */
+    #ifdef ROBUSTO_WORKER_TASK_STACK_SIZE
+    int rc = robusto_create_task_custom((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, (rob_task_handle_t **)&q_context->worker_task_handle, 0, ROBUSTO_WORKER_TASK_STACK_SIZE);
+    #else
     int rc = robusto_create_task((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, (rob_task_handle_t **)&q_context->worker_task_handle, 0);
+    #endif
     if (rc != ROB_OK)
     {
         ROB_LOGE(robusto_worker_log_prefix, "Failed creating worker task, returned: %i (see projdefs.h)", rc);
