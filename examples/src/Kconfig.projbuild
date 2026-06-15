@@ -88,6 +88,7 @@ menu "Robusto Examples"
             Note that the UMTS gateway has to be enabled and configured.
     config ROBUSTO_CAMERA_EXAMPLE
         bool "The Camera example"
+        depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         help 
             This takes a picture and sends it using Robusto.
     

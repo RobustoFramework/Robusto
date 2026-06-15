@@ -49,6 +49,11 @@ rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter,
     }
 }
 
+rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity, uint32_t memory) {
+    (void)memory;
+    return robusto_create_task(task_function, parameter, task_name, handle, affinity);
+}
+
 
 rob_ret_val_t robusto_delete_current_task()  {
     pthread_exit(NULL);
