@@ -597,20 +597,20 @@ int init_radiolib()
 
 #ifdef USE_ESPIDF
 
-    spi_bus_config_t spibus_cfg = {
-        .mosi_io_num = CONFIG_LORA_MOSI_GPIO,
-        .miso_io_num = CONFIG_LORA_MISO_GPIO,
-        .sclk_io_num = CONFIG_LORA_SCK_GPIO,
-        .data3_io_num = -1,
-        .data4_io_num = -1,
-        .data5_io_num = -1,
-        .data6_io_num = -1,
-        .data7_io_num = -1,
-        .max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE,
-        .flags = 0,
-        .intr_flags = 0,
-
-    };
+    spi_bus_config_t spibus_cfg = {};
+    spibus_cfg.mosi_io_num = CONFIG_LORA_MOSI_GPIO;
+    spibus_cfg.miso_io_num = CONFIG_LORA_MISO_GPIO;
+    spibus_cfg.sclk_io_num = CONFIG_LORA_SCK_GPIO;
+    spibus_cfg.quadwp_io_num = -1;
+    spibus_cfg.quadhd_io_num = -1;
+    spibus_cfg.data3_io_num = -1;
+    spibus_cfg.data4_io_num = -1;
+    spibus_cfg.data5_io_num = -1;
+    spibus_cfg.data6_io_num = -1;
+    spibus_cfg.data7_io_num = -1;
+    spibus_cfg.max_transfer_sz = SOC_SPI_MAXIMUM_BUFFER_SIZE;
+    spibus_cfg.flags = 0;
+    spibus_cfg.intr_flags = 0;
     int state = spi_bus_initialize(SPI2_HOST, &spibus_cfg, SPI_DMA_CH_AUTO);
     if (state == ESP_OK)
     {
@@ -622,20 +622,20 @@ int init_radiolib()
         return ROB_FAIL;
     }
 
-    spi_device_interface_config_t spi_cfg = {
-        .command_bits = 0,
-        .address_bits = 0,
-        .dummy_bits = 0,
-        .mode = 0,
-        .duty_cycle_pos = 128, // 50% duty cycle
-        .cs_ena_pretrans = 3,
-        .cs_ena_posttrans = 3,
-        .clock_speed_hz = 400000,
-        .input_delay_ns = 0,
-        .spics_io_num = CONFIG_LORA_CS_GPIO,
-        .queue_size = 3, // Keep the CS low 3 cycles after transaction, to stop slave from missing the last bit when CS has less propagation delay than CLK
-        .pre_cb = NULL,
-        .post_cb = NULL};
+    spi_device_interface_config_t spi_cfg = {};
+    spi_cfg.command_bits = 0;
+    spi_cfg.address_bits = 0;
+    spi_cfg.dummy_bits = 0;
+    spi_cfg.mode = 0;
+    spi_cfg.duty_cycle_pos = 128; // 50% duty cycle
+    spi_cfg.cs_ena_pretrans = 3;
+    spi_cfg.cs_ena_posttrans = 3;
+    spi_cfg.clock_speed_hz = 400000;
+    spi_cfg.input_delay_ns = 0;
+    spi_cfg.spics_io_num = CONFIG_LORA_CS_GPIO;
+    spi_cfg.queue_size = 3; // Keep the CS low 3 cycles after transaction, to stop slave from missing the last bit when CS has less propagation delay than CLK
+    spi_cfg.pre_cb = NULL;
+    spi_cfg.post_cb = NULL;
 
     hal = new RobustoHal(SPI2_HOST, &spi_cfg, lora_messaging_log_prefix);
 #else

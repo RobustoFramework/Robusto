@@ -275,7 +275,7 @@ void peer_scoring(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
         if (media_type == robusto_mt_canbus)
         {
-            update_score(peer, robusto_mt_espnow);
+            update_score(peer, robusto_mt_canbus);
         }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_UMTS

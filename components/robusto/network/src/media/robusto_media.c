@@ -91,11 +91,14 @@ void list_media_types(robusto_media_types media_types, char *log_str)
     {
         strcat(log_str, "CAN bus,");
     }
-    /*
     if (media_types & robusto_mt_umts)
     {
         strcat(log_str, " UMTS,");
-    }*/
+    }
+    if (media_types & robusto_mt_wifi)
+    {
+        strcat(log_str, " Wi-Fi,");
+    }
     if (media_types & robusto_mt_mock)
     {
         strcat(log_str, " MOCK,");
@@ -131,12 +134,14 @@ char *media_type_to_str(robusto_media_types media_type)
     {
         return "CAN bus";
     }
-    /*
     if (media_type == robusto_mt_umts)
     {
         return "UMTS";
     }
-    */
+    if (media_type == robusto_mt_wifi)
+    {
+        return "Wi-Fi";
+    }
     if (media_type == robusto_mt_mock)
     {
         return "MOCK";

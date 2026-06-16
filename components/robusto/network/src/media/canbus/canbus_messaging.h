@@ -51,7 +51,7 @@ extern "C"
 #endif
 
 
-#if CONFIG_CANBUS_ADDR == -1
+#if CONFIG_ROBUSTO_CANBUS_ADDRESS == -1
 #error "CAN bus - A CAN bus address must be set in menuconfig!"
 #endif
 

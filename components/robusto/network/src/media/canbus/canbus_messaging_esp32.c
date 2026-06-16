@@ -6,8 +6,11 @@
 #include <robusto_qos.h>
 #include <robusto_incoming.h>
 
-#include <driver/gpio.h>
-#include <driver/twai.h>
+#include <esp_twai.h>
+#include <esp_twai_onchip.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <hal/gpio_types.h>
 #include <string.h>
 #include <robusto_time.h>
 
@@ -22,7 +25,18 @@
 static char *canbus_messaging_log_prefix;
 
 /* Last known status of the TWAI controller */
-twai_status_info_t status_info;
+static twai_node_status_t status_info;
+static twai_node_record_t record_info;
+static twai_node_handle_t canbus_twai_node;
+static QueueHandle_t canbus_rx_queue;
+static bool canbus_twai_running;
+
+typedef struct canbus_twai_frame
+{
+    uint32_t identifier;
+    uint16_t data_length_code;
+    uint8_t data[TWAI_FRAME_MAX_DLC];
+} canbus_twai_frame_t;
 
 typedef struct in_flight
 {
@@ -44,75 +58,96 @@ void canbus_twai_install();
 
 in_flight_t in_flights[CANBUS_MAX_IN_FLIGHT];
 
-// The following defines are values Espressif proposed to test https://github.com/espressif/esp-idf/issues/13332.
-#if APB_CLK_FREQ == (32 * 1000000) // TWAI_CLK_SRC_DEFAULT = 32M
-#define TWAI_TIMING_CONFIG_25KBITS()                                                                                                             \
-    {                                                                                                                                            \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 400000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_50KBITS()                                                                                                              \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_100KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_125KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 23, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_250KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 4000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_500KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 8000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_800KBITS()                                                                                                              \
-    {                                                                                                                                              \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_1MBITS()                                                                                                                \
-    {                                                                                                                                              \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 16000000, .brp = 0, .tseg_1 = 11, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+static uint32_t canbus_twai_bitrate(void)
+{
+#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_1MBITS
+    return 1000000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_800KBITS)
+    return 800000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_500KBITS)
+    return 500000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_250KBITS)
+    return 250000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_125KBITS)
+    return 125000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_100KBITS)
+    return 100000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_50KBITS)
+    return 50000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_25KBITS)
+    return 25000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_20KBITS)
+    return 20000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_16KBITS)
+    return 16000;
+#elif defined(CONFIG_ROBUSTO_CANBUS_BIT_RATE_12_5KBITS)
+    return 12500;
+#else
+    return 125000;
+#endif
+}
+
+static bool canbus_twai_rx_done_cb(twai_node_handle_t handle, const twai_rx_done_event_data_t *edata, void *user_ctx)
+{
+    (void)edata;
+    QueueHandle_t rx_queue = (QueueHandle_t)user_ctx;
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    uint8_t rx_data[TWAI_FRAME_MAX_DLC] = {0};
+    twai_frame_t rx_frame = {0};
+    rx_frame.buffer = rx_data;
+    rx_frame.buffer_len = sizeof(rx_data);
+
+    while (twai_node_receive_from_isr(handle, &rx_frame) == ESP_OK)
+    {
+        canbus_twai_frame_t queue_frame = {0};
+        queue_frame.identifier = rx_frame.header.id;
+        queue_frame.data_length_code = twaifd_dlc2len(rx_frame.header.dlc);
+        if (queue_frame.data_length_code > TWAI_FRAME_MAX_DLC)
+        {
+            queue_frame.data_length_code = TWAI_FRAME_MAX_DLC;
+        }
+        memcpy(queue_frame.data, rx_data, queue_frame.data_length_code);
+        if (rx_queue != NULL)
+        {
+            xQueueSendFromISR(rx_queue, &queue_frame, &higher_priority_task_woken);
+        }
+        memset(rx_data, 0, sizeof(rx_data));
+        rx_frame.buffer = rx_data;
+        rx_frame.buffer_len = sizeof(rx_data);
     }
 
-#elif APB_CLK_FREQ == (80 * 1000000) // TWAI_CLK_SRC_DEFAULT = 80M
-#define TWAI_TIMING_CONFIG_25KBITS()                                                                                                             \
-    {                                                                                                                                            \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 625000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
+    return higher_priority_task_woken == pdTRUE;
+}
+
+static esp_err_t canbus_twai_transmit(uint32_t identifier, const uint8_t *data, uint16_t data_length)
+{
+    if (canbus_twai_node == NULL || !canbus_twai_running)
+    {
+        return ESP_ERR_INVALID_STATE;
     }
-#define TWAI_TIMING_CONFIG_50KBITS()                                                                                                              \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 1000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+
+    uint8_t tx_data[TWAI_FRAME_MAX_DLC] = {0};
+    if (data_length > TWAI_FRAME_MAX_DLC)
+    {
+        return ESP_ERR_INVALID_ARG;
     }
-#define TWAI_TIMING_CONFIG_100KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
+    memcpy(tx_data, data, data_length);
+
+    twai_frame_t frame = {0};
+    frame.header.id = identifier;
+    frame.header.ide = true;
+    frame.header.rtr = false;
+    frame.header.dlc = data_length;
+    frame.buffer = tx_data;
+    frame.buffer_len = data_length;
+
+    esp_err_t transmit_result = twai_node_transmit(canbus_twai_node, &frame, CANBUS_TIMEOUT_MS);
+    if (transmit_result == ESP_OK)
+    {
+        transmit_result = twai_node_transmit_wait_all_done(canbus_twai_node, CANBUS_TIMEOUT_MS);
     }
-#define TWAI_TIMING_CONFIG_125KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 2500000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_250KBITS()                                                                                                             \
-    {                                                                                                                                             \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 5000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_500KBITS()                                                                                                              \
-    {                                                                                                                                              \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 10000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_800KBITS()                                                                                                              \
-    {                                                                                                                                              \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 16, .tseg_2 = 8, .sjw = 3, .triple_sampling = false \
-    }
-#define TWAI_TIMING_CONFIG_1MBITS()                                                                                                                \
-    {                                                                                                                                              \
-        .clk_src = TWAI_CLK_SRC_DEFAULT, .quanta_resolution_hz = 20000000, .brp = 0, .tseg_1 = 15, .tseg_2 = 4, .sjw = 3, .triple_sampling = false \
-    }
-#endif // APB_CLK_FREQ
+    return transmit_result;
+}
 
 /**
  * @brief Start a new in-flight
@@ -200,9 +235,12 @@ int add_to_in_flight(uint8_t address, uint16_t package_index, uint8_t *data, uin
 
 void handle_twai_error(esp_err_t tr_result)
 {
-    twai_get_status_info(&status_info);
-    ROB_LOGI(canbus_messaging_log_prefix, "TWAI information: \nState: %u \n arb_lost_count: %lu, bus_error_count: %lu, rx_error_counter: %lu, tx_error_counter: %lu",
-             status_info.state, status_info.arb_lost_count, status_info.bus_error_count, status_info.rx_error_counter, status_info.tx_error_counter);
+    if (canbus_twai_node != NULL)
+    {
+        twai_node_get_info(canbus_twai_node, &status_info, &record_info);
+    }
+    ROB_LOGI(canbus_messaging_log_prefix, "TWAI information: \nState: %u \n bus_error_count: %lu, rx_error_counter: %hu, tx_error_counter: %hu, tx_queue_remaining: %lu",
+             status_info.state, record_info.bus_err_num, status_info.rx_error_count, status_info.tx_error_count, status_info.tx_queue_remaining);
 
     switch (tr_result)
     {
@@ -211,53 +249,30 @@ void handle_twai_error(esp_err_t tr_result)
         break;
     case ESP_ERR_INVALID_STATE:
         ROB_LOGE(canbus_messaging_log_prefix, "TWAI error 259: Invalid State");
-        if (status_info.tx_error_counter > 127)
+        if (status_info.tx_error_count > 127)
         {
 
-            if (status_info.state != TWAI_STATE_BUS_OFF)
+            if (status_info.state != TWAI_ERROR_BUS_OFF)
             {
                 ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Bus wasn't off, will not initiate recovery.");
                 break;
             }
             else
             {
-                ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Bus is off, uninstall.");
-                if (twai_driver_uninstall() != ESP_OK)
+                ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Bus is off, initiating recovery.");
+                esp_err_t recover_result = twai_node_recover(canbus_twai_node);
+                if (recover_result != ESP_OK)
                 {
-                    ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Failed to uninstall. Driver is not in stopped/bus-off state, or is not installed.");
+                    ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Failed to initiate recovery. Code: %i", recover_result);
                     break;
-                };
-                canbus_twai_install();
-            }
-            ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Initiate recovery.");
-            if (twai_initiate_recovery() != ESP_OK)
-            {
-                ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Failed to initiate recovery.");
-                // We will not break here, tries to restart later.
-            }
-            else
-            {
-                ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Recovery initiated. Waiting for status to be stopped.");
-                r_delay(500);
-                twai_get_status_info(&status_info);
+                }
                 uint32_t start_time = r_millis();
-                while (status_info.state != TWAI_STATE_STOPPED && (start_time < start_time + 1000))
+                while (status_info.state == TWAI_ERROR_BUS_OFF && (r_millis() - start_time < 1000))
                 {
                     r_delay(500);
-                    twai_get_status_info(&status_info);
+                    twai_node_get_info(canbus_twai_node, &status_info, &record_info);
                 }
             }
-
-                ROB_LOGI(canbus_messaging_log_prefix, "TWAI: Attempting starting.");
-                if (twai_start() != ESP_OK)
-                {
-                    ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Start failed.");
-                }
-                else
-                {
-                    ROB_LOGE(canbus_messaging_log_prefix, "TWAI: Start succeeded!");
-                }
-
         }
         break;
     case ESP_ERR_INVALID_CRC:
@@ -286,14 +301,14 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     // This might be significant for very fast updates as that would enable the context byte + 2 uint32s in one frame, context byte + or a 16 bit serviceid + uint16_t an uint32_t.
     // If we don't want this, we'll just use that bit to double the possible message length
 
-    if (status_info.state != TWAI_STATE_RUNNING)
+    if (canbus_twai_node == NULL || !canbus_twai_running)
     {
-        twai_get_status_info(&status_info);
-        if (status_info.state != TWAI_STATE_RUNNING)
+        if (canbus_twai_node != NULL)
         {
-            ROB_LOGE(canbus_messaging_log_prefix, "canbus_send_message: TWAI CAN bus is not running");
-            return ROB_FAIL;
+            twai_node_get_info(canbus_twai_node, &status_info, &record_info);
         }
+        ROB_LOGE(canbus_messaging_log_prefix, "canbus_send_message: TWAI CAN bus is not running");
+        return ROB_FAIL;
     }
 
     // BTW if you haven't, go watch "Nanook of the North" (Flaherty).
@@ -315,29 +330,20 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
     ROB_LOGD(canbus_messaging_log_prefix, "Data that will be sent (CRC32 and adressing will be excluded) actually sending: %lu bytes): ", offset_data_length);
     rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, offset_data, offset_data_length);
 
-    twai_message_t message;
-    message.extd = 1;             // Extended frame format
-    message.rtr = 0;              // Not a remote transmission request
-    message.ss = 0;               // Not a single-shot, will retry
-    message.self = 0,             // Not a self reception request
-    message.dlc_non_comp = 0,     // DLC is not more than 8
-
-    message.identifier = 0;
-    message.identifier |= number_of_packets << 16;
-    message.identifier |= get_host_peer()->canbus_address << 8;
-    message.identifier |= peer->canbus_address;
-    message.identifier |= 1 << 28;    // Set bit 29, first message
-    message.identifier &= ~(1 << 27); // Unset bit 28, reserved
+    uint32_t identifier = 0;
+    identifier |= number_of_packets << 16;
+    identifier |= get_host_peer()->canbus_address << 8;
+    identifier |= peer->canbus_address;
+    identifier |= 1 << 28;    // Set bit 29, first message
+    identifier &= ~(1 << 27); // Unset bit 28, reserved
 
     uint32_t bytes_sent = 0;
     uint32_t package_index = 0;
     while (offset_data_length - bytes_sent > TWAI_FRAME_MAX_DLC)
     {
-        memcpy(&message.data, offset_data + bytes_sent, TWAI_FRAME_MAX_DLC);
-        message.data_length_code = TWAI_FRAME_MAX_DLC;
-        ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
-        rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
-        esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
+        ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", TWAI_FRAME_MAX_DLC);
+        rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, offset_data + bytes_sent, TWAI_FRAME_MAX_DLC);
+        esp_err_t tr_result = canbus_twai_transmit(identifier, offset_data + bytes_sent, TWAI_FRAME_MAX_DLC);
         if (tr_result == ESP_OK)
         {
             ROB_LOGD(canbus_messaging_log_prefix, "Message queued for transmission");
@@ -350,19 +356,18 @@ rob_ret_val_t canbus_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t 
             return ROB_FAIL;
         }
         package_index++;
-        message.identifier = 0;
-        message.identifier |= package_index << 16;
-        message.identifier |= get_host_peer()->canbus_address << 8;
-        message.identifier |= peer->canbus_address;
-        message.identifier &= ~(1 << 28); // Unset bit 29. Not the first packet from now on. Faster to do than check, probably.
+        identifier = 0;
+        identifier |= package_index << 16;
+        identifier |= get_host_peer()->canbus_address << 8;
+        identifier |= peer->canbus_address;
+        identifier &= ~(1 << 28); // Unset bit 29. Not the first packet from now on. Faster to do than check, probably.
         bytes_sent += TWAI_FRAME_MAX_DLC;
     }
 
-    memcpy(&message.data, offset_data + bytes_sent, offset_data_length - bytes_sent);
-    message.data_length_code = offset_data_length - bytes_sent;
-    ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", message.data_length_code);
-    rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, (uint8_t *)&(message.data), message.data_length_code);
-    esp_err_t tr_result = twai_transmit(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
+    uint16_t final_data_length = offset_data_length - bytes_sent;
+    ROB_LOGD(canbus_messaging_log_prefix, "Sending packet (length: %hu): ", final_data_length);
+    rob_log_bit_mesh(ROB_LOG_DEBUG, canbus_messaging_log_prefix, offset_data + bytes_sent, final_data_length);
+    esp_err_t tr_result = canbus_twai_transmit(identifier, offset_data + bytes_sent, final_data_length);
     if (tr_result == ESP_OK)
     {
         ROB_LOGD(canbus_messaging_log_prefix, "Message queued for transmission");
@@ -388,17 +393,15 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
 
     // TODO: Treat all data lengths shorter than 8 bytes as single messages. Heart beats would be one variant.
     // TODO: Stop sending and receiving CRC (add parameter to ), it is included in CAN bus and
-    twai_message_t message;
-    esp_err_t rec_result = twai_receive(&message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS));
-    if (rec_result == ESP_ERR_TIMEOUT)
+    canbus_twai_frame_t message;
+    if (canbus_rx_queue == NULL)
     {
-        ROB_LOGD(canbus_messaging_log_prefix, "Timed out waiting");
+        ROB_LOGE(canbus_messaging_log_prefix, "CAN bus RX queue is not initialized.");
         return ROB_FAIL;
     }
-    else if (rec_result != ESP_OK)
+    if (xQueueReceive(canbus_rx_queue, &message, pdMS_TO_TICKS(CANBUS_TIMEOUT_MS)) != pdTRUE)
     {
-        ROB_LOGW(canbus_messaging_log_prefix, "Failed to receive message, result code: %i", rec_result);
-        handle_twai_error(rec_result);
+        ROB_LOGD(canbus_messaging_log_prefix, "Timed out waiting");
         return ROB_FAIL;
     }
     uint8_t dest = (uint8_t)(message.identifier);
@@ -444,7 +447,7 @@ int canbus_read_data(uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_
             // NOTE: We might gain an extra byte by using the package index field if it is a single by using bit 28. Worth it?
             data_length = message.data_length_code;
             data = robusto_malloc(data_length);
-            memcpy(data, &message.data, data_length);
+            memcpy(data, message.data, data_length);
         }
     }
     else
@@ -546,10 +549,23 @@ int canbus_heartbeat(robusto_peer_t *peer)
 
 void canbus_compat_messaging_start(void)
 {
-    // Start TWAI driver
-    esp_err_t ret_start = twai_start();
+    if (canbus_twai_node == NULL)
+    {
+        canbus_twai_install();
+    }
+    if (canbus_twai_node == NULL)
+    {
+        ROB_LOGE(canbus_messaging_log_prefix, "CAN bus TWAI node is not installed.");
+        return;
+    }
+    if (canbus_rx_queue != NULL)
+    {
+        xQueueReset(canbus_rx_queue);
+    }
+    esp_err_t ret_start = twai_node_enable(canbus_twai_node);
     if (ret_start == ESP_OK)
     {
+        canbus_twai_running = true;
         ROB_LOGI(canbus_messaging_log_prefix, "CAN bus TWAI Driver started.");
     }
     else
@@ -557,52 +573,43 @@ void canbus_compat_messaging_start(void)
         ROB_LOGE(canbus_messaging_log_prefix, "CAN bus TWAI Failed to start driver. Code %i", ret_start);
         return;
     }
-    twai_clear_receive_queue();
 };
 
 void canbus_twai_install()
 {
-    // Initialize configuration structures using macro initializers
-    twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(CONFIG_ROBUSTO_CANBUS_TX_IO, CONFIG_ROBUSTO_CANBUS_RX_IO, TWAI_MODE_NORMAL);
+    if (canbus_twai_node != NULL)
+    {
+        return;
+    }
+    if (canbus_rx_queue == NULL)
+    {
+        canbus_rx_queue = xQueueCreate(CANBUS_MAX_IN_FLIGHT * 2, sizeof(canbus_twai_frame_t));
+        if (canbus_rx_queue == NULL)
+        {
+            ROB_LOGE(canbus_messaging_log_prefix, "CAN bus failed to allocate RX queue.");
+            return;
+        }
+    }
 
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_1MBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_1MBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_800KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_800KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_500KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_250KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_125KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_125KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_100KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_100KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_50KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_50KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_25KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_25KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_20KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_20KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_16KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_16KBITS();
-#endif
-#ifdef CONFIG_ROBUSTO_CANBUS_BIT_RATE_12_5KBITS
-    twai_timing_config_t t_config = TWAI_TIMING_CONFIG_12_5KBITS();
-#endif
-    twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+    twai_onchip_node_config_t node_config = {0};
+    node_config.io_cfg.tx = CONFIG_ROBUSTO_CANBUS_TX_IO;
+    node_config.io_cfg.rx = CONFIG_ROBUSTO_CANBUS_RX_IO;
+    node_config.io_cfg.quanta_clk_out = GPIO_NUM_NC;
+    node_config.io_cfg.bus_off_indicator = GPIO_NUM_NC;
+    node_config.bit_timing.bitrate = canbus_twai_bitrate();
+    node_config.tx_queue_depth = CANBUS_MAX_IN_FLIGHT;
+    node_config.fail_retry_cnt = -1;
+    node_config.flags.no_receive_rtr = true;
 
     // Install TWAI driver
     ROB_LOGI(canbus_messaging_log_prefix, "CAN bus installing.");
-    esp_err_t ret_install = twai_driver_install(&g_config, &t_config, &f_config);
+    esp_err_t ret_install = twai_new_node_onchip(&node_config, &canbus_twai_node);
+    if (ret_install == ESP_OK)
+    {
+        twai_event_callbacks_t callbacks = {0};
+        callbacks.on_rx_done = canbus_twai_rx_done_cb;
+        ret_install = twai_node_register_event_callbacks(canbus_twai_node, &callbacks, canbus_rx_queue);
+    }
     if (ret_install == ESP_OK)
     {
         ROB_LOGI(canbus_messaging_log_prefix, "CAN bus TWAI Driver installed.");

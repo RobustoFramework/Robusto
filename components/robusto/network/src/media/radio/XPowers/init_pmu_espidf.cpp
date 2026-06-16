@@ -1,6 +1,7 @@
 #include "init_pmu.hpp"
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #ifdef USE_ESPIDF
+#if defined(CONFIG_XPOWERS_CHIP_AXP192) || defined(CONFIG_XPOWERS_CHIP_AXP2102)
 #include <stdio.h>
 #include <cstring>
 #include "freertos/FreeRTOS.h"
@@ -84,6 +85,12 @@ static void pmu_hander_task(void *args)
         }
     }
 }
+
+#else
+void init_pmu(void)
+{
+}
+#endif
 
 #endif
 

@@ -39,7 +39,7 @@ extern "C"
 #endif
 
 void robusto_i2c_stop();
-void robusto_i2c_start();
+void robusto_i2c_start(void);
 void robusto_i2c_init(char * _log_prefix);
 
 
