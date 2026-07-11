@@ -6,7 +6,6 @@
  * @date 2023-02-19
  *
  * @copyright
- * Copyright (c) 2022, Nicklas Börjesson <nicklasb at gmail dot com>
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
  *
@@ -33,7 +32,9 @@
 #if defined(USE_ESPIDF) && defined(CONFIG_ROBUSTO_SUPPORTS_I2C)
 
 #include <freertos/FreeRTOS.h>
-#include <driver/i2c.h>
+#include <freertos/queue.h>
+#include <driver/i2c_master.h>
+#include <driver/i2c_slave.h>
 
 #include <robusto_logging.h>
 #include <robusto_retval.h>
@@ -50,6 +51,163 @@ static char *i2c_esp32_messaging_log_prefix;
 
 #define I2C_ADDR_LEN 1
 
+typedef enum robusto_i2c_driver_mode
+{
+    ROBUSTO_I2C_MODE_NONE,
+    ROBUSTO_I2C_MODE_MASTER,
+    ROBUSTO_I2C_MODE_SLAVE,
+} robusto_i2c_driver_mode_t;
+
+typedef struct robusto_i2c_rx_item
+{
+    uint32_t data_length;
+    uint8_t data[I2C_RX_BUF];
+} robusto_i2c_rx_item_t;
+
+static i2c_master_bus_handle_t i2c_master_bus;
+static i2c_master_dev_handle_t i2c_master_device;
+static i2c_slave_dev_handle_t i2c_slave_device;
+static QueueHandle_t i2c_slave_rx_queue;
+static robusto_i2c_driver_mode_t i2c_driver_mode = ROBUSTO_I2C_MODE_NONE;
+
+
+static bool i2c_slave_receive_cb(i2c_slave_dev_handle_t i2c_slave, const i2c_slave_rx_done_event_data_t *evt_data, void *arg)
+{
+    (void)i2c_slave;
+    QueueHandle_t rx_queue = (QueueHandle_t)arg;
+    robusto_i2c_rx_item_t rx_item = {0};
+    BaseType_t higher_priority_task_woken = pdFALSE;
+
+    rx_item.data_length = evt_data->length;
+    if (rx_item.data_length > I2C_RX_BUF)
+    {
+        rx_item.data_length = I2C_RX_BUF;
+    }
+    memcpy(rx_item.data, evt_data->buffer, rx_item.data_length);
+    xQueueSendFromISR(rx_queue, &rx_item, &higher_priority_task_woken);
+    return higher_priority_task_woken == pdTRUE;
+}
+
+static esp_err_t i2c_delete_current_driver(void)
+{
+    esp_err_t first_error = ESP_OK;
+    if (i2c_master_device != NULL)
+    {
+        esp_err_t ret = i2c_master_bus_rm_device(i2c_master_device);
+        if (ret != ESP_OK && first_error == ESP_OK)
+        {
+            first_error = ret;
+        }
+        i2c_master_device = NULL;
+    }
+    if (i2c_master_bus != NULL)
+    {
+        esp_err_t ret = i2c_del_master_bus(i2c_master_bus);
+        if (ret != ESP_OK && first_error == ESP_OK)
+        {
+            first_error = ret;
+        }
+        i2c_master_bus = NULL;
+    }
+    if (i2c_slave_device != NULL)
+    {
+        esp_err_t ret = i2c_del_slave_device(i2c_slave_device);
+        if (ret != ESP_OK && first_error == ESP_OK)
+        {
+            first_error = ret;
+        }
+        i2c_slave_device = NULL;
+    }
+    i2c_driver_mode = ROBUSTO_I2C_MODE_NONE;
+    return first_error;
+}
+
+static rob_ret_val_t i2c_install_master_driver(void)
+{
+    i2c_master_bus_config_t bus_config = {0};
+    bus_config.i2c_port = (i2c_port_num_t)CONFIG_I2C_CONTROLLER_NUM;
+    bus_config.sda_io_num = (gpio_num_t)CONFIG_I2C_SDA_IO;
+    bus_config.scl_io_num = (gpio_num_t)CONFIG_I2C_SCL_IO;
+    bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
+
+    esp_err_t ret = i2c_new_master_bus(&bus_config, &i2c_master_bus);
+    if (ret != ESP_OK)
+    {
+        ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Master - Failed creating bus. Code: %i", ret);
+        return ROB_ERR_INIT_FAIL;
+    }
+
+    i2c_device_config_t device_config = {0};
+    device_config.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+    device_config.device_address = I2C_DEVICE_ADDRESS_NOT_USED;
+    device_config.scl_speed_hz = CONFIG_I2C_MAX_FREQ_HZ;
+
+    ret = i2c_master_bus_add_device(i2c_master_bus, &device_config, &i2c_master_device);
+    if (ret != ESP_OK)
+    {
+        ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Master - Failed adding device. Code: %i", ret);
+        i2c_delete_current_driver();
+        return ROB_ERR_INIT_FAIL;
+    }
+    i2c_driver_mode = ROBUSTO_I2C_MODE_MASTER;
+    return ROB_OK;
+}
+
+static rob_ret_val_t i2c_install_slave_driver(void)
+{
+    if (i2c_slave_rx_queue == NULL)
+    {
+        i2c_slave_rx_queue = xQueueCreate(4, sizeof(robusto_i2c_rx_item_t));
+        if (i2c_slave_rx_queue == NULL)
+        {
+            ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - Failed creating RX queue.");
+            return ROB_ERR_OUT_OF_MEMORY;
+        }
+    }
+    else
+    {
+        xQueueReset(i2c_slave_rx_queue);
+    }
+
+    i2c_slave_config_t slave_config = {0};
+    slave_config.i2c_port = (i2c_port_num_t)CONFIG_I2C_CONTROLLER_NUM;
+    slave_config.sda_io_num = (gpio_num_t)CONFIG_I2C_SDA_IO;
+    slave_config.scl_io_num = (gpio_num_t)CONFIG_I2C_SCL_IO;
+    slave_config.clk_source = I2C_CLK_SRC_DEFAULT;
+    slave_config.send_buf_depth = I2C_TX_BUF;
+    slave_config.receive_buf_depth = I2C_RX_BUF;
+    slave_config.slave_addr = CONFIG_I2C_ADDR;
+    slave_config.addr_bit_len = I2C_ADDR_BIT_LEN_7;
+
+    esp_err_t ret = i2c_new_slave_device(&slave_config, &i2c_slave_device);
+    if (ret != ESP_OK)
+    {
+        ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - Failed creating slave device. Code: %i", ret);
+        return ROB_ERR_INIT_FAIL;
+    }
+
+    i2c_slave_event_callbacks_t callbacks = {0};
+    callbacks.on_receive = i2c_slave_receive_cb;
+    ret = i2c_slave_register_event_callbacks(i2c_slave_device, &callbacks, i2c_slave_rx_queue);
+    if (ret != ESP_OK)
+    {
+        ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - Failed registering callbacks. Code: %i", ret);
+        i2c_delete_current_driver();
+        return ROB_ERR_INIT_FAIL;
+    }
+    i2c_driver_mode = ROBUSTO_I2C_MODE_SLAVE;
+    return ROB_OK;
+}
+
+static esp_err_t i2c_master_run_ops(i2c_operation_job_t *operations, size_t operation_count, int timeout_ms)
+{
+    if (i2c_master_device == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return i2c_master_execute_defined_operations(i2c_master_device, operations, operation_count, timeout_ms);
+}
+
 
 rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
 {
@@ -62,54 +220,30 @@ rob_ret_val_t i2c_set_master(bool is_master, bool dont_delete)
         ROB_LOGD(i2c_esp32_messaging_log_prefix, "Setting I2C driver to slave mode at address %x.", CONFIG_I2C_ADDR);
     }
 
+    robusto_i2c_driver_mode_t requested_mode = is_master ? ROBUSTO_I2C_MODE_MASTER : ROBUSTO_I2C_MODE_SLAVE;
+    if (i2c_driver_mode == requested_mode)
+    {
+        return ROB_OK;
+    }
+
     if (!dont_delete)
     {
-        rob_ret_val_t delete_ret = ROB_FAIL;
-        delete_ret = i2c_driver_delete(CONFIG_I2C_CONTROLLER_NUM);
-        if (delete_ret == ROB_ERR_INVALID_ARG)
+        esp_err_t delete_ret = i2c_delete_current_driver();
+        if (delete_ret != ESP_OK)
         {
-            ROB_LOGE(i2c_esp32_messaging_log_prefix, ">> Deleting driver caused an invalid arg-error.");
+            ROB_LOGE(i2c_esp32_messaging_log_prefix, ">> Deleting driver failed. Code: %i", delete_ret);
             return ROB_ERR_INVALID_ARG;
         }
     }
 
     if (is_master)
     {
-
-        i2c_config_t conf = {
-            .mode = I2C_MODE_MASTER,
-            .sda_io_num = CONFIG_I2C_SDA_IO,
-            .scl_io_num = CONFIG_I2C_SCL_IO,
-            .sda_pullup_en = GPIO_PULLUP_DISABLE,
-            .scl_pullup_en = GPIO_PULLUP_DISABLE,
-            .master.clk_speed = CONFIG_I2C_MAX_FREQ_HZ,
-            .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL,
-        };
-        ESP_ERROR_CHECK(i2c_param_config(CONFIG_I2C_CONTROLLER_NUM, &conf));
-
         ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Master - Installing driver");
-        return i2c_driver_install(CONFIG_I2C_CONTROLLER_NUM, conf.mode, 0, 0, 0);
+        return i2c_install_master_driver();
     }
-    else
-    {
 
-        i2c_config_t conf = {
-            .mode = I2C_MODE_SLAVE,
-            .sda_io_num = CONFIG_I2C_SDA_IO,
-            .scl_io_num = CONFIG_I2C_SCL_IO,
-            .sda_pullup_en = GPIO_PULLUP_DISABLE,
-            .scl_pullup_en = GPIO_PULLUP_DISABLE,
-            //.master.clk_speed = I2C_FREQ_HZ,
-            .slave.slave_addr = CONFIG_I2C_ADDR,
-            .slave.addr_10bit_en = false,
-            .clk_flags = I2C_SCLK_SRC_FLAG_FOR_NOMAL,
-        };
-        ESP_ERROR_CHECK(i2c_param_config(CONFIG_I2C_CONTROLLER_NUM, &conf));
-        i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 0x1f); 
-        ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - Installing driver");
-
-        return i2c_driver_install(CONFIG_I2C_CONTROLLER_NUM, conf.mode, I2C_TX_BUF, I2C_RX_BUF, 0);
-    }
+    ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - Installing driver");
+    return i2c_install_slave_driver();
 }
 
 
@@ -134,14 +268,14 @@ rob_ret_val_t i2c_before_comms(bool is_sending, bool first_call)
         ROB_LOGW(i2c_esp32_messaging_log_prefix, "I2C Master - >> SDA was low, seems we have to listen first..");
         i2c_set_master(false, false);
 
-        return OB_ERR_SEND_FAIL;
+        return ROB_ERR_SEND_FAIL;
     }
 }
 rob_ret_val_t i2c_after_comms(bool first_param, bool second_param)
 {
-    rob_ret_val_t mst_ret = i2c_set_master(false, false);
+    (void)i2c_set_master(false, false);
     int ret = ROB_OK;
-    return ret; 
+    return ret;
 }
 
 rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
@@ -153,11 +287,18 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
     int read_retries = 0;
     int read_ret = ROB_FAIL;    
     r_delay(50);
-    i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 0x1f); 
     while(1)
     {
         ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - << Reading receipt from %hhu, try %i.", peer->i2c_address, read_retries);
-        read_ret = i2c_master_read_from_device(CONFIG_I2C_CONTROLLER_NUM, peer->i2c_address, dest_data, 2, 100 / portTICK_PERIOD_MS);
+        uint8_t read_address = (peer->i2c_address << 1) | 1;
+        i2c_operation_job_t read_operations[] = {
+            {.command = I2C_MASTER_CMD_START},
+            {.command = I2C_MASTER_CMD_WRITE, .write = {.ack_check = true, .data = &read_address, .total_bytes = 1}},
+            {.command = I2C_MASTER_CMD_READ, .read = {.ack_value = I2C_ACK_VAL, .data = dest_data, .total_bytes = 1}},
+            {.command = I2C_MASTER_CMD_READ, .read = {.ack_value = I2C_NACK_VAL, .data = dest_data + 1, .total_bytes = 1}},
+            {.command = I2C_MASTER_CMD_STOP},
+        };
+        read_ret = i2c_master_run_ops(read_operations, sizeof(read_operations) / sizeof(i2c_operation_job_t), 100);
     
         // TODO: It seems like we always get some unexpected bytes here. The weird thing is that is almost always the same value.
         // If it was either not successful, or that the data didn't indicate whether it worked or not..
@@ -208,8 +349,6 @@ rob_ret_val_t i2c_read_receipt(robusto_peer_t *peer)
         }
     }
     robusto_free(dest_data);
-    
-    //i2c_cmd_link_delete(cmd);
     return read_ret;
 }
 rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
@@ -231,18 +370,20 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
     ROB_LOGI(i2c_esp32_messaging_log_prefix, "I2C Master - >> Sending to %hhu, name %s.", peer->i2c_address, peer->name);   
     int64_t starttime = r_millis();
     i2c_before_comms(true, false);
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (peer->i2c_address << 1) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, CONFIG_I2C_ADDR, ACK_CHECK_EN);
-    i2c_master_write(cmd, offset_data, offset_data_length, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
+    uint8_t write_address = peer->i2c_address << 1;
+    uint8_t source_address = CONFIG_I2C_ADDR;
+    i2c_operation_job_t write_operations[] = {
+        {.command = I2C_MASTER_CMD_START},
+        {.command = I2C_MASTER_CMD_WRITE, .write = {.ack_check = true, .data = &write_address, .total_bytes = 1}},
+        {.command = I2C_MASTER_CMD_WRITE, .write = {.ack_check = true, .data = &source_address, .total_bytes = 1}},
+        {.command = I2C_MASTER_CMD_WRITE, .write = {.ack_check = true, .data = offset_data, .total_bytes = offset_data_length}},
+        {.command = I2C_MASTER_CMD_STOP},
+    };
 
     esp_err_t send_ret = ROB_FAIL;
 
     ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Master - >> Sending.");
-    send_ret = i2c_master_cmd_begin(CONFIG_I2C_CONTROLLER_NUM, cmd, 1000 / portTICK_PERIOD_MS);
-    i2c_cmd_link_delete(cmd);
+    send_ret = i2c_master_run_ops(write_operations, sizeof(write_operations) / sizeof(i2c_operation_job_t), 1000);
 
     if (send_ret != ESP_OK)
     {
@@ -277,14 +418,14 @@ rob_ret_val_t i2c_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t dat
 
 int i2c_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_bytes)
 {
-    int ret_val;
+    int ret_val = 0;
     prefix_bytes[0] = 0x01;
     int retries = 0;
     int data_len = 0;
     uint8_t *data = *rcv_data;
     bool is_heartbeat = false;
 
-    data = robusto_malloc(255);
+    data = robusto_malloc(I2C_RX_BUF);
     do
     {
         if (retries > 0)
@@ -293,27 +434,28 @@ int i2c_read_data (uint8_t **rcv_data, robusto_peer_t **peer, uint8_t *prefix_by
         }
         do
         {
-            ret_val = i2c_slave_read_buffer(CONFIG_I2C_CONTROLLER_NUM, data + data_len, I2C_RX_BUF - data_len,
-                                            10 / portTICK_PERIOD_MS);
-            if (ret_val < 0)
+            robusto_i2c_rx_item_t rx_item = {0};
+            if (i2c_slave_rx_queue == NULL)
             {
-                ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - << Error %i reading buffer", ret_val);
-                r_delay(100);
+                robusto_free(data);
+                ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - << RX queue is not initialized.");
+                return ROB_FAIL;
+            }
+            ret_val = xQueueReceive(i2c_slave_rx_queue, &rx_item, 10 / portTICK_PERIOD_MS) == pdTRUE ? rx_item.data_length : 0;
+            if (ret_val > 0 && data_len + ret_val <= I2C_RX_BUF)
+            {
+                memcpy(data + data_len, rx_item.data, ret_val);
+                ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - We got %i bytes of data.", ret_val);
+                data_len = data_len + ret_val;
+            }
+            else if (ret_val > 0)
+            {
+                ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - << Got too much data: %i bytes", data_len + ret_val);
+                ret_val = ROB_ERR_MESSAGE_TOO_LONG;
             }
             else
             {
-                if (ret_val > 0) {
-                    ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - We got %i bytes of data.", ret_val);
-                }
-                
-                // We only add 0 or positive values.
-                data_len = data_len + ret_val;
-            }
-            
-            if (data_len > I2C_RX_BUF)
-            {
-                // TODO: Add another buffer, chain them or something, obviously we need to be able to receive much more data
-                ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - << Got too much data: %i bytes", data_len);
+                ret_val = 0;
             }
         } while (ret_val > 0); // Continue as long as there is a result.
         retries++;
@@ -400,9 +542,9 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
         receipt[1] = 0xff;
     }
 
-    int ret = i2c_slave_write_buffer(CONFIG_I2C_CONTROLLER_NUM, (uint8_t *)&receipt, 2,
-                                     I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
-    if (ret < 0)
+    uint32_t write_len = 0;
+    esp_err_t ret = i2c_slave_device == NULL ? ESP_ERR_INVALID_STATE : i2c_slave_write(i2c_slave_device, (uint8_t *)&receipt, 2, &write_len, I2C_TIMEOUT_MS);
+    if (ret != ESP_OK || write_len != 2)
     {
         ROB_LOGE(i2c_esp32_messaging_log_prefix, "I2C Slave - >> Got an error from sending back data: %i", ret);
         if (peer)
@@ -412,14 +554,13 @@ rob_ret_val_t i2c_send_receipt(robusto_peer_t *peer, bool success, bool unknown)
     }
     else
     {
-        ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - >> Sent %i bytes: %hhx%hhx", ret, receipt[0], receipt[1]);
-        ret = 0;
+        ROB_LOGD(i2c_esp32_messaging_log_prefix, "I2C Slave - >> Sent %" PRIu32 " bytes: %hhx%hhx", write_len, receipt[0], receipt[1]);
         if (peer)
         {
             peer->i2c_info.send_successes++;
         }
     }
-    return ret;
+    return ret == ESP_OK && write_len == 2 ? ROB_OK : ROB_FAIL;
 }
 
 void i2c_compat_messaging_start() {
@@ -432,8 +573,6 @@ void i2c_compat_messaging_init(char *_log_prefix)
 {
     // TODO: Implement detection and handling of these error states: https://arduino.stackexchange.com/questions/46680/i2c-packet-ocasionally-send-a-garbage-data
     i2c_esp32_messaging_log_prefix = _log_prefix;
-    // This we have to set manually for some non-s3 cards 
-    i2c_set_timeout((i2c_port_t)CONFIG_I2C_CONTROLLER_NUM, 1000 / portTICK_PERIOD_MS); 
 }
 
 #endif

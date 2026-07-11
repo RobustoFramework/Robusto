@@ -49,16 +49,19 @@ static char *lora_worker_log_prefix;
 STAILQ_HEAD(lora_work_q, media_queue_item) 
 lora_work_q;
 
-media_queue_item_t *lora_first_queueitem() 
+void *lora_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&lora_work_q); 
 }
 
-void lora_remove_first_queue_item(){
+void lora_remove_first_queue_item(queue_context_t *q_context){
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&lora_work_q, items);
 }
-void lora_insert_tail(queue_context_t * q_context, media_queue_item_t *new_item) { 
-    STAILQ_INSERT_TAIL(&lora_work_q, new_item, items);
+void lora_insert_tail(queue_context_t * q_context, void *new_item) { 
+    (void)q_context;
+    STAILQ_INSERT_TAIL(&lora_work_q, (media_queue_item_t *)new_item, items);
 }
 
 queue_context_t *lora_get_queue_context() {
@@ -90,9 +93,9 @@ rob_ret_val_t lora_init_worker(work_callback work_cb, poll_callback poll_cb, cha
     // Initialize the work queue
     STAILQ_INIT(&lora_work_q);
 
-    lora_queue_context.first_queue_item_cb = (first_queueitem *)&lora_first_queueitem; 
-    lora_queue_context.remove_first_queueitem_cb = (remove_first_queueitem *)&lora_remove_first_queue_item; 
-    lora_queue_context.insert_tail_cb = (insert_queue_item *)&lora_insert_tail;
+    lora_queue_context.first_queue_item_cb = lora_first_queueitem; 
+    lora_queue_context.remove_first_queueitem_cb = lora_remove_first_queue_item; 
+    lora_queue_context.insert_tail_cb = lora_insert_tail;
     lora_queue_context.insert_head_cb = NULL;
     lora_queue_context.on_work_cb = work_cb; 
     lora_queue_context.on_poll_cb = poll_cb;

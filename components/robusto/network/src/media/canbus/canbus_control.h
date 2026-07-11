@@ -39,7 +39,7 @@ extern "C"
 #endif
 
 void robusto_canbus_stop();
-void robusto_canbus_start();
+void robusto_canbus_start(void);
 void robusto_canbus_init(char * _log_prefix);
 
 

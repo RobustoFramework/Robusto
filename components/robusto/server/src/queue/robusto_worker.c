@@ -44,7 +44,7 @@
 #include <robusto_time.h>
 #include <robusto_system.h>
 /* The log prefix for all logging */
-static char *robusto_worker_log_prefix;
+static const char *robusto_worker_log_prefix;
 
 void *safe_get_head_work_item(queue_context_t *q_context)
 {
@@ -197,7 +197,7 @@ static void robusto_worker(queue_context_t *q_context)
     robusto_delete_current_task();
 }
 
-rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, const char *queue_name)
+rob_ret_val_t init_work_queue(queue_context_t *q_context, const char *_log_prefix, const char *queue_name)
 {
     robusto_worker_log_prefix = _log_prefix;
 
@@ -251,7 +251,12 @@ rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, con
     ROB_LOGI(robusto_worker_log_prefix, "Register the worker task. Name: %s", q_context->worker_task_name);
     /* We obviously don't immidiately want to shutdown the worker just because someone haven't set shutdown to false. */
     q_context->shutdown = false;
+    /* If configured, use a custom stack size for queue workers to avoid overflow when parsing/handling payloads. */
+    #if defined(CONFIG_ROBUSTO_WORKER_TASK_STACK_SIZE) && CONFIG_ROBUSTO_WORKER_TASK_STACK_SIZE > 0
+    int rc = robusto_create_task_custom((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, (rob_task_handle_t **)&q_context->worker_task_handle, 0, CONFIG_ROBUSTO_WORKER_TASK_STACK_SIZE);
+    #else
     int rc = robusto_create_task((TaskFunction_t)robusto_worker, q_context, q_context->worker_task_name, (rob_task_handle_t **)&q_context->worker_task_handle, 0);
+    #endif
     if (rc != ROB_OK)
     {
         ROB_LOGE(robusto_worker_log_prefix, "Failed creating worker task, returned: %i (see projdefs.h)", rc);

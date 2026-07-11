@@ -58,8 +58,7 @@ void RobustoHal::init() {
   if(initInterface) {
     ROB_LOGI(log_prefix, "Initalizing SPI.");
     spiBegin();
-    // TODO: This is not perfect; some versions of the LoRa32 do have a PMU.
-    #ifdef CONFIG_LORA_SX126X
+    #if defined(CONFIG_XPOWERS_CHIP_AXP192) || defined(CONFIG_XPOWERS_CHIP_AXP2102)
 
     ROB_LOGI(log_prefix, "Initalizing PMU.");
     init_pmu();

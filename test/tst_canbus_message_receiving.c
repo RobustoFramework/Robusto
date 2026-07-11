@@ -66,7 +66,7 @@ void tst_canbus_message_receive_presentation(void)
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(ROBUSTO_PROTOCOL_VERSION_MIN, reply_msg[offset + 3], "The minimum protocol version doesn't match");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(get_host_supported_media_types(),reply_msg[offset + 4], "The supported media types doesn't match");
     #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(CONFIG_CANBUS_ADDR, reply_msg[offset + 5], "The CANBUS version doesn't match");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(CONFIG_ROBUSTO_CANBUS_ADDRESS, reply_msg[offset + 5], "The CANBUS version doesn't match");
     #else
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, reply_msg[offset + 5], "The CANBUS version doesn't match");
     #endif

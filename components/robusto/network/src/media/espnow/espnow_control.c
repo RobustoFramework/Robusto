@@ -104,7 +104,7 @@ void robusto_espnow_start() {
     init_wifi();
 
     uint8_t wifi_mac_addr[ROBUSTO_MAC_ADDR_LEN];
-    esp_wifi_get_mac(ESP_IF_WIFI_STA, wifi_mac_addr);
+    esp_wifi_get_mac(ESPNOW_WIFI_IF, wifi_mac_addr);
     ROB_LOGW(espnow_log_prefix, "robusto_espnow_start - WIFI STA MAC address:");
     rob_log_bit_mesh(ROB_LOG_WARN, espnow_log_prefix, wifi_mac_addr, ROBUSTO_MAC_ADDR_LEN);
         

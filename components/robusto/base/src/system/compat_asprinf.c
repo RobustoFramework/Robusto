@@ -22,7 +22,7 @@ int robusto_asprintf(char **str, const char *fmt, ...)
     // init variadic argumens
     va_start(args, fmt);
 
-#ifdef USE_ARDUINO
+#if defined(USE_ARDUINO) || defined(USE_NATIVE)
     // format and get size
     size = robusto_vasprintf(str, fmt, args);
 #else

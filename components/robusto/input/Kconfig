@@ -29,6 +29,7 @@ menu "Input"
         int "Select GPIO to monitor"
         depends on ROBUSTO_INPUT_ADC_MONITOR
         range 0 50 
+        default 20
 
     config ROBUSTO_INPUT_ADC_MONITOR_RESISTOR_DIVIDER_R1
         int "The value of the R1 resistance in your voltage divider"

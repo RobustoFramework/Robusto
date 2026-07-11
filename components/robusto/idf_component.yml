@@ -1,16 +1,18 @@
-version: "2.2.0"
+version: "3.0.1"
 description: "Robusto framework"
 url: "https://github.com/RobustoFramework"
 repository: "https://github.com/RobustoFramework/Robusto.git"
 license: "BSD-2-Clause"
 dependencies:
   # Required IDF version
-  idf: ">=4.1"
+  idf: ">=6.0"
   espressif/esp_modem: "^1"
-  jgromes/radiolib: "^6.4"
+  jgromes/radiolib: "^7.1"
   # Screen support
   lvgl/lvgl: "^9" 
   espressif/esp_lvgl_port: "^2"
   espressif/esp_lcd_sh1107: "^1"
+  espressif/mqtt: "^1"
+  espressif/cjson: "^1"
 maintainers:
   - "Nicklas Börjesson <nicklasb@gmail.com>"

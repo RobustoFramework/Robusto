@@ -67,10 +67,10 @@ extern "C"
         robusto_mt_i2c = 8U,
 
         robusto_mt_canbus = 16U,
-        /* TODO: To be implemented
 
         robusto_mt_umts = 32U, // TODO: Only implemented as a gateway service.
         robusto_mt_wifi = 64U,    // TODO: On what level should UMTS and wifi be implemented? Neither are direct and both use IP adressing
+        /* TODO: To be implemented
         // TTL? Onewire? Probably this should be implemented in some way. Or onewire. (perhaps separate for testing connections)
         */
         /* Special types */

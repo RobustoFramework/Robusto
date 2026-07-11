@@ -66,7 +66,7 @@ uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize)
 void set_state(robusto_peer_t * peer, robusto_media_t *info, e_media_type media_type, e_media_state media_state, e_media_problem problem);
 void check_media(robusto_peer_t * peer, robusto_media_t *info, uint64_t last_heartbeat_time, e_media_type media_type);
 void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type);
-uint64_t parse_heartbeat(uint8_t * data, uint8_t preamble_len);
+uint64_t parse_heartbeat(const uint8_t * data, uint8_t preamble_len);
 
 
 #ifdef __cplusplus

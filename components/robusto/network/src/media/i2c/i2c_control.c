@@ -38,7 +38,7 @@
 #include "i2c_messaging.h"
 #include "i2c_peer.h"
 #include <robusto_media.h>
-#define I2C_TIMEOUT_MS 80
+#define I2C_CONTROL_TIMEOUT_MS 80
 
 
 #define TEST_DATA_LENGTH_KB 10
@@ -66,7 +66,7 @@ void robusto_i2c_stop() {
 }
 
 
-void robusto_i2c_start(char * _log_prefix) {
+void robusto_i2c_start(void) {
     i2c_compat_messaging_start();
 
     ROB_LOGI(i2c_log_prefix, "Starting I2C worker");

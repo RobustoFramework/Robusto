@@ -160,7 +160,7 @@ extern "C"
         work_callback *on_work_cb;
 
         /* Log prefix */
-        char *log_prefix;
+        const char *log_prefix;
 
         /* Optional callback that is called each poll period by the worker.
         Note: This is run in the queue task, and might conflict with multitasking. */
@@ -203,7 +203,7 @@ extern "C"
 
     rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bool important);
 
-    rob_ret_val_t init_work_queue(queue_context_t *q_context, char *_log_prefix, const char *queue_name);
+    rob_ret_val_t init_work_queue(queue_context_t *q_context, const char *_log_prefix, const char *queue_name);
 
     void set_queue_blocked(queue_context_t *q_context, bool blocked);
 

@@ -59,7 +59,11 @@
 #ifdef USE_ESPIDF
 #include <sdkconfig.h>
 #else
+#ifdef USE_NATIVE
 #include "robconfig_.h"
+#else
+#include <robconfig_.h>
+#endif
 #endif
 
 #if defined(USE_ESPIDF) || defined(USE_ARDUINO) || defined(USE_STM32)

@@ -39,7 +39,9 @@
 #include <Arduino.h>
 #include <robusto_concurrency.h>
 #endif
-
+#if defined(USE_NATIVE)
+#include <stdlib.h>
+#endif
 #if 0
 #ifdef BAREMETAL
 #include <Arduino_FreeRTOS.h>
@@ -75,7 +77,7 @@
 #endif
 #ifdef CONFIG_ROBUSTO_CAMERA_EXAMPLE
 #include "../camera/camera.h"
-#endif
+ #endif
 
 #ifndef CONFIG_ROBUSTO_EXAMPLE_HELLO_CLIENT
 #include <time.h>
@@ -182,25 +184,31 @@ void main_task(void *parameters)
     };
     
     #else
+    #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
     uint32_t counter = 0;
     struct timeval tv;
     struct timezone tz;
-    char* datebuffer = (char*)malloc(80);
     struct tm *gm;
+    char* datebuffer = (char*)malloc(80);
+    #endif
+    
+    
 
     while (1)
     {
         r_delay(1000);
         #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
         r_gettimeofday(&tv, &tz);
-        gm = gmtime(&tv.tv_sec);
+        time_t current_seconds = (time_t)tv.tv_sec;
+        gm = gmtime(&current_seconds);
         strftime(datebuffer, 80, "%Y-%m-%d - %H:%M:%S", gm);
         ROB_LOGI_STAY("Example", "Current RTC time = %s:%li", datebuffer, tv.tv_usec % 1000);
         #endif
     };
     #endif
-    
+    #if !defined(CONFIG_ROBUSTO_INPUT_ADC_MONITOR) && !defined(CONFIG_ROBUSTO_EXAMPLE_INPUT_LADDER)
     free(datebuffer);
+    #endif
 }
 
 

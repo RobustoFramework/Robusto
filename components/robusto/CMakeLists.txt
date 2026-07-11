@@ -54,7 +54,7 @@ idf_component_register(
     
     REQUIRES 
         # Base
-        driver esp_timer nvs_flash 
+        driver esp_driver_gpio esp_driver_gptimer esp_driver_i2c esp_driver_twai esp_timer nvs_flash 
         # Flash
         spiffs vfs
         # Networking dependecies
@@ -64,6 +64,6 @@ idf_component_register(
         # Screen
         esp_lcd
         # UMTS (note the esp_modem dependency)
-        mqtt esp_netif esp_modem esp_http_client esp-tls json 
+        esp_netif esp_modem esp_http_client esp-tls 
                                                                       
 )

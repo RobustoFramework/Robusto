@@ -38,7 +38,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #endif
-
+#include <string.h>
 #include <robusto_logging.h>
 
 // The queue context
@@ -50,16 +50,19 @@ static char *incoming_worker_log_prefix;
 STAILQ_HEAD(incoming_work_q, incoming_queue_item) 
 incoming_work_q;
 
-void *incoming_first_queueitem() 
+void *incoming_first_queueitem(queue_context_t *q_context) 
 {
+    (void)q_context;
     return STAILQ_FIRST(&incoming_work_q); 
 }
 
-void incoming_remove_first_queue_item(){
+void incoming_remove_first_queue_item(queue_context_t *q_context){
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&incoming_work_q, items);
 }
 
 void incoming_insert_tail(queue_context_t * q_context, void *new_item) { 
+    (void)q_context;
     STAILQ_INSERT_TAIL(&incoming_work_q, (incoming_queue_item_t *)new_item, items);
 }
 

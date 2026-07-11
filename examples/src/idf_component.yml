@@ -6,4 +6,4 @@ dependencies:
   # Required IDF version
   idf: ">=4.1"
   esp_modem: "^1.0.3"
-  espressif/esp32-camera: "2.*"
+  espressif/esp32-camera: "^2.1.7"

@@ -38,25 +38,25 @@
 #include "canbus_messaging.h"
 #include "canbus_peer.h"
 #include <robusto_media.h>
-#define CAN bus_TIMEOUT_MS 80
+#define CANBUS_CONTROL_TIMEOUT_MS 80
 
 
 #define TEST_DATA_LENGTH_KB 10
 #define TEST_DATA_MULTIPLIER 100
 
-#define CAN bus_TX_BUF_KB (TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER) /*!< CAN bus master doesn't need buffer */
-#define CAN bus_RX_BUF_KB (TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER) /*!< CAN bus master doesn't need buffer */
+#define CANBUS_TX_BUF_KB (TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER) /*!< CAN bus master doesn't need buffer */
+#define CANBUS_RX_BUF_KB (TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER) /*!< CAN bus master doesn't need buffer */
 
 #define TEST_DELAY_MS 100
 #if (TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER) % 10 != 0
 #error "TEST_DATA_LENGTH_KB * TEST_DATA_MULTIPLIER must be divideable by 10!"
 #endif
 
-#if CONFIG_CANBUS_ADDR == -1
+#if CONFIG_ROBUSTO_CANBUS_ADDRESS == -1
 #error "CANBUS - An CAN bus address must be set in menuconfig!"
 #endif
 
-const char * canbus_log_prefix;
+char * canbus_log_prefix;
 
 
 void robusto_canbus_stop() {
@@ -66,7 +66,7 @@ void robusto_canbus_stop() {
 }
 
 
-void robusto_canbus_start(char * _log_prefix) {
+void robusto_canbus_start(void) {
     canbus_compat_messaging_start();
 
     ROB_LOGI(canbus_log_prefix, "Starting CAN bus worker");

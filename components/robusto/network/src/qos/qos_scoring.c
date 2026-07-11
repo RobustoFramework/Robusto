@@ -182,7 +182,6 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
     // They might make a different choice when messaging us based on our responses, which is how we inform them.
     // And we cannot inform them if the do not send anything.
 
-    uint64_t curr_time = r_millis();
     robusto_media_t *curr_info = get_media_info(peer, media_type);
     // If we have no sample data, that is a small negative.
     float failure_rate = 0.1;
@@ -276,7 +275,7 @@ void peer_scoring(robusto_peer_t *peer)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
         if (media_type == robusto_mt_canbus)
         {
-            update_score(peer, robusto_mt_espnow);
+            update_score(peer, robusto_mt_canbus);
         }
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_UMTS

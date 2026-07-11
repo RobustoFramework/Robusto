@@ -64,6 +64,7 @@ menu "Conductor configuration"
                 int "The I2C-address of the conductor"
                 depends on ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
                 range 0 255
+                default 0
                 help
                     This is the I2C address of the conductor.
 
