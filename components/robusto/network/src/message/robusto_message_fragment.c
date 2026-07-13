@@ -82,32 +82,23 @@ void remove_fragmented_message(fragmented_message_t *frag_msg)
 
 fragmented_message_t *find_fragmented_message(uint32_t hash)
 {
-
-    fragmented_message_t *retval;
-    if ((!last_frag_msg) || ((last_frag_msg) && (last_frag_msg->hash != hash)))
-    {
-        if (!last_frag_msg)
-        {
-            return NULL;
-        }
-
-        // TODO: Implement finding message hashes
-        ROB_LOGE(fragmentation_log_prefix, "Time to implement looking up the fragment message, existing hash was %" PRIu32 "", last_frag_msg->hash);
-        retval = NULL;
-    }
-    else
+    if (last_frag_msg && last_frag_msg->hash == hash)
     {
         ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
-        retval = last_frag_msg;
+        return last_frag_msg->abort_transmission ? NULL : last_frag_msg;
     }
-    if (retval)
+
+    fragmented_message_t *curr = NULL;
+    SLIST_FOREACH(curr, &fragmented_messages_head, fragmented_messages)
     {
-        return retval->abort_transmission ? NULL : retval;
+        if (curr->hash == hash)
+        {
+            last_frag_msg = curr;
+            return curr->abort_transmission ? NULL : curr;
+        }
     }
-    else
-    {
-        return NULL;
-    }
+
+    return NULL;
 }
 /**
  * @brief Send the result of a fragmentation message transmission
@@ -144,6 +135,13 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     robusto_media_t *media = get_media_info(peer, media_type);
     // Manually check CRC32 hash
 
+    if (len < ROBUSTO_CRC_LENGTH + 18)
+    {
+        ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because wrong length, %i.", len);
+        add_to_history(media, false, ROB_FAIL);
+        return;
+    }
+
     if (*(uint32_t *)(data) != robusto_crc32(0, data + 4, 18))
     {
         add_to_history(media, false, ROB_FAIL);
@@ -151,10 +149,6 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
         return;
     }
 
-    if (len < ROBUSTO_CRC_LENGTH + 18)
-    {
-        ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because wrong length, %i.", len);
-    }
     uint32_t hash;
     memcpy(&hash, data + ROBUSTO_CRC_LENGTH + 14, 4);
 
@@ -217,6 +211,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         }
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
         send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, true);
+        robusto_free(missing);
         return;
     }
     else
@@ -226,6 +221,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         {
             ROB_LOGE(fragmentation_log_prefix, "The full message did not match with the hash");
             send_result(peer, frag_msg, ROB_ERR_WRONG_CRC, send_message);
+            remove_fragmented_message(frag_msg);
             // TODO: Send check result failed. We have no way of knowing which part failed.
             return;
         }
@@ -264,6 +260,12 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
 
     uint32_t msg_frag_count;
     memcpy(&msg_frag_count, data + ROBUSTO_CRC_LENGTH + 2, 4);
+
+    if (msg_frag_count >= frag_msg->fragment_count)
+    {
+        ROB_LOGE(fragmentation_log_prefix, "Invalid fragment index %lu, fragment count %lu.", msg_frag_count, frag_msg->fragment_count);
+        return;
+    }
 
     // We check the length of all fragments, start with calculating what the current should be
     uint32_t curr_frag_size = frag_msg->fragment_size;
@@ -540,7 +542,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     int rc = ROB_FAIL;
     // How many parts will it have?
     uint32_t fragment_count = data_length / fragment_size;
-    if (fragment_count % fragment_size > 0)
+    if (data_length % fragment_size > 0)
     {
         fragment_count++;
     }

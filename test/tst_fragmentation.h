@@ -2,3 +2,11 @@
 #include <robconfig.h>
 void tst_fragmentation_complete(void);
 void tst_fragmentation_resending(void);
+void tst_fragmentation_even_division_fragment_metadata(void);
+void tst_fragmentation_non_division_fragment_metadata(void);
+void tst_fragmentation_request_even_division_count(void);
+void tst_fragmentation_request_non_division_count(void);
+void tst_fragmentation_crc_mismatch_cleans_up_state(void);
+void tst_fragmentation_missing_fragments_does_not_leak_memory(void);
+void tst_fragmentation_short_request_does_not_create_state(void);
+void tst_fragmentation_interleaved_hashes_are_resolved(void);

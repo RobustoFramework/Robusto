@@ -18,12 +18,15 @@ static char *sample_worker_log_prefix;
 STAILQ_HEAD(sample_work_q, sample_queue_item) 
 sample_work_q;
 
-void *sample_first_queueitem() 
+void *sample_first_queueitem(queue_context_t *q_context)
 {
+    (void)q_context;
     return STAILQ_FIRST(&sample_work_q); 
 }
 
-void sample_remove_first_queue_item(){
+void sample_remove_first_queue_item(queue_context_t *q_context)
+{
+    (void)q_context;
     STAILQ_REMOVE_HEAD(&sample_work_q, items);
 }
 

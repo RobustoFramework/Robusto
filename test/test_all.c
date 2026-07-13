@@ -122,6 +122,30 @@ void runUnityTests(void *pvParameters)
 #endif
 
     UNITY_BEGIN();
+
+#ifdef ROBUSTO_FRAGMENTATION_ONLY_TESTS
+#ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
+    RUN_TEST(tst_add_host_media_type_mock);
+    robusto_yield();
+
+    RUN_TEST(tst_fragmentation_request_even_division_count);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_request_non_division_count);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_crc_mismatch_cleans_up_state);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_missing_fragments_does_not_leak_memory);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_interleaved_hashes_are_resolved);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_short_request_does_not_create_state);
+    robusto_yield();
+#endif
+
+    UNITY_END();
+    return;
+#endif
+
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
 
     RUN_TEST(tst_millis);
@@ -210,6 +234,10 @@ void runUnityTests(void *pvParameters)
     RUN_TEST(tst_fragmentation_complete);
     robusto_yield();
     RUN_TEST(tst_fragmentation_resending);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_even_division_fragment_metadata);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_non_division_fragment_metadata);
     robusto_yield();
 
     // TODO: We should make the mock QoS scenario work
