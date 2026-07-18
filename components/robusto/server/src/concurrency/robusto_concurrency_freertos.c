@@ -50,8 +50,11 @@ rob_ret_val_t robusto_create_task_custom(TaskFunction_t task_function, void *par
 {    
     #ifdef USE_ARDUINO // Arduino seems to only support one core
     int rc = xTaskCreate(task_function, task_name, memory, parameter, 8, handle);
-    #else 
-    int rc = xTaskCreatePinnedToCore(task_function, task_name, memory, parameter, 8, (TaskHandle_t *)handle, affinity);
+    #else
+    BaseType_t task_affinity = affinity >= 0 && affinity < portNUM_PROCESSORS
+                                   ? affinity
+                                   : tskNO_AFFINITY;
+    int rc = xTaskCreatePinnedToCore(task_function, task_name, memory, parameter, 8, (TaskHandle_t *)handle, task_affinity);
     #endif
     if (rc == pdTRUE)
     {

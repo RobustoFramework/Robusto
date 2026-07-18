@@ -97,14 +97,30 @@ uint8_t digitalPinToGPIO(uint8_t pin) {
       case 30: return GPIO_NUM_30;
       case 31: return GPIO_NUM_31;
       */
+      #ifdef GPIO_NUM_32
       case 32: return GPIO_NUM_32;
+      #endif
+      #ifdef GPIO_NUM_33
       case 33: return GPIO_NUM_33;
+      #endif
+      #ifdef GPIO_NUM_34
       case 34: return GPIO_NUM_34;
+      #endif
+      #ifdef GPIO_NUM_35
       case 35: return GPIO_NUM_35;
+      #endif
+      #ifdef GPIO_NUM_36
       case 36: return GPIO_NUM_36;
+      #endif
+      #ifdef GPIO_NUM_37
       case 37: return GPIO_NUM_37;
+      #endif
+      #ifdef GPIO_NUM_38
       case 38: return GPIO_NUM_38;
+      #endif
+      #ifdef GPIO_NUM_39
       case 39: return GPIO_NUM_39;
+      #endif
       default: return GPIO_NUM_MAX;
     }
   }
