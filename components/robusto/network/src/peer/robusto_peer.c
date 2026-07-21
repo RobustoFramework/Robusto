@@ -44,6 +44,7 @@
 
 #ifdef USE_ESPIDF
 #include <freertos/FreeRTOS.h>
+#include <esp_err.h>
 #include <esp_mac.h>
 #endif
 
@@ -493,8 +494,8 @@ void robusto_peer_init(char *_log_prefix)
     }
     
     #ifdef USE_ESPIDF
-        esp_read_mac((uint8_t *)&(robusto_host.base_mac_address), ESP_MAC_WIFI_STA);
-        ROB_LOGI(peer_log_prefix, "robusto_peer_init() - WIFI base STA address:");
+        ESP_ERROR_CHECK(esp_read_mac((uint8_t *)&(robusto_host.base_mac_address), ESP_MAC_BASE));
+        ROB_LOGI(peer_log_prefix, "robusto_peer_init() - base MAC address:");
         rob_log_bit_mesh(ROB_LOG_INFO, peer_log_prefix, (uint8_t *) &robusto_host.base_mac_address, ROBUSTO_MAC_ADDR_LEN);
     #endif
 
