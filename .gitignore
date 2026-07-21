@@ -21,6 +21,11 @@ cache
 # cmake
 build
 
+# proxy
+build-proxy-integration/
+build-proxy-pubsub-test/
+build-proxy-server/
+
 # ESP-IDF dependencies
 managed_components
 dependencies.lock

@@ -9,5 +9,6 @@ menu "Robusto Configuration"
     orsource "misc/src/pubsub/Kconfig"
     orsource "misc/src/umts/Kconfig"
     orsource "input/Kconfig"
+    orsource "proxy/Kconfig"
 endmenu
 

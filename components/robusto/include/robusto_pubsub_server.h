@@ -48,6 +48,7 @@ extern "C"
 #endif
 
 typedef rob_ret_val_t (pubsub_server_subscriber_callback)(uint8_t *data, uint32_t data_length);
+typedef rob_ret_val_t (pubsub_server_subscriber_context_callback)(void *context, uint8_t *data, uint32_t data_length);
 
 typedef struct pubsub_server_subscriber pubsub_server_subscriber_t;
 
@@ -57,6 +58,10 @@ struct pubsub_server_subscriber {
     robusto_peer_t * peer;
     /* If set, call a local callback with the data */
     pubsub_server_subscriber_callback * local_callback;
+    /* If set, call a local callback with subscriber-owned context */
+    pubsub_server_subscriber_context_callback * local_context_callback;
+    /* Context passed to local_context_callback */
+    void *local_context;
     /* Next subscriber */
     pubsub_server_subscriber_t * next;
 };
@@ -92,6 +97,19 @@ struct pubsub_server_topic {
 uint32_t robusto_pubsub_server_subscribe(robusto_peer_t *peer, pubsub_server_subscriber_callback *local_cb, char * topic_name);
 
 /**
+ * @brief Register a context-aware local subscription to a topic
+ * @note The callback and context pair identifies the local subscriber
+ *
+ * @param local_cb Callback invoked with the supplied context
+ * @param context Subscriber-owned context passed to the callback
+ * @param topic_name The name of the topic
+ * @return uint32_t Topic hash, or zero on failure
+ */
+uint32_t robusto_pubsub_server_subscribe_with_context(pubsub_server_subscriber_context_callback *local_cb,
+                                                      void *context,
+                                                      char *topic_name);
+
+/**
  * @brief Unregister a subscription
  * 
  * @param peer The peer wishing to unsubscribe
@@ -99,6 +117,18 @@ uint32_t robusto_pubsub_server_subscribe(robusto_peer_t *peer, pubsub_server_sub
  * @return rob_ret_val_t Result of unsubscription 
  */
 uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_subscriber_callback *local_cb, uint32_t topic);
+
+/**
+ * @brief Unregister a context-aware local subscription
+ *
+ * @param local_cb Callback used when subscribing
+ * @param context Context used when subscribing
+ * @param topic Topic hash returned by subscribe_with_context
+ * @return uint32_t Topic hash when removed, otherwise zero
+ */
+uint32_t robusto_pubsub_server_unsubscribe_with_context(pubsub_server_subscriber_context_callback *local_cb,
+                                                        void *context,
+                                                        uint32_t topic);
 
 /**
  * @brief Create a new topic or return a matching one

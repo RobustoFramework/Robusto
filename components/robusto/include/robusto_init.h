@@ -33,6 +33,7 @@
 
 #include <robconfig.h>
 #include <inttypes.h>
+#include <robusto_retval.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -41,14 +42,25 @@ extern "C"
 typedef void(init_callback_t)(char * log_prefix);
 typedef void(start_callback_t)(void);
 typedef void(stop_callback_t)(void);
+typedef rob_ret_val_t(init_result_callback_t)(void *context, char *log_prefix);
+typedef rob_ret_val_t(start_result_callback_t)(void *context);
+typedef rob_ret_val_t(stop_result_callback_t)(void *context);
 
 void register_service(init_callback_t init_cb, start_callback_t* start_cb, stop_callback_t * stop_cb, uint8_t runlevel, char * service_name);
+rob_ret_val_t register_service_checked(init_result_callback_t *init_cb,
+									   start_result_callback_t *start_cb,
+									   stop_result_callback_t *stop_cb,
+									   void *context,
+									   uint8_t runlevel,
+									   char *service_name);
 
 uint8_t get_runlevel();
 
 void robusto_init_compatibility();
 
 void init_robusto();
+rob_ret_val_t init_robusto_checked(void);
+rob_ret_val_t stop_robusto_checked(void);
 
 
 #ifdef __cplusplus

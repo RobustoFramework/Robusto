@@ -1,0 +1,37 @@
+menu "Robusto Proxy"
+
+    config ROBUSTO_PROXY
+        bool "Enable Robusto proxy"
+        default n
+
+    choice ROBUSTO_PROXY_ROLE
+        prompt "Proxy role"
+        depends on ROBUSTO_PROXY
+
+        config ROBUSTO_PROXY_CLIENT
+            bool "Controller/client"
+
+        config ROBUSTO_PROXY_SERVER
+            bool "Delegate/server"
+
+    endchoice
+
+    config ROBUSTO_PROXY_SERVICE_PUBSUB
+        bool "Enable PubSub delegation"
+        depends on ROBUSTO_PROXY
+        depends on ROBUSTO_PROXY_CLIENT || ROBUSTO_PUBSUB_SERVER
+        default y
+
+    choice ROBUSTO_PROXY_PROFILE
+        prompt "Resource profile"
+        depends on ROBUSTO_PROXY
+
+        config ROBUSTO_PROXY_PROFILE_LOW_MEMORY
+            bool "Low memory"
+
+        config ROBUSTO_PROXY_PROFILE_STANDARD
+            bool "Standard"
+
+    endchoice
+
+endmenu

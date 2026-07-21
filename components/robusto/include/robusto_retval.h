@@ -30,7 +30,6 @@
  */
 
 #pragma once
-#include <robconfig.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -75,6 +74,8 @@ typedef enum e_robusto_return_codes
     ROB_ERR_INIT_FAIL = RBC_GEN - 6,
     /* The procedure timed out. */
     ROB_ERR_TIMEOUT = RBC_GEN - 7,
+    /* The requested service is configured but not ready. */
+    ROB_ERR_NOT_READY = RBC_GEN - 8,
     
 
     /* ------ Communication (RBC_COM)-------*/
@@ -89,6 +90,8 @@ typedef enum e_robusto_return_codes
     ROB_ERR_NO_RECEIPT = RBC_COM - 4,
     /* The peer doesn't know of we are */
     ROB_ERR_WHO = RBC_COM - 5,
+    /* A mutating operation may have completed, but no terminal result is known. */
+    ROB_ERR_OUTCOME_UNKNOWN = RBC_COM - 6,
 
     /* Message to long to comply */
     ROB_ERR_MESSAGE_TOO_LONG = RBC_COM - 10,

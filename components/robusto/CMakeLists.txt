@@ -48,9 +48,32 @@ FILE(GLOB rob_sources
 "input/src/*.c"
 )
 
+if(CONFIG_ROBUSTO_PROXY)
+    list(APPEND rob_sources
+        "proxy/src/robusto_proxy_control.c"
+        "proxy/src/robusto_proxy_crc32.c"
+        "proxy/src/robusto_proxy_frame.c"
+        "proxy/src/robusto_proxy_inflight.c"
+        "proxy/src/robusto_proxy_pubsub.c"
+        "proxy/src/robusto_proxy_session.c"
+    )
+    if(CONFIG_ROBUSTO_PROXY_CLIENT)
+        list(APPEND rob_sources
+            "proxy/src/robusto_proxy_client.c"
+            "proxy/src/robusto_proxy_lifecycle.c"
+            "proxy/src/robusto_proxy_pubsub_client.c"
+        )
+    elseif(CONFIG_ROBUSTO_PROXY_SERVER)
+        list(APPEND rob_sources
+            "proxy/src/robusto_proxy_pubsub_adapter.c"
+            "proxy/src/robusto_proxy_service.c"
+        )
+    endif()
+endif()
+
 idf_component_register(
     SRCS ${rob_sources} 
-    INCLUDE_DIRS . include 
+    INCLUDE_DIRS . include proxy/include
     
     REQUIRES 
         # Base

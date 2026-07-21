@@ -148,6 +148,8 @@ void runUnityTests(void *pvParameters)
 
 #ifndef CONFIG_ROBUSTO_NETWORK_QOS_TESTING
 
+    robusto_yield();
+
     RUN_TEST(tst_millis);
     robusto_yield();
 

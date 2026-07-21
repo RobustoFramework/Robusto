@@ -93,25 +93,38 @@ pubsub_server_topic_t * robusto_pubsub_server_find_or_create_topic(char * name) 
  */
 pubsub_server_subscriber_t * find_subscription(pubsub_server_topic_t *topic,
                                                robusto_peer_t *peer,
-                                               pubsub_server_subscriber_callback *local_cb) {
+                                               pubsub_server_subscriber_callback *local_cb,
+                                               pubsub_server_subscriber_context_callback *local_context_cb,
+                                               void *local_context) {
 
     pubsub_server_subscriber_t * curr_subscriber = topic->first_subscriber;
     while (curr_subscriber) {
         if ((peer && curr_subscriber->peer &&
              curr_subscriber->peer->relation_id_incoming == peer->relation_id_incoming) ||
             (local_cb && !curr_subscriber->peer &&
-             curr_subscriber->local_callback == local_cb)) {
+             curr_subscriber->local_callback == local_cb) ||
+            (local_context_cb && !curr_subscriber->peer &&
+             curr_subscriber->local_context_callback == local_context_cb &&
+             curr_subscriber->local_context == local_context)) {
             return curr_subscriber;
         }
         curr_subscriber = curr_subscriber->next;
     }
     return NULL;
 }
-uint32_t robusto_pubsub_add_subscriber(pubsub_server_topic_t *topic, robusto_peer_t *peer, pubsub_server_subscriber_callback *local_cb) {
-    if (!topic || (!peer && !local_cb) || (peer && local_cb)) {
+uint32_t robusto_pubsub_add_subscriber(pubsub_server_topic_t *topic,
+                                      robusto_peer_t *peer,
+                                      pubsub_server_subscriber_callback *local_cb,
+                                      pubsub_server_subscriber_context_callback *local_context_cb,
+                                      void *local_context) {
+    bool has_local_callback = local_cb || local_context_cb;
+    if (!topic || (!peer && !has_local_callback) || (peer && has_local_callback) ||
+        (local_cb && local_context_cb)) {
         return 0;
     }
-    pubsub_server_subscriber_t * existing = find_subscription(topic, peer, local_cb);
+    pubsub_server_subscriber_t * existing = find_subscription(topic, peer, local_cb,
+                                                               local_context_cb,
+                                                               local_context);
     if (existing) {
         ROB_LOGW(pubsub_log_prefix, "Subscriber already registered for %s, returning hash: %lu.", topic->name, topic->hash);
         return topic->hash;
@@ -122,8 +135,9 @@ uint32_t robusto_pubsub_add_subscriber(pubsub_server_topic_t *topic, robusto_pee
         return 0;
     }
     new_subscriber->peer = peer;
-   
     new_subscriber->local_callback = local_cb;
+    new_subscriber->local_context_callback = local_context_cb;
+    new_subscriber->local_context = local_context;
     new_subscriber->next = NULL;
     if (!topic->first_subscriber) {
         topic->first_subscriber = new_subscriber;
@@ -150,7 +164,17 @@ uint32_t robusto_pubsub_server_subscribe(robusto_peer_t *peer, pubsub_server_sub
         return 0;
     }
     // Add the subscriber, return hash
-    return robusto_pubsub_add_subscriber(curr_topic, peer, local_cb);
+    return robusto_pubsub_add_subscriber(curr_topic, peer, local_cb, NULL, NULL);
+}
+
+uint32_t robusto_pubsub_server_subscribe_with_context(pubsub_server_subscriber_context_callback *local_cb,
+                                                      void *context,
+                                                      char *topic_name) {
+    pubsub_server_topic_t *curr_topic = robusto_pubsub_server_find_or_create_topic(topic_name);
+    if (!curr_topic || !local_cb) {
+        return 0;
+    }
+    return robusto_pubsub_add_subscriber(curr_topic, NULL, NULL, local_cb, context);
 }
 
 uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_subscriber_callback *local_cb, uint32_t topic) {
@@ -187,30 +211,61 @@ uint32_t robusto_pubsub_server_unsubscribe(robusto_peer_t *peer, pubsub_server_s
     return 0;
 }
 
+uint32_t robusto_pubsub_server_unsubscribe_with_context(pubsub_server_subscriber_context_callback *local_cb,
+                                                        void *context,
+                                                        uint32_t topic) {
+    pubsub_server_topic_t *curr_topic = find_topic_by_hash(topic);
+    pubsub_server_subscriber_t *previous = NULL;
+    pubsub_server_subscriber_t *subscriber;
+
+    if (!curr_topic || !local_cb) {
+        return 0;
+    }
+
+    subscriber = curr_topic->first_subscriber;
+    while (subscriber) {
+        if (!subscriber->peer && subscriber->local_context_callback == local_cb &&
+            subscriber->local_context == context) {
+            if (previous) {
+                previous->next = subscriber->next;
+            } else {
+                curr_topic->first_subscriber = subscriber->next;
+            }
+            if (curr_topic->last_subscriber == subscriber) {
+                curr_topic->last_subscriber = previous;
+            }
+            curr_topic->subscriber_count--;
+            robusto_free(subscriber);
+            return curr_topic->hash;
+        }
+        previous = subscriber;
+        subscriber = subscriber->next;
+    }
+    return 0;
+}
+
 rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscriber_t *subscriber, uint8_t* data, uint32_t data_length) {
     if (subscriber->local_callback) {
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to callback", topic->name);
         return  subscriber->local_callback(data, data_length);
+    } else if (subscriber->local_context_callback) {
+        ROB_LOGD(pubsub_log_prefix, "Publishing %s to context callback", topic->name);
+        return subscriber->local_context_callback(subscriber->local_context, data, data_length);
     } else if (subscriber->peer) {
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
-        // Reallocate data to add the topic hash in front
-        uint8_t *msg = NULL;
-        // We move the data to SPI if possible to not waste RAM
-        if (data_length > 500) {
-            msg = robusto_spi_realloc(data, data_length + 5);
-        } else {
-            msg = robusto_realloc(data, data_length + 5);
-        }
+        uint8_t *msg = data_length > 500
+                           ? robusto_spi_malloc(data_length + 5)
+                           : robusto_malloc(data_length + 5);
         if (!msg) {
-            ROB_LOGE(pubsub_log_prefix, "Failed reallocating memory to publish %s to peer %s.", topic->name, subscriber->peer->name);
+            ROB_LOGE(pubsub_log_prefix, "Failed allocating memory to publish %s to peer %s.", topic->name, subscriber->peer->name);
             return ROB_ERR_OUT_OF_MEMORY;
         }
-        //Move the data forward 5 bytes
-        memmove(msg + 5, msg, data_length);
         msg[0] = PUBSUB_DATA;
         memcpy(msg + 1, &topic->hash, 4);
+        memcpy(msg + 5, data, data_length);
 
         rob_ret_val_t pubretval = send_message_binary(subscriber->peer, PUBSUB_CLIENT_ID, 0, msg, data_length + 5, NULL);
+        robusto_free(msg);
         if (pubretval != ROB_OK) {
             ROB_LOGW(pubsub_log_prefix, "Failed publishing %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
         }
