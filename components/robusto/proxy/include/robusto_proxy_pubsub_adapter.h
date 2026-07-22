@@ -71,6 +71,12 @@ typedef struct robusto_proxy_pubsub_server_adapter {
     uint8_t event_read_index;
     uint8_t event_write_index;
     uint8_t event_count;
+    uint8_t *publish_data;
+    uint64_t publish_operation_id;
+    uint32_t publish_data_length;
+    uint32_t publish_data_received;
+    uint16_t publish_topic_length;
+    char publish_topic[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
     uint32_t publish_requests;
     uint32_t subscribe_requests;
     uint32_t unsubscribe_requests;

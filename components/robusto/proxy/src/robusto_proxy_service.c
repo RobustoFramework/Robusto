@@ -5,6 +5,20 @@
 #include "robusto_proxy_control.h"
 #include "robusto_proxy_frame.h"
 
+static uint64_t available_features(const robusto_proxy_service_t *service)
+{
+    uint64_t features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1;
+    const robusto_proxy_pubsub_adapter_t *adapter = service->pubsub_adapter;
+
+    if (adapter != NULL && adapter->publish_begin != NULL &&
+        adapter->publish_chunk != NULL && adapter->publish_commit != NULL &&
+        adapter->publish_abort != NULL && adapter->session_reset != NULL)
+    {
+        features |= ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH;
+    }
+    return features;
+}
+
 void robusto_proxy_service_init(
     robusto_proxy_service_t *service,
     robusto_proxy_profile_t profile,
@@ -110,6 +124,7 @@ bool robusto_proxy_service_handle_control_request(
         uint16_t error_status = ROBUSTO_PROXY_STATUS_OK;
         uint32_t local_max_payload = service->session.local_limits.request_pool_bytes;
         uint64_t requested_features;
+        uint64_t supported_features = available_features(service);
 
         if (response_buffer_size < ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES)
         {
@@ -137,7 +152,7 @@ bool robusto_proxy_service_handle_control_request(
         {
             error_status = ROBUSTO_PROXY_STATUS_UNSUPPORTED_VERSION;
         }
-        else if ((request.required_features & ~ROBUSTO_PROXY_FEATURE_PUBSUB_V1) != 0U)
+            else if ((request.required_features & ~supported_features) != 0U)
         {
             error_status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
         }
@@ -162,6 +177,27 @@ bool robusto_proxy_service_handle_control_request(
             return false;
         }
 
+        if (service->pubsub_adapter != NULL &&
+            service->pubsub_adapter->session_reset != NULL)
+        {
+            uint16_t reset_status = service->pubsub_adapter->session_reset(
+                service->pubsub_adapter_context);
+            if (reset_status != ROBUSTO_PROXY_STATUS_OK)
+            {
+                prefix.status = reset_status;
+                if (robusto_proxy_encode_response_prefix(
+                        response_buffer, response_buffer_size, &prefix) !=
+                    ROBUSTO_PROXY_RESULT_OK)
+                {
+                    service->requests -= 1U;
+                    return false;
+                }
+                service->errors += 1U;
+                *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES;
+                return true;
+            }
+        }
+
         if (local_max_payload > ROBUSTO_PROXY_MAX_PAYLOAD_BYTES)
         {
             local_max_payload = ROBUSTO_PROXY_MAX_PAYLOAD_BYTES;
@@ -180,7 +216,8 @@ bool robusto_proxy_service_handle_control_request(
         response.dedupe_entries = service->session.local_limits.dedupe_entries;
         response.dedupe_window_ms = service->session.local_limits.dedupe_window_ms;
         requested_features = request.required_features | request.optional_features;
-        response.enabled_features = requested_features & ROBUSTO_PROXY_FEATURE_PUBSUB_V1;
+        response.enabled_features =
+            requested_features & supported_features;
         response.proxy_uptime_ms = now_ms - service->started_at_ms;
 
         if (service->session.state == ROBUSTO_PROXY_SESSION_ESTABLISHED &&
@@ -192,7 +229,8 @@ bool robusto_proxy_service_handle_control_request(
             response.selected_max_in_flight = service->session.negotiated_limits.max_in_flight;
             response.dedupe_entries = service->session.negotiated_limits.dedupe_entries;
             response.dedupe_window_ms = service->session.negotiated_limits.dedupe_window_ms;
-            response.enabled_features = service->session.enabled_features;
+            response.enabled_features =
+                service->session.enabled_features & supported_features;
         }
 
         prefix.status = ROBUSTO_PROXY_STATUS_OK;
@@ -298,7 +336,7 @@ bool robusto_proxy_service_handle_control_request(
         if ((response.enabled_features & ROBUSTO_PROXY_FEATURE_PUBSUB_V1) != 0U)
         {
             response.pubsub_major = 1U;
-            response.pubsub_minor = 0U;
+            response.pubsub_minor = 1U;
         }
         response.selected_max_payload = service->session.negotiated_limits.request_pool_bytes;
         response.selected_max_in_flight = service->session.negotiated_limits.max_in_flight;
@@ -403,6 +441,14 @@ bool robusto_proxy_service_handle_pubsub_request(
         return encode_pubsub_result(service, ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE,
                                     response_buffer, response_buffer_size, 0U, response_size);
     }
+    if (opcode >= ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_BEGIN &&
+        opcode <= ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_ABORT &&
+        (service->session.enabled_features &
+         ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH) == 0U)
+    {
+        return encode_pubsub_result(service, ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE,
+                                    response_buffer, response_buffer_size, 0U, response_size);
+    }
     if (response_buffer_size < ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES)
     {
         service->requests -= 1U;
@@ -421,7 +467,7 @@ bool robusto_proxy_service_handle_pubsub_request(
         if (decode_result != ROBUSTO_PROXY_RESULT_OK)
         {
             if (request_payload_size >= ROBUSTO_PROXY_PUBSUB_PUBLISH_HEADER_SIZE_BYTES &&
-                request.data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES)
+                request.data_length > ROBUSTO_PROXY_PUBSUB_MAX_INLINE_DATA_BYTES)
             {
                 status = ROBUSTO_PROXY_STATUS_PUBSUB_PAYLOAD_TOO_LARGE;
             }
@@ -457,6 +503,117 @@ bool robusto_proxy_service_handle_pubsub_request(
                 return false;
             }
             success_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_RESPONSE_SIZE_BYTES;
+        }
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_BEGIN)
+    {
+        robusto_proxy_pubsub_publish_begin_request_t request;
+        robusto_proxy_result_t decode_result;
+        memset(&request, 0, sizeof(request));
+        decode_result = robusto_proxy_pubsub_decode_publish_begin_request(
+            request_payload, request_payload_size, &request);
+        if (decode_result != ROBUSTO_PROXY_RESULT_OK)
+        {
+            if (decode_result == ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT &&
+                request.operation_id != 0U &&
+                !robusto_proxy_pubsub_topic_is_valid(request.topic, request.topic_length))
+            {
+                status = ROBUSTO_PROXY_STATUS_PUBSUB_TOPIC_INVALID;
+            }
+            else
+            {
+                status = decode_result == ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT
+                             ? ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT
+                             : ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+            }
+        }
+        else if (service->pubsub_adapter->publish_begin == NULL)
+        {
+            status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
+        }
+        else
+        {
+            status = service->pubsub_adapter->publish_begin(
+                service->pubsub_adapter_context, &request);
+        }
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_CHUNK)
+    {
+        robusto_proxy_pubsub_publish_chunk_request_t request;
+        robusto_proxy_result_t decode_result;
+        memset(&request, 0, sizeof(request));
+        decode_result = robusto_proxy_pubsub_decode_publish_chunk_request(
+            request_payload, request_payload_size, &request);
+        if (decode_result != ROBUSTO_PROXY_RESULT_OK)
+        {
+            status = decode_result == ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT
+                         ? ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT
+                         : ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+        }
+        else if (service->pubsub_adapter->publish_chunk == NULL)
+        {
+            status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
+        }
+        else
+        {
+            status = service->pubsub_adapter->publish_chunk(
+                service->pubsub_adapter_context, &request);
+        }
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_COMMIT)
+    {
+        robusto_proxy_pubsub_publish_transfer_request_t request;
+        robusto_proxy_pubsub_publish_response_t response;
+        robusto_proxy_result_t decode_result =
+            robusto_proxy_pubsub_decode_publish_transfer_request(
+                request_payload, request_payload_size, &request);
+        if (decode_result != ROBUSTO_PROXY_RESULT_OK)
+        {
+            status = decode_result == ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT
+                         ? ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT
+                         : ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+        }
+        else if (service->pubsub_adapter->publish_commit == NULL)
+        {
+            status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
+        }
+        else
+        {
+            memset(&response, 0, sizeof(response));
+            status = service->pubsub_adapter->publish_commit(
+                service->pubsub_adapter_context, &request, &response);
+            if (status == ROBUSTO_PROXY_STATUS_OK &&
+                robusto_proxy_pubsub_encode_publish_response(
+                    success_buffer,
+                    response_buffer_size - ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                    &response) != ROBUSTO_PROXY_RESULT_OK)
+            {
+                service->requests -= 1U;
+                return false;
+            }
+            success_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_RESPONSE_SIZE_BYTES;
+        }
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_ABORT)
+    {
+        robusto_proxy_pubsub_publish_transfer_request_t request;
+        robusto_proxy_result_t decode_result =
+            robusto_proxy_pubsub_decode_publish_transfer_request(
+                request_payload, request_payload_size, &request);
+        if (decode_result != ROBUSTO_PROXY_RESULT_OK)
+        {
+            status = decode_result == ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT
+                         ? ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT
+                         : ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+        }
+        else if (service->pubsub_adapter->publish_abort == NULL)
+        {
+            status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
+        }
+        else
+        {
+            status = service->pubsub_adapter->publish_abort(
+                service->pubsub_adapter_context, &request);
         }
     }
     else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_SUBSCRIBE)

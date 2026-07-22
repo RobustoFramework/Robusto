@@ -121,7 +121,7 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_request(
     size_t required_size;
     if (buffer == NULL || request == NULL || encoded_size == NULL ||
         request->operation_id == 0U || !robusto_proxy_pubsub_topic_is_valid(request->topic, request->topic_length) ||
-        request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES ||
+        request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_INLINE_DATA_BYTES ||
         (request->data_length > 0U && request->data == NULL))
     {
         return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
@@ -159,7 +159,8 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_request(
     request->data_length = read_le32(buffer + 12U);
     required_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_HEADER_SIZE_BYTES +
                     request->topic_length + request->data_length;
-    if (required_size != buffer_size || request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES)
+    if (required_size != buffer_size ||
+        request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_INLINE_DATA_BYTES)
     {
         return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
     }
@@ -174,6 +175,151 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_request(
         return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
     }
     return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_begin_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_begin_request_t *request, size_t *encoded_size)
+{
+    size_t required_size;
+
+    if (buffer == NULL || request == NULL || encoded_size == NULL ||
+        request->operation_id == 0U || request->data_length == 0U ||
+        !robusto_proxy_pubsub_topic_is_valid(request->topic, request->topic_length))
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    required_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES +
+                    request->topic_length;
+    if (buffer_size < required_size)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    write_le64(buffer, request->operation_id);
+    write_le16(buffer + 8U, request->topic_length);
+    write_le16(buffer + 10U, 0U);
+    write_le32(buffer + 12U, request->data_length);
+    memcpy(buffer + ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES,
+           request->topic, request->topic_length);
+    *encoded_size = required_size;
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_begin_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_begin_request_t *request)
+{
+    size_t required_size;
+
+    if (buffer == NULL || request == NULL ||
+        buffer_size < ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    request->operation_id = read_le64(buffer);
+    request->topic_length = read_le16(buffer + 8U);
+    request->data_length = read_le32(buffer + 12U);
+    required_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES +
+                    request->topic_length;
+    if (required_size != buffer_size)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    if (read_le16(buffer + 10U) != 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_RESERVED;
+    }
+    request->topic = buffer + ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES;
+    if (request->operation_id == 0U || request->data_length == 0U ||
+        !robusto_proxy_pubsub_topic_is_valid(request->topic, request->topic_length))
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_chunk_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_chunk_request_t *request, size_t *encoded_size)
+{
+    size_t required_size;
+
+    if (buffer == NULL || request == NULL || encoded_size == NULL ||
+        request->operation_id == 0U || request->data == NULL ||
+        request->data_length == 0U ||
+        request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    required_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES +
+                    request->data_length;
+    if (buffer_size < required_size)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    write_le64(buffer, request->operation_id);
+    write_le32(buffer + 8U, request->offset);
+    write_le32(buffer + 12U, request->data_length);
+    memcpy(buffer + ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES,
+           request->data, request->data_length);
+    *encoded_size = required_size;
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_chunk_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_chunk_request_t *request)
+{
+    size_t required_size;
+
+    if (buffer == NULL || request == NULL ||
+        buffer_size < ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    request->operation_id = read_le64(buffer);
+    request->offset = read_le32(buffer + 8U);
+    request->data_length = read_le32(buffer + 12U);
+    required_size = ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES +
+                    request->data_length;
+    if (required_size != buffer_size || request->data_length == 0U ||
+        request->data_length > ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    request->data = buffer + ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES;
+    return request->operation_id != 0U ? ROBUSTO_PROXY_RESULT_OK
+                                       : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_transfer_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_transfer_request_t *request)
+{
+    if (buffer == NULL || request == NULL || request->operation_id == 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    if (buffer_size < ROBUSTO_PROXY_PUBSUB_PUBLISH_TRANSFER_REQUEST_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    write_le64(buffer, request->operation_id);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_transfer_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_transfer_request_t *request)
+{
+    if (buffer == NULL || request == NULL ||
+        buffer_size != ROBUSTO_PROXY_PUBSUB_PUBLISH_TRANSFER_REQUEST_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    request->operation_id = read_le64(buffer);
+    return request->operation_id != 0U ? ROBUSTO_PROXY_RESULT_OK
+                                       : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
 }
 
 robusto_proxy_result_t robusto_proxy_pubsub_encode_subscribe_request(
@@ -410,7 +556,7 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery(
     size_t required_size;
     if (buffer == NULL || delivery == NULL || encoded_size == NULL ||
         delivery->subscription_id == 0U || delivery->delivery_sequence == 0U ||
-        delivery->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES ||
+        delivery->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES ||
         (delivery->data_length > 0U && delivery->data == NULL))
     {
         return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
@@ -444,7 +590,8 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery(
     delivery->delivery_sequence = read_le32(buffer + 4U);
     delivery->data_length = read_le32(buffer + 8U);
     required_size = ROBUSTO_PROXY_PUBSUB_DELIVERY_HEADER_SIZE_BYTES + delivery->data_length;
-    if (required_size != buffer_size || delivery->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES)
+    if (required_size != buffer_size ||
+        delivery->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES)
     {
         return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
     }

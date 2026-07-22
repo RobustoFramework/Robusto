@@ -935,7 +935,7 @@ static void test_service_control_capability_query_paths(void)
     TEST_ASSERT_TRUE(capability.proxy_boot_id == service.session.local_boot_id);
     TEST_ASSERT_TRUE(capability.enabled_features == ROBUSTO_PROXY_FEATURE_PUBSUB_V1);
     TEST_ASSERT_EQUAL_U32(1U, capability.pubsub_major);
-    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_PROTOCOL_MINOR, capability.pubsub_minor);
+    TEST_ASSERT_EQUAL_U32(1U, capability.pubsub_minor);
     TEST_ASSERT_EQUAL_U32(4096U, capability.selected_max_payload);
     TEST_ASSERT_EQUAL_U32(2U, capability.selected_max_in_flight);
     TEST_ASSERT_EQUAL_U32(16U, capability.max_subscriptions);
@@ -1035,6 +1035,7 @@ static void test_service_control_frame_dispatch_happy_path_and_bad_crc(void)
 
 static void test_service_hello_negotiation_and_rejection_paths(void)
 {
+    const robusto_proxy_pubsub_adapter_t inline_only_adapter = {0};
     robusto_proxy_service_t service;
     robusto_proxy_hello_request_t hello_request;
     robusto_proxy_hello_response_t hello_response;
@@ -1114,6 +1115,55 @@ static void test_service_hello_negotiation_and_rejection_paths(void)
     TEST_ASSERT_TRUE(service.session.peer_boot_id == hello_request.controller_boot_id);
     TEST_ASSERT_EQUAL_U32(1U, service.requests);
 
+    robusto_proxy_service_set_pubsub_adapter(
+        &service, &inline_only_adapter, NULL);
+    hello_request.optional_features =
+        ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH;
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_encode_hello_request(
+            hello_payload, sizeof(hello_payload), &hello_request));
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service,
+        ROBUSTO_PROXY_OPCODE_HELLO,
+        hello_payload,
+        sizeof(hello_payload),
+        1026U,
+        response_frame,
+        sizeof(response_frame),
+        &response_size));
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_hello_response_message(
+            response_frame, response_size, &prefix, &hello_response));
+    TEST_ASSERT_TRUE(robusto_proxy_response_prefix_is_success(&prefix));
+    TEST_ASSERT_TRUE(
+        hello_response.enabled_features == ROBUSTO_PROXY_FEATURE_PUBSUB_V1);
+
+    hello_request.required_features |=
+        ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH;
+    hello_request.optional_features = 0U;
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_encode_hello_request(
+            hello_payload, sizeof(hello_payload), &hello_request));
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service,
+        ROBUSTO_PROXY_OPCODE_HELLO,
+        hello_payload,
+        sizeof(hello_payload),
+        1027U,
+        error_response,
+        sizeof(error_response),
+        &response_size));
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_response_prefix(
+            error_response, response_size, &prefix));
+    TEST_ASSERT_EQUAL_U32(
+        ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE, prefix.status);
+    hello_request.required_features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1;
+
     hello_request.min_protocol_major = 2U;
     hello_request.max_protocol_major = 2U;
     TEST_ASSERT_EQUAL_INT(
@@ -1135,7 +1185,7 @@ static void test_service_hello_negotiation_and_rejection_paths(void)
 
     hello_request.min_protocol_major = ROBUSTO_PROXY_PROTOCOL_MAJOR;
     hello_request.max_protocol_major = ROBUSTO_PROXY_PROTOCOL_MAJOR;
-    hello_request.required_features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1 | 0x02ULL;
+    hello_request.required_features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1 | 0x04ULL;
     TEST_ASSERT_EQUAL_INT(
         ROBUSTO_PROXY_RESULT_OK,
         robusto_proxy_encode_hello_request(hello_payload, sizeof(hello_payload), &hello_request));
@@ -1152,8 +1202,8 @@ static void test_service_hello_negotiation_and_rejection_paths(void)
         ROBUSTO_PROXY_RESULT_OK,
         robusto_proxy_decode_response_prefix(error_response, response_size, &prefix));
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE, prefix.status);
-    TEST_ASSERT_EQUAL_U32(3U, service.requests);
-    TEST_ASSERT_EQUAL_U32(2U, service.errors);
+    TEST_ASSERT_EQUAL_U32(5U, service.requests);
+    TEST_ASSERT_EQUAL_U32(3U, service.errors);
 }
 
 static void test_service_control_handler_rejects_unsupported_opcode(void)
@@ -1337,11 +1387,20 @@ static void test_pubsub_codec_rejects_malformed_payloads(void)
 
 typedef struct fake_pubsub_adapter_state {
     uint32_t publish_calls;
+    uint32_t publish_begin_calls;
+    uint32_t publish_chunk_calls;
+    uint32_t publish_commit_calls;
+    uint32_t publish_abort_calls;
+    uint32_t session_reset_calls;
+    uint32_t publish_data_length;
+    uint32_t publish_data_received;
     uint32_t subscribe_calls;
     uint32_t unsubscribe_calls;
     uint32_t status_calls;
     uint64_t last_operation_id;
     uint32_t subscription_id;
+    uint16_t publish_begin_status;
+    uint16_t publish_commit_status;
 } fake_pubsub_adapter_state_t;
 
 static uint16_t fake_pubsub_publish(void *context,
@@ -1353,6 +1412,80 @@ static uint16_t fake_pubsub_publish(void *context,
     state->last_operation_id = request->operation_id;
     response->topic_hash = 0xAABBCCDDU;
     response->delivery_count = request->data_length;
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t fake_pubsub_publish_begin(
+    void *context, const robusto_proxy_pubsub_publish_begin_request_t *request)
+{
+    fake_pubsub_adapter_state_t *state = context;
+    state->publish_begin_calls += 1U;
+    if (state->publish_begin_status != ROBUSTO_PROXY_STATUS_OK)
+    {
+        return state->publish_begin_status;
+    }
+    state->last_operation_id = request->operation_id;
+    state->publish_data_length = request->data_length;
+    state->publish_data_received = 0U;
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t fake_pubsub_publish_chunk(
+    void *context, const robusto_proxy_pubsub_publish_chunk_request_t *request)
+{
+    fake_pubsub_adapter_state_t *state = context;
+    if (request->operation_id != state->last_operation_id ||
+        request->offset != state->publish_data_received ||
+        request->data_length > state->publish_data_length - state->publish_data_received)
+    {
+        return ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+    }
+    state->publish_chunk_calls += 1U;
+    state->publish_data_received += request->data_length;
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t fake_pubsub_publish_commit(
+    void *context, const robusto_proxy_pubsub_publish_transfer_request_t *request,
+    robusto_proxy_pubsub_publish_response_t *response)
+{
+    fake_pubsub_adapter_state_t *state = context;
+    if (request->operation_id != state->last_operation_id ||
+        state->publish_data_received != state->publish_data_length)
+    {
+        return ROBUSTO_PROXY_STATUS_CONFLICT;
+    }
+    state->publish_commit_calls += 1U;
+    state->publish_calls += 1U;
+    if (state->publish_commit_status != ROBUSTO_PROXY_STATUS_OK)
+    {
+        return state->publish_commit_status;
+    }
+    response->topic_hash = 0xAABBCCDDU;
+    response->delivery_count = state->publish_data_length;
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t fake_pubsub_publish_abort(
+    void *context, const robusto_proxy_pubsub_publish_transfer_request_t *request)
+{
+    fake_pubsub_adapter_state_t *state = context;
+    if (request->operation_id != state->last_operation_id)
+    {
+        return ROBUSTO_PROXY_STATUS_CONFLICT;
+    }
+    state->publish_abort_calls += 1U;
+    state->publish_data_length = 0U;
+    state->publish_data_received = 0U;
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t fake_pubsub_session_reset(void *context)
+{
+    fake_pubsub_adapter_state_t *state = context;
+    state->session_reset_calls += 1U;
+    state->publish_data_length = 0U;
+    state->publish_data_received = 0U;
     return ROBUSTO_PROXY_STATUS_OK;
 }
 
@@ -1395,6 +1528,7 @@ typedef enum fake_client_exchange_mode {
     FAKE_CLIENT_EXCHANGE_ACCEPTED_TIMEOUT,
     FAKE_CLIENT_EXCHANGE_NOT_ACCEPTED,
     FAKE_CLIENT_EXCHANGE_TIMEOUT_ONCE,
+    FAKE_CLIENT_EXCHANGE_CHUNK_TIMEOUT_ONCE,
 } fake_client_exchange_mode_t;
 
 typedef struct fake_client_transport {
@@ -1476,6 +1610,15 @@ static rob_ret_val_t fake_client_exchange(
         *response_size = 0U;
         return ROB_ERR_TIMEOUT;
     }
+    if (transport->mode == FAKE_CLIENT_EXCHANGE_CHUNK_TIMEOUT_ONCE &&
+        header->domain == ROBUSTO_PROXY_DOMAIN_PUBSUB &&
+        header->opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_CHUNK &&
+        transport->timeouts_remaining > 0U)
+    {
+        transport->timeouts_remaining -= 1U;
+        *response_size = 0U;
+        return ROB_ERR_TIMEOUT;
+    }
     if (transport->mode == FAKE_CLIENT_EXCHANGE_TIMEOUT_ONCE &&
         transport->timeouts_remaining > 0U)
     {
@@ -1502,6 +1645,11 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
 {
     static const robusto_proxy_pubsub_adapter_t adapter = {
         .publish = fake_pubsub_publish,
+        .publish_begin = fake_pubsub_publish_begin,
+        .publish_chunk = fake_pubsub_publish_chunk,
+        .publish_commit = fake_pubsub_publish_commit,
+        .publish_abort = fake_pubsub_publish_abort,
+        .session_reset = fake_pubsub_session_reset,
         .subscribe = fake_pubsub_subscribe,
         .unsubscribe = fake_pubsub_unsubscribe,
         .status = fake_pubsub_status,
@@ -1511,6 +1659,7 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
     uint8_t delivery_payload[32];
     uint8_t delivery_frame[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
     uint8_t data[] = {0x11U, 0x22U};
+    static uint8_t large_data[200U * 1024U];
     robusto_proxy_pubsub_client_subscription_t subscription_storage[1];
     robusto_proxy_pubsub_client_subscription_t *subscription = NULL;
     robusto_proxy_service_t service;
@@ -1571,22 +1720,76 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
                           robusto_proxy_pubsub_publish(&client, "client.test", data, sizeof(data)));
     TEST_ASSERT_EQUAL_U32(1U, adapter_state.publish_calls);
     TEST_ASSERT_EQUAL_U32(30U, (uint32_t)adapter_state.last_operation_id);
+    for (size_t index = 0U; index < sizeof(large_data); ++index)
+    {
+        large_data[index] = (uint8_t)index;
+    }
+    TEST_ASSERT_EQUAL_INT(
+        ROB_OK,
+        robusto_proxy_pubsub_publish(&client, "client.large", large_data,
+                                     sizeof(large_data)));
+    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_calls);
+    TEST_ASSERT_EQUAL_U32(1U, adapter_state.publish_begin_calls);
+    TEST_ASSERT_EQUAL_U32(51U, adapter_state.publish_chunk_calls);
+    TEST_ASSERT_EQUAL_U32(1U, adapter_state.publish_commit_calls);
+    TEST_ASSERT_EQUAL_U32(sizeof(large_data), adapter_state.publish_data_received);
+
+    adapter_state.publish_commit_status = ROBUSTO_PROXY_STATUS_INTERNAL;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_FAIL,
+        robusto_proxy_pubsub_publish(&client, "client.large", large_data,
+                                     sizeof(large_data)));
+    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_commit_calls);
+    TEST_ASSERT_EQUAL_U32(0U, adapter_state.publish_abort_calls);
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_ESTABLISHED, client.session.state);
+    adapter_state.publish_commit_status = ROBUSTO_PROXY_STATUS_OK;
+
+    transport.mode = FAKE_CLIENT_EXCHANGE_CHUNK_TIMEOUT_ONCE;
+    transport.timeouts_remaining = 1U;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_FAIL,
+        robusto_proxy_pubsub_publish(&client, "client.large", large_data,
+                                     sizeof(large_data)));
+    TEST_ASSERT_EQUAL_U32(1U, adapter_state.publish_abort_calls);
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_ESTABLISHED, client.session.state);
+    transport.mode = FAKE_CLIENT_EXCHANGE_RESPONSE;
+
+    adapter_state.publish_begin_status = ROBUSTO_PROXY_STATUS_OUT_OF_MEMORY;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_ERR_OUT_OF_MEMORY,
+        robusto_proxy_pubsub_publish(&client, "client.large", large_data,
+                                     sizeof(large_data)));
+    TEST_ASSERT_EQUAL_U32(4U, adapter_state.publish_begin_calls);
+    TEST_ASSERT_EQUAL_U32(103U, adapter_state.publish_chunk_calls);
+    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_commit_calls);
+    adapter_state.publish_begin_status = ROBUSTO_PROXY_STATUS_OK;
+    transport.mode = FAKE_CLIENT_EXCHANGE_ACCEPTED_TIMEOUT;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_ERR_OUTCOME_UNKNOWN,
+        robusto_proxy_pubsub_publish(&client, "client.large", large_data,
+                                     sizeof(large_data)));
+    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_abort_calls);
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_DEGRADED, client.session.state);
+    transport.mode = FAKE_CLIENT_EXCHANGE_RESPONSE;
+    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_connect(&client));
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_ESTABLISHED, client.session.state);
+    TEST_ASSERT_EQUAL_U32(2U, adapter_state.session_reset_calls);
     TEST_ASSERT_EQUAL_INT(
         ROB_OK,
         robusto_proxy_pubsub_query_status(&client, &pubsub_status));
     TEST_ASSERT_EQUAL_U32(1U, pubsub_status.state);
-    TEST_ASSERT_EQUAL_U32(1U, pubsub_status.publish_requests);
+    TEST_ASSERT_EQUAL_U32(3U, pubsub_status.publish_requests);
     TEST_ASSERT_EQUAL_U32(1U, adapter_state.status_calls);
 
     transport.mode = FAKE_CLIENT_EXCHANGE_ACCEPTED_TIMEOUT;
     TEST_ASSERT_EQUAL_INT(ROB_ERR_OUTCOME_UNKNOWN,
                           robusto_proxy_pubsub_publish(&client, "client.test", data, sizeof(data)));
-    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_calls);
+    TEST_ASSERT_EQUAL_U32(4U, adapter_state.publish_calls);
 
     transport.mode = FAKE_CLIENT_EXCHANGE_NOT_ACCEPTED;
     TEST_ASSERT_EQUAL_INT(ROB_ERR_SEND_FAIL,
                           robusto_proxy_pubsub_publish(&client, "client.test", data, sizeof(data)));
-    TEST_ASSERT_EQUAL_U32(2U, adapter_state.publish_calls);
+    TEST_ASSERT_EQUAL_U32(4U, adapter_state.publish_calls);
     TEST_ASSERT_EQUAL_U32(0U, client.inflight.active_count);
 
     transport.mode = FAKE_CLIENT_EXCHANGE_RESPONSE;
@@ -1679,7 +1882,8 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
         ROB_OK,
         robusto_proxy_client_query_capabilities(&client, &capabilities));
     TEST_ASSERT_EQUAL_U32(0xC6U, (uint32_t)capabilities.proxy_boot_id);
-    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_FEATURE_PUBSUB_V1,
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_FEATURE_PUBSUB_V1 |
+                              ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH,
                           (uint32_t)capabilities.enabled_features);
 
     TEST_ASSERT_EQUAL_INT(
@@ -1871,6 +2075,9 @@ typedef struct fake_server_backend_state {
     void *callback_context;
     uint32_t subscribe_calls;
     uint32_t unsubscribe_calls;
+    uint32_t publish_calls;
+    uint32_t published_length;
+    uint32_t published_sum;
     uint16_t publish_status;
     uint16_t unsubscribe_status;
 } fake_server_backend_state_t;
@@ -1885,11 +2092,131 @@ static uint16_t fake_server_publish(void *context, const char *topic,
     {
         return state->publish_status;
     }
+    state->publish_calls += 1U;
+    state->published_length = data_length;
+    state->published_sum = 0U;
+    for (uint32_t index = 0U; index < data_length; ++index)
+    {
+        state->published_sum += data[index];
+    }
     *topic_hash = 0x12345678U;
     *delivery_count = state->callback == NULL ? 0U : 1U;
     return state->callback == NULL
                ? ROBUSTO_PROXY_STATUS_OK
                : state->callback(state->callback_context, data, data_length);
+}
+
+static uint16_t fake_server_subscribe(
+    void *context, const char *topic,
+    robusto_proxy_pubsub_local_callback_t callback,
+    void *callback_context, uint32_t *topic_hash);
+static uint16_t fake_server_unsubscribe(
+    void *context, uint32_t topic_hash,
+    robusto_proxy_pubsub_local_callback_t callback,
+    void *callback_context);
+
+static void test_pubsub_server_adapter_chunked_publish(void)
+{
+    static const uint8_t topic[] = "camera.jpeg";
+    static uint8_t data[5000];
+    const robusto_proxy_pubsub_backend_t backend = {
+        fake_server_publish, fake_server_subscribe, fake_server_unsubscribe};
+    fake_server_backend_state_t backend_state = {0};
+    robusto_proxy_pubsub_server_adapter_t adapter;
+    robusto_proxy_pubsub_subscription_t subscriptions[1];
+    uint8_t event_pool[4];
+    robusto_proxy_pubsub_publish_begin_request_t begin = {
+        77U, topic, sizeof(topic) - 1U, sizeof(data)};
+    robusto_proxy_pubsub_publish_chunk_request_t chunk = {
+        77U, 0U, data, ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES};
+    robusto_proxy_pubsub_publish_transfer_request_t transfer = {77U};
+    robusto_proxy_pubsub_publish_response_t response;
+    robusto_proxy_service_t service;
+    robusto_proxy_hello_request_t hello = {
+        .controller_boot_id = 1U,
+        .min_protocol_major = ROBUSTO_PROXY_PROTOCOL_MAJOR,
+        .max_protocol_major = ROBUSTO_PROXY_PROTOCOL_MAJOR,
+        .min_protocol_minor = ROBUSTO_PROXY_PROTOCOL_MINOR,
+        .max_protocol_minor = ROBUSTO_PROXY_PROTOCOL_MINOR,
+        .max_payload = ROBUSTO_PROXY_MAX_PAYLOAD_BYTES,
+        .max_in_flight = 1U,
+        .required_features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1 |
+                             ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH,
+    };
+    uint8_t hello_payload[ROBUSTO_PROXY_HELLO_REQUEST_SIZE_BYTES];
+    uint8_t hello_response[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES +
+                           ROBUSTO_PROXY_HELLO_RESPONSE_SIZE_BYTES];
+    size_t hello_response_size = 0U;
+    const robusto_proxy_pubsub_adapter_t *operations =
+        robusto_proxy_pubsub_server_adapter_operations();
+    uint32_t expected_sum = 0U;
+
+    for (size_t index = 0U; index < sizeof(data); ++index)
+    {
+        data[index] = (uint8_t)index;
+        expected_sum += data[index];
+    }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_init(
+        &adapter, &backend, &backend_state, subscriptions, 1U,
+        event_pool, sizeof(event_pool), (robusto_proxy_pubsub_lock_t){0}));
+    robusto_proxy_service_init(&service, ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
+                               2U, 1U, 1U, 1U, 0U);
+    robusto_proxy_service_set_pubsub_adapter(&service, operations, &adapter);
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_encode_hello_request(
+            hello_payload, sizeof(hello_payload), &hello));
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service, ROBUSTO_PROXY_OPCODE_HELLO,
+        hello_payload, sizeof(hello_payload), 1U,
+        hello_response, sizeof(hello_response), &hello_response_size));
+    TEST_ASSERT_EQUAL_U32(sizeof(hello_response), hello_response_size);
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_begin(&adapter, &begin));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_BUSY,
+                          operations->publish_begin(&adapter, &begin));
+    chunk.offset = 1U;
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD,
+                          operations->publish_chunk(&adapter, &chunk));
+    chunk.offset = 0U;
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_chunk(&adapter, &chunk));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD,
+                          operations->publish_commit(&adapter, &transfer, &response));
+    chunk.offset = ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES;
+    chunk.data += ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES;
+    chunk.data_length = sizeof(data) - ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES;
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_chunk(&adapter, &chunk));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_commit(&adapter, &transfer, &response));
+    TEST_ASSERT_EQUAL_U32(1U, backend_state.publish_calls);
+    TEST_ASSERT_EQUAL_U32(sizeof(data), backend_state.published_length);
+    TEST_ASSERT_EQUAL_U32(expected_sum, backend_state.published_sum);
+    TEST_ASSERT_TRUE(adapter.publish_data == NULL);
+
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_begin(&adapter, &begin));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_abort(&adapter, &transfer));
+    TEST_ASSERT_TRUE(adapter.publish_data == NULL);
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_begin(&adapter, &begin));
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_encode_hello_request(
+            hello_payload, sizeof(hello_payload), &hello));
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service, ROBUSTO_PROXY_OPCODE_HELLO,
+        hello_payload, sizeof(hello_payload), 2U,
+        hello_response, sizeof(hello_response), &hello_response_size));
+    TEST_ASSERT_EQUAL_U32(sizeof(hello_response), hello_response_size);
+    TEST_ASSERT_TRUE(adapter.publish_data == NULL);
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_begin(&adapter, &begin));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->publish_abort(&adapter, &transfer));
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_deinit(&adapter));
 }
 
 static uint16_t fake_server_subscribe(void *context, const char *topic,
@@ -2107,6 +2434,7 @@ int main(void)
     test_pubsub_codec_rejects_malformed_payloads();
     test_service_pubsub_dispatch_and_gates();
     test_pubsub_server_adapter_subscription_delivery_and_overflow();
+    test_pubsub_server_adapter_chunked_publish();
     test_pubsub_server_adapter_deinit_retries_backend_failure();
     test_proxy_client_connect_publish_and_acceptance();
 

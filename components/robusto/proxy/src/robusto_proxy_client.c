@@ -351,6 +351,7 @@ rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client)
     request.max_payload = ROBUSTO_PROXY_MAX_PAYLOAD_BYTES;
     request.max_in_flight = client->session.local_limits.max_in_flight;
     request.required_features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1;
+    request.optional_features = ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH;
     if (robusto_proxy_encode_hello_request(client->response_frame,
                                            client->response_frame_size,
                                            &request) != ROBUSTO_PROXY_RESULT_OK)

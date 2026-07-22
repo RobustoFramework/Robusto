@@ -21,7 +21,7 @@ static robusto_proxy_service_t proxy_service;
 static robusto_c6_pubsub_backend_t pubsub_backend;
 static robusto_proxy_pubsub_server_adapter_t pubsub_adapter;
 static robusto_proxy_pubsub_subscription_t pubsub_subscriptions[16];
-static uint8_t pubsub_event_pool[ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES];
+static uint8_t pubsub_event_pool[ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES];
 
 typedef struct {
     size_t size;

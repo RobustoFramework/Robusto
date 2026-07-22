@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -8,6 +9,8 @@
 #include "robusto_init.h"
 #include "robusto_proxy_pubsub_client.h"
 #include "robusto_proxy_sdio.h"
+
+#define LARGE_PUBLISH_BYTES (200U * 1024U)
 
 static const char *TAG = "p4_proxy_main";
 static robusto_proxy_pubsub_client_subscription_t subscriptions[4];
@@ -59,6 +62,38 @@ static rob_ret_val_t run_pubsub_example(void)
     return delivery_result;
 }
 
+static uint8_t expected_byte(uint32_t offset)
+{
+    return (uint8_t)((offset * 31U + (offset >> 8U) + 0x5AU) & 0xFFU);
+}
+
+static rob_ret_val_t run_large_publish_example(void)
+{
+    const uint32_t payload_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    size_t largest_block = heap_caps_get_largest_free_block(payload_caps);
+    uint8_t *payload;
+    rob_ret_val_t result;
+
+    ESP_LOGI(TAG, "largest PSRAM block before large publish: %u bytes",
+             (unsigned int)largest_block);
+    payload = heap_caps_malloc(LARGE_PUBLISH_BYTES, payload_caps);
+    if (payload == NULL) {
+        return ROB_ERR_OUT_OF_MEMORY;
+    }
+    for (uint32_t offset = 0U; offset < LARGE_PUBLISH_BYTES; ++offset) {
+        payload[offset] = expected_byte(offset);
+    }
+    result = robusto_proxy_pubsub_publish(
+        robusto_proxy_sdio(), "proxy.test.large", payload,
+        LARGE_PUBLISH_BYTES);
+    heap_caps_free(payload);
+    if (result == ROB_OK) {
+        ESP_LOGI(TAG, "[PASS] sent %u-byte chunked publish",
+                 LARGE_PUBLISH_BYTES);
+    }
+    return result;
+}
+
 static void halt(void)
 {
     for (;;) {
@@ -78,6 +113,9 @@ void app_main(void)
     }
     if (result == ROB_OK) {
         result = run_pubsub_example();
+    }
+    if (result == ROB_OK) {
+        result = run_large_publish_example();
     }
     if (result != ROB_OK) {
         rob_ret_val_t stop_result = ROB_OK;

@@ -16,6 +16,16 @@ typedef struct robusto_proxy_pubsub_adapter {
     uint16_t (*publish)(void *context,
                         const robusto_proxy_pubsub_publish_request_t *request,
                         robusto_proxy_pubsub_publish_response_t *response);
+    uint16_t (*publish_begin)(void *context,
+                              const robusto_proxy_pubsub_publish_begin_request_t *request);
+    uint16_t (*publish_chunk)(void *context,
+                              const robusto_proxy_pubsub_publish_chunk_request_t *request);
+    uint16_t (*publish_commit)(void *context,
+                               const robusto_proxy_pubsub_publish_transfer_request_t *request,
+                               robusto_proxy_pubsub_publish_response_t *response);
+    uint16_t (*publish_abort)(void *context,
+                              const robusto_proxy_pubsub_publish_transfer_request_t *request);
+    uint16_t (*session_reset)(void *context);
     uint16_t (*subscribe)(void *context,
                           const robusto_proxy_pubsub_subscribe_request_t *request,
                           robusto_proxy_pubsub_subscribe_response_t *response);

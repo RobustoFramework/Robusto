@@ -1,6 +1,21 @@
 #include "robusto_proxy_pubsub_adapter.h"
 
+#include <stdlib.h>
 #include <string.h>
+
+#ifdef ESP_PLATFORM
+#include "esp_heap_caps.h"
+#endif
+
+static uint8_t *allocate_publish_data(uint32_t data_length)
+{
+#ifdef ESP_PLATFORM
+    return heap_caps_malloc(data_length,
+                            MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+#else
+    return malloc(data_length);
+#endif
+}
 
 static bool adapter_take(robusto_proxy_pubsub_server_adapter_t *adapter)
 {
@@ -109,7 +124,8 @@ static uint16_t queue_delivery(void *context, const uint8_t *data, uint32_t data
     {
         subscription->next_delivery_sequence = 1U;
     }
-    if (!subscription->active || data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES ||
+    if (!subscription->active ||
+        data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES ||
         adapter->event_count == ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT ||
         data_length > adapter->event_pool_capacity - adapter->event_pool_used)
     {
@@ -159,6 +175,184 @@ static uint16_t adapter_publish(void *context,
         adapter->pubsub_errors += 1U;
     }
     return status;
+}
+
+static void release_publish_transfer(robusto_proxy_pubsub_server_adapter_t *adapter)
+{
+    free(adapter->publish_data);
+    adapter->publish_data = NULL;
+    adapter->publish_operation_id = 0U;
+    adapter->publish_data_length = 0U;
+    adapter->publish_data_received = 0U;
+    adapter->publish_topic_length = 0U;
+    adapter->publish_topic[0] = '\0';
+}
+
+static uint16_t adapter_publish_begin(
+    void *context, const robusto_proxy_pubsub_publish_begin_request_t *request)
+{
+    robusto_proxy_pubsub_server_adapter_t *adapter = context;
+
+    if (adapter == NULL || request == NULL || request->operation_id == 0U ||
+        request->data_length == 0U ||
+        !robusto_proxy_pubsub_topic_is_valid(request->topic, request->topic_length))
+    {
+        return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    if (adapter->publish_data != NULL)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    adapter->publish_data = allocate_publish_data(request->data_length);
+    if (adapter->publish_data == NULL)
+    {
+        adapter->pubsub_errors += 1U;
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_OUT_OF_MEMORY;
+    }
+    adapter->publish_operation_id = request->operation_id;
+    adapter->publish_data_length = request->data_length;
+    adapter->publish_data_received = 0U;
+    adapter->publish_topic_length = request->topic_length;
+    memcpy(adapter->publish_topic, request->topic, request->topic_length);
+    adapter->publish_topic[request->topic_length] = '\0';
+    adapter_give(adapter);
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t adapter_publish_chunk(
+    void *context, const robusto_proxy_pubsub_publish_chunk_request_t *request)
+{
+    robusto_proxy_pubsub_server_adapter_t *adapter = context;
+
+    if (adapter == NULL || request == NULL || request->operation_id == 0U ||
+        request->data == NULL || request->data_length == 0U)
+    {
+        return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    if (adapter->publish_data == NULL ||
+        adapter->publish_operation_id != request->operation_id)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_CONFLICT;
+    }
+    if (request->offset != adapter->publish_data_received ||
+        request->data_length >
+            adapter->publish_data_length - adapter->publish_data_received)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+    }
+    memcpy(adapter->publish_data + request->offset, request->data,
+           request->data_length);
+    adapter->publish_data_received += request->data_length;
+    adapter_give(adapter);
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t adapter_publish_commit(
+    void *context, const robusto_proxy_pubsub_publish_transfer_request_t *request,
+    robusto_proxy_pubsub_publish_response_t *response)
+{
+    robusto_proxy_pubsub_server_adapter_t *adapter = context;
+    robusto_proxy_pubsub_publish_request_t publish_request;
+    uint8_t *publish_data;
+    uint32_t publish_data_length;
+    uint16_t publish_topic_length;
+    char publish_topic[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
+    uint16_t status;
+
+    if (adapter == NULL || request == NULL || response == NULL ||
+        request->operation_id == 0U)
+    {
+        return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    if (adapter->publish_data == NULL ||
+        adapter->publish_operation_id != request->operation_id)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_CONFLICT;
+    }
+    if (adapter->publish_data_received != adapter->publish_data_length)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_MALFORMED_PAYLOAD;
+    }
+    publish_data = adapter->publish_data;
+    publish_data_length = adapter->publish_data_length;
+    publish_topic_length = adapter->publish_topic_length;
+    memcpy(publish_topic, adapter->publish_topic, publish_topic_length + 1U);
+    adapter->publish_data = NULL;
+    adapter->publish_operation_id = 0U;
+    adapter->publish_data_length = 0U;
+    adapter->publish_data_received = 0U;
+    adapter->publish_topic_length = 0U;
+    adapter->publish_topic[0] = '\0';
+    adapter_give(adapter);
+
+    memset(&publish_request, 0, sizeof(publish_request));
+    publish_request.operation_id = request->operation_id;
+    publish_request.topic = (const uint8_t *)publish_topic;
+    publish_request.topic_length = publish_topic_length;
+    publish_request.data = publish_data;
+    publish_request.data_length = publish_data_length;
+    status = adapter_publish(adapter, &publish_request, response);
+    free(publish_data);
+    return status;
+}
+
+static uint16_t adapter_publish_abort(
+    void *context, const robusto_proxy_pubsub_publish_transfer_request_t *request)
+{
+    robusto_proxy_pubsub_server_adapter_t *adapter = context;
+
+    if (adapter == NULL || request == NULL || request->operation_id == 0U)
+    {
+        return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    if (adapter->publish_data == NULL ||
+        adapter->publish_operation_id != request->operation_id)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_CONFLICT;
+    }
+    release_publish_transfer(adapter);
+    adapter_give(adapter);
+    return ROBUSTO_PROXY_STATUS_OK;
+}
+
+static uint16_t adapter_session_reset(void *context)
+{
+    robusto_proxy_pubsub_server_adapter_t *adapter = context;
+
+    if (adapter == NULL)
+    {
+        return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
+    release_publish_transfer(adapter);
+    adapter_give(adapter);
+    return ROBUSTO_PROXY_STATUS_OK;
 }
 
 static uint16_t adapter_subscribe(void *context,
@@ -290,6 +484,11 @@ static uint16_t adapter_status(void *context,
 
 static const robusto_proxy_pubsub_adapter_t operations = {
     .publish = adapter_publish,
+    .publish_begin = adapter_publish_begin,
+    .publish_chunk = adapter_publish_chunk,
+    .publish_commit = adapter_publish_commit,
+    .publish_abort = adapter_publish_abort,
+    .session_reset = adapter_session_reset,
     .subscribe = adapter_subscribe,
     .unsubscribe = adapter_unsubscribe,
     .status = adapter_status,
@@ -365,6 +564,7 @@ bool robusto_proxy_pubsub_server_adapter_deinit(
             adapter->pubsub_errors += 1U;
         }
     }
+    release_publish_transfer(adapter);
     adapter_give(adapter);
     return success;
 }

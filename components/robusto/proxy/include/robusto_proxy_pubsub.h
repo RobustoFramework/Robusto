@@ -10,10 +10,15 @@ extern "C" {
 #endif
 
 #define ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES 255U
-#define ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES 3824U
+#define ROBUSTO_PROXY_PUBSUB_MAX_INLINE_DATA_BYTES 3824U
+#define ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES 4080U
+#define ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES 3824U
 #define ROBUSTO_PROXY_PUBSUB_SUBSCRIBE_DELIVERIES 0x01U
 
 #define ROBUSTO_PROXY_PUBSUB_PUBLISH_HEADER_SIZE_BYTES 16U
+#define ROBUSTO_PROXY_PUBSUB_PUBLISH_BEGIN_HEADER_SIZE_BYTES 16U
+#define ROBUSTO_PROXY_PUBSUB_PUBLISH_CHUNK_HEADER_SIZE_BYTES 16U
+#define ROBUSTO_PROXY_PUBSUB_PUBLISH_TRANSFER_REQUEST_SIZE_BYTES 8U
 #define ROBUSTO_PROXY_PUBSUB_SUBSCRIBE_HEADER_SIZE_BYTES 12U
 #define ROBUSTO_PROXY_PUBSUB_UNSUBSCRIBE_REQUEST_SIZE_BYTES 12U
 #define ROBUSTO_PROXY_PUBSUB_PUBLISH_RESPONSE_SIZE_BYTES 8U
@@ -29,6 +34,24 @@ typedef struct robusto_proxy_pubsub_publish_request {
     const uint8_t *data;
     uint32_t data_length;
 } robusto_proxy_pubsub_publish_request_t;
+
+typedef struct robusto_proxy_pubsub_publish_begin_request {
+    uint64_t operation_id;
+    const uint8_t *topic;
+    uint16_t topic_length;
+    uint32_t data_length;
+} robusto_proxy_pubsub_publish_begin_request_t;
+
+typedef struct robusto_proxy_pubsub_publish_chunk_request {
+    uint64_t operation_id;
+    uint32_t offset;
+    const uint8_t *data;
+    uint32_t data_length;
+} robusto_proxy_pubsub_publish_chunk_request_t;
+
+typedef struct robusto_proxy_pubsub_publish_transfer_request {
+    uint64_t operation_id;
+} robusto_proxy_pubsub_publish_transfer_request_t;
 
 typedef struct robusto_proxy_pubsub_subscribe_request {
     uint64_t operation_id;
@@ -84,6 +107,24 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_request(
 robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_request(
     const uint8_t *buffer, size_t buffer_size,
     robusto_proxy_pubsub_publish_request_t *request);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_begin_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_begin_request_t *request, size_t *encoded_size);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_begin_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_begin_request_t *request);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_chunk_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_chunk_request_t *request, size_t *encoded_size);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_chunk_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_chunk_request_t *request);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_transfer_request(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_publish_transfer_request_t *request);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_publish_transfer_request(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_publish_transfer_request_t *request);
 robusto_proxy_result_t robusto_proxy_pubsub_encode_subscribe_request(
     uint8_t *buffer, size_t buffer_size,
     const robusto_proxy_pubsub_subscribe_request_t *request, size_t *encoded_size);

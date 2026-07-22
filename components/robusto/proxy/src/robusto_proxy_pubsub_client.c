@@ -241,6 +241,152 @@ rob_ret_val_t robusto_proxy_pubsub_unsubscribe(
     return ROB_OK;
 }
 
+static rob_ret_val_t abort_publish_transfer(
+    robusto_proxy_client_t *client, uint64_t operation_id)
+{
+    robusto_proxy_pubsub_publish_transfer_request_t request;
+    const uint8_t *response_payload;
+    size_t response_payload_size;
+
+    request.operation_id = operation_id;
+    if (robusto_proxy_pubsub_encode_publish_transfer_request(
+            client->response_frame, client->response_frame_size, &request) !=
+        ROBUSTO_PROXY_RESULT_OK)
+    {
+        return ROB_FAIL;
+    }
+    return robusto_proxy_client_request(
+        client, ROBUSTO_PROXY_DOMAIN_PUBSUB,
+        ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_ABORT,
+        client->response_frame,
+        ROBUSTO_PROXY_PUBSUB_PUBLISH_TRANSFER_REQUEST_SIZE_BYTES, true,
+        &response_payload, &response_payload_size);
+}
+
+static rob_ret_val_t finish_failed_publish(
+    robusto_proxy_client_t *client, uint64_t operation_id,
+    rob_ret_val_t publish_result)
+{
+    rob_ret_val_t abort_result = abort_publish_transfer(client, operation_id);
+
+    if (abort_result != ROB_OK)
+    {
+        client->session.state = ROBUSTO_PROXY_SESSION_DEGRADED;
+        return ROB_ERR_OUTCOME_UNKNOWN;
+    }
+    return publish_result == ROB_ERR_OUTCOME_UNKNOWN ? ROB_FAIL : publish_result;
+}
+
+static rob_ret_val_t publish_chunked(
+    robusto_proxy_client_t *client, const char *topic_name, size_t topic_length,
+    uint8_t *data, uint32_t data_length)
+{
+    robusto_proxy_pubsub_publish_begin_request_t begin_request;
+    robusto_proxy_pubsub_publish_chunk_request_t chunk_request;
+    robusto_proxy_pubsub_publish_transfer_request_t commit_request;
+    robusto_proxy_pubsub_publish_response_t response;
+    const uint8_t *response_payload;
+    size_t response_payload_size;
+    size_t request_size;
+    uint64_t operation_id = robusto_proxy_client_take_operation_id(client);
+    uint32_t offset = 0U;
+    rob_ret_val_t result;
+
+    if ((client->session.enabled_features &
+         ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH) == 0U)
+    {
+        return ROB_ERR_NOT_SUPPORTED;
+    }
+
+    memset(&begin_request, 0, sizeof(begin_request));
+    begin_request.operation_id = operation_id;
+    begin_request.topic = (const uint8_t *)topic_name;
+    begin_request.topic_length = (uint16_t)topic_length;
+    begin_request.data_length = data_length;
+    if (robusto_proxy_pubsub_encode_publish_begin_request(
+            client->response_frame, client->response_frame_size,
+            &begin_request, &request_size) != ROBUSTO_PROXY_RESULT_OK)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    result = robusto_proxy_client_request(
+        client, ROBUSTO_PROXY_DOMAIN_PUBSUB,
+        ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_BEGIN,
+        client->response_frame, request_size, true,
+        &response_payload, &response_payload_size);
+    if (result != ROB_OK)
+    {
+        if (result == ROB_ERR_OUTCOME_UNKNOWN)
+        {
+            return finish_failed_publish(client, operation_id, result);
+        }
+        return result;
+    }
+
+    while (offset < data_length)
+    {
+        uint32_t remaining = data_length - offset;
+        uint32_t chunk_length = remaining > ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES
+                                    ? ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES
+                                    : remaining;
+        memset(&chunk_request, 0, sizeof(chunk_request));
+        chunk_request.operation_id = operation_id;
+        chunk_request.offset = offset;
+        chunk_request.data = data + offset;
+        chunk_request.data_length = chunk_length;
+        if (robusto_proxy_pubsub_encode_publish_chunk_request(
+                client->response_frame, client->response_frame_size,
+                &chunk_request, &request_size) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            result = ROB_FAIL;
+            break;
+        }
+        result = robusto_proxy_client_request(
+            client, ROBUSTO_PROXY_DOMAIN_PUBSUB,
+            ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_CHUNK,
+            client->response_frame, request_size, true,
+            &response_payload, &response_payload_size);
+        if (result != ROB_OK)
+        {
+            break;
+        }
+        offset += chunk_length;
+    }
+    if (result != ROB_OK)
+    {
+        return finish_failed_publish(client, operation_id, result);
+    }
+
+    commit_request.operation_id = operation_id;
+    if (robusto_proxy_pubsub_encode_publish_transfer_request(
+            client->response_frame, client->response_frame_size,
+            &commit_request) != ROBUSTO_PROXY_RESULT_OK)
+    {
+        return finish_failed_publish(client, operation_id, ROB_FAIL);
+    }
+    result = robusto_proxy_client_request(
+        client, ROBUSTO_PROXY_DOMAIN_PUBSUB,
+        ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH_COMMIT,
+        client->response_frame,
+        ROBUSTO_PROXY_PUBSUB_PUBLISH_TRANSFER_REQUEST_SIZE_BYTES, true,
+        &response_payload, &response_payload_size);
+    if (result == ROB_ERR_OUTCOME_UNKNOWN)
+    {
+        return finish_failed_publish(client, operation_id, result);
+    }
+    if (result != ROB_OK)
+    {
+        return result;
+    }
+    if (robusto_proxy_pubsub_decode_publish_response(
+            response_payload, response_payload_size, &response) !=
+        ROBUSTO_PROXY_RESULT_OK)
+    {
+        return ROB_ERR_PARSING_FAILED;
+    }
+    return ROB_OK;
+}
+
 rob_ret_val_t robusto_proxy_pubsub_publish(
     robusto_proxy_client_t *client,
     const char *topic_name,
@@ -256,8 +402,7 @@ rob_ret_val_t robusto_proxy_pubsub_publish(
     rob_ret_val_t result;
 
     if (client == NULL || topic_name == NULL ||
-        (data_length > 0U && data == NULL) ||
-        data_length > ROBUSTO_PROXY_PUBSUB_MAX_DATA_BYTES)
+        (data_length > 0U && data == NULL))
     {
         return ROB_ERR_INVALID_ARG;
     }
@@ -270,6 +415,10 @@ rob_ret_val_t robusto_proxy_pubsub_publish(
     if (topic_length == 0U || topic_length > ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES)
     {
         return ROB_ERR_INVALID_ARG;
+    }
+    if (data_length > ROBUSTO_PROXY_PUBSUB_MAX_INLINE_DATA_BYTES)
+    {
+        return publish_chunked(client, topic_name, topic_length, data, data_length);
     }
 
     memset(&request, 0, sizeof(request));

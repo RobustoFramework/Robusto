@@ -10,6 +10,11 @@ clock defaults are the qualified profile for Waveshare ESP32-P4-WIFI6. Change
 the P4 settings in **Robusto Configuration > Robusto Proxy > ESP SDIO
 transport** for another compatible ESP32-P4/ESP32-C6 design.
 
+The qualified P4 projects enable the ESP32-P4NRW32 package's 32 MiB PSRAM in
+16-line HEX mode at 200 MHz. PSRAM is registered with ESP-IDF's capability
+allocator, while standard `malloc()` remains internal. Buffers intended for
+PSRAM request `MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT` explicitly.
+
 ## Roles
 
 Both applications initialize Robusto normally. Their proxy configuration is

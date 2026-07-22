@@ -463,7 +463,15 @@ Do not deinitialize SDIO independently while proxy workers are running.
 
 - Topic names are 1 to 255 UTF-8 bytes, with no control characters.
 - Topic names are exact and have no wildcard syntax.
-- A publish payload is at most 3,824 bytes.
+- Publish payloads up to 3,824 bytes use one proxy frame. Larger publishes use
+    sequential 4,080-byte chunks and are reassembled in C6 internal SRAM before
+    local PubSub dispatch. The current image has about 290.2 KiB remaining at
+    build time, but the runtime limit is the C6's largest contiguous internal
+    8-bit heap block. If allocation fails, C6 returns `OUT_OF_MEMORY` to P4 before
+    accepting chunks.
+- Large-message support is a negotiated session capability, not an implicit
+    guarantee of PubSub v1. A peer without `PUBSUB_CHUNKED_PUBLISH` continues to
+    support inline publishes and returns `ROB_ERR_NOT_SUPPORTED` for larger data.
 - The low-memory protocol profile negotiates at most 16 remote subscriptions,
   but the P4 application storage may intentionally allow fewer.
 - DELIVERY ordering is FIFO per subscription.
