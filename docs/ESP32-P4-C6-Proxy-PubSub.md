@@ -17,6 +17,16 @@ Robusto contains the portable proxy, ESP raw-SDIO transport, P4 and C6
 applications, native contracts, and provisioning application. No sibling
 repository is required to build or use the solution.
 
+## Current project direction
+
+The actively maintained production direction is the ESP32-P4 to ESP32-C6
+one-bit SDIO binding documented in this guide, including Waveshare
+ESP32-P4-WIFI6 variants that route to ESP32-C6-MINI over SDIO.
+
+SPI transport is not part of the current qualified scope and is not required
+for this implementation. A future SPI binding remains optional exploratory
+work for other board families, not a dependency for this project.
+
 ## Qualified platform
 
 The production pair was qualified with:
