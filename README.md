@@ -30,6 +30,7 @@ More conceptual information:
 - [Architecture](https://github.com/RobustoFramework/Robusto/blob/main/docs/Architecture.md) 
 - [Concepts](https://github.com/RobustoFramework/Robusto/blob/main/docs/Concepts.md) 
 - [ESP32-P4/C6 Proxy PubSub](docs/ESP32-P4-C6-Proxy-PubSub.md)
+- [Waveshare ESP32-P4-WIFI6 proxy example](examples/proxy/esp32_p4_c6_sdio/README.md)
 
 The more technical documentation on features are in their README:s:
  - [Base functionality](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/base/README.md) 
@@ -40,6 +41,7 @@ The more technical documentation on features are in their README:s:
  - [Server](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/server/README.md)
  - [Sensor](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/sensor/README.md)
  - [Misc](https://github.com/RobustoFramework/Robusto/blob/main/components/robusto/misc/README.md)
+ - [Proxy](components/robusto/proxy/README.md)
 
 If you want to help out developing Robusto:
 - [Development](https://github.com/RobustoFramework/Robusto/blob/main/development/README.md)

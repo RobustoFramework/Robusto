@@ -1,0 +1,15 @@
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+
+#define C6_FIRMWARE_OFFSET ((size_t)@C6_FIRMWARE_OFFSET@U)
+#define C6_FIRMWARE_SIZE ((size_t)@C6_FIRMWARE_SIZE@U)
+
+static const uint8_t C6_FIRMWARE_SHA256[32] = {
+    @C6_FIRMWARE_SHA256_BYTES@
+};
+
+static const uint8_t C6_ELF_SHA256[32] = {
+    @C6_ELF_SHA256_BYTES@
+};

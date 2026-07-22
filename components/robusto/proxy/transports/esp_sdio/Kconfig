@@ -1,0 +1,46 @@
+menu "ESP SDIO transport"
+    depends on ROBUSTO_PROXY
+
+if IDF_TARGET_ESP32P4
+
+config ROBUSTO_PROXY_SDIO_P4_CLK_GPIO
+    int "SDIO clock GPIO"
+    range 0 63
+    default 18
+
+config ROBUSTO_PROXY_SDIO_P4_CMD_GPIO
+    int "SDIO command GPIO"
+    range 0 63
+    default 19
+
+config ROBUSTO_PROXY_SDIO_P4_DAT0_GPIO
+    int "SDIO DAT0 GPIO"
+    range 0 63
+    default 14
+
+config ROBUSTO_PROXY_SDIO_P4_DAT1_GPIO
+    int "SDIO DAT1 and interrupt GPIO"
+    range 0 63
+    default 15
+    help
+        DAT1 also carries the ESP32-C6 new-packet interrupt in one-bit mode.
+
+config ROBUSTO_PROXY_SDIO_P4_C6_RESET_GPIO
+    int "ESP32-C6 reset GPIO"
+    range 0 63
+    default 54
+
+config ROBUSTO_PROXY_SDIO_P4_CLOCK_KHZ
+    int "SDIO clock frequency (kHz)"
+    range 400 40000
+    default 10000
+
+endif
+
+if IDF_TARGET_ESP32C6
+
+comment "ESP32-C6 SDIO slave pins are fixed by the peripheral"
+
+endif
+
+endmenu

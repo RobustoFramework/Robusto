@@ -43,3 +43,6 @@ __pycache__
 /.config.*
 /Kconfig.*
 /sdkconfig*
+
+# Generated ESP-IDF example configuration
+/examples/**/sdkconfig

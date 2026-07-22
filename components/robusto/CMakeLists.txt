@@ -48,7 +48,33 @@ FILE(GLOB rob_sources
 "input/src/*.c"
 )
 
+if(IDF_TARGET STREQUAL "esp32p4")
+    list(APPEND rob_proxy_private_requirements
+        esp_app_format
+        esp_partition
+        esp_system
+        esp_driver_gpio
+        esp_driver_sdmmc
+        mbedtls
+        sdmmc
+        espressif__esp_serial_slave_link
+    )
+elseif(IDF_TARGET STREQUAL "esp32c6")
+    list(APPEND rob_proxy_private_requirements
+        app_update
+        esp_driver_sdio
+        esp_timer
+        mbedtls
+        nvs_flash
+    )
+endif()
+
 if(CONFIG_ROBUSTO_PROXY)
+    if((IDF_TARGET STREQUAL "esp32p4" OR IDF_TARGET STREQUAL "esp32c6") AND
+       CONFIG_ROBUSTO_PROXY_PROFILE_STANDARD)
+        message(FATAL_ERROR
+            "The ESP32-P4/ESP32-C6 SDIO proxy supports only the low-memory profile")
+    endif()
     list(APPEND rob_sources
         "proxy/src/robusto_proxy_control.c"
         "proxy/src/robusto_proxy_crc32.c"
@@ -56,7 +82,27 @@ if(CONFIG_ROBUSTO_PROXY)
         "proxy/src/robusto_proxy_inflight.c"
         "proxy/src/robusto_proxy_pubsub.c"
         "proxy/src/robusto_proxy_session.c"
+        "proxy/transports/rsd1/src/robusto_rsd1_protocol.c"
     )
+    if(IDF_TARGET STREQUAL "esp32p4")
+        list(APPEND rob_sources
+            "proxy/transports/esp_sdio/src/p4/robusto_proxy_sdio_host.c"
+            "proxy/transports/esp_sdio/src/p4/robusto_proxy_sdio.c"
+            "proxy/transports/esp_sdio/src/p4/robusto_c6_update_client.c"
+            "proxy/transports/esp_sdio/src/p4/robusto_proxy_sdio_c6_provisioning.c"
+        )
+    elseif(IDF_TARGET STREQUAL "esp32c6")
+        list(APPEND rob_sources
+            "proxy/transports/esp_sdio/src/c6/robusto_proxy_sdio_device.c"
+            "proxy/transports/esp_sdio/src/c6/robusto_proxy_sdio_c6.c"
+            "proxy/transports/esp_sdio/src/c6/robusto_c6_proxy_server.c"
+            "proxy/transports/esp_sdio/src/c6/robusto_c6_pubsub_backend.c"
+            "proxy/transports/esp_sdio/src/c6/robusto_c6_control_frontend.c"
+            "proxy/transports/esp_sdio/src/c6/update/robusto_c6_updater.c"
+            "proxy/transports/esp_sdio/src/c6/update/robusto_c6_recovery.c"
+            "proxy/transports/esp_sdio/src/c6/robusto_c6_proxy_binding.c"
+        )
+    endif()
     if(CONFIG_ROBUSTO_PROXY_CLIENT)
         list(APPEND rob_sources
             "proxy/src/robusto_proxy_client.c"
@@ -73,7 +119,12 @@ endif()
 
 idf_component_register(
     SRCS ${rob_sources} 
-    INCLUDE_DIRS . include proxy/include
+    INCLUDE_DIRS . include proxy/include proxy/transports/rsd1/include
+    PRIV_INCLUDE_DIRS
+        proxy/transports/esp_sdio/src/common
+        proxy/transports/esp_sdio/src/p4
+        proxy/transports/esp_sdio/src/c6
+        proxy/transports/esp_sdio/src/c6/update
     
     REQUIRES 
         # Base
@@ -88,5 +139,5 @@ idf_component_register(
         esp_lcd
         # UMTS (note the esp_modem dependency)
         esp_netif esp_modem esp_http_client esp-tls 
-                                                                      
+    PRIV_REQUIRES ${rob_proxy_private_requirements}
 )

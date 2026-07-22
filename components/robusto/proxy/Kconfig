@@ -9,10 +9,10 @@ menu "Robusto Proxy"
         depends on ROBUSTO_PROXY
 
         config ROBUSTO_PROXY_CLIENT
-            bool "Controller/client"
+            bool "Delegating controller/client"
 
         config ROBUSTO_PROXY_SERVER
-            bool "Delegate/server"
+            bool "Delegated instance/server"
 
     endchoice
 
@@ -30,8 +30,15 @@ menu "Robusto Proxy"
             bool "Low memory"
 
         config ROBUSTO_PROXY_PROFILE_STANDARD
-            bool "Standard"
+            bool "Standard (not implemented for ESP SDIO)"
+            help
+                The portable standard profile is defined and native-tested,
+                but the ESP32-P4/ESP32-C6 SDIO runtime currently allocates only
+                the low-memory profile capacities. Selecting this profile for
+                either ESP SDIO target stops configuration with an error.
 
     endchoice
+
+    orsource "transports/esp_sdio/Kconfig"
 
 endmenu
