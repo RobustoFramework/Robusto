@@ -17,6 +17,10 @@ Robusto contains the portable proxy, ESP raw-SDIO transport, P4 and C6
 applications, native contracts, and provisioning application. No sibling
 repository is required to build or use the solution.
 
+Qualified example project on GitHub:
+
+https://github.com/RobustoFramework/Robusto/tree/main/examples/proxy/esp32_p4_c6_sdio
+
 ## Current project direction
 
 The actively maintained production direction is the ESP32-P4 to ESP32-C6
@@ -361,6 +365,133 @@ does not execute locally.
 application chooses the fixed capacity and owns the array. The production
 example uses four slots, matching its four-entry DELIVERY event queue.
 
+## Migrate an existing S3 subscriber to P4 + C6
+
+Use this sequence when moving an existing Central subscriber role from
+ESP32-S3 to the ESP32-P4 controller with an ESP32-C6 delegated runtime.
+
+### 1. Inventory the existing S3 subscriber behavior
+
+Collect and record the current behavior before modifying code:
+
+- peer identity and timing settings (name, heartbeat, receipt timings)
+- media settings (for example ESP-NOW PMK, LMK, channel, mode)
+- subscriber topic names and callback parse expectations
+- startup assumptions for "ready" state
+
+Create a migration table with setting name, old value, new owner (P4 or C6),
+and migration action.
+
+### 2. Define the runtime role split
+
+Document ownership before implementation:
+
+- P4 owns application logic, proxy client runtime, and remote PubSub calls
+- C6 owns proxy server runtime, local PubSub backend, and migrated media role
+
+Do not add a fallback path that reroutes proxy failures to local P4 PubSub.
+
+### 3. Port Central code to proxy client APIs on P4
+
+Keep the required lifecycle order:
+
+1. allocate fixed proxy subscription storage
+2. register proxy SDIO binding
+3. initialize Robusto
+4. wait for HELLO-negotiated readiness
+5. subscribe through `robusto_proxy_pubsub_subscribe()`
+6. process DELIVERY callbacks
+
+Treat the proxy as ready only when `robusto_proxy_pubsub_is_ready(...)`
+returns true.
+
+Handle all non-OK return values explicitly:
+
+- `ROB_ERR_NOT_READY`: session state issue, not a local-fallback trigger
+- `ROB_ERR_OUTCOME_UNKNOWN`: mutation result is ambiguous
+
+### 4. Mirror the S3 media role on C6
+
+Set equivalent C6 identity and media behavior for existing peers:
+
+- peer identity and timing behavior required by the current ecosystem
+- media role details used previously on S3 (for example ESP-NOW keys/channel)
+
+Do not assume defaults match prior S3 behavior.
+
+For the current ESP SDIO path on ESP32-P4/ESP32-C6, use
+`CONFIG_ROBUSTO_PROXY_PROFILE_LOW_MEMORY=y`. The standard profile is not
+implemented for this target pair.
+
+### 5. Build and provision in strict order
+
+Order is mandatory:
+
+1. build C6 delegate
+2. build P4 provisioner with that exact C6 image packaged
+3. flash+monitor provisioner on P4 (install/confirm C6 over SDIO)
+4. flash+monitor P4 Central application
+
+Command pattern:
+
+```console
+idf.py -C <c6_delegate_project> set-target esp32c6
+idf.py -C <c6_delegate_project> build
+idf.py -C <provisioning_project> set-target esp32p4
+idf.py -C <provisioning_project> -D "C6_FIRMWARE=<absolute_path_to_c6_bin>" build
+idf.py -C <provisioning_project> -p <P4_PORT> flash monitor
+idf.py -C <p4_central_project> set-target esp32p4
+idf.py -C <p4_central_project> -p <P4_PORT> flash monitor
+```
+
+### 6. Validate build-time configuration before runtime tests
+
+P4 configuration must include:
+
+- proxy client role enabled
+- proxy PubSub service enabled
+- low-memory proxy profile selected
+- expected SDIO pin/clock values
+
+C6 configuration must include:
+
+- proxy server role enabled
+- PubSub server enabled
+- expected media settings for the migrated role
+
+### 7. Run acceptance gates from logs
+
+C6 gates:
+
+- runlevel startup completes
+- proxy server starts
+- media initialization confirms active state
+- proxy backend logs subscription activity when P4 subscribes
+
+P4 gates:
+
+- proxy client starts and exchanges succeed
+- PubSub ready state is reached
+- subscription succeeds
+- Central receives expected Collector payloads
+
+Data-path gates:
+
+- effective payload behavior matches pre-migration baseline
+- no hidden local fallback path exists in subscriber logic
+
+### 8. Use staged failure isolation
+
+If Central does not receive data, isolate in order:
+
+1. C6 boot and media startup
+2. C6 proxy server startup
+3. P4 HELLO and readiness
+4. subscription request success
+5. delivery callback execution and parsing
+
+Preserve full logs before changing configuration.
+
 ## Subscribe and receive DELIVERY events
 
 The callback runs on the P4 proxy event task, outside the SDIO ISR, transport
@@ -530,3 +661,24 @@ ambiguous. Preserve it as a distinct application state.
 If C6 provisioning stops, preserve the complete log, current C6 identity, and
 both build hashes. Do not erase state or retry with a different artifact until
 the failed gate is understood.
+
+### Subscriber migration checklist and diagnostics
+
+When validating an S3-to-P4+C6 subscriber migration:
+
+- distinguish proxy-ready from media-ready in logs
+- do not map `ROB_ERR_NOT_READY` to local fallback behavior
+- verify C6 media settings match peer requirements (for example ESP-NOW keys/channel)
+- verify subscription success before debugging callback parsing
+- verify payload expectations against pre-migration baseline data
+
+## Acceptance checklist for production sign-off
+
+All gates should pass before production sign-off:
+
+- C6 image is provisioned through the P4 workflow and identity-confirmed
+- C6 media role is active with expected configuration
+- P4 proxy client reaches ready state
+- expected subscriptions are installed
+- expected payload flow is observed at Central
+- no proxy-to-local fallback path is used

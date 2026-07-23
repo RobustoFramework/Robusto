@@ -70,5 +70,11 @@ python development/proxy/test/run_proxy_contracts.py
 This command is the provider-independent proxy CI gate. It requires Python and
 `cc`, `gcc`, or `clang`; set `CC` to select another compiler executable.
 
-See `docs/ESP32-P4-C6-Proxy-PubSub.md` for the complete build, provisioning,
-update, and recovery procedure.
+See the proxy PubSub guide on GitHub for the complete build, provisioning,
+update, and recovery procedure:
+
+https://github.com/RobustoFramework/Robusto/blob/main/docs/ESP32-P4-C6-Proxy-PubSub.md
+
+See the qualified ESP32-P4/ESP32-C6 SDIO example on GitHub:
+
+https://github.com/RobustoFramework/Robusto/tree/main/examples/proxy/esp32_p4_c6_sdio

@@ -65,6 +65,11 @@ example is not yet a complete stock-board installation path. See
 for the complete procedure, the optional Waveshare C6 UART pad wiring, the
 recovery boundary, and requirements for other P4 Wi-Fi coprocessor boards.
 
+Canonical GitHub links:
+
+- Guide: https://github.com/RobustoFramework/Robusto/blob/main/docs/ESP32-P4-C6-Proxy-PubSub.md
+- Example: https://github.com/RobustoFramework/Robusto/tree/main/examples/proxy/esp32_p4_c6_sdio
+
 ## Native contracts
 
 Run all proxy contracts from the Robusto repository root with Python and a
