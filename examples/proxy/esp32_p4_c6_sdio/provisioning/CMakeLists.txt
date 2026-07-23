@@ -4,7 +4,7 @@ set(C6_FINAL_FIRMWARE
     "${CMAKE_CURRENT_LIST_DIR}/../c6_delegate/build/robusto_c6_delegate.bin"
     CACHE FILEPATH "Built final C6 application image")
 set(C6_BOOTSTRAP_FIRMWARE
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../build-bootstrap/robusto_c6_delegate.bin"
+    "${CMAKE_CURRENT_LIST_DIR}/../c6_delegate/build-bootstrap/robusto_c6_delegate.bin"
     CACHE FILEPATH "Built factory-migration bootstrap C6 application image")
 foreach(firmware IN ITEMS C6_FINAL_FIRMWARE C6_BOOTSTRAP_FIRMWARE)
 if(NOT EXISTS "${${firmware}}")

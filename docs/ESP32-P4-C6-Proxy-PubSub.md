@@ -185,19 +185,23 @@ PowerShell:
 $env:ESP_IDF_VERSION = "6.0"
 ```
 
-Run commands in this guide from the Robusto repository root. Build the final
-C6 delegate and the factory-migration bootstrap from the same project:
+Define the absolute C6 project path before building. `idf.py -C` selects the
+project, but a relative `-B` path is resolved from the shell's working
+directory. Using project-local absolute build paths keeps both artifacts under
+`c6_delegate` regardless of the caller's working directory:
 
-```console
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate -B build-bootstrap -D "ROBUSTO_C6_BOOTSTRAP=ON" build
+```powershell
+$robustoRoot = (Resolve-Path "<path-to-Robusto>").Path
+$c6Delegate = Join-Path $robustoRoot "examples/proxy/esp32_p4_c6_sdio/c6_delegate"
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build") build
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build-bootstrap") -D "ROBUSTO_C6_BOOTSTRAP=ON" build
 ```
 
 The application images are:
 
 ```text
 examples/proxy/esp32_p4_c6_sdio/c6_delegate/build/robusto_c6_delegate.bin
-build-bootstrap/robusto_c6_delegate.bin
+examples/proxy/esp32_p4_c6_sdio/c6_delegate/build-bootstrap/robusto_c6_delegate.bin
 ```
 
 The project consumes Robusto through normal component and Kconfig selection:
@@ -249,12 +253,17 @@ image:
 - SHA-256 over the exact C6 application file, checked before and after transfer
 - the C6 image's embedded ELF SHA-256, checked before confirmation
 
-Build both C6 variants first, then build the provisioner:
+Build both C6 variants first, then build the provisioner. These commands use
+absolute project-local build directories and are independent of the shell's
+working directory:
 
-```console
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate -B build-bootstrap -D "ROBUSTO_C6_BOOTSTRAP=ON" build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning build
+```powershell
+$robustoRoot = (Resolve-Path "<path-to-Robusto>").Path
+$c6Delegate = Join-Path $robustoRoot "examples/proxy/esp32_p4_c6_sdio/c6_delegate"
+$provisioning = Join-Path $robustoRoot "examples/proxy/esp32_p4_c6_sdio/provisioning"
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build") build
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build-bootstrap") -D "ROBUSTO_C6_BOOTSTRAP=ON" build
+idf.py -C $provisioning -B (Join-Path $provisioning "build") build
 ```
 
 To package other built C6 images, set both inputs during configure:

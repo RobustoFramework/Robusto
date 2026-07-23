@@ -39,25 +39,31 @@ the meaningful difference:
   qualified one-bit raw SDIO drivers.
 
 Use ESP-IDF v6.0.2 and activate its environment using Espressif's instructions
-for your operating system. Run the following commands from the Robusto
-repository root. `idf.py -C` selects a project without changing the shell's
-working directory. ESP Hosted and ESP Wi-Fi Remote select their ESP-IDF 6.0
-Kconfig files through `ESP_IDF_VERSION`; set that compatibility-series value
-to `6.0`, not the full installed release `6.0.2`, before configuring the P4
-projects.
+for your operating system. `idf.py -C` selects a project, but a relative `-B`
+path is still resolved from the shell's working directory. Define the absolute
+example path so every artifact remains under its selected project regardless
+of the caller's working directory. ESP Hosted and ESP Wi-Fi Remote select
+their ESP-IDF 6.0 Kconfig files through `ESP_IDF_VERSION`; set that
+compatibility-series value to `6.0`, not the full installed release `6.0.2`,
+before configuring the P4 projects.
 
 ```powershell
 $env:ESP_IDF_VERSION = "6.0"
+$robustoRoot = (Resolve-Path "<path-to-Robusto>").Path
+$example = Join-Path $robustoRoot "examples/proxy/esp32_p4_c6_sdio"
+$c6Delegate = Join-Path $example "c6_delegate"
+$p4Controller = Join-Path $example "p4_controller"
+$provisioning = Join-Path $example "provisioning"
 ```
 
 Build the final delegate, the factory-migration bootstrap, and then the P4
 projects:
 
-```console
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate -B build-bootstrap -D "ROBUSTO_C6_BOOTSTRAP=ON" build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/p4_controller build
-idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning build
+```powershell
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build") build
+idf.py -C $c6Delegate -B (Join-Path $c6Delegate "build-bootstrap") -D "ROBUSTO_C6_BOOTSTRAP=ON" build
+idf.py -C $p4Controller -B (Join-Path $p4Controller "build") build
+idf.py -C $provisioning -B (Join-Path $provisioning "build") build
 ```
 
 The provisioning configure step derives exact-file and embedded ELF SHA-256
