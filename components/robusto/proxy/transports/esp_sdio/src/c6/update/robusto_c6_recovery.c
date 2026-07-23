@@ -114,16 +114,29 @@ esp_err_t robusto_c6_recovery_boot_guard(void)
         return ESP_ERR_INVALID_STATE;
     }
     esp_err_t error = load_confirmation(&record, &present);
-    if (error != ESP_OK || !present || record.state != C6_CONFIRM_STATE_ARMED ||
+    if (error != ESP_OK) {
+        return error;
+    }
+    if (!present ||
         memcmp(record.build_sha256, description->app_elf_sha256,
                sizeof(record.build_sha256)) != 0) {
-        return error;
+        return store_confirmation(C6_CONFIRM_STATE_ARMED,
+                                  description->app_elf_sha256);
+    }
+    if (record.state != C6_CONFIRM_STATE_ARMED) {
+        return ESP_OK;
     }
     const esp_partition_t *previous = esp_ota_get_next_update_partition(running);
     if (previous == NULL || previous == running) {
         return ESP_ERR_NOT_FOUND;
     }
     error = esp_ota_set_boot_partition(previous);
+    if (error == ESP_ERR_OTA_VALIDATE_FAILED) {
+        ESP_LOGW(TAG,
+                 "Rollback target subtype 0x%02x is invalid; keeping current recovery image",
+                 previous->subtype);
+        return ESP_OK;
+    }
     if (error != ESP_OK) {
         return error;
     }

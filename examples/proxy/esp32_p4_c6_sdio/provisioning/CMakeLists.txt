@@ -1,51 +1,77 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(C6_FIRMWARE
+set(C6_FINAL_FIRMWARE
     "${CMAKE_CURRENT_LIST_DIR}/../c6_delegate/build/robusto_c6_delegate.bin"
-    CACHE FILEPATH "Built C6 application image to provision")
-if(NOT EXISTS "${C6_FIRMWARE}")
+    CACHE FILEPATH "Built final C6 application image")
+set(C6_BOOTSTRAP_FIRMWARE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../../build-bootstrap/robusto_c6_delegate.bin"
+    CACHE FILEPATH "Built factory-migration bootstrap C6 application image")
+foreach(firmware IN ITEMS C6_FINAL_FIRMWARE C6_BOOTSTRAP_FIRMWARE)
+if(NOT EXISTS "${${firmware}}")
     message(FATAL_ERROR
-        "Build c6_delegate first or set C6_FIRMWARE to its application image")
+        "Build both C6 images first or set ${firmware} explicitly")
 endif()
+endforeach()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-             "${C6_FIRMWARE}")
+             "${C6_FINAL_FIRMWARE}" "${C6_BOOTSTRAP_FIRMWARE}")
 
-file(SIZE "${C6_FIRMWARE}" C6_FIRMWARE_SIZE)
-file(SHA256 "${C6_FIRMWARE}" C6_FIRMWARE_SHA256)
-set(C6_FIRMWARE_OFFSET 64)
-set(C6_FIRMWARE_PACKAGED
-    "${CMAKE_CURRENT_BINARY_DIR}/robusto_c6_delegate.container.bin")
+set(C6_BOOTSTRAP_CONTAINER_OFFSET 0)
+set(C6_BOOTSTRAP_OFFSET 64)
+set(C6_FINAL_CONTAINER_OFFSET 0x60000)
+math(EXPR C6_FINAL_OFFSET "${C6_FINAL_CONTAINER_OFFSET} + 64")
+set(C6_FIRMWARE_PARTITION_SIZE 0x150000)
+set(C6_FIRMWARE_PACKAGED "${CMAKE_CURRENT_BINARY_DIR}/robusto_c6_bundle.bin")
+file(WRITE "${C6_FIRMWARE_PACKAGED}" "")
+foreach(kind IN ITEMS BOOTSTRAP FINAL)
+file(SIZE "${C6_${kind}_FIRMWARE}" C6_${kind}_SIZE)
+math(EXPR C6_${kind}_END
+     "${C6_${kind}_CONTAINER_OFFSET} + 64 + ${C6_${kind}_SIZE}")
+if(kind STREQUAL "BOOTSTRAP" AND
+   C6_BOOTSTRAP_END GREATER C6_FINAL_CONTAINER_OFFSET)
+    message(FATAL_ERROR
+        "Bootstrap C6 container overlaps final container offset")
+elseif(kind STREQUAL "FINAL" AND
+       C6_FINAL_END GREATER C6_FIRMWARE_PARTITION_SIZE)
+    message(FATAL_ERROR
+        "Final C6 container exceeds slave_fw partition")
+endif()
+file(SHA256 "${C6_${kind}_FIRMWARE}" C6_${kind}_SHA256)
+set(container "${CMAKE_CURRENT_BINARY_DIR}/robusto_c6_${kind}.container.bin")
 execute_process(
     COMMAND "${PYTHON}"
         "${CMAKE_CURRENT_LIST_DIR}/package_c6_firmware.py"
-        --input "${C6_FIRMWARE}"
-        --output "${C6_FIRMWARE_PACKAGED}"
-        --size "${C6_FIRMWARE_SIZE}"
-        --sha256 "${C6_FIRMWARE_SHA256}"
+        --input "${C6_${kind}_FIRMWARE}"
+        --output "${container}"
+        --size "${C6_${kind}_SIZE}"
+        --sha256 "${C6_${kind}_SHA256}"
+        --bundle "${C6_FIRMWARE_PACKAGED}"
+        --offset "${C6_${kind}_CONTAINER_OFFSET}"
     RESULT_VARIABLE package_result
     ERROR_VARIABLE package_error
 )
 if(NOT package_result EQUAL 0)
-    message(FATAL_ERROR "Cannot package C6 image: ${package_error}")
+    message(FATAL_ERROR "Cannot package ${kind} C6 image: ${package_error}")
 endif()
 execute_process(
-    COMMAND "${PYTHON}" -m esptool image-info "${C6_FIRMWARE}"
+    COMMAND "${PYTHON}" -m esptool image-info "${C6_${kind}_FIRMWARE}"
     RESULT_VARIABLE image_info_result
     OUTPUT_VARIABLE image_info
     ERROR_VARIABLE image_info_error
 )
 if(NOT image_info_result EQUAL 0)
-    message(FATAL_ERROR "Cannot inspect C6 image: ${image_info_error}")
+    message(FATAL_ERROR "Cannot inspect ${kind} C6 image: ${image_info_error}")
 endif()
 string(REGEX MATCH "ELF file SHA256: [0-9a-fA-F]+"
     elf_sha_match "${image_info}")
-string(REPLACE "ELF file SHA256: " "" C6_ELF_SHA256 "${elf_sha_match}")
-string(LENGTH "${C6_ELF_SHA256}" C6_ELF_SHA256_LENGTH)
-if(NOT C6_ELF_SHA256_LENGTH EQUAL 64)
-    message(FATAL_ERROR "C6 image does not contain a 32-byte ELF SHA-256")
+string(REPLACE "ELF file SHA256: " "" C6_${kind}_ELF_SHA256 "${elf_sha_match}")
+string(LENGTH "${C6_${kind}_ELF_SHA256}" elf_sha_length)
+if(NOT elf_sha_length EQUAL 64)
+    message(FATAL_ERROR "${kind} C6 image lacks a 32-byte ELF SHA-256")
 endif()
+endforeach()
 
-foreach(hash_name IN ITEMS C6_FIRMWARE_SHA256 C6_ELF_SHA256)
+foreach(hash_name IN ITEMS C6_BOOTSTRAP_SHA256 C6_BOOTSTRAP_ELF_SHA256
+                           C6_FINAL_SHA256 C6_FINAL_ELF_SHA256)
     string(REGEX MATCHALL "[0-9a-fA-F][0-9a-fA-F]" hash_bytes
            "${${hash_name}}")
     set(${hash_name}_BYTES "")

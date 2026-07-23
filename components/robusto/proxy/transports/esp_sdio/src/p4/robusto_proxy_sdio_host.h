@@ -6,6 +6,7 @@
 #include "esp_err.h"
 
 esp_err_t robusto_proxy_sdio_host_init(void);
+esp_err_t robusto_proxy_sdio_host_init_without_reset(void);
 esp_err_t robusto_proxy_sdio_host_send(uint32_t message_id,
                                     const uint8_t *payload,
                                     size_t payload_size,

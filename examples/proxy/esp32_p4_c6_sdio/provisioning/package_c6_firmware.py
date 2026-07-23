@@ -15,6 +15,8 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--size", required=True, type=int)
     parser.add_argument("--sha256", required=True)
+    parser.add_argument("--bundle", type=Path)
+    parser.add_argument("--offset", type=lambda value: int(value, 0), default=0)
     arguments = parser.parse_args()
 
     payload = arguments.input.read_bytes()
@@ -39,6 +41,11 @@ def main() -> None:
             f"Container header size is {len(header)}, expected {HEADER_SIZE}"
         )
     arguments.output.write_bytes(header + payload)
+    if arguments.bundle is not None:
+        mode = "r+b" if arguments.bundle.exists() else "w+b"
+        with arguments.bundle.open(mode) as bundle:
+            bundle.seek(arguments.offset)
+            bundle.write(header + payload)
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ and measured.
 | Portable proxy and RSD1 | Implemented and native-tested |
 | ESP32-P4/ESP32-C6 one-bit SDIO | Hardware-qualified v1 binding |
 | Generation-6 P4-driven update | Hardware-qualified |
-| Stock/factory C6 bootstrap | Not integrated into the generalized example |
+| Stock/factory C6 bootstrap | Integrated and build-validated; hardware qualification pending |
 | Other P4/C6 SDIO boards | Requires board-specific qualification |
 | SPI or UART proxy transport | Not implemented |
 | Non-C6 delegated runtime | Not implemented |

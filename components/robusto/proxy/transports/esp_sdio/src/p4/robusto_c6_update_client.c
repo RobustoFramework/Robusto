@@ -8,17 +8,53 @@
 
 #define UPDATE_TIMEOUT_MS 30000U
 #define UPDATE_TRANSACTION_ID 0x52505258U
+#define MAX_UNEXPECTED_RESPONSES 32U
 
 static const char *TAG = "c6_update_client";
 static uint8_t request_buffer[sizeof(robusto_c6_update_request_t) +
                               ROBUSTO_C6_UPDATE_MAX_CHUNK_SIZE];
+static uint8_t response_buffer[ROBUSTO_C6_UPDATE_MAX_CHUNK_SIZE];
+
+static esp_err_t receive_expected(uint32_t expected_message_id,
+                                  void *response,
+                                  size_t expected_response_size)
+{
+    for (uint32_t attempt = 0U; attempt < MAX_UNEXPECTED_RESPONSES; ++attempt) {
+        uint32_t message_id = 0U;
+        size_t response_size = 0U;
+        esp_err_t error = robusto_proxy_sdio_host_receive(
+            &message_id, response_buffer, sizeof(response_buffer),
+            &response_size, UPDATE_TIMEOUT_MS);
+
+        if (error != ESP_OK) {
+            return error;
+        }
+        if (message_id != expected_message_id) {
+            ESP_LOGW(TAG,
+                     "Discard queued response msg=0x%08lx size=%u while waiting for 0x%08lx",
+                     (unsigned long)message_id, (unsigned int)response_size,
+                     (unsigned long)expected_message_id);
+            continue;
+        }
+        if (response_size != expected_response_size) {
+            ESP_LOGE(TAG,
+                     "Response 0x%08lx size=%u expected=%u",
+                     (unsigned long)message_id, (unsigned int)response_size,
+                     (unsigned int)expected_response_size);
+            return ESP_ERR_INVALID_RESPONSE;
+        }
+        memcpy(response, response_buffer, response_size);
+        return ESP_OK;
+    }
+    ESP_LOGE(TAG, "Too many queued responses while waiting for 0x%08lx",
+             (unsigned long)expected_message_id);
+    return ESP_ERR_INVALID_RESPONSE;
+}
 
 static esp_err_t exchange_update(const robusto_c6_update_request_t *request,
                                  const uint8_t *data,
                                  robusto_c6_update_response_t *response)
 {
-    uint32_t message_id = 0U;
-    size_t response_size = 0U;
     size_t request_size = sizeof(*request) + request->data_size;
 
     if (request == NULL || response == NULL ||
@@ -35,21 +71,26 @@ static esp_err_t exchange_update(const robusto_c6_update_request_t *request,
     if (error != ESP_OK) {
         return error;
     }
-    error = robusto_proxy_sdio_host_receive(
-        &message_id, (uint8_t *)response, sizeof(*response), &response_size,
-        UPDATE_TIMEOUT_MS);
+    error = receive_expected(ROBUSTO_C6_UPDATE_RESPONSE_MSG_ID, response,
+                             sizeof(*response));
     if (error != ESP_OK) {
         return error;
     }
-    if (message_id != ROBUSTO_C6_UPDATE_RESPONSE_MSG_ID ||
-        response_size != sizeof(*response) ||
-        response->magic != ROBUSTO_C6_UPDATE_MAGIC ||
+    if (response->magic != ROBUSTO_C6_UPDATE_MAGIC ||
         response->version != ROBUSTO_C6_UPDATE_VERSION ||
         response->command != request->command ||
         response->transaction_id != request->transaction_id ||
         response->generation != ROBUSTO_C6_UPDATE_GENERATION_CURRENT ||
         response->updater_revision != ROBUSTO_C6_UPDATER_REVISION_CURRENT ||
         response->reserved != 0U) {
+        ESP_LOGE(TAG,
+                 "Invalid update response: magic=0x%08lx version=%u command=%u/%u transaction=0x%08lx/0x%08lx generation=%u revision=%u reserved=%u",
+                 (unsigned long)response->magic, response->version,
+                 response->command, request->command,
+                 (unsigned long)response->transaction_id,
+                 (unsigned long)request->transaction_id,
+                 response->generation, response->updater_revision,
+                 response->reserved);
         return ESP_ERR_INVALID_RESPONSE;
     }
     return response->status;
@@ -65,9 +106,6 @@ static esp_err_t exchange_identity(
         .version = ROBUSTO_C6_RECOVERY_IDENTITY_VERSION,
         .command = command,
     };
-    uint32_t message_id = 0U;
-    size_t response_size = 0U;
-
     if (identity == NULL ||
         (command == ROBUSTO_C6_RECOVERY_IDENTITY_COMMAND_CONFIRM &&
          build_sha256 == NULL)) {
@@ -83,15 +121,12 @@ static esp_err_t exchange_identity(
     if (error != ESP_OK) {
         return error;
     }
-    error = robusto_proxy_sdio_host_receive(
-        &message_id, (uint8_t *)identity, sizeof(*identity), &response_size,
-        UPDATE_TIMEOUT_MS);
+    error = receive_expected(ROBUSTO_C6_RECOVERY_IDENTITY_RECORD_MSG_ID,
+                             identity, sizeof(*identity));
     if (error != ESP_OK) {
         return error;
     }
-    if (message_id != ROBUSTO_C6_RECOVERY_IDENTITY_RECORD_MSG_ID ||
-        response_size != sizeof(*identity) ||
-        identity->magic != ROBUSTO_C6_RECOVERY_IDENTITY_MAGIC ||
+    if (identity->magic != ROBUSTO_C6_RECOVERY_IDENTITY_MAGIC ||
         identity->version != ROBUSTO_C6_RECOVERY_IDENTITY_VERSION ||
         identity->generation != ROBUSTO_C6_UPDATE_GENERATION_CURRENT ||
         identity->protocol_revision != ROBUSTO_C6_RECOVERY_PROTOCOL_REVISION ||

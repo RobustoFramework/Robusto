@@ -3,7 +3,12 @@ cmake_minimum_required(VERSION 3.16)
 set(EXTRA_COMPONENT_DIRS
     "../../../../components/robusto"
 )
-set(PROJECT_VER "robusto-c6-delegate")
+option(ROBUSTO_C6_BOOTSTRAP "Build the factory-migration bootstrap identity" OFF)
+if(ROBUSTO_C6_BOOTSTRAP)
+    set(PROJECT_VER "robusto-c6-bootstrap")
+else()
+    set(PROJECT_VER "robusto-c6-delegate")
+endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(robusto_c6_delegate)

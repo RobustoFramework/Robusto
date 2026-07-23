@@ -16,4 +16,9 @@ typedef struct robusto_proxy_sdio_c6_provisioning_config {
 
 esp_err_t robusto_proxy_sdio_c6_provision(
     const robusto_proxy_sdio_c6_provisioning_config_t *config,
-    bool *restart_required);
+    bool *restart_required,
+    bool *identity_received);
+
+esp_err_t robusto_proxy_sdio_c6_confirm_after_activation(
+    const robusto_proxy_sdio_c6_provisioning_config_t *config,
+    bool *identity_received);

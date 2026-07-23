@@ -46,6 +46,12 @@ robusto_rsd1_result_t robusto_rsd1_decode(
     size_t buffer_size,
     robusto_rsd1_packet_view_t *packet);
 
+robusto_rsd1_result_t robusto_rsd1_decode_prefix(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_rsd1_packet_view_t *packet,
+    size_t *packet_size);
+
 #ifdef __cplusplus
 }
 #endif

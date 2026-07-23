@@ -25,6 +25,7 @@ build
 build-proxy-integration/
 build-proxy-pubsub-test/
 build-proxy-server/
+build-bootstrap/
 
 # ESP-IDF dependencies
 managed_components

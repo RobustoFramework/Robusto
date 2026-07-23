@@ -24,6 +24,7 @@ typedef struct robusto_proxy_sdio_host_state {
     sdmmc_card_t card;
     essl_handle_t link;
     uint32_t next_sequence;
+    size_t buffered_receive_size;
     bool host_initialized;
     bool receive_interrupt_registered;
 } robusto_proxy_sdio_host_state_t;
@@ -161,7 +162,7 @@ static esp_err_t initialize_card(void)
     return error;
 }
 
-esp_err_t robusto_proxy_sdio_host_init(void)
+static esp_err_t initialize_host(bool reset_before_connect)
 {
     sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
     essl_sdio_config_t link_config;
@@ -171,9 +172,11 @@ esp_err_t robusto_proxy_sdio_host_init(void)
         return ESP_ERR_INVALID_STATE;
     }
 
-    error = reset_c6();
-    if (error != ESP_OK) {
-        return error;
+    if (reset_before_connect) {
+        error = reset_c6();
+        if (error != ESP_OK) {
+            return error;
+        }
     }
     error = sdmmc_host_init();
     if (error != ESP_OK) {
@@ -224,6 +227,16 @@ cleanup:
     return error;
 }
 
+esp_err_t robusto_proxy_sdio_host_init(void)
+{
+    return initialize_host(true);
+}
+
+esp_err_t robusto_proxy_sdio_host_init_without_reset(void)
+{
+    return initialize_host(false);
+}
+
 esp_err_t robusto_proxy_sdio_host_send(uint32_t message_id,
                                     const uint8_t *payload,
                                     size_t payload_size,
@@ -263,6 +276,7 @@ esp_err_t robusto_proxy_sdio_host_receive(uint32_t *message_id,
                                        uint32_t timeout_ms)
 {
     robusto_rsd1_packet_view_t packet;
+    size_t packet_size = 0U;
     uint32_t interrupt_raw = 0U;
     uint32_t interrupt_status = 0U;
     size_t received_size = sizeof(receive_packet);
@@ -276,57 +290,79 @@ esp_err_t robusto_proxy_sdio_host_receive(uint32_t *message_id,
         return ESP_ERR_INVALID_ARG;
     }
 
-    error = wait_for_receive_interrupt(timeout_ms);
-    if (error != ESP_OK) {
-        if (error != ESP_ERR_TIMEOUT) {
-            ESP_LOGE(TAG, "SDIO receive wait interrupt: %s",
+    if (state.buffered_receive_size == 0U) {
+        error = wait_for_receive_interrupt(timeout_ms);
+        if (error != ESP_OK) {
+            if (error != ESP_ERR_TIMEOUT) {
+                ESP_LOGE(TAG, "SDIO receive wait interrupt: %s",
+                         esp_err_to_name(error));
+            }
+            return error;
+        }
+        error = essl_get_intr(state.link, &interrupt_raw, &interrupt_status,
+                              timeout_ms);
+        if (error != ESP_OK) {
+            ESP_LOGE(TAG, "SDIO receive read interrupt: %s",
                      esp_err_to_name(error));
+            return error;
         }
-        return error;
-    }
-    error = essl_get_intr(state.link, &interrupt_raw, &interrupt_status,
-                          timeout_ms);
-    if (error != ESP_OK) {
-        ESP_LOGE(TAG, "SDIO receive read interrupt: %s",
-                 esp_err_to_name(error));
-        return error;
-    }
-    error = essl_clear_intr(state.link, interrupt_raw, timeout_ms);
-    if (error != ESP_OK) {
-        ESP_LOGE(TAG,
-                 "SDIO receive clear interrupt raw=0x%08lx status=0x%08lx: %s",
-                 (unsigned long)interrupt_raw,
-                 (unsigned long)interrupt_status, esp_err_to_name(error));
-        return error;
-    }
-    if ((interrupt_status & ESSL_SDIO_DEF_ESP32C6.new_packet_intr_mask) == 0U) {
-        return ESP_ERR_NOT_FOUND;
-    }
+        error = essl_clear_intr(state.link, interrupt_raw, timeout_ms);
+        if (error != ESP_OK) {
+            ESP_LOGE(TAG,
+                     "SDIO receive clear interrupt raw=0x%08lx status=0x%08lx: %s",
+                     (unsigned long)interrupt_raw,
+                     (unsigned long)interrupt_status, esp_err_to_name(error));
+            return error;
+        }
+        if ((interrupt_status & ESSL_SDIO_DEF_ESP32C6.new_packet_intr_mask) ==
+            0U) {
+            return ESP_ERR_NOT_FOUND;
+        }
 
-    error = essl_get_packet(state.link, receive_packet, sizeof(receive_packet),
-                            &received_size, timeout_ms);
-    if (error == ESP_ERR_NOT_FINISHED) {
-        esp_err_t cleanup_error = robusto_proxy_sdio_host_deinit();
-        if (cleanup_error != ESP_OK) {
-            ESP_LOGE(TAG, "SDIO oversized-packet cleanup: %s",
-                     esp_err_to_name(cleanup_error));
-            return cleanup_error;
+        error = essl_get_packet(state.link, receive_packet,
+                                sizeof(receive_packet), &received_size,
+                                timeout_ms);
+        if (error == ESP_ERR_NOT_FINISHED) {
+            esp_err_t cleanup_error = robusto_proxy_sdio_host_deinit();
+            if (cleanup_error != ESP_OK) {
+                ESP_LOGE(TAG, "SDIO oversized-packet cleanup: %s",
+                         esp_err_to_name(cleanup_error));
+                return cleanup_error;
+            }
+            return ESP_ERR_INVALID_SIZE;
         }
-        return ESP_ERR_INVALID_SIZE;
+        if (error != ESP_OK) {
+            ESP_LOGE(TAG,
+                     "SDIO receive packet raw=0x%08lx status=0x%08lx size=%u: %s",
+                     (unsigned long)interrupt_raw,
+                     (unsigned long)interrupt_status,
+                     (unsigned int)received_size, esp_err_to_name(error));
+            return error;
+        }
+        state.buffered_receive_size = received_size;
     }
-    if (error != ESP_OK) {
-        ESP_LOGE(TAG,
-                 "SDIO receive packet raw=0x%08lx status=0x%08lx size=%u: %s",
-                 (unsigned long)interrupt_raw,
-                 (unsigned long)interrupt_status,
-                 (unsigned int)received_size, esp_err_to_name(error));
-        return error;
-    }
-    if (robusto_rsd1_decode(receive_packet, received_size, &packet) !=
-        ROBUSTO_RSD1_OK) {
+    robusto_rsd1_result_t decode_result = robusto_rsd1_decode_prefix(
+        receive_packet, state.buffered_receive_size, &packet, &packet_size);
+    if (decode_result != ROBUSTO_RSD1_OK) {
+        if (state.buffered_receive_size >= 8U) {
+            ESP_LOGE(TAG,
+                     "RSD1 decode failed result=%u size=%u head=%02x %02x %02x %02x %02x %02x %02x %02x",
+                     (unsigned int)decode_result,
+                     (unsigned int)state.buffered_receive_size,
+                     receive_packet[0],
+                     receive_packet[1], receive_packet[2], receive_packet[3],
+                     receive_packet[4], receive_packet[5], receive_packet[6],
+                     receive_packet[7]);
+        } else {
+            ESP_LOGE(TAG, "RSD1 decode failed result=%u size=%u",
+                     (unsigned int)decode_result,
+                     (unsigned int)state.buffered_receive_size);
+        }
+        state.buffered_receive_size = 0U;
         return ESP_ERR_INVALID_RESPONSE;
     }
     if (packet.payload_size > payload_capacity) {
+        state.buffered_receive_size = 0U;
         return ESP_ERR_INVALID_SIZE;
     }
 
@@ -334,6 +370,11 @@ esp_err_t robusto_proxy_sdio_host_receive(uint32_t *message_id,
     *payload_size = packet.payload_size;
     if (packet.payload_size > 0U) {
         memcpy(payload, packet.payload, packet.payload_size);
+    }
+    state.buffered_receive_size -= packet_size;
+    if (state.buffered_receive_size > 0U) {
+        memmove(receive_packet, receive_packet + packet_size,
+                state.buffered_receive_size);
     }
     return ESP_OK;
 }
@@ -370,5 +411,6 @@ esp_err_t robusto_proxy_sdio_host_deinit(void)
     }
     memset(&state.card, 0, sizeof(state.card));
     state.next_sequence = 0U;
+    state.buffered_receive_size = 0U;
     return error;
 }

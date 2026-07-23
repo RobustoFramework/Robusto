@@ -83,12 +83,29 @@ robusto_rsd1_result_t robusto_rsd1_decode(
     size_t buffer_size,
     robusto_rsd1_packet_view_t *packet)
 {
+    size_t packet_size = 0U;
+    robusto_rsd1_result_t result = robusto_rsd1_decode_prefix(
+        buffer, buffer_size, packet, &packet_size);
+
+    if (result != ROBUSTO_RSD1_OK) {
+        return result;
+    }
+    return packet_size == buffer_size ? ROBUSTO_RSD1_OK
+                                      : ROBUSTO_RSD1_BAD_LENGTH;
+}
+
+robusto_rsd1_result_t robusto_rsd1_decode_prefix(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_rsd1_packet_view_t *packet,
+    size_t *packet_size)
+{
     uint16_t payload_size;
     size_t required_size;
     uint32_t expected_crc;
     uint32_t actual_crc;
 
-    if (buffer == NULL || packet == NULL) {
+    if (buffer == NULL || packet == NULL || packet_size == NULL) {
         return ROBUSTO_RSD1_INVALID_ARGUMENT;
     }
     if (buffer_size < ROBUSTO_RSD1_HEADER_SIZE + ROBUSTO_RSD1_CRC_SIZE) {
@@ -113,7 +130,7 @@ robusto_rsd1_result_t robusto_rsd1_decode(
     }
     required_size = ROBUSTO_RSD1_HEADER_SIZE + payload_size +
                     ROBUSTO_RSD1_CRC_SIZE;
-    if (buffer_size != required_size) {
+    if (buffer_size < required_size) {
         return ROBUSTO_RSD1_BAD_LENGTH;
     }
 
@@ -131,5 +148,6 @@ robusto_rsd1_result_t robusto_rsd1_decode(
     if (packet->message_id == 0U || packet->sequence == 0U) {
         return ROBUSTO_RSD1_INVALID_ARGUMENT;
     }
+    *packet_size = required_size;
     return ROBUSTO_RSD1_OK;
 }

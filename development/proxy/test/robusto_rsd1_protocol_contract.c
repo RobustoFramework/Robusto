@@ -21,8 +21,9 @@ static void check(int condition, const char *expression, int line)
 int main(void)
 {
     static uint8_t payload[ROBUSTO_RSD1_MAX_PAYLOAD_SIZE];
-    static uint8_t packet[ROBUSTO_RSD1_MAX_PACKET_SIZE];
+      static uint8_t packet[ROBUSTO_RSD1_MAX_PACKET_SIZE * 2U];
     robusto_rsd1_packet_view_t decoded;
+      size_t decoded_size = 0U;
     size_t packet_size = 0U;
 
     for (size_t index = 0U; index < sizeof(payload); ++index) {
@@ -32,9 +33,9 @@ int main(void)
     CHECK(ROBUSTO_RSD1_MAX_PAYLOAD_SIZE == 4120U);
     CHECK(ROBUSTO_RSD1_MAX_PACKET_SIZE == 4144U);
     CHECK(robusto_rsd1_encode(
-              packet, sizeof(packet), 0x41340001U, 7U,
+              packet, ROBUSTO_RSD1_MAX_PACKET_SIZE, 0x41340001U, 7U,
               payload, sizeof(payload), &packet_size) == ROBUSTO_RSD1_OK);
-    CHECK(packet_size == sizeof(packet));
+    CHECK(packet_size == ROBUSTO_RSD1_MAX_PACKET_SIZE);
     CHECK(packet[0] == 'R' && packet[1] == 'S' &&
           packet[2] == 'D' && packet[3] == '1');
     CHECK(packet[4] == ROBUSTO_RSD1_VERSION);
@@ -45,6 +46,19 @@ int main(void)
     CHECK(decoded.sequence == 7U);
     CHECK(decoded.payload_size == sizeof(payload));
     CHECK(memcmp(decoded.payload, payload, sizeof(payload)) == 0);
+    memcpy(packet + packet_size, packet, packet_size);
+    CHECK(robusto_rsd1_decode(packet, packet_size * 2U, &decoded) ==
+          ROBUSTO_RSD1_BAD_LENGTH);
+    CHECK(robusto_rsd1_decode_prefix(
+              packet, packet_size * 2U, &decoded, &decoded_size) ==
+          ROBUSTO_RSD1_OK);
+    CHECK(decoded_size == packet_size);
+    CHECK(decoded.message_id == 0x41340001U);
+      CHECK(robusto_rsd1_decode_prefix(
+                    packet + decoded_size, packet_size * 2U - decoded_size,
+                    &decoded, &decoded_size) == ROBUSTO_RSD1_OK);
+      CHECK(decoded_size == packet_size);
+      CHECK(decoded.sequence == 7U);
 
     CHECK(robusto_rsd1_decode(packet, packet_size - 1U, &decoded) ==
           ROBUSTO_RSD1_BAD_LENGTH);

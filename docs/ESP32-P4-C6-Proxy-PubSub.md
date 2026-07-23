@@ -176,17 +176,28 @@ development/proxy/test/                            native contracts
 ## Build the C6 application
 
 Activate an ESP-IDF v6.0.2 environment using Espressif's instructions for your
-operating system. Run commands in this guide from the Robusto repository root.
-Build the C6 project without changing directories:
+operating system. ESP Hosted and ESP Wi-Fi Remote use `ESP_IDF_VERSION` as a
+Kconfig filename selector. Set it to the compatibility series `6.0`, not the
+installed patch release `6.0.2`, before configuring the P4 projects. In
+PowerShell:
+
+```powershell
+$env:ESP_IDF_VERSION = "6.0"
+```
+
+Run commands in this guide from the Robusto repository root. Build the final
+C6 delegate and the factory-migration bootstrap from the same project:
 
 ```console
 idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate build
+idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate -B build-bootstrap -D "ROBUSTO_C6_BOOTSTRAP=ON" build
 ```
 
-The application image is:
+The application images are:
 
 ```text
-build/robusto_c6_delegate.bin
+examples/proxy/esp32_p4_c6_sdio/c6_delegate/build/robusto_c6_delegate.bin
+build-bootstrap/robusto_c6_delegate.bin
 ```
 
 The project consumes Robusto through normal component and Kconfig selection:
@@ -219,46 +230,62 @@ connect to C6 UART and does not need to identify the running C6 firmware. A P4
 installer must identify the available C6 protocol, select a qualified migration
 step, and transfer the corresponding C6 image over onboard SDIO.
 
-The staged development installer qualified migration from the factory
-ESP-Hosted image through the project-owned updater using only P4 USB and SDIO.
-That factory bootstrap was not carried into the current generalized
-`provisioning` project. The current project accepts only a generation-6,
-revision-2 updater. Until the bootstrap is integrated, the generalized example
-is not a complete installer for a stock board and must not instruct users to
-recover or initialize the C6 through another connection.
+The provisioning project integrates the factory ESP-Hosted bootstrap and the
+project-owned generation-6 revision-2 updater. It first attempts to read the
+raw recovery identity. If the factory C6 does not expose that protocol, the P4
+transfers the bootstrap through the factory-compatible transport. Later phases
+confirm the bootstrap, install and confirm the final delegate, and verify that
+the final identity survives another P4 restart.
 
-The P4 provisioning project packages the exact current C6 application into
-the P4 `slave_fw` partition. Its build derives and embeds both identities:
+The P4 persists the migration phase in the `c6_migrate` NVS namespace. The
+phases are discovery, bootstrap pending, bootstrap ready, final pending, final
+verification, and complete. A restart resumes from the recorded phase rather
+than assuming that the preceding transfer or confirmation succeeded.
+
+The P4 provisioning project packages both exact C6 applications into the P4
+`slave_fw` partition. Its build derives and embeds these identities for each
+image:
 
 - SHA-256 over the exact C6 application file, checked before and after transfer
 - the C6 image's embedded ELF SHA-256, checked before confirmation
 
-Build the C6 first, then build the provisioner:
+Build both C6 variants first, then build the provisioner:
 
 ```console
 idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate build
+idf.py -C examples/proxy/esp32_p4_c6_sdio/c6_delegate -B build-bootstrap -D "ROBUSTO_C6_BOOTSTRAP=ON" build
 idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning build
 ```
 
-To package another built C6 image, set `C6_FIRMWARE` during configure:
+To package other built C6 images, set both inputs during configure:
 
 ```console
-idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning -D "C6_FIRMWARE=<path-to-c6-image>" build
+idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning -D "C6_BOOTSTRAP_FIRMWARE=<path-to-bootstrap-image>" -D "C6_FINAL_FIRMWARE=<path-to-final-image>" build
 ```
 
-The generated P4 flash manifest writes the P4 bootloader, partition table,
-provisioning application, and `slave_fw`. It does not write P4 NVS. Run the
-provisioner through the normal P4 USB interface:
+The generated `robusto_c6_bundle.bin` contains a 64-byte-header bootstrap
+container at offset `0` and a final container at `0x60000`. Their payloads
+therefore begin at offsets `64` and `393280`. The generated P4 flash manifest
+writes the P4 bootloader, partition table, provisioning application, and this
+bundle in `slave_fw` at P4 flash address `0x110000`. It does not write P4 NVS.
+Run the provisioner through the normal P4 USB interface:
 
 ```console
 idf.py -C examples/proxy/esp32_p4_c6_sdio/provisioning -p <P4_PORT> flash monitor
 ```
 
-The application verifies the packaged file before contacting C6, requires a
-generation-6 revision-2 updater, transfers ordered 1,500-byte chunks, requires
-ESP image validation and exact-file SHA-256 finalization, and activates the
-inactive OTA slot. After both processors restart, it reads the running C6 ELF
-identity and confirms only an exact match.
+The raw updater verifies the selected packaged file before transfer, sends
+ordered 1,500-byte chunks, requires ESP image validation and exact-file SHA-256
+finalization, and activates the inactive OTA slot. After both processors
+restart, the provisioner reads the running C6 ELF identity and confirms only
+an exact match.
+
+The dual-image build was validated with ESP-IDF v6.0.2 on 2026-07-23. Both C6
+images were 344,400 bytes, `robusto_c6_bundle.bin` was 737,680 bytes, and the P4
+provisioning application was `0x94d90` bytes with 42% of its application
+partition free. These sizes are evidence for that build, not fixed format
+requirements. Hardware execution of the integrated factory migration remains
+to be qualified.
 
 If the target image is already confirmed, no OTA write occurs. If it was armed
 but left pending, the next C6 reset can roll it back before the provisioner
@@ -277,8 +304,8 @@ This protects an update that reaches the recovery identity service but is not
 confirmed. A candidate that cannot boot far enough to start raw SDIO cannot arm
 itself and cannot be recovered by the current provisioner. Such a state needs a
 P4-driven recovery design; it is not shifted to a user-operated C6 connection.
-The current provisioner also cannot migrate a factory protocol that lacks the
-revision-2 updater.
+The factory transport only covers the qualified factory ESP-Hosted starting
+state; other factory protocols require their own identified migration step.
 
 ## Add the delegating controller to a project
 
@@ -427,18 +454,20 @@ implemented for this target pair.
 
 Order is mandatory:
 
-1. build C6 delegate
-2. build P4 provisioner with that exact C6 image packaged
-3. flash+monitor provisioner on P4 (install/confirm C6 over SDIO)
-4. flash+monitor P4 Central application
+1. build the final C6 delegate
+2. build the C6 factory-migration bootstrap
+3. build the P4 provisioner with both exact C6 images packaged
+4. flash+monitor provisioner on P4 (migrate/install/confirm C6 over SDIO)
+5. flash+monitor P4 Central application
 
 Command pattern:
 
 ```console
 idf.py -C <c6_delegate_project> set-target esp32c6
 idf.py -C <c6_delegate_project> build
+idf.py -C <c6_delegate_project> -B <bootstrap_build_directory> -D "ROBUSTO_C6_BOOTSTRAP=ON" build
 idf.py -C <provisioning_project> set-target esp32p4
-idf.py -C <provisioning_project> -D "C6_FIRMWARE=<absolute_path_to_c6_bin>" build
+idf.py -C <provisioning_project> -D "C6_BOOTSTRAP_FIRMWARE=<absolute_path_to_bootstrap_bin>" -D "C6_FINAL_FIRMWARE=<absolute_path_to_final_bin>" build
 idf.py -C <provisioning_project> -p <P4_PORT> flash monitor
 idf.py -C <p4_central_project> set-target esp32p4
 idf.py -C <p4_central_project> -p <P4_PORT> flash monitor
