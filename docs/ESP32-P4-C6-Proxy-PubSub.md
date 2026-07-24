@@ -675,6 +675,34 @@ The public calls return `rob_ret_val_t`. For diagnostics, the client also
 retains the latest wire result in `client.last_status`,
 `client.last_result_flags`, and `client.last_retry_after_ms`.
 
+## Large delegated PubSub data and delivery pressure
+
+Inline publishes and deliveries up to 3,824 bytes continue to use one proxy
+frame. Larger P4-to-C6 publishes require negotiated
+`PUBSUB_CHUNKED_PUBLISH`; larger C6-to-P4 deliveries require negotiated
+`PUBSUB_CHUNKED_DELIVERY`. These capabilities are independent. If one is not
+negotiated, the supported inline and opposite-direction operations remain
+available rather than forcing the complete PubSub service to behave the same
+way in every session.
+
+The C6 has no PSRAM. A large inbound publish therefore depends on a contiguous
+C6 internal-heap allocation. An independent large outbound delivery also needs
+queue-owned C6 storage until its chunks are sent; an immediate delegated
+delivery of the same completed publish transfers that buffer instead of making
+a second full copy. The P4 prefers PSRAM for large delivery reassembly. In all
+cases, current allocation and queue availability determine whether a particular
+large operation can proceed; there is no smaller configured directional cap.
+
+When a large delegated topic is missing, query PubSub status before diagnosing
+provisioning or subscription state. A rising C6 `delivery_drops` count is the
+first signal of C6 allocation, event-descriptor, event-pool, or negotiated
+delivery-capability pressure. A rising P4
+`client.pubsub_delivery_sequence_gaps` count confirms that one or more assigned
+delivery sequences did not arrive. Those counters moving means the subscription
+can still be valid while complete deliveries are being dropped under current
+conditions. If both remain unchanged, continue with the normal subscription,
+session, and provisioning checks in Troubleshooting below.
+
 ## Expected production boot
 
 A healthy P4 boot should show:
