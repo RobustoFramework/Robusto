@@ -2233,6 +2233,9 @@ static void test_pubsub_server_adapter_chunked_publish(void)
         77U, 0U, data, ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES};
     robusto_proxy_pubsub_publish_transfer_request_t transfer = {77U};
     robusto_proxy_pubsub_publish_response_t response;
+    robusto_proxy_pubsub_subscribe_request_t subscribe = {
+        78U, topic, sizeof(topic) - 1U, ROBUSTO_PROXY_PUBSUB_SUBSCRIBE_DELIVERIES};
+    robusto_proxy_pubsub_subscribe_response_t subscribe_response;
     robusto_proxy_service_t service;
     robusto_proxy_hello_request_t hello = {
         .controller_boot_id = 1U,
@@ -2252,6 +2255,7 @@ static void test_pubsub_server_adapter_chunked_publish(void)
     const robusto_proxy_pubsub_adapter_t *operations =
         robusto_proxy_pubsub_server_adapter_operations();
     uint32_t expected_sum = 0U;
+    uint8_t *publish_buffer;
 
     for (size_t index = 0U; index < sizeof(data); ++index)
     {
@@ -2274,6 +2278,9 @@ static void test_pubsub_server_adapter_chunked_publish(void)
         hello_response, sizeof(hello_response), &hello_response_size));
     TEST_ASSERT_EQUAL_U32(sizeof(hello_response), hello_response_size);
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
+                          operations->subscribe(
+                              &adapter, &subscribe, &subscribe_response));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->publish_begin(&adapter, &begin));
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_BUSY,
                           operations->publish_begin(&adapter, &begin));
@@ -2290,12 +2297,16 @@ static void test_pubsub_server_adapter_chunked_publish(void)
     chunk.data_length = sizeof(data) - ROBUSTO_PROXY_PUBSUB_MAX_CHUNK_DATA_BYTES;
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->publish_chunk(&adapter, &chunk));
+    publish_buffer = adapter.publish_data;
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->publish_commit(&adapter, &transfer, &response));
     TEST_ASSERT_EQUAL_U32(1U, backend_state.publish_calls);
     TEST_ASSERT_EQUAL_U32(sizeof(data), backend_state.published_length);
     TEST_ASSERT_EQUAL_U32(expected_sum, backend_state.published_sum);
     TEST_ASSERT_TRUE(adapter.publish_data == NULL);
+    TEST_ASSERT_EQUAL_U32(1U, adapter.event_count);
+    TEST_ASSERT_TRUE(adapter.events[adapter.event_read_index].transfer_data ==
+                     publish_buffer);
 
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->publish_begin(&adapter, &begin));

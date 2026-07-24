@@ -13,16 +13,20 @@ reassembled once by the delegate before local PubSub dispatch. Larger
 delegate-to-controller deliveries use negotiated begin, chunk, and commit
 events; the controller invokes the application callback only after complete
 reassembly. The wire format retains the public `uint32_t` message length and
-does not impose a smaller message cap.
+does not impose a smaller directional message cap. Practical payload size in
+either direction is determined at runtime by the contiguous allocations that
+succeed while the application and transport are active.
 
 Each sender must own one contiguous payload while a transfer is active. The
 current ESP32-C6 build has no PSRAM, so both inbound publish reassembly and an
 outbound queued delivery are limited by available 8-bit heap under load. The
 ESP32-P4 client prefers PSRAM for delivery reassembly and falls back to internal
-8-bit heap. C6 delivery allocation or queue pressure drops the complete newest
-delivery and increments `delivery_drops`; query PubSub status and monitor P4
-sequence-gap counters rather than interpreting a missing large topic as a
-subscription failure.
+8-bit heap. When a chunked publish is synchronously delivered to a delegated
+subscription, the C6 transfers ownership of the completed reassembly buffer to
+the outbound queue instead of allocating a second full copy. C6 delivery
+allocation or queue pressure drops the complete newest delivery and increments
+`delivery_drops`; query PubSub status and monitor P4 sequence-gap counters
+rather than interpreting a missing large topic as a subscription failure.
 
 ## Layout
 

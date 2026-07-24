@@ -3,7 +3,7 @@
 #include "robusto_proxy_sdio_c6.h"
 
 #define LARGE_PUBLISH_BYTES (200U * 1024U)
-#define LARGE_DELIVERY_BYTES (32U * 1024U)
+#define LARGE_DELIVERY_BYTES (200U * 1024U)
 
 static const char *TAG = "robusto_c6_delegate";
 static uint32_t large_delivery_topic_hash;

@@ -646,6 +646,9 @@ Do not deinitialize SDIO independently while proxy workers are running.
     events carrying up to 4,080 bytes, and `DELIVERY_COMMIT`. P4 prefers PSRAM
     for one contiguous reassembly buffer and invokes the application callback
     only after a complete commit.
+- The public and wire length is `uint32_t`; there is no smaller directional
+    payload cap. Practical size in either direction is determined by contiguous
+    allocations that succeed under the current runtime load.
 - Large-message support is negotiated independently in each direction. A peer
     without `PUBSUB_CHUNKED_PUBLISH` or `PUBSUB_CHUNKED_DELIVERY` continues to
     support inline data. Large publishes return `ROB_ERR_NOT_SUPPORTED`; a C6
@@ -653,8 +656,9 @@ Do not deinitialize SDIO independently while proxy workers are running.
     counted.
 - The C6 has no PSRAM. Its practical limit is the largest available 8-bit heap
     block under load. A queued outbound delivery owns its complete payload until
-    all chunks are emitted, so simultaneous inbound and outbound large data must
-    fit together.
+    all chunks are emitted. When an inbound chunked publish immediately produces
+    a delegated delivery of the same buffer, ownership is transferred to the
+    outbound queue without a second full allocation.
 - The low-memory protocol profile negotiates at most 16 remote subscriptions,
   but the P4 application storage may intentionally allow fewer.
 - DELIVERY ordering is FIFO per subscription.
@@ -682,12 +686,12 @@ A healthy P4 boot should show:
 5. application PubSub operations succeeding
 
 The example performs a bounded inline loopback, a 200 KiB chunked publish from
-P4 to C6, and a 32 KiB chunked delivery from C6 to P4. It then prints status
+P4 to C6, and a 200 KiB chunked delivery from C6 to P4. It then prints status
 counters and the final readiness marker:
 
 ```text
 [PASS] sent 204800-byte chunked publish
-[PASS] verified 32768-byte chunked delivery
+[PASS] verified 204800-byte chunked delivery
 PubSub status: deliveries=... drops=0 errors=0 sequence_gaps=0
 remote PubSub example ready
 ```

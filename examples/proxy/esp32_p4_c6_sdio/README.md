@@ -104,20 +104,23 @@ before invoking its application callback.
 
 The controller example proves both directions on startup. It sends a patterned
 200 KiB publish to C6, subscribes to a C6-originated delivery topic, verifies a
-patterned 32 KiB delivery byte for byte, and queries PubSub status. Expected
+patterned 200 KiB delivery byte for byte, and queries PubSub status. Expected
 success markers include:
 
 ```text
 [PASS] sent 204800-byte chunked publish
-[PASS] verified 32768-byte chunked delivery
+[PASS] verified 204800-byte chunked delivery
 PubSub status: deliveries=... drops=0 errors=0 sequence_gaps=0
 remote PubSub example ready
 ```
 
-Large transfers require one contiguous owned buffer at the receiving side and,
-for queued C6 deliveries, one contiguous C6 buffer until all event chunks have
-been sent. The C6 has no PSRAM. Allocation failure, event descriptor pressure,
-or event-pool pressure increments `delivery_drops`; the P4 also exposes
+There is no smaller directional payload cap beyond the public `uint32_t`
+length. Large transfers require contiguous allocations that succeed under the
+current runtime load. The C6 has no PSRAM; P4 delivery reassembly prefers
+PSRAM. The bidirectional echo transfers ownership of the completed C6 publish
+buffer to the outbound queue, so it does not require a second 200 KiB C6 copy.
+Allocation failure, event descriptor pressure, or event-pool pressure
+increments `delivery_drops`; the P4 also exposes
 `pubsub_delivery_sequence_gaps`. Treat either counter as delivery pressure, not
 as evidence that provisioning or subscription failed.
 

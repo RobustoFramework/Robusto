@@ -149,14 +149,24 @@ static uint16_t queue_delivery(void *context, const uint8_t *data, uint32_t data
     event->data_length = data_length;
     if (data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES)
     {
-        event->transfer_data = allocate_delivery_data(data_length);
-        if (event->transfer_data == NULL)
+        if (data == adapter->publish_dispatch_data &&
+            data_length == adapter->publish_dispatch_data_length &&
+            !adapter->publish_dispatch_transferred)
         {
-            adapter->delivery_drops += 1U;
-            adapter_give(adapter);
-            return ROBUSTO_PROXY_STATUS_OK;
+            event->transfer_data = adapter->publish_dispatch_data;
+            adapter->publish_dispatch_transferred = true;
         }
-        memcpy(event->transfer_data, data, data_length);
+        else
+        {
+            event->transfer_data = allocate_delivery_data(data_length);
+            if (event->transfer_data == NULL)
+            {
+                adapter->delivery_drops += 1U;
+                adapter_give(adapter);
+                return ROBUSTO_PROXY_STATUS_OK;
+            }
+            memcpy(event->transfer_data, data, data_length);
+        }
     }
     else
     {
@@ -228,7 +238,7 @@ static uint16_t adapter_publish_begin(
     {
         return ROBUSTO_PROXY_STATUS_BUSY;
     }
-    if (adapter->publish_data != NULL)
+    if (adapter->publish_data != NULL || adapter->publish_dispatch_data != NULL)
     {
         adapter_give(adapter);
         return ROBUSTO_PROXY_STATUS_BUSY;
@@ -326,6 +336,9 @@ static uint16_t adapter_publish_commit(
     adapter->publish_data_received = 0U;
     adapter->publish_topic_length = 0U;
     adapter->publish_topic[0] = '\0';
+    adapter->publish_dispatch_data = publish_data;
+    adapter->publish_dispatch_data_length = publish_data_length;
+    adapter->publish_dispatch_transferred = false;
     adapter_give(adapter);
 
     memset(&publish_request, 0, sizeof(publish_request));
@@ -335,7 +348,14 @@ static uint16_t adapter_publish_commit(
     publish_request.data = publish_data;
     publish_request.data_length = publish_data_length;
     status = adapter_publish(adapter, &publish_request, response);
-    free(publish_data);
+    bool transferred = adapter->publish_dispatch_transferred;
+    adapter->publish_dispatch_data = NULL;
+    adapter->publish_dispatch_data_length = 0U;
+    adapter->publish_dispatch_transferred = false;
+    if (!transferred)
+    {
+        free(publish_data);
+    }
     return status;
 }
 

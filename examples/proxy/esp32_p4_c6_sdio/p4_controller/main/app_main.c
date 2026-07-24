@@ -11,7 +11,7 @@
 #include "robusto_proxy_sdio.h"
 
 #define LARGE_PUBLISH_BYTES (200U * 1024U)
-#define LARGE_DELIVERY_BYTES (32U * 1024U)
+#define LARGE_DELIVERY_BYTES (200U * 1024U)
 
 static const char *TAG = "p4_proxy_main";
 static robusto_proxy_pubsub_client_subscription_t subscriptions[4];
