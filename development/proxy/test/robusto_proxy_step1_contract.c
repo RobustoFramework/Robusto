@@ -2430,6 +2430,8 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
     TEST_ASSERT_EQUAL_U32(1U, delivery.subscription_id);
     TEST_ASSERT_EQUAL_U32(1U, delivery.delivery_sequence);
     TEST_ASSERT_TRUE(memcmp(delivery.data, first_data, sizeof(first_data)) == 0);
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
     robusto_proxy_service_init(&service, ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
                                1U, 1U, 9U, 2U, 0U);
     service.session.state = ROBUSTO_PROXY_SESSION_ESTABLISHED;
@@ -2457,6 +2459,8 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
                           robusto_proxy_pubsub_decode_delivery(payload, payload_size, &delivery));
     TEST_ASSERT_EQUAL_U32(3U, delivery.delivery_sequence);
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
 
     for (size_t index = 0U; index < sizeof(large_data); ++index)
     {
@@ -2476,8 +2480,10 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
         TEST_ASSERT_EQUAL_U32(5000U, begin.data_length);
         TEST_ASSERT_EQUAL_U32(4U, begin.delivery_sequence);
     }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
     TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_take_delivery(
-        &adapter, true, &delivery_opcode, payload, sizeof(payload), &payload_size));
+        &adapter, true, &delivery_opcode, payload, 4044U, &payload_size));
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK, delivery_opcode);
     {
         robusto_proxy_pubsub_delivery_chunk_t chunk;
@@ -2485,22 +2491,40 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
                               robusto_proxy_pubsub_decode_delivery_chunk(
                                   payload, payload_size, &chunk));
         TEST_ASSERT_EQUAL_U32(0U, chunk.offset);
-        TEST_ASSERT_EQUAL_U32(4080U, chunk.data_length);
+        TEST_ASSERT_EQUAL_U32(4028U, chunk.data_length);
         TEST_ASSERT_TRUE(memcmp(chunk.data, large_data, chunk.data_length) == 0);
     }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, false));
     TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_take_delivery(
-        &adapter, true, &delivery_opcode, payload, sizeof(payload), &payload_size));
+        &adapter, true, &delivery_opcode, payload, 4044U, &payload_size));
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK, delivery_opcode);
     {
         robusto_proxy_pubsub_delivery_chunk_t chunk;
         TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
                               robusto_proxy_pubsub_decode_delivery_chunk(
                                   payload, payload_size, &chunk));
-        TEST_ASSERT_EQUAL_U32(4080U, chunk.offset);
-        TEST_ASSERT_EQUAL_U32(920U, chunk.data_length);
+        TEST_ASSERT_EQUAL_U32(0U, chunk.offset);
+        TEST_ASSERT_EQUAL_U32(4028U, chunk.data_length);
+        TEST_ASSERT_TRUE(memcmp(chunk.data, large_data, chunk.data_length) == 0);
+    }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_take_delivery(
+        &adapter, true, &delivery_opcode, payload, 4044U, &payload_size));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK, delivery_opcode);
+    {
+        robusto_proxy_pubsub_delivery_chunk_t chunk;
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_pubsub_decode_delivery_chunk(
+                                  payload, payload_size, &chunk));
+        TEST_ASSERT_EQUAL_U32(4028U, chunk.offset);
+        TEST_ASSERT_EQUAL_U32(972U, chunk.data_length);
         TEST_ASSERT_TRUE(memcmp(chunk.data, large_data + chunk.offset,
                                 chunk.data_length) == 0);
     }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
     TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_take_delivery(
         &adapter, true, &delivery_opcode, payload, sizeof(payload), &payload_size));
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_COMMIT, delivery_opcode);
@@ -2511,6 +2535,8 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
                                   payload, payload_size, &commit));
         TEST_ASSERT_EQUAL_U32(4U, commit.delivery_sequence);
     }
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_complete_delivery(
+        &adapter, true));
 
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->status(&adapter, &status_response));
@@ -2572,6 +2598,160 @@ static void test_pubsub_server_adapter_deinit_retries_backend_failure(void)
     TEST_ASSERT_EQUAL_U32(1U, backend_state.unsubscribe_calls);
 }
 
+static void test_pubsub_client_interleaves_inline_and_chunked_deliveries(void)
+{
+    static const robusto_proxy_pubsub_adapter_t adapter = {
+        .publish = fake_pubsub_publish,
+        .publish_begin = fake_pubsub_publish_begin,
+        .publish_chunk = fake_pubsub_publish_chunk,
+        .publish_commit = fake_pubsub_publish_commit,
+        .publish_abort = fake_pubsub_publish_abort,
+        .session_reset = fake_pubsub_session_reset,
+        .subscribe = fake_pubsub_subscribe,
+        .unsubscribe = fake_pubsub_unsubscribe,
+        .status = fake_pubsub_status,
+    };
+    uint8_t request_frame[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
+    uint8_t response_frame[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
+    uint8_t event_payload[ROBUSTO_PROXY_MAX_PAYLOAD_BYTES];
+    uint8_t event_frame[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
+    static uint8_t image_data[5000U];
+    uint8_t detection_data[] = {0x31U, 0x32U};
+    robusto_proxy_pubsub_client_subscription_t subscriptions[2];
+    robusto_proxy_pubsub_client_subscription_t *image_subscription = NULL;
+    robusto_proxy_pubsub_client_subscription_t *detection_subscription = NULL;
+    robusto_proxy_service_t service;
+    fake_pubsub_adapter_state_t adapter_state = {0};
+    fake_client_transport_t transport = {0};
+    robusto_proxy_client_t client;
+    uint32_t image_callbacks = 0U;
+    uint32_t detection_callbacks = 0U;
+    size_t event_payload_size;
+    size_t event_frame_size;
+    robusto_proxy_client_config_t config = {
+        .profile = ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
+        .controller_boot_id = 0x1234U,
+        .correlation_seed = 1U,
+        .sequence_seed = 1U,
+        .operation_seed = 1U,
+        .request_timeout_ms = 1000U,
+        .exchange = fake_client_exchange,
+        .transport_context = &transport,
+        .now_ms = fake_client_now_ms,
+        .wait_ms = fake_client_wait_ms,
+        .retry_jitter_ms = fake_client_retry_jitter_ms,
+        .clock_context = &transport,
+        .request_frame = request_frame,
+        .request_frame_size = sizeof(request_frame),
+        .response_frame = response_frame,
+        .response_frame_size = sizeof(response_frame),
+    };
+
+    for (size_t index = 0U; index < sizeof(image_data); ++index)
+    {
+        image_data[index] = (uint8_t)index;
+    }
+    robusto_proxy_service_init(&service, ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
+                               0xC6U, 1U, 1U, 2U, 0U);
+    robusto_proxy_service_set_pubsub_adapter(&service, &adapter, &adapter_state);
+    transport.service = &service;
+    transport.now_ms = 100U;
+    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_init(&client, &config));
+    TEST_ASSERT_EQUAL_INT(ROB_OK,
+                          robusto_proxy_pubsub_configure(&client, subscriptions, 2U));
+    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_connect(&client));
+    adapter_state.subscription_id = 7U;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_OK,
+        robusto_proxy_pubsub_subscribe(&client, "collector.images",
+                                       fake_proxy_delivery_callback, &image_callbacks,
+                                       &image_subscription));
+    adapter_state.subscription_id = 8U;
+    TEST_ASSERT_EQUAL_INT(
+        ROB_OK,
+        robusto_proxy_pubsub_subscribe(&client, "collector.detections",
+                                       fake_proxy_delivery_callback, &detection_callbacks,
+                                       &detection_subscription));
+    TEST_ASSERT_TRUE(image_subscription != NULL);
+    TEST_ASSERT_TRUE(detection_subscription != NULL);
+
+    {
+        robusto_proxy_pubsub_delivery_begin_t begin = {7U, 1U, sizeof(image_data)};
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_pubsub_encode_delivery_begin(
+                                  event_payload, sizeof(event_payload), &begin));
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_service_build_pubsub_event(
+                                  &service, ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_BEGIN,
+                                  event_payload,
+                                  ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES,
+                                  event_frame, sizeof(event_frame), &event_frame_size));
+        TEST_ASSERT_EQUAL_INT(ROB_OK,
+                              robusto_proxy_pubsub_handle_event(
+                                  &client, event_frame, event_frame_size));
+    }
+    {
+        robusto_proxy_pubsub_delivery_t delivery = {
+            8U, 1U, detection_data, sizeof(detection_data)};
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_pubsub_encode_delivery(
+                                  event_payload, sizeof(event_payload), &delivery,
+                                  &event_payload_size));
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_service_build_pubsub_delivery_event(
+                                  &service, event_payload, event_payload_size,
+                                  event_frame, sizeof(event_frame), &event_frame_size));
+        TEST_ASSERT_EQUAL_INT(ROB_OK,
+                              robusto_proxy_pubsub_handle_event(
+                                  &client, event_frame, event_frame_size));
+        TEST_ASSERT_EQUAL_U32(1U, detection_callbacks);
+        TEST_ASSERT_EQUAL_U32(0U, image_callbacks);
+        TEST_ASSERT_TRUE(client.pubsub_delivery_data != NULL);
+        TEST_ASSERT_EQUAL_U32(0U, client.pubsub_delivery_data_received);
+    }
+    for (uint32_t offset = 0U; offset < sizeof(image_data);)
+    {
+        uint32_t chunk_length = (uint32_t)sizeof(image_data) - offset;
+        if (chunk_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES)
+        {
+            chunk_length = ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES;
+        }
+        robusto_proxy_pubsub_delivery_chunk_t chunk = {
+            7U, 1U, offset, image_data + offset, chunk_length};
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_pubsub_encode_delivery_chunk(
+                                  event_payload, sizeof(event_payload), &chunk,
+                                  &event_payload_size));
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_service_build_pubsub_event(
+                                  &service, ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK,
+                                  event_payload, event_payload_size,
+                                  event_frame, sizeof(event_frame), &event_frame_size));
+        TEST_ASSERT_EQUAL_INT(ROB_OK,
+                              robusto_proxy_pubsub_handle_event(
+                                  &client, event_frame, event_frame_size));
+        offset += chunk_length;
+    }
+    {
+        robusto_proxy_pubsub_delivery_commit_t commit = {7U, 1U};
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_pubsub_encode_delivery_commit(
+                                  event_payload, sizeof(event_payload), &commit));
+        TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
+                              robusto_proxy_service_build_pubsub_event(
+                                  &service, ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_COMMIT,
+                                  event_payload,
+                                  ROBUSTO_PROXY_PUBSUB_DELIVERY_COMMIT_SIZE_BYTES,
+                                  event_frame, sizeof(event_frame), &event_frame_size));
+        TEST_ASSERT_EQUAL_INT(ROB_OK,
+                              robusto_proxy_pubsub_handle_event(
+                                  &client, event_frame, event_frame_size));
+    }
+    TEST_ASSERT_EQUAL_U32(1U, image_callbacks);
+    TEST_ASSERT_EQUAL_U32(1U, detection_callbacks);
+    TEST_ASSERT_TRUE(client.pubsub_delivery_data == NULL);
+}
+
 int main(void)
 {
     test_crc32_golden_vector();
@@ -2608,6 +2788,7 @@ int main(void)
     test_pubsub_server_adapter_chunked_publish();
     test_pubsub_server_adapter_deinit_retries_backend_failure();
     test_proxy_client_connect_publish_and_acceptance();
+    test_pubsub_client_interleaves_inline_and_chunked_deliveries();
 
     if (tests_failed != 0)
     {

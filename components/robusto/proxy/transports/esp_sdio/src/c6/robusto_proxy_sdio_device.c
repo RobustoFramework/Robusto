@@ -24,7 +24,7 @@ typedef struct {
 } frontend_callback_t;
 
 typedef struct {
-    uint8_t bytes[ROBUSTO_RSD1_MAX_PACKET_SIZE];
+    uint8_t bytes[ROBUSTO_PROXY_SDIO_SLAVE_MAX_PACKET_SIZE];
     bool busy;
     uint8_t alignment_padding[3];
 } tx_slot_t;
@@ -112,7 +112,8 @@ esp_err_t robusto_message_frontend_send(uint32_t message_id,
     esp_err_t error;
 
     if (message_id == 0U || (data_len > 0U && data == NULL) ||
-        data_len > ROBUSTO_RSD1_MAX_PAYLOAD_SIZE || frontend_mutex == NULL) {
+        data_len > ROBUSTO_PROXY_SDIO_SLAVE_MAX_FRONTEND_PAYLOAD_SIZE ||
+        frontend_mutex == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
     if (xSemaphoreTake(frontend_mutex, pdMS_TO_TICKS(SEND_TIMEOUT_MS)) != pdTRUE) {

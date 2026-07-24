@@ -581,11 +581,11 @@ rob_ret_val_t robusto_proxy_pubsub_handle_event(
     {
         robusto_proxy_pubsub_delivery_t delivery;
 
-        if (client->pubsub_delivery_data != NULL ||
-            robusto_proxy_pubsub_decode_delivery(
-                payload, header->payload_length, &delivery) != ROBUSTO_PROXY_RESULT_OK)
+        if (robusto_proxy_pubsub_decode_delivery(
+                payload, header->payload_length, &delivery) != ROBUSTO_PROXY_RESULT_OK ||
+            (client->pubsub_delivery_data != NULL &&
+             delivery.subscription_id == client->pubsub_delivery_subscription_id))
         {
-            release_delivery_transfer(client);
             return ROB_ERR_PARSING_FAILED;
         }
         fields = find_subscription_by_id(client, delivery.subscription_id);

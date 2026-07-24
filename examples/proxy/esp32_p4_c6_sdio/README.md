@@ -102,6 +102,12 @@ P4-to-C6 publishes and C6-to-P4 deliveries are split into ordered chunks. The
 C6 reassembles a publish before local dispatch; the P4 reassembles a delivery
 before invoking its application callback.
 
+For C6-to-P4 delivery, onboard SDIO carries at most 4,028 data bytes per chunk
+so the complete RSD1 packet remains within the C6 driver's 4,092-byte limit.
+The C6 serializes each queued large delivery through commit and retries the
+same event stage after a failed send. The P4 can still dispatch an inline event
+for another subscription without invalidating active large-delivery state.
+
 The controller example proves both directions on startup. It sends a patterned
 200 KiB publish to C6, subscribes to a C6-originated delivery topic, verifies a
 patterned 200 KiB delivery byte for byte, and queries PubSub status. Expected

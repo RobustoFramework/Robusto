@@ -9,6 +9,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "robusto_proxy_sdio_messages.h"
+#include "robusto_proxy_sdio_device.h"
 #include "robusto_c6_pubsub_backend.h"
 #include "robusto_message_frontend.h"
 #include "robusto_proxy_protocol.h"
@@ -60,7 +61,8 @@ static void send_pending_deliveries(void)
         &pubsub_adapter,
         (proxy_service.session.enabled_features &
          ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY) != 0U,
-        &opcode, delivery_payload, sizeof(delivery_payload),
+        &opcode, delivery_payload,
+        ROBUSTO_PROXY_SDIO_SLAVE_MAX_EVENT_PAYLOAD_SIZE,
         &payload_size)) {
         robusto_proxy_result_t result =
             robusto_proxy_service_build_pubsub_event(
@@ -69,13 +71,27 @@ static void send_pending_deliveries(void)
         if (result != ROBUSTO_PROXY_RESULT_OK) {
             ESP_LOGE(TAG, "Build delivery event result=%d", result);
             proxy_service.errors += 1U;
-            continue;
+            if (!robusto_proxy_pubsub_server_adapter_complete_delivery(
+                    &pubsub_adapter, false)) {
+                ESP_LOGE(TAG, "Retain unsent delivery event");
+            }
+            break;
         }
         esp_err_t error = robusto_message_frontend_send(
             ROBUSTO_PROXY_SDIO_EVENT_MSG_ID, delivery_event, event_size);
         if (error != ESP_OK) {
             ESP_LOGE(TAG, "Send delivery event: %s",
                      esp_err_to_name(error));
+            proxy_service.errors += 1U;
+            if (!robusto_proxy_pubsub_server_adapter_complete_delivery(
+                    &pubsub_adapter, false)) {
+                ESP_LOGE(TAG, "Retain failed delivery event");
+            }
+            break;
+        }
+        if (!robusto_proxy_pubsub_server_adapter_complete_delivery(
+                &pubsub_adapter, true)) {
+            ESP_LOGE(TAG, "Complete sent delivery event");
             proxy_service.errors += 1U;
             break;
         }

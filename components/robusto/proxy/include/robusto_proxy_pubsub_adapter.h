@@ -74,6 +74,9 @@ typedef struct robusto_proxy_pubsub_server_adapter {
     uint8_t event_read_index;
     uint8_t event_write_index;
     uint8_t event_count;
+    uint8_t pending_delivery_opcode;
+    uint32_t pending_delivery_chunk_length;
+    bool delivery_pending;
     uint8_t *publish_data;
     uint64_t publish_operation_id;
     uint32_t publish_data_length;
@@ -114,6 +117,10 @@ bool robusto_proxy_pubsub_server_adapter_take_delivery(
     uint8_t *payload_buffer,
     size_t payload_buffer_size,
     size_t *payload_size);
+
+bool robusto_proxy_pubsub_server_adapter_complete_delivery(
+    robusto_proxy_pubsub_server_adapter_t *adapter,
+    bool sent);
 
 #ifdef __cplusplus
 }

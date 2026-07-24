@@ -643,9 +643,11 @@ Do not deinitialize SDIO independently while proxy workers are running.
     reassembled in C6 internal SRAM before local PubSub dispatch. If allocation
     fails, C6 returns `OUT_OF_MEMORY` before accepting chunks.
 - Larger C6-to-P4 deliveries use `DELIVERY_BEGIN`, ordered `DELIVERY_CHUNK`
-    events carrying up to 4,080 bytes, and `DELIVERY_COMMIT`. P4 prefers PSRAM
-    for one contiguous reassembly buffer and invokes the application callback
-    only after a complete commit.
+    events, and `DELIVERY_COMMIT`. The generic codec allows up to 4,080 data
+    bytes per chunk; onboard ESP-SDIO uses 4,028 so the complete RSD1 packet
+    does not exceed the C6 driver's 4,092-byte limit. P4 prefers PSRAM for one
+    contiguous reassembly buffer and invokes the application callback only
+    after a complete commit.
 - The public and wire length is `uint32_t`; there is no smaller directional
     payload cap. Practical size in either direction is determined by contiguous
     allocations that succeed under the current runtime load.
@@ -684,6 +686,14 @@ frame. Larger P4-to-C6 publishes require negotiated
 negotiated, the supported inline and opposite-direction operations remain
 available rather than forcing the complete PubSub service to behave the same
 way in every session.
+
+The C6 sender processes delivery descriptors in FIFO order and serializes a
+large descriptor from `DELIVERY_BEGIN` through `DELIVERY_COMMIT` before taking
+the next descriptor. It advances that descriptor only after the SDIO frontend
+confirms the event was queued; a failed send retries the same stage and offset.
+The P4 parser nevertheless permits a valid inline delivery for another
+subscription during active chunk reassembly and preserves the partial large
+delivery. Events for the same subscription must retain sequence order.
 
 The C6 has no PSRAM. A large inbound publish therefore depends on a contiguous
 C6 internal-heap allocation. An independent large outbound delivery also needs

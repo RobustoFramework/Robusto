@@ -17,6 +17,15 @@ does not impose a smaller directional message cap. Practical payload size in
 either direction is determined at runtime by the contiguous allocations that
 succeed while the application and transport are active.
 
+The generic delivery codec permits up to 4,080 data bytes per chunk. The
+ESP32-C6 SDIO sender uses 4,028 data bytes so the 16-byte delivery header,
+24-byte proxy frame overhead, and 24-byte RSD1 overhead fit the C6 driver's
+4,092-byte packet limit. It retains the current FIFO delivery descriptor until
+each event is confirmed sent, then serializes that descriptor through
+`DELIVERY_COMMIT` before selecting the next queued delivery. The P4 parser also
+accepts a valid inline delivery for another subscription while chunk
+reassembly is active without discarding the partial large delivery.
+
 Each sender must own one contiguous payload while a transfer is active. The
 current ESP32-C6 build has no PSRAM, so both inbound publish reassembly and an
 outbound queued delivery are limited by available 8-bit heap under load. The
