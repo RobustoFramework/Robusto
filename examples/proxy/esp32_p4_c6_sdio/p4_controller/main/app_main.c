@@ -11,6 +11,7 @@
 #include "robusto_proxy_sdio.h"
 
 #define LARGE_PUBLISH_BYTES (200U * 1024U)
+#define LARGE_DELIVERY_BYTES (32U * 1024U)
 
 static const char *TAG = "p4_proxy_main";
 static robusto_proxy_pubsub_client_subscription_t subscriptions[4];
@@ -67,6 +68,28 @@ static uint8_t expected_byte(uint32_t offset)
     return (uint8_t)((offset * 31U + (offset >> 8U) + 0x5AU) & 0xFFU);
 }
 
+static rob_ret_val_t large_delivery_callback(void *context, uint8_t *data,
+                                             uint32_t data_length)
+{
+    (void)context;
+    if (data == NULL || data_length != LARGE_DELIVERY_BYTES) {
+        delivery_result = ROB_ERR_PARSING_FAILED;
+    } else {
+        delivery_result = ROB_OK;
+        for (uint32_t offset = 0U; offset < data_length; ++offset) {
+            if (data[offset] != expected_byte(offset)) {
+                ESP_LOGE(TAG,
+                         "large delivery mismatch: offset=%lu expected=%02x actual=%02x",
+                         (unsigned long)offset, expected_byte(offset), data[offset]);
+                delivery_result = ROB_ERR_PARSING_FAILED;
+                break;
+            }
+        }
+    }
+    xSemaphoreGive(delivery_semaphore);
+    return delivery_result;
+}
+
 static rob_ret_val_t run_large_publish_example(void)
 {
     const uint32_t payload_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
@@ -94,6 +117,49 @@ static rob_ret_val_t run_large_publish_example(void)
     return result;
 }
 
+static rob_ret_val_t run_large_bidirectional_example(void)
+{
+    robusto_proxy_pubsub_client_subscription_t *subscription = NULL;
+    robusto_proxy_pubsub_status_response_t status = {0};
+    rob_ret_val_t status_result;
+    rob_ret_val_t result;
+
+    delivery_result = ROB_ERR_TIMEOUT;
+    result = robusto_proxy_pubsub_subscribe(
+        robusto_proxy_sdio(), "proxy.test.large.delivery",
+        large_delivery_callback, NULL, &subscription);
+    if (result == ROB_OK) {
+        result = run_large_publish_example();
+    }
+    if (result == ROB_OK &&
+        xSemaphoreTake(delivery_semaphore, pdMS_TO_TICKS(10000U)) != pdTRUE) {
+        result = ROB_ERR_TIMEOUT;
+    }
+    if (result == ROB_OK) {
+        result = delivery_result;
+    }
+    if (result == ROB_OK) {
+        ESP_LOGI(TAG, "[PASS] verified %u-byte chunked delivery",
+                 LARGE_DELIVERY_BYTES);
+    }
+    status_result = robusto_proxy_pubsub_query_status(
+        robusto_proxy_sdio(), &status);
+    if (status_result == ROB_OK) {
+        ESP_LOGI(TAG,
+                 "PubSub status: deliveries=%lu drops=%lu errors=%lu sequence_gaps=%lu",
+                 (unsigned long)status.delivery_events,
+                 (unsigned long)status.delivery_drops,
+                 (unsigned long)status.pubsub_errors,
+                 (unsigned long)robusto_proxy_sdio()->pubsub_delivery_sequence_gaps);
+    } else {
+        ESP_LOGE(TAG, "PubSub status query failed: %d", status_result);
+        if (result == ROB_OK) {
+            result = status_result;
+        }
+    }
+    return result;
+}
+
 static void halt(void)
 {
     for (;;) {
@@ -115,7 +181,7 @@ void app_main(void)
         result = run_pubsub_example();
     }
     if (result == ROB_OK) {
-        result = run_large_publish_example();
+        result = run_large_bidirectional_example();
     }
     if (result != ROB_OK) {
         rob_ret_val_t stop_result = ROB_OK;

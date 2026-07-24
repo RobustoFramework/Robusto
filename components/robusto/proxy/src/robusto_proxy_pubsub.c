@@ -600,3 +600,126 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery(
                ? ROBUSTO_PROXY_RESULT_OK
                : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
 }
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_begin(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_begin_t *begin)
+{
+    if (buffer == NULL || begin == NULL ||
+        buffer_size < ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES ||
+        begin->subscription_id == 0U || begin->delivery_sequence == 0U ||
+        begin->data_length <= ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    write_le32(buffer, begin->subscription_id);
+    write_le32(buffer + 4U, begin->delivery_sequence);
+    write_le32(buffer + 8U, begin->data_length);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_begin(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_begin_t *begin)
+{
+    if (buffer == NULL || begin == NULL ||
+        buffer_size != ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    begin->subscription_id = read_le32(buffer);
+    begin->delivery_sequence = read_le32(buffer + 4U);
+    begin->data_length = read_le32(buffer + 8U);
+    return begin->subscription_id != 0U && begin->delivery_sequence != 0U &&
+                   begin->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES
+               ? ROBUSTO_PROXY_RESULT_OK
+               : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_chunk(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_chunk_t *chunk, size_t *encoded_size)
+{
+    size_t required_size;
+
+    if (buffer == NULL || chunk == NULL || encoded_size == NULL ||
+        chunk->subscription_id == 0U || chunk->delivery_sequence == 0U ||
+        chunk->data == NULL || chunk->data_length == 0U ||
+        chunk->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    required_size = ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES +
+                    chunk->data_length;
+    if (buffer_size < required_size)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    write_le32(buffer, chunk->subscription_id);
+    write_le32(buffer + 4U, chunk->delivery_sequence);
+    write_le32(buffer + 8U, chunk->offset);
+    write_le32(buffer + 12U, chunk->data_length);
+    memcpy(buffer + ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES,
+           chunk->data, chunk->data_length);
+    *encoded_size = required_size;
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_chunk(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_chunk_t *chunk)
+{
+    size_t required_size;
+
+    if (buffer == NULL || chunk == NULL ||
+        buffer_size < ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    chunk->subscription_id = read_le32(buffer);
+    chunk->delivery_sequence = read_le32(buffer + 4U);
+    chunk->offset = read_le32(buffer + 8U);
+    chunk->data_length = read_le32(buffer + 12U);
+    required_size = ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES +
+                    chunk->data_length;
+    if (required_size != buffer_size || chunk->data_length == 0U ||
+        chunk->data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    chunk->data = buffer + ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES;
+    return chunk->subscription_id != 0U && chunk->delivery_sequence != 0U
+               ? ROBUSTO_PROXY_RESULT_OK
+               : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_commit(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_commit_t *commit)
+{
+    if (buffer == NULL || commit == NULL ||
+        buffer_size < ROBUSTO_PROXY_PUBSUB_DELIVERY_COMMIT_SIZE_BYTES ||
+        commit->subscription_id == 0U || commit->delivery_sequence == 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    write_le32(buffer, commit->subscription_id);
+    write_le32(buffer + 4U, commit->delivery_sequence);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_commit(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_commit_t *commit)
+{
+    if (buffer == NULL || commit == NULL ||
+        buffer_size != ROBUSTO_PROXY_PUBSUB_DELIVERY_COMMIT_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
+    }
+    commit->subscription_id = read_le32(buffer);
+    commit->delivery_sequence = read_le32(buffer + 4U);
+    return commit->subscription_id != 0U && commit->delivery_sequence != 0U
+               ? ROBUSTO_PROXY_RESULT_OK
+               : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+}

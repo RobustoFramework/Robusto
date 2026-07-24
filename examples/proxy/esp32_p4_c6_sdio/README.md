@@ -66,6 +66,11 @@ idf.py -C $p4Controller -B (Join-Path $p4Controller "build") build
 idf.py -C $provisioning -B (Join-Path $provisioning "build") build
 ```
 
+Keep the explicit project-local `-B` arguments. Relative build directories are
+resolved from the shell's working directory, not from the project selected by
+`-C`; changing these commands back to `-B build-bootstrap` breaks the
+provisioner's default artifact contract when invoked outside the repository.
+
 The provisioning configure step derives exact-file and embedded ELF SHA-256
 identities for both C6 images. It packages 64-byte-header containers at bundle
 offsets `0` and `0x60000`, so the C6 payload offsets are `64` and `393280`.
@@ -88,6 +93,33 @@ qualification gate. See
 [`docs/ESP32-P4-C6-Proxy-PubSub.md`](../../../docs/ESP32-P4-C6-Proxy-PubSub.md)
 for the complete procedure, the optional Waveshare C6 UART pad wiring, the
 recovery boundary, and requirements for other P4 Wi-Fi coprocessor boards.
+
+## Bidirectional large PubSub data
+
+Inline publish and delivery payloads are limited to 3,824 bytes per logical
+proxy frame. When both peers negotiate the corresponding capabilities, larger
+P4-to-C6 publishes and C6-to-P4 deliveries are split into ordered chunks. The
+C6 reassembles a publish before local dispatch; the P4 reassembles a delivery
+before invoking its application callback.
+
+The controller example proves both directions on startup. It sends a patterned
+200 KiB publish to C6, subscribes to a C6-originated delivery topic, verifies a
+patterned 32 KiB delivery byte for byte, and queries PubSub status. Expected
+success markers include:
+
+```text
+[PASS] sent 204800-byte chunked publish
+[PASS] verified 32768-byte chunked delivery
+PubSub status: deliveries=... drops=0 errors=0 sequence_gaps=0
+remote PubSub example ready
+```
+
+Large transfers require one contiguous owned buffer at the receiving side and,
+for queued C6 deliveries, one contiguous C6 buffer until all event chunks have
+been sent. The C6 has no PSRAM. Allocation failure, event descriptor pressure,
+or event-pool pressure increments `delivery_drops`; the P4 also exposes
+`pubsub_delivery_sequence_gaps`. Treat either counter as delivery pressure, not
+as evidence that provisioning or subscription failed.
 
 Canonical GitHub links:
 

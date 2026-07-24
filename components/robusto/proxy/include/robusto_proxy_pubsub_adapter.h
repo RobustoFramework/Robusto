@@ -52,6 +52,9 @@ typedef struct robusto_proxy_pubsub_event_descriptor {
     uint32_t delivery_sequence;
     uint32_t data_length;
     uint32_t pool_offset;
+    uint32_t transfer_offset;
+    uint8_t *transfer_data;
+    uint8_t transfer_stage;
 } robusto_proxy_pubsub_event_descriptor_t;
 
 typedef struct robusto_proxy_pubsub_server_adapter {
@@ -103,6 +106,8 @@ const robusto_proxy_pubsub_adapter_t *robusto_proxy_pubsub_server_adapter_operat
 
 bool robusto_proxy_pubsub_server_adapter_take_delivery(
     robusto_proxy_pubsub_server_adapter_t *adapter,
+    bool chunked_delivery_enabled,
+    uint8_t *opcode,
     uint8_t *payload_buffer,
     size_t payload_buffer_size,
     size_t *payload_size);

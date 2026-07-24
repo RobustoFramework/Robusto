@@ -3,8 +3,10 @@
 #include "robusto_proxy_sdio_c6.h"
 
 #define LARGE_PUBLISH_BYTES (200U * 1024U)
+#define LARGE_DELIVERY_BYTES (32U * 1024U)
 
 static const char *TAG = "robusto_c6_delegate";
+static uint32_t large_delivery_topic_hash;
 
 static uint8_t expected_byte(uint32_t offset)
 {
@@ -27,6 +29,22 @@ static rob_ret_val_t verify_large_publish(uint8_t *data, uint32_t data_length)
         }
     }
     ESP_LOGI(TAG, "[PASS] verified %u-byte chunked publish", LARGE_PUBLISH_BYTES);
+    rob_ret_val_t result = robusto_pubsub_server_publish(
+        large_delivery_topic_hash, data, LARGE_DELIVERY_BYTES);
+    if (result == ROB_OK) {
+        ESP_LOGI(TAG, "[PASS] queued %u-byte chunked delivery",
+                 LARGE_DELIVERY_BYTES);
+    } else {
+        ESP_LOGE(TAG, "large delivery publish failed: %d", result);
+    }
+    return result;
+}
+
+static rob_ret_val_t large_delivery_local_sink(uint8_t *data,
+                                               uint32_t data_length)
+{
+    (void)data;
+    (void)data_length;
     return ROB_OK;
 }
 
@@ -35,6 +53,9 @@ void app_main(void)
     uint32_t topic_hash;
 
     ESP_ERROR_CHECK(robusto_proxy_sdio_c6_start());
+    large_delivery_topic_hash = robusto_pubsub_server_subscribe(
+        NULL, large_delivery_local_sink, "proxy.test.large.delivery");
+    ESP_ERROR_CHECK(large_delivery_topic_hash == 0U ? ESP_ERR_NO_MEM : ESP_OK);
     topic_hash = robusto_pubsub_server_subscribe(
         NULL, verify_large_publish, "proxy.test.large");
     ESP_ERROR_CHECK(topic_hash == 0U ? ESP_ERR_NO_MEM : ESP_OK);

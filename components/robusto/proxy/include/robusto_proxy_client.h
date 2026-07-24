@@ -59,6 +59,11 @@ typedef struct robusto_proxy_client {
     uint32_t pubsub_delivery_events;
     uint32_t pubsub_unknown_deliveries;
     uint32_t pubsub_delivery_sequence_gaps;
+    uint8_t *pubsub_delivery_data;
+    uint32_t pubsub_delivery_subscription_id;
+    uint32_t pubsub_delivery_sequence;
+    uint32_t pubsub_delivery_data_length;
+    uint32_t pubsub_delivery_data_received;
     uint32_t retries;
     uint8_t consecutive_health_timeouts;
 } robusto_proxy_client_t;

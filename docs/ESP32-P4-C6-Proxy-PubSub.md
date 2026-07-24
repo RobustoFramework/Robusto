@@ -436,7 +436,7 @@ Keep the required lifecycle order:
 3. initialize Robusto
 4. wait for HELLO-negotiated readiness
 5. subscribe through `robusto_proxy_pubsub_subscribe()`
-6. process DELIVERY callbacks
+6. process complete DELIVERY callbacks after any negotiated chunk reassembly
 
 Treat the proxy as ready only when `robusto_proxy_pubsub_is_ready(...)`
 returns true.
@@ -533,7 +533,10 @@ Preserve full logs before changing configuration.
 ## Subscribe and receive DELIVERY events
 
 The callback runs on the P4 proxy event task, outside the SDIO ISR, transport
-lock, and synchronous request lock. Keep it bounded and return its result:
+lock, and synchronous request lock. Inline data arrives in one event. For a
+negotiated chunked delivery, the P4 validates begin/chunk/commit ordering and
+invokes the callback once with the complete reassembled payload. Keep the
+callback bounded and return its result:
 
 ```c
 static rob_ret_val_t temperature_callback(void *context,
@@ -597,6 +600,9 @@ robusto_proxy_pubsub_status_response_t status = {0};
 
 rob_ret_val_t result = robusto_proxy_pubsub_query_status(
     robusto_proxy_sdio(), &status);
+if (result == ROB_OK && status.delivery_drops != 0U) {
+    /* Report C6 allocation or delivery queue pressure. */
+}
 if (result == ROB_OK && status.state != 1U) {
     result = ROB_ERR_NOT_READY;
 }
@@ -632,21 +638,30 @@ Do not deinitialize SDIO independently while proxy workers are running.
 
 - Topic names are 1 to 255 UTF-8 bytes, with no control characters.
 - Topic names are exact and have no wildcard syntax.
-- Publish payloads up to 3,824 bytes use one proxy frame. Larger publishes use
-    sequential 4,080-byte chunks and are reassembled in C6 internal SRAM before
-    local PubSub dispatch. The current image has about 290.2 KiB remaining at
-    build time, but the runtime limit is the C6's largest contiguous internal
-    8-bit heap block. If allocation fails, C6 returns `OUT_OF_MEMORY` to P4 before
-    accepting chunks.
-- Large-message support is a negotiated session capability, not an implicit
-    guarantee of PubSub v1. A peer without `PUBSUB_CHUNKED_PUBLISH` continues to
-    support inline publishes and returns `ROB_ERR_NOT_SUPPORTED` for larger data.
+- Publish and delivery payloads up to 3,824 bytes use one proxy frame.
+- Larger P4-to-C6 publishes use sequential 4,080-byte chunks and are
+    reassembled in C6 internal SRAM before local PubSub dispatch. If allocation
+    fails, C6 returns `OUT_OF_MEMORY` before accepting chunks.
+- Larger C6-to-P4 deliveries use `DELIVERY_BEGIN`, ordered `DELIVERY_CHUNK`
+    events carrying up to 4,080 bytes, and `DELIVERY_COMMIT`. P4 prefers PSRAM
+    for one contiguous reassembly buffer and invokes the application callback
+    only after a complete commit.
+- Large-message support is negotiated independently in each direction. A peer
+    without `PUBSUB_CHUNKED_PUBLISH` or `PUBSUB_CHUNKED_DELIVERY` continues to
+    support inline data. Large publishes return `ROB_ERR_NOT_SUPPORTED`; a C6
+    large delivery for a controller without delivery support is dropped and
+    counted.
+- The C6 has no PSRAM. Its practical limit is the largest available 8-bit heap
+    block under load. A queued outbound delivery owns its complete payload until
+    all chunks are emitted, so simultaneous inbound and outbound large data must
+    fit together.
 - The low-memory protocol profile negotiates at most 16 remote subscriptions,
   but the P4 application storage may intentionally allow fewer.
 - DELIVERY ordering is FIFO per subscription.
 - DELIVERY retention, QoS, retained messages, replay history, and
   exactly-once delivery are not provided.
-- Delivery queue pressure drops the newest event and increments counters.
+- Delivery allocation or queue pressure drops the complete newest delivery and
+    increments `delivery_drops` in PubSub status.
 - A sequence gap is observable through
   `client.pubsub_delivery_sequence_gaps`.
 - C6 reset changes its boot ID. Reconnection reconciles desired active
@@ -666,9 +681,14 @@ A healthy P4 boot should show:
 4. later Robusto runlevels completing
 5. application PubSub operations succeeding
 
-The example performs a bounded publish/DELIVERY loopback test and then prints:
+The example performs a bounded inline loopback, a 200 KiB chunked publish from
+P4 to C6, and a 32 KiB chunked delivery from C6 to P4. It then prints status
+counters and the final readiness marker:
 
 ```text
+[PASS] sent 204800-byte chunked publish
+[PASS] verified 32768-byte chunked delivery
+PubSub status: deliveries=... drops=0 errors=0 sequence_gaps=0
 remote PubSub example ready
 ```
 

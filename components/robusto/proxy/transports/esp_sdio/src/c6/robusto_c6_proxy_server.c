@@ -52,15 +52,19 @@ static void frame_request_callback(uint32_t msg_id,
 
 static void send_pending_deliveries(void)
 {
+    uint8_t opcode;
     size_t payload_size;
     size_t event_size;
 
     while (robusto_proxy_pubsub_server_adapter_take_delivery(
-        &pubsub_adapter, delivery_payload, sizeof(delivery_payload),
+        &pubsub_adapter,
+        (proxy_service.session.enabled_features &
+         ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY) != 0U,
+        &opcode, delivery_payload, sizeof(delivery_payload),
         &payload_size)) {
         robusto_proxy_result_t result =
-            robusto_proxy_service_build_pubsub_delivery_event(
-                &proxy_service, delivery_payload, payload_size,
+            robusto_proxy_service_build_pubsub_event(
+                &proxy_service, opcode, delivery_payload, payload_size,
                 delivery_event, sizeof(delivery_event), &event_size);
         if (result != ROBUSTO_PROXY_RESULT_OK) {
             ESP_LOGE(TAG, "Build delivery event result=%d", result);

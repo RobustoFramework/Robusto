@@ -26,6 +26,11 @@ extern "C" {
 #define ROBUSTO_PROXY_PUBSUB_UNSUBSCRIBE_RESPONSE_SIZE_BYTES 4U
 #define ROBUSTO_PROXY_PUBSUB_STATUS_RESPONSE_SIZE_BYTES 36U
 #define ROBUSTO_PROXY_PUBSUB_DELIVERY_HEADER_SIZE_BYTES 12U
+#define ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES 12U
+#define ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES 16U
+#define ROBUSTO_PROXY_PUBSUB_DELIVERY_COMMIT_SIZE_BYTES 8U
+#define ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES \
+    (ROBUSTO_PROXY_MAX_PAYLOAD_BYTES - ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES)
 
 typedef struct robusto_proxy_pubsub_publish_request {
     uint64_t operation_id;
@@ -99,6 +104,25 @@ typedef struct robusto_proxy_pubsub_delivery {
     uint32_t data_length;
 } robusto_proxy_pubsub_delivery_t;
 
+typedef struct robusto_proxy_pubsub_delivery_begin {
+    uint32_t subscription_id;
+    uint32_t delivery_sequence;
+    uint32_t data_length;
+} robusto_proxy_pubsub_delivery_begin_t;
+
+typedef struct robusto_proxy_pubsub_delivery_chunk {
+    uint32_t subscription_id;
+    uint32_t delivery_sequence;
+    uint32_t offset;
+    const uint8_t *data;
+    uint32_t data_length;
+} robusto_proxy_pubsub_delivery_chunk_t;
+
+typedef struct robusto_proxy_pubsub_delivery_commit {
+    uint32_t subscription_id;
+    uint32_t delivery_sequence;
+} robusto_proxy_pubsub_delivery_commit_t;
+
 bool robusto_proxy_pubsub_topic_is_valid(const uint8_t *topic, uint16_t length);
 
 robusto_proxy_result_t robusto_proxy_pubsub_encode_publish_request(
@@ -168,6 +192,24 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery(
 robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery(
     const uint8_t *buffer, size_t buffer_size,
     robusto_proxy_pubsub_delivery_t *delivery);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_begin(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_begin_t *begin);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_begin(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_begin_t *begin);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_chunk(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_chunk_t *chunk, size_t *encoded_size);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_chunk(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_chunk_t *chunk);
+robusto_proxy_result_t robusto_proxy_pubsub_encode_delivery_commit(
+    uint8_t *buffer, size_t buffer_size,
+    const robusto_proxy_pubsub_delivery_commit_t *commit);
+robusto_proxy_result_t robusto_proxy_pubsub_decode_delivery_commit(
+    const uint8_t *buffer, size_t buffer_size,
+    robusto_proxy_pubsub_delivery_commit_t *commit);
 
 #ifdef __cplusplus
 }

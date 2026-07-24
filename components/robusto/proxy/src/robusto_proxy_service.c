@@ -16,6 +16,10 @@ static uint64_t available_features(const robusto_proxy_service_t *service)
     {
         features |= ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH;
     }
+    if (adapter != NULL)
+    {
+        features |= ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY;
+    }
     return features;
 }
 
@@ -738,7 +742,6 @@ robusto_proxy_result_t robusto_proxy_service_build_pubsub_delivery_event(
     size_t event_frame_size,
     size_t *encoded_size)
 {
-    robusto_proxy_frame_header_t header;
     robusto_proxy_pubsub_delivery_t delivery;
     robusto_proxy_result_t result;
 
@@ -756,16 +759,70 @@ robusto_proxy_result_t robusto_proxy_service_build_pubsub_delivery_event(
     {
         return result;
     }
+    return robusto_proxy_service_build_pubsub_event(
+        service, ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY,
+        delivery_payload, delivery_payload_size, event_frame,
+        event_frame_size, encoded_size);
+}
+
+robusto_proxy_result_t robusto_proxy_service_build_pubsub_event(
+    robusto_proxy_service_t *service, uint8_t opcode,
+    const uint8_t *event_payload, size_t event_payload_size,
+    uint8_t *event_frame, size_t event_frame_size, size_t *encoded_size)
+{
+    robusto_proxy_frame_header_t header;
+    robusto_proxy_result_t result;
+
+    if (service == NULL || event_payload == NULL || event_frame == NULL ||
+        encoded_size == NULL ||
+        service->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED ||
+        (service->session.enabled_features & ROBUSTO_PROXY_FEATURE_PUBSUB_V1) == 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY)
+    {
+        robusto_proxy_pubsub_delivery_t delivery;
+        result = robusto_proxy_pubsub_decode_delivery(
+            event_payload, event_payload_size, &delivery);
+    }
+    else if ((service->session.enabled_features &
+              ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY) == 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_BEGIN)
+    {
+        robusto_proxy_pubsub_delivery_begin_t begin;
+        result = robusto_proxy_pubsub_decode_delivery_begin(
+            event_payload, event_payload_size, &begin);
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK)
+    {
+        robusto_proxy_pubsub_delivery_chunk_t chunk;
+        result = robusto_proxy_pubsub_decode_delivery_chunk(
+            event_payload, event_payload_size, &chunk);
+    }
+    else if (opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_COMMIT)
+    {
+        robusto_proxy_pubsub_delivery_commit_t commit;
+        result = robusto_proxy_pubsub_decode_delivery_commit(
+            event_payload, event_payload_size, &commit);
+    }
+    else
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    if (result != ROBUSTO_PROXY_RESULT_OK)
+    {
+        return result;
+    }
     robusto_proxy_frame_header_init(
-        &header,
-        ROBUSTO_PROXY_FLAG_EVENT,
-        ROBUSTO_PROXY_DOMAIN_PUBSUB,
-        ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY,
-        0U,
-        robusto_proxy_session_take_sequence(&service->session),
-        (uint32_t)delivery_payload_size);
+        &header, ROBUSTO_PROXY_FLAG_EVENT, ROBUSTO_PROXY_DOMAIN_PUBSUB,
+        opcode, 0U, robusto_proxy_session_take_sequence(&service->session),
+        (uint32_t)event_payload_size);
     result = robusto_proxy_frame_encode(event_frame, event_frame_size, &header,
-                                        delivery_payload, encoded_size);
+                                        event_payload, encoded_size);
     if (result == ROBUSTO_PROXY_RESULT_OK)
     {
         service->events += 1U;

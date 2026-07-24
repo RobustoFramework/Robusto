@@ -17,6 +17,15 @@ static uint8_t *allocate_publish_data(uint32_t data_length)
 #endif
 }
 
+static uint8_t *allocate_delivery_data(uint32_t data_length)
+{
+#ifdef ESP_PLATFORM
+    return heap_caps_malloc(data_length, MALLOC_CAP_8BIT);
+#else
+    return malloc(data_length);
+#endif
+}
+
 static bool adapter_take(robusto_proxy_pubsub_server_adapter_t *adapter)
 {
     return adapter->lock.take == NULL || adapter->lock.take(adapter->lock.context);
@@ -125,25 +134,41 @@ static uint16_t queue_delivery(void *context, const uint8_t *data, uint32_t data
         subscription->next_delivery_sequence = 1U;
     }
     if (!subscription->active ||
-        data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES ||
         adapter->event_count == ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT ||
-        data_length > adapter->event_pool_capacity - adapter->event_pool_used)
+        (data_length <= ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES &&
+         data_length > adapter->event_pool_capacity - adapter->event_pool_used))
     {
         adapter->delivery_drops += 1U;
         adapter_give(adapter);
         return ROBUSTO_PROXY_STATUS_OK;
     }
     event = &adapter->events[adapter->event_write_index];
+    memset(event, 0, sizeof(*event));
     event->subscription_id = subscription->subscription_id;
     event->delivery_sequence = sequence;
     event->data_length = data_length;
-    event->pool_offset = adapter->event_pool_write;
-    for (uint32_t index = 0U; index < data_length; ++index)
+    if (data_length > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_DATA_BYTES)
     {
-        adapter->event_pool[adapter->event_pool_write] = data[index];
-        adapter->event_pool_write = (adapter->event_pool_write + 1U) % adapter->event_pool_capacity;
+        event->transfer_data = allocate_delivery_data(data_length);
+        if (event->transfer_data == NULL)
+        {
+            adapter->delivery_drops += 1U;
+            adapter_give(adapter);
+            return ROBUSTO_PROXY_STATUS_OK;
+        }
+        memcpy(event->transfer_data, data, data_length);
     }
-    adapter->event_pool_used += data_length;
+    else
+    {
+        event->pool_offset = adapter->event_pool_write;
+        for (uint32_t index = 0U; index < data_length; ++index)
+        {
+            adapter->event_pool[adapter->event_pool_write] = data[index];
+            adapter->event_pool_write =
+                (adapter->event_pool_write + 1U) % adapter->event_pool_capacity;
+        }
+        adapter->event_pool_used += data_length;
+    }
     adapter->event_write_index = (uint8_t)((adapter->event_write_index + 1U) %
                                            ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
     adapter->event_count += 1U;
@@ -351,6 +376,26 @@ static uint16_t adapter_session_reset(void *context)
         return ROBUSTO_PROXY_STATUS_BUSY;
     }
     release_publish_transfer(adapter);
+    while (adapter->event_count > 0U)
+    {
+        robusto_proxy_pubsub_event_descriptor_t *event =
+            &adapter->events[adapter->event_read_index];
+        if (event->transfer_data != NULL)
+        {
+            free(event->transfer_data);
+        }
+        else
+        {
+            adapter->event_pool_read =
+                (adapter->event_pool_read + event->data_length) %
+                adapter->event_pool_capacity;
+            adapter->event_pool_used -= event->data_length;
+        }
+        memset(event, 0, sizeof(*event));
+        adapter->event_read_index = (uint8_t)((adapter->event_read_index + 1U) %
+                                              ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
+        adapter->event_count -= 1U;
+    }
     adapter_give(adapter);
     return ROBUSTO_PROXY_STATUS_OK;
 }
@@ -565,6 +610,19 @@ bool robusto_proxy_pubsub_server_adapter_deinit(
         }
     }
     release_publish_transfer(adapter);
+    while (adapter->event_count > 0U)
+    {
+        robusto_proxy_pubsub_event_descriptor_t *event =
+            &adapter->events[adapter->event_read_index];
+        free(event->transfer_data);
+        memset(event, 0, sizeof(*event));
+        adapter->event_read_index = (uint8_t)((adapter->event_read_index + 1U) %
+                                              ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
+        adapter->event_count -= 1U;
+    }
+    adapter->event_pool_read = 0U;
+    adapter->event_pool_write = 0U;
+    adapter->event_pool_used = 0U;
     adapter_give(adapter);
     return success;
 }
@@ -576,14 +634,18 @@ const robusto_proxy_pubsub_adapter_t *robusto_proxy_pubsub_server_adapter_operat
 
 bool robusto_proxy_pubsub_server_adapter_take_delivery(
     robusto_proxy_pubsub_server_adapter_t *adapter,
+    bool chunked_delivery_enabled,
+    uint8_t *opcode,
     uint8_t *payload_buffer,
     size_t payload_buffer_size,
     size_t *payload_size)
 {
     robusto_proxy_pubsub_event_descriptor_t event;
     robusto_proxy_pubsub_delivery_t delivery;
+    robusto_proxy_result_t result;
 
-    if (adapter == NULL || payload_buffer == NULL || payload_size == NULL || !adapter_take(adapter))
+    if (adapter == NULL || opcode == NULL || payload_buffer == NULL ||
+        payload_size == NULL || !adapter_take(adapter))
     {
         return false;
     }
@@ -593,6 +655,83 @@ bool robusto_proxy_pubsub_server_adapter_take_delivery(
         return false;
     }
     event = adapter->events[adapter->event_read_index];
+    if (event.transfer_data != NULL)
+    {
+        if (!chunked_delivery_enabled)
+        {
+            free(event.transfer_data);
+            memset(&adapter->events[adapter->event_read_index], 0,
+                   sizeof(adapter->events[adapter->event_read_index]));
+            adapter->event_read_index = (uint8_t)((adapter->event_read_index + 1U) %
+                                                  ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
+            adapter->event_count -= 1U;
+            adapter->delivery_drops += 1U;
+            adapter_give(adapter);
+            return false;
+        }
+        if (event.transfer_stage == 0U)
+        {
+            robusto_proxy_pubsub_delivery_begin_t begin = {
+                event.subscription_id, event.delivery_sequence, event.data_length};
+            result = robusto_proxy_pubsub_encode_delivery_begin(
+                payload_buffer, payload_buffer_size, &begin);
+            if (result == ROBUSTO_PROXY_RESULT_OK)
+            {
+                adapter->events[adapter->event_read_index].transfer_stage = 1U;
+                *opcode = ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_BEGIN;
+                *payload_size = ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES;
+            }
+            adapter_give(adapter);
+            return result == ROBUSTO_PROXY_RESULT_OK;
+        }
+        if (event.transfer_stage == 1U)
+        {
+            uint32_t remaining = event.data_length - event.transfer_offset;
+            uint32_t chunk_length = remaining > ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES
+                                        ? ROBUSTO_PROXY_PUBSUB_MAX_DELIVERY_CHUNK_DATA_BYTES
+                                        : remaining;
+            robusto_proxy_pubsub_delivery_chunk_t chunk = {
+                event.subscription_id, event.delivery_sequence,
+                event.transfer_offset, event.transfer_data + event.transfer_offset,
+                chunk_length};
+            result = robusto_proxy_pubsub_encode_delivery_chunk(
+                payload_buffer, payload_buffer_size, &chunk, payload_size);
+            if (result == ROBUSTO_PROXY_RESULT_OK)
+            {
+                robusto_proxy_pubsub_event_descriptor_t *queued =
+                    &adapter->events[adapter->event_read_index];
+                queued->transfer_offset += chunk_length;
+                if (queued->transfer_offset == queued->data_length)
+                {
+                    queued->transfer_stage = 2U;
+                }
+                *opcode = ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK;
+            }
+            adapter_give(adapter);
+            return result == ROBUSTO_PROXY_RESULT_OK;
+        }
+        {
+            robusto_proxy_pubsub_delivery_commit_t commit = {
+                event.subscription_id, event.delivery_sequence};
+            result = robusto_proxy_pubsub_encode_delivery_commit(
+                payload_buffer, payload_buffer_size, &commit);
+            if (result != ROBUSTO_PROXY_RESULT_OK)
+            {
+                adapter_give(adapter);
+                return false;
+            }
+            free(event.transfer_data);
+            memset(&adapter->events[adapter->event_read_index], 0,
+                   sizeof(adapter->events[adapter->event_read_index]));
+            adapter->event_read_index = (uint8_t)((adapter->event_read_index + 1U) %
+                                                  ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
+            adapter->event_count -= 1U;
+            *opcode = ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_COMMIT;
+            *payload_size = ROBUSTO_PROXY_PUBSUB_DELIVERY_COMMIT_SIZE_BYTES;
+            adapter_give(adapter);
+            return true;
+        }
+    }
     if (payload_buffer_size < ROBUSTO_PROXY_PUBSUB_DELIVERY_HEADER_SIZE_BYTES + event.data_length)
     {
         adapter_give(adapter);
@@ -619,6 +758,7 @@ bool robusto_proxy_pubsub_server_adapter_take_delivery(
     adapter->event_read_index = (uint8_t)((adapter->event_read_index + 1U) %
                                           ROBUSTO_PROXY_PUBSUB_EVENT_DESCRIPTOR_LIMIT);
     adapter->event_count -= 1U;
+    *opcode = ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY;
     adapter_give(adapter);
     return true;
 }

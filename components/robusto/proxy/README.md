@@ -7,15 +7,22 @@ the configured adapters. Both instances may continue running unrelated local
 Robusto services. Applications use the public headers in `proxy/include`;
 transport and target internals remain private to the component.
 
-PubSub publishes up to 3,824 bytes use one proxy frame. Larger publishes are
-sent as sequential 4,080-byte chunks and reassembled once by the delegated
-instance before local PubSub dispatch. The wire format retains the public
-`uint32_t` message length and does not impose a smaller message cap. A delegate
-accepts a chunked publish only when it can allocate one contiguous message
-buffer; otherwise the controller receives `ROB_ERR_OUT_OF_MEMORY` before any
-chunks are sent. The current ESP32-C6 build has no PSRAM: its build-time SRAM
-remainder is about 290.2 KiB, while the actual runtime limit is the largest
-available internal 8-bit heap block and is therefore lower under load.
+PubSub data up to 3,824 bytes uses one proxy frame in either direction. Larger
+controller-to-delegate publishes use sequential 4,080-byte chunks and are
+reassembled once by the delegate before local PubSub dispatch. Larger
+delegate-to-controller deliveries use negotiated begin, chunk, and commit
+events; the controller invokes the application callback only after complete
+reassembly. The wire format retains the public `uint32_t` message length and
+does not impose a smaller message cap.
+
+Each sender must own one contiguous payload while a transfer is active. The
+current ESP32-C6 build has no PSRAM, so both inbound publish reassembly and an
+outbound queued delivery are limited by available 8-bit heap under load. The
+ESP32-P4 client prefers PSRAM for delivery reassembly and falls back to internal
+8-bit heap. C6 delivery allocation or queue pressure drops the complete newest
+delivery and increments `delivery_drops`; query PubSub status and monitor P4
+sequence-gap counters rather than interpreting a missing large topic as a
+subscription failure.
 
 ## Layout
 

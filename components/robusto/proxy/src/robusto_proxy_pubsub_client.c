@@ -1,6 +1,11 @@
 #include "robusto_proxy_pubsub_client.h"
 
+#include <stdlib.h>
 #include <string.h>
+
+#ifdef ESP_PLATFORM
+#include "esp_heap_caps.h"
+#endif
 
 #include "robusto_proxy_frame.h"
 #include "robusto_proxy_pubsub.h"
@@ -80,6 +85,58 @@ static robusto_proxy_pubsub_client_subscription_fields_t *find_subscription_by_i
     return NULL;
 }
 
+static uint8_t *allocate_delivery_transfer(uint32_t data_length)
+{
+#ifdef ESP_PLATFORM
+    return heap_caps_malloc_prefer(
+        data_length, 2U,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT,
+        MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+#else
+    return malloc(data_length);
+#endif
+}
+
+static void free_delivery_transfer(uint8_t *data)
+{
+#ifdef ESP_PLATFORM
+    heap_caps_free(data);
+#else
+    free(data);
+#endif
+}
+
+static void release_delivery_transfer(robusto_proxy_client_t *client)
+{
+    free_delivery_transfer(client->pubsub_delivery_data);
+    client->pubsub_delivery_data = NULL;
+    client->pubsub_delivery_subscription_id = 0U;
+    client->pubsub_delivery_sequence = 0U;
+    client->pubsub_delivery_data_length = 0U;
+    client->pubsub_delivery_data_received = 0U;
+}
+
+static rob_ret_val_t dispatch_delivery(
+    robusto_proxy_client_t *client,
+    robusto_proxy_pubsub_client_subscription_fields_t *fields,
+    uint32_t delivery_sequence,
+    uint8_t *data,
+    uint32_t data_length)
+{
+    uint32_t next_sequence;
+    rob_ret_val_t callback_result;
+
+    if (delivery_sequence != fields->next_delivery_sequence)
+    {
+        client->pubsub_delivery_sequence_gaps += 1U;
+    }
+    next_sequence = delivery_sequence + 1U;
+    fields->next_delivery_sequence = next_sequence == 0U ? 1U : next_sequence;
+    callback_result = fields->callback(fields->callback_context, data, data_length);
+    client->pubsub_delivery_events += 1U;
+    return callback_result;
+}
+
 rob_ret_val_t robusto_proxy_pubsub_configure(
     robusto_proxy_client_t *client,
     robusto_proxy_pubsub_client_subscription_t *subscriptions,
@@ -90,6 +147,7 @@ rob_ret_val_t robusto_proxy_pubsub_configure(
     {
         return ROB_ERR_INVALID_ARG;
     }
+    release_delivery_transfer(client);
     memset(subscriptions, 0, sizeof(*subscriptions) * subscription_capacity);
     client->pubsub_subscriptions = subscriptions;
     client->pubsub_subscription_capacity = subscription_capacity;
@@ -237,6 +295,10 @@ rob_ret_val_t robusto_proxy_pubsub_unsubscribe(
         return ROB_ERR_PARSING_FAILED;
     }
     (void)response;
+    if (client->pubsub_delivery_subscription_id == fields->subscription_id)
+    {
+        release_delivery_transfer(client);
+    }
     memset(fields, 0, sizeof(*fields));
     return ROB_OK;
 }
@@ -490,10 +552,8 @@ rob_ret_val_t robusto_proxy_pubsub_handle_event(
     size_t event_frame_size)
 {
     const robusto_proxy_frame_header_t *header;
-    robusto_proxy_pubsub_delivery_t delivery;
     robusto_proxy_pubsub_client_subscription_fields_t *fields;
-    uint32_t next_sequence;
-    rob_ret_val_t callback_result;
+    const uint8_t *payload;
 
     if (client == NULL || event_frame == NULL)
     {
@@ -512,31 +572,124 @@ rob_ret_val_t robusto_proxy_pubsub_handle_event(
     if (event_frame_size != robusto_proxy_frame_size_bytes(header->payload_length) ||
         header->flags != ROBUSTO_PROXY_FLAG_EVENT ||
         header->domain != ROBUSTO_PROXY_DOMAIN_PUBSUB ||
-        header->opcode != ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY ||
-        header->correlation_id != 0U ||
-        robusto_proxy_pubsub_decode_delivery(
-            event_frame + ROBUSTO_PROXY_HEADER_SIZE_BYTES,
-            header->payload_length, &delivery) != ROBUSTO_PROXY_RESULT_OK)
+        header->correlation_id != 0U)
     {
         return ROB_ERR_PARSING_FAILED;
     }
-    fields = find_subscription_by_id(client, delivery.subscription_id);
-    if (fields == NULL)
+    payload = event_frame + ROBUSTO_PROXY_HEADER_SIZE_BYTES;
+    if (header->opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY)
     {
-        client->pubsub_unknown_deliveries += 1U;
-        return ROB_ERR_INVALID_ID;
+        robusto_proxy_pubsub_delivery_t delivery;
+
+        if (client->pubsub_delivery_data != NULL ||
+            robusto_proxy_pubsub_decode_delivery(
+                payload, header->payload_length, &delivery) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            release_delivery_transfer(client);
+            return ROB_ERR_PARSING_FAILED;
+        }
+        fields = find_subscription_by_id(client, delivery.subscription_id);
+        if (fields == NULL)
+        {
+            client->pubsub_unknown_deliveries += 1U;
+            return ROB_ERR_INVALID_ID;
+        }
+        return dispatch_delivery(client, fields, delivery.delivery_sequence,
+                                 (uint8_t *)delivery.data, delivery.data_length);
     }
-    if (delivery.delivery_sequence != fields->next_delivery_sequence)
+    if ((client->session.enabled_features &
+         ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY) == 0U)
     {
-        client->pubsub_delivery_sequence_gaps += 1U;
+        return ROB_ERR_NOT_SUPPORTED;
     }
-    next_sequence = delivery.delivery_sequence + 1U;
-    fields->next_delivery_sequence = next_sequence == 0U ? 1U : next_sequence;
-    callback_result = fields->callback(fields->callback_context,
-                                       (uint8_t *)delivery.data,
-                                       delivery.data_length);
-    client->pubsub_delivery_events += 1U;
-    return callback_result;
+    if (header->opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_BEGIN)
+    {
+        robusto_proxy_pubsub_delivery_begin_t begin;
+
+        if (client->pubsub_delivery_data != NULL ||
+            robusto_proxy_pubsub_decode_delivery_begin(
+                payload, header->payload_length, &begin) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            release_delivery_transfer(client);
+            return ROB_ERR_PARSING_FAILED;
+        }
+        fields = find_subscription_by_id(client, begin.subscription_id);
+        if (fields == NULL)
+        {
+            client->pubsub_unknown_deliveries += 1U;
+            return ROB_ERR_INVALID_ID;
+        }
+        client->pubsub_delivery_data = allocate_delivery_transfer(begin.data_length);
+        if (client->pubsub_delivery_data == NULL)
+        {
+            return ROB_ERR_OUT_OF_MEMORY;
+        }
+        client->pubsub_delivery_subscription_id = begin.subscription_id;
+        client->pubsub_delivery_sequence = begin.delivery_sequence;
+        client->pubsub_delivery_data_length = begin.data_length;
+        client->pubsub_delivery_data_received = 0U;
+        return ROB_OK;
+    }
+    if (header->opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_CHUNK)
+    {
+        robusto_proxy_pubsub_delivery_chunk_t chunk;
+
+        if (robusto_proxy_pubsub_decode_delivery_chunk(
+                payload, header->payload_length, &chunk) != ROBUSTO_PROXY_RESULT_OK ||
+            client->pubsub_delivery_data == NULL ||
+            chunk.subscription_id != client->pubsub_delivery_subscription_id ||
+            chunk.delivery_sequence != client->pubsub_delivery_sequence ||
+            chunk.offset != client->pubsub_delivery_data_received ||
+            chunk.data_length > client->pubsub_delivery_data_length -
+                                    client->pubsub_delivery_data_received)
+        {
+            release_delivery_transfer(client);
+            return ROB_ERR_PARSING_FAILED;
+        }
+        memcpy(client->pubsub_delivery_data + chunk.offset,
+               chunk.data, chunk.data_length);
+        client->pubsub_delivery_data_received += chunk.data_length;
+        return ROB_OK;
+    }
+    if (header->opcode == ROBUSTO_PROXY_PUBSUB_OPCODE_DELIVERY_COMMIT)
+    {
+        robusto_proxy_pubsub_delivery_commit_t commit;
+        uint8_t *delivery_data;
+        uint32_t delivery_length;
+        uint32_t delivery_sequence;
+        rob_ret_val_t result;
+
+        if (robusto_proxy_pubsub_decode_delivery_commit(
+                payload, header->payload_length, &commit) != ROBUSTO_PROXY_RESULT_OK ||
+            client->pubsub_delivery_data == NULL ||
+            commit.subscription_id != client->pubsub_delivery_subscription_id ||
+            commit.delivery_sequence != client->pubsub_delivery_sequence ||
+            client->pubsub_delivery_data_received != client->pubsub_delivery_data_length)
+        {
+            release_delivery_transfer(client);
+            return ROB_ERR_PARSING_FAILED;
+        }
+        fields = find_subscription_by_id(client, commit.subscription_id);
+        if (fields == NULL)
+        {
+            client->pubsub_unknown_deliveries += 1U;
+            release_delivery_transfer(client);
+            return ROB_ERR_INVALID_ID;
+        }
+        delivery_data = client->pubsub_delivery_data;
+        delivery_length = client->pubsub_delivery_data_length;
+        delivery_sequence = client->pubsub_delivery_sequence;
+        client->pubsub_delivery_data = NULL;
+        client->pubsub_delivery_subscription_id = 0U;
+        client->pubsub_delivery_sequence = 0U;
+        client->pubsub_delivery_data_length = 0U;
+        client->pubsub_delivery_data_received = 0U;
+        result = dispatch_delivery(client, fields, delivery_sequence,
+                                   delivery_data, delivery_length);
+        free_delivery_transfer(delivery_data);
+        return result;
+    }
+    return ROB_ERR_PARSING_FAILED;
 }
 
 void robusto_proxy_pubsub_session_reset(robusto_proxy_client_t *client)
@@ -548,6 +701,7 @@ void robusto_proxy_pubsub_session_reset(robusto_proxy_client_t *client)
     {
         return;
     }
+    release_delivery_transfer(client);
     subscriptions = client->pubsub_subscriptions;
     for (index = 0U; index < client->pubsub_subscription_capacity; ++index)
     {

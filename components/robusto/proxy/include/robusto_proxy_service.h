@@ -99,6 +99,15 @@ robusto_proxy_result_t robusto_proxy_service_build_pubsub_delivery_event(
     size_t event_frame_size,
     size_t *encoded_size);
 
+robusto_proxy_result_t robusto_proxy_service_build_pubsub_event(
+    robusto_proxy_service_t *service,
+    uint8_t opcode,
+    const uint8_t *event_payload,
+    size_t event_payload_size,
+    uint8_t *event_frame,
+    size_t event_frame_size,
+    size_t *encoded_size);
+
 robusto_proxy_result_t robusto_proxy_service_handle_frame(
     robusto_proxy_service_t *service,
     const uint8_t *request_frame,
