@@ -21,6 +21,45 @@ typedef enum migration_phase {
     MIGRATION_PHASE_COMPLETE = 5,
 } migration_phase_t;
 
+static const char *migration_phase_name(migration_phase_t phase)
+{
+    switch (phase) {
+    case MIGRATION_PHASE_DISCOVER:
+        return "discover";
+    case MIGRATION_PHASE_BOOTSTRAP_PENDING:
+        return "bootstrap_pending";
+    case MIGRATION_PHASE_BOOTSTRAP_READY:
+        return "bootstrap_ready";
+    case MIGRATION_PHASE_FINAL_PENDING:
+        return "final_pending";
+    case MIGRATION_PHASE_FINAL_VERIFY:
+        return "final_verify";
+    case MIGRATION_PHASE_COMPLETE:
+        return "complete";
+    default:
+        return "unknown";
+    }
+}
+
+static const char *migration_error_detail(migration_phase_t phase,
+                                          esp_err_t error,
+                                          bool restart_required,
+                                          bool identity_received)
+{
+    if (error == ESP_ERR_INVALID_STATE) {
+        if (phase == MIGRATION_PHASE_COMPLETE && !identity_received) {
+            return "stored phase says complete, but the delegate did not return a raw-SDIO identity";
+        }
+        if (phase == MIGRATION_PHASE_FINAL_VERIFY && identity_received) {
+            return "delegate answered, but its exact ELF identity was not confirmed after activation";
+        }
+        if (phase == MIGRATION_PHASE_COMPLETE && restart_required) {
+            return "stored phase says complete, but a newer final delegate image was installed and restart is still required";
+        }
+    }
+    return "see preceding provisioning logs for the failing operation";
+}
+
 static const char *TAG = "c6_provisioning";
 
 static void halt(void)
@@ -218,7 +257,13 @@ void app_main(void)
         }
     } else {
         error = provision_raw(&final, &restart_required, &identity_received);
-        if (error == ESP_OK && (restart_required || !identity_received)) {
+        if (error == ESP_OK && restart_required) {
+            error = store_phase(MIGRATION_PHASE_FINAL_VERIFY);
+            if (error == ESP_OK) {
+                restart_for_phase(
+                    "Final C6 image updated; restarting for confirmation");
+            }
+        } else if (error == ESP_OK && !identity_received) {
             error = ESP_ERR_INVALID_STATE;
         }
         if (error == ESP_OK) {
@@ -228,7 +273,12 @@ void app_main(void)
         }
     }
 
-    ESP_LOGE(TAG, "C6 migration phase %u failed: %s",
-             (unsigned int)phase, esp_err_to_name(error));
+    ESP_LOGE(TAG,
+             "C6 migration phase %u (%s) failed: %s; identity_received=%s restart_required=%s; %s",
+             (unsigned int)phase, migration_phase_name(phase),
+             esp_err_to_name(error), identity_received ? "true" : "false",
+             restart_required ? "true" : "false",
+             migration_error_detail(phase, error, restart_required,
+                                    identity_received));
     halt();
 }

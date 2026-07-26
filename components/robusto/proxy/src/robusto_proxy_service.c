@@ -6,6 +6,7 @@
 #include "robusto_proxy_frame.h"
 
 #ifdef ESP_PLATFORM
+#include "esp_app_desc.h"
 #include "esp_app_format.h"
 #include "robusto_system.h"
 #else
@@ -52,7 +53,7 @@ static const char *delegate_identity_string(void)
         const esp_app_desc_t *description = esp_app_get_description();
         if (description != NULL && description->app_elf_sha256[0] != '\0')
         {
-            identity = description->app_elf_sha256;
+            identity = (const char *)description->app_elf_sha256;
         }
     }
 #endif
