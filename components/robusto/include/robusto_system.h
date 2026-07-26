@@ -67,6 +67,8 @@ void robusto_led_blink(uint16_t on_delay, uint16_t off_delay, uint16_t count);
  */
 void * robusto_malloc(size_t size);
 
+bool robusto_has_spiram(void);
+
 /**
  * @brief A proxy for malloc() for Robusto SPI RAM, falls back to normal malloc if SPI RAM allocation fails.
  * 

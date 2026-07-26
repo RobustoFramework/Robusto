@@ -241,6 +241,20 @@ void check_media(robusto_peer_t *peer, robusto_media_t *info, uint64_t last_hear
     // We are receiving from, sending to and reaching the peer, and it is known. So if not before, it is now working.
     else if (info->state != media_state_working && (peer->state != PEER_UNKNOWN) && (info->state != media_state_recovering))
     {
+        bool resolved = true;
+
+        if (info->problem == media_problem_send_problem) {
+            resolved = info->last_send > info->last_state_change;
+        } else if (info->problem == media_problem_silence) {
+            resolved = info->last_receive > info->last_state_change;
+        } else if (info->problem == media_problem_cannot_reach) {
+            resolved = info->last_peer_receive > info->last_state_change;
+        }
+
+        if (!resolved) {
+            return;
+        }
+
         ROB_LOGW(qos_state_log_prefix, "The peer %s, media type %s, state %u (%s) problem %u (%s) seem to be fixed now => changing state to working, info->last_state_change %llu.",
                     peer->name, media_type_to_str(media_type), info->state, str_media_states[info->state], info->problem, str_media_problems[info->problem], info->last_state_change);
         set_state(peer, info, media_type, media_state_working, media_problem_none);
@@ -315,9 +329,11 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
 
         if (info->postpone_qos)
         {
-            info->last_send = r_millis();
-            info->last_peer_receive = info->last_send;
-            info->last_receive = info->last_send;
+            if (info->state == media_state_working) {
+                info->last_send = r_millis();
+                info->last_peer_receive = info->last_send;
+                info->last_receive = info->last_send;
+            }
             info->postpone_qos = false;
         }
 

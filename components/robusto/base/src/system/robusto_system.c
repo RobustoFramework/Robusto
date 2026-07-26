@@ -74,6 +74,22 @@
 
 char *system_log_prefix = "Unset";
 
+#ifdef USE_ESPIDF
+static bool robusto_has_spiram_heap(void)
+{
+    return heap_caps_get_total_size(MALLOC_CAP_SPIRAM) > 0;
+}
+#endif
+
+bool robusto_has_spiram(void)
+{
+#ifdef USE_ESPIDF
+    return robusto_has_spiram_heap();
+#else
+    return false;
+#endif
+}
+
 void *robusto_malloc(size_t size)
 {
 #ifdef USE_ESPIDF

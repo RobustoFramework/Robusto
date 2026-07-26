@@ -4,12 +4,63 @@
 
 #include <robusto_network_service.h>
 #include <robusto_message.h>
+#include <robusto_peer.h>
 #include <string.h>
 
 static char * pubsub_log_prefix;
 
 static void incoming_callback(robusto_message_t *message);
 static void shutdown_callback();
+
+static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
+                                          const char *topic_name,
+                                          uint32_t data_length,
+                                          e_media_type *media_type_out)
+{
+    e_media_type media_type = robusto_mt_none;
+    robusto_media_t *media_info;
+    rob_ret_val_t media_rc;
+
+    if (peer == NULL || media_type_out == NULL) {
+        return ROB_ERR_INVALID_ARG;
+    }
+
+    media_rc = set_suitable_media(peer, (uint16_t)(data_length + 5U), robusto_mt_none, &media_type);
+    if (media_rc != ROB_OK || media_type == robusto_mt_none) {
+        if (data_length > 500U) {
+            ROB_LOGW(pubsub_log_prefix,
+                     "Skipping large publish of %s to peer %s: no suitable media available len=%lu",
+                     topic_name,
+                     peer->name,
+                     (unsigned long)data_length);
+        }
+        return ROB_FAIL;
+    }
+
+    if (data_length <= 500U) {
+        *media_type_out = media_type;
+        return ROB_OK;
+    }
+
+    media_info = get_media_info(peer, media_type);
+    if (media_info == NULL) {
+        return ROB_FAIL;
+    }
+    if (media_info->state != media_state_working) {
+        ROB_LOGW(pubsub_log_prefix,
+                 "Skipping large publish of %s to peer %s using %s: state=%u problem=%u len=%lu",
+                 topic_name,
+                 peer->name,
+                 media_type_to_str(media_type),
+                 media_info->state,
+                 media_info->problem,
+                 (unsigned long)data_length);
+        return ROB_FAIL;
+    }
+
+    *media_type_out = media_type;
+    return ROB_OK;
+}
 
 network_service_t pubsub_server_service = {
     .incoming_callback = &incoming_callback,
@@ -252,8 +303,15 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to context callback", topic->name);
         return subscriber->local_context_callback(subscriber->local_context, data, data_length);
     } else if (subscriber->peer) {
+        e_media_type media_type = robusto_mt_none;
+        bool prefer_spiram = robusto_has_spiram();
+
+        if (prepare_peer_publish(subscriber->peer, topic->name, data_length, &media_type) != ROB_OK) {
+            return ROB_FAIL;
+        }
+
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
-        uint8_t *msg = data_length > 500
+        uint8_t *msg = (data_length > 500 && prefer_spiram)
                            ? robusto_spi_malloc(data_length + 5)
                            : robusto_malloc(data_length + 5);
         if (!msg) {
