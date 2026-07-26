@@ -8,9 +8,13 @@
 extern "C" {
 #endif
 
+/** Maximum encoded slot size used by transport bindings. */
 #define ROBUSTO_PROXY_SLOT_SIZE_BYTES 4120U
+/** Fixed frame header size in bytes. */
 #define ROBUSTO_PROXY_HEADER_SIZE_BYTES 20U
+/** CRC trailer size in bytes. */
 #define ROBUSTO_PROXY_CRC_SIZE_BYTES 4U
+/** Maximum control/pubsub payload size per frame. */
 #define ROBUSTO_PROXY_MAX_PAYLOAD_BYTES 4096U
 
 #define ROBUSTO_PROXY_PROTOCOL_MAJOR 1U
@@ -27,6 +31,8 @@ extern "C" {
 #define ROBUSTO_PROXY_OPCODE_HELLO 0x01U
 #define ROBUSTO_PROXY_OPCODE_CAPABILITY_QUERY 0x02U
 #define ROBUSTO_PROXY_OPCODE_HEALTH 0x03U
+#define ROBUSTO_PROXY_OPCODE_SYSTEM_INFO 0x04U
+#define ROBUSTO_PROXY_OPCODE_REBOOT 0x05U
 
 #define ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH 0x01U
 #define ROBUSTO_PROXY_PUBSUB_OPCODE_SUBSCRIBE 0x02U
@@ -100,15 +106,25 @@ typedef enum robusto_proxy_profile {
 } robusto_proxy_profile_t;
 
 typedef struct robusto_proxy_frame_header {
+    /** Protocol magic bytes. */
     uint8_t magic[2];
+    /** Negotiated protocol major version. */
     uint8_t protocol_major;
+    /** Header length in bytes (must match ROBUSTO_PROXY_HEADER_SIZE_BYTES). */
     uint8_t header_length;
+    /** Message class flags (request/response/event/retry). */
     uint8_t flags;
+    /** Domain identifier (control or pubsub). */
     uint8_t domain;
+    /** Operation code within the domain. */
     uint8_t opcode;
+    /** Reserved for future protocol extensions. */
     uint8_t reserved;
+    /** Correlation ID used to match requests and responses. */
     uint32_t correlation_id;
+    /** Session sequence number. */
     uint32_t sequence;
+    /** Payload length in bytes. */
     uint32_t payload_length;
 } robusto_proxy_frame_header_t;
 
@@ -163,6 +179,25 @@ typedef struct robusto_proxy_health_response {
     uint32_t queue_high_water;
 } robusto_proxy_health_response_t;
 
+typedef struct robusto_proxy_system_info_response {
+    /** Delegate boot ID from the active proxy session. */
+    uint64_t proxy_boot_id;
+    /** Current free general-purpose memory on the delegate. */
+    uint32_t available_memory_bytes;
+    /** Current free SPI-capable memory on the delegate. */
+    uint32_t available_spi_memory_bytes;
+    /** Number of valid bytes in robusto_version. */
+    uint8_t robusto_version_length;
+    /** Number of valid bytes in delegate_version. */
+    uint8_t delegate_version_length;
+    /** Reserved for future expansion. */
+    uint8_t reserved[2];
+    /** Robusto framework version bytes (not guaranteed NUL-terminated). */
+    uint8_t robusto_version[32];
+    /** Delegate identity/version bytes (not guaranteed NUL-terminated). */
+    uint8_t delegate_version[64];
+} robusto_proxy_system_info_response_t;
+
 typedef struct robusto_proxy_response_prefix {
     uint16_t status;
     uint16_t result_flags;
@@ -180,9 +215,16 @@ typedef struct robusto_proxy_profile_limits {
     uint32_t response_pool_bytes;
 } robusto_proxy_profile_limits_t;
 
+/** Returns true when the frame flags are protocol-valid. */
 bool robusto_proxy_flag_is_valid(uint8_t flags);
+
+/** Returns true when payload length does not exceed protocol limits. */
 bool robusto_proxy_payload_length_is_valid(uint32_t payload_length);
+
+/** Computes full frame size (header + payload + CRC) for payload_length. */
 size_t robusto_proxy_frame_size_bytes(uint32_t payload_length);
+
+/** Returns runtime limits for the selected proxy profile. */
 robusto_proxy_profile_limits_t robusto_proxy_profile_limits(robusto_proxy_profile_t profile);
 
 #ifdef __cplusplus

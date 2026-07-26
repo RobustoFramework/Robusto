@@ -248,9 +248,12 @@ static void test_control_payload_round_trip(void)
     robusto_proxy_hello_response_t hello_response_copy;
     robusto_proxy_health_response_t health_response;
     robusto_proxy_health_response_t health_response_copy;
+    robusto_proxy_system_info_response_t system_info_response;
+    robusto_proxy_system_info_response_t system_info_response_copy;
     uint8_t hello_request_bytes[ROBUSTO_PROXY_HELLO_REQUEST_SIZE_BYTES];
     uint8_t hello_response_bytes[ROBUSTO_PROXY_HELLO_RESPONSE_SIZE_BYTES];
     uint8_t health_response_bytes[ROBUSTO_PROXY_HEALTH_RESPONSE_SIZE_BYTES];
+    uint8_t system_info_response_bytes[ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES];
 
     memset(&hello_request, 0, sizeof(hello_request));
     hello_request.controller_boot_id = 0x1122334455667788ULL;
@@ -306,6 +309,33 @@ static void test_control_payload_round_trip(void)
     TEST_ASSERT_EQUAL_U32(health_response.uptime_ms, health_response_copy.uptime_ms);
     TEST_ASSERT_EQUAL_U32(health_response.requests, health_response_copy.requests);
     TEST_ASSERT_EQUAL_U32(health_response.queue_high_water, health_response_copy.queue_high_water);
+
+    memset(&system_info_response, 0, sizeof(system_info_response));
+    system_info_response.proxy_boot_id = 0x1234ULL;
+    system_info_response.available_memory_bytes = 100U;
+    system_info_response.available_spi_memory_bytes = 200U;
+    memcpy(system_info_response.robusto_version, "0.1", 3U);
+    system_info_response.robusto_version_length = 3U;
+    memcpy(system_info_response.delegate_version, "delegate-v1", 11U);
+    system_info_response.delegate_version_length = 11U;
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_encode_system_info_response(
+            system_info_response_bytes, sizeof(system_info_response_bytes),
+            &system_info_response));
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_system_info_response(
+            system_info_response_bytes, sizeof(system_info_response_bytes),
+            &system_info_response_copy));
+    TEST_ASSERT_EQUAL_U32(system_info_response.available_memory_bytes,
+                          system_info_response_copy.available_memory_bytes);
+    TEST_ASSERT_EQUAL_U32(system_info_response.available_spi_memory_bytes,
+                          system_info_response_copy.available_spi_memory_bytes);
+    TEST_ASSERT_EQUAL_U32(system_info_response.robusto_version_length,
+                          system_info_response_copy.robusto_version_length);
+    TEST_ASSERT_EQUAL_U32(system_info_response.delegate_version_length,
+                          system_info_response_copy.delegate_version_length);
 }
 
 static void test_control_payload_rejects_short_buffers(void)
@@ -313,15 +343,18 @@ static void test_control_payload_rejects_short_buffers(void)
     robusto_proxy_hello_request_t hello_request;
     robusto_proxy_hello_response_t hello_response;
     robusto_proxy_health_response_t health_response;
+    robusto_proxy_system_info_response_t system_info_response;
     uint8_t short_buffer[8] = {0U};
 
     memset(&hello_request, 0, sizeof(hello_request));
     memset(&hello_response, 0, sizeof(hello_response));
     memset(&health_response, 0, sizeof(health_response));
+    memset(&system_info_response, 0, sizeof(system_info_response));
 
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT, robusto_proxy_encode_hello_request(short_buffer, sizeof(short_buffer), &hello_request));
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT, robusto_proxy_decode_hello_response(short_buffer, sizeof(short_buffer), &hello_response));
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT, robusto_proxy_decode_health_response(short_buffer, sizeof(short_buffer), &health_response));
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT, robusto_proxy_decode_system_info_response(short_buffer, sizeof(short_buffer), &system_info_response));
 }
 
 static void test_response_prefix_round_trip_and_validation(void)
@@ -369,9 +402,12 @@ static void test_prefixed_control_response_messages(void)
     robusto_proxy_capability_response_t decoded_capability;
     robusto_proxy_health_response_t health_response;
     robusto_proxy_health_response_t decoded_health;
+    robusto_proxy_system_info_response_t system_info;
+    robusto_proxy_system_info_response_t decoded_system_info;
     uint8_t hello_message[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_HELLO_RESPONSE_SIZE_BYTES];
     uint8_t capability_message[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_CAPABILITY_RESPONSE_SIZE_BYTES];
     uint8_t health_message[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_HEALTH_RESPONSE_SIZE_BYTES];
+    uint8_t system_info_message[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES];
     uint8_t error_message[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + 3U] = {0U};
 
     memset(&prefix, 0, sizeof(prefix));
@@ -415,6 +451,21 @@ static void test_prefixed_control_response_messages(void)
     TEST_ASSERT_EQUAL_U32(health_response.requests, decoded_health.requests);
     TEST_ASSERT_EQUAL_U32(health_response.queue_high_water, decoded_health.queue_high_water);
 
+    memset(&system_info, 0, sizeof(system_info));
+    system_info.proxy_boot_id = 0x7788ULL;
+    system_info.available_memory_bytes = 1024U;
+    system_info.available_spi_memory_bytes = 2048U;
+    memcpy(system_info.robusto_version, "0.1", 3U);
+    system_info.robusto_version_length = 3U;
+    memcpy(system_info.delegate_version, "delegate-v1", 11U);
+    system_info.delegate_version_length = 11U;
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK, robusto_proxy_encode_response_prefix(system_info_message, sizeof(system_info_message), &prefix));
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK, robusto_proxy_encode_system_info_response(system_info_message + ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES, ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES, &system_info));
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK, robusto_proxy_decode_system_info_response_message(system_info_message, sizeof(system_info_message), &decoded_prefix, &decoded_system_info));
+    TEST_ASSERT_EQUAL_U32(system_info.available_memory_bytes, decoded_system_info.available_memory_bytes);
+    TEST_ASSERT_EQUAL_U32(system_info.available_spi_memory_bytes, decoded_system_info.available_spi_memory_bytes);
+    TEST_ASSERT_EQUAL_U32(system_info.delegate_version_length, decoded_system_info.delegate_version_length);
+
     memset(&prefix, 0, sizeof(prefix));
     prefix.status = ROBUSTO_PROXY_STATUS_BUSY;
     prefix.result_flags = ROBUSTO_PROXY_RESULT_FLAG_RETRYABLE;
@@ -427,6 +478,91 @@ static void test_prefixed_control_response_messages(void)
     TEST_ASSERT_FALSE(robusto_proxy_response_prefix_is_success(&decoded_prefix));
     TEST_ASSERT_EQUAL_U32(0U, decoded_hello.selected_max_payload);
     TEST_ASSERT_EQUAL_U32(50U, decoded_prefix.retry_after_ms);
+}
+
+static bool fake_reboot_handler(void *context)
+{
+    uint32_t *counter = context;
+    if (counter != NULL)
+    {
+        *counter += 1U;
+    }
+    return true;
+}
+
+static void test_service_control_system_info_and_reboot_paths(void)
+{
+    robusto_proxy_service_t service;
+    robusto_proxy_response_prefix_t prefix;
+    robusto_proxy_system_info_response_t info;
+    uint8_t info_response[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES];
+    uint8_t reboot_response[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES];
+    size_t response_size = 0U;
+    uint32_t reboot_calls = 0U;
+
+    robusto_proxy_service_init(
+        &service,
+        ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
+        0x1122ULL,
+        1U,
+        1U,
+        2U,
+        0U);
+    service.session.state = ROBUSTO_PROXY_SESSION_ESTABLISHED;
+
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service,
+        ROBUSTO_PROXY_OPCODE_SYSTEM_INFO,
+        NULL,
+        0U,
+        10U,
+        info_response,
+        sizeof(info_response),
+        &response_size));
+    TEST_ASSERT_EQUAL_U32(sizeof(info_response), (uint32_t)response_size);
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_system_info_response_message(
+            info_response, response_size, &prefix, &info));
+    TEST_ASSERT_TRUE(robusto_proxy_response_prefix_is_success(&prefix));
+    TEST_ASSERT_TRUE(info.proxy_boot_id == service.session.local_boot_id);
+    TEST_ASSERT_TRUE(info.robusto_version_length > 0U);
+
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service,
+        ROBUSTO_PROXY_OPCODE_REBOOT,
+        NULL,
+        0U,
+        11U,
+        reboot_response,
+        sizeof(reboot_response),
+        &response_size));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                          (uint32_t)response_size);
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_response_prefix(reboot_response, response_size,
+                                             &prefix));
+    TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE,
+                          prefix.status);
+
+    robusto_proxy_service_set_reboot_handler(
+        &service, fake_reboot_handler, &reboot_calls);
+    TEST_ASSERT_TRUE(robusto_proxy_service_handle_control_request(
+        &service,
+        ROBUSTO_PROXY_OPCODE_REBOOT,
+        NULL,
+        0U,
+        12U,
+        reboot_response,
+        sizeof(reboot_response),
+        &response_size));
+    TEST_ASSERT_EQUAL_INT(
+        ROBUSTO_PROXY_RESULT_OK,
+        robusto_proxy_decode_response_prefix(reboot_response, response_size,
+                                             &prefix));
+    TEST_ASSERT_TRUE(robusto_proxy_response_prefix_is_success(&prefix));
+    TEST_ASSERT_EQUAL_U32(1U, reboot_calls);
 }
 
 static void test_inflight_admission_lookup_completion_and_invalidation(void)
@@ -1428,6 +1564,7 @@ typedef struct fake_pubsub_adapter_state {
     uint32_t subscribe_calls;
     uint32_t unsubscribe_calls;
     uint32_t status_calls;
+    uint32_t reboot_calls;
     uint64_t last_operation_id;
     uint32_t subscription_id;
     uint16_t publish_begin_status;
@@ -1699,6 +1836,7 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
     robusto_proxy_client_t client;
     robusto_proxy_health_response_t health;
     robusto_proxy_capability_response_t capabilities;
+    robusto_proxy_system_info_response_t system_info;
     robusto_proxy_pubsub_status_response_t pubsub_status;
     robusto_proxy_pubsub_delivery_t delivery = {
         .subscription_id = 7U,
@@ -1731,6 +1869,8 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
     robusto_proxy_service_init(&service, ROBUSTO_PROXY_PROFILE_LOW_MEMORY,
                                0xC6U, 1U, 1U, 2U, 0U);
     robusto_proxy_service_set_pubsub_adapter(&service, &adapter, &adapter_state);
+    robusto_proxy_service_set_reboot_handler(
+        &service, fake_reboot_handler, &adapter_state.reboot_calls);
     transport.service = &service;
     transport.now_ms = 100U;
 
@@ -1917,6 +2057,18 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
                               ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_PUBLISH |
                               ROBUSTO_PROXY_FEATURE_PUBSUB_CHUNKED_DELIVERY,
                           (uint32_t)capabilities.enabled_features);
+
+    TEST_ASSERT_EQUAL_INT(
+        ROB_OK,
+        robusto_proxy_client_query_system_info(&client, &system_info));
+    TEST_ASSERT_TRUE(system_info.robusto_version_length > 0U);
+
+    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_reboot_delegate(&client));
+    TEST_ASSERT_EQUAL_U32(1U, adapter_state.reboot_calls);
+    TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_RESET, client.session.state);
+    TEST_ASSERT_FALSE(robusto_proxy_pubsub_is_ready(&client));
+    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_connect(&client));
+    TEST_ASSERT_TRUE(robusto_proxy_pubsub_is_ready(&client));
 
     TEST_ASSERT_EQUAL_INT(
         ROB_OK,
@@ -2777,6 +2929,7 @@ int main(void)
     test_service_health_wire_round_trip_from_builder();
     test_service_control_health_request_handler_happy_path();
     test_service_control_capability_query_paths();
+    test_service_control_system_info_and_reboot_paths();
     test_service_control_frame_dispatch_happy_path_and_bad_crc();
     test_service_hello_negotiation_and_rejection_paths();
     test_service_control_handler_rejects_unsupported_opcode();

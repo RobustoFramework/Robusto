@@ -621,6 +621,30 @@ Successful unsubscribe invalidates the local handle. Reusing it returns
 queued before unsubscribe may still reach the P4 transport, but the client
 discards it because the subscription is inactive.
 
+## Query delegate identity, memory, and reboot
+
+The proxy control API also exposes delegate system information and controlled
+reboot operations.
+
+Use `robusto_proxy_client_query_system_info(...)` to read:
+
+- delegate identity/version marker
+- free memory (`get_free_mem()`)
+- free SPI memory (`get_free_mem_spi()`)
+
+For deployment verification, compare the returned delegate identity against
+the expected value for your rollout before enabling normal operation.
+
+On C6 builds, identity precedence is:
+
+1. `CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY` when set
+2. delegate ELF SHA-256 identity
+3. `ROBUSTO_VERSION` fallback
+
+Use `robusto_proxy_client_reboot_delegate(...)` to request a controlled
+delegate restart. After a successful reboot request, re-run HELLO and do not
+assume previous proxy-ready state remains valid.
+
 ## Shutdown
 
 Use checked shutdown and handle its return value:

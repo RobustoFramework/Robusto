@@ -17,6 +17,11 @@ typedef uint32_t (*robusto_proxy_clock_now_ms)(void *context);
 typedef void (*robusto_proxy_clock_wait_ms)(void *context, uint32_t delay_ms);
 typedef uint32_t (*robusto_proxy_retry_jitter_ms)(void *context, uint32_t maximum_ms);
 
+/**
+ * Configuration for robusto_proxy_client_init.
+ *
+ * request_frame/response_frame must remain valid for the client lifetime.
+ */
 typedef struct robusto_proxy_client_config {
     robusto_proxy_profile_t profile;
     uint64_t controller_boot_id;
@@ -68,19 +73,43 @@ typedef struct robusto_proxy_client {
     uint8_t consecutive_health_timeouts;
 } robusto_proxy_client_t;
 
+/** Initializes a proxy client instance from config. */
 rob_ret_val_t robusto_proxy_client_init(
     robusto_proxy_client_t *client,
     const robusto_proxy_client_config_t *config);
 
+/** Performs HELLO negotiation and establishes the proxy session. */
 rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client);
 
+/** Queries negotiated remote capabilities for the active session. */
 rob_ret_val_t robusto_proxy_client_query_capabilities(
     robusto_proxy_client_t *client,
     robusto_proxy_capability_response_t *response);
 
+/** Queries delegate health counters and uptime. */
 rob_ret_val_t robusto_proxy_client_query_health(
     robusto_proxy_client_t *client,
     robusto_proxy_health_response_t *response);
+
+/**
+ * Queries delegate system identity and memory status.
+ *
+ * On ESP32-C6 delegates, delegate_version resolves in this order:
+ * 1) CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY
+ * 2) delegate ELF SHA-256 identity
+ * 3) ROBUSTO_VERSION fallback
+ */
+rob_ret_val_t robusto_proxy_client_query_system_info(
+    robusto_proxy_client_t *client,
+    robusto_proxy_system_info_response_t *response);
+
+/**
+ * Requests a controlled reboot of the delegate.
+ *
+ * After success, callers must reconnect and renegotiate session state.
+ */
+rob_ret_val_t robusto_proxy_client_reboot_delegate(
+    robusto_proxy_client_t *client);
 
 rob_ret_val_t robusto_proxy_status_to_robusto(uint16_t status);
 

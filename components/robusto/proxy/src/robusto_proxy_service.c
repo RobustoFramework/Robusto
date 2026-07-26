@@ -5,6 +5,60 @@
 #include "robusto_proxy_control.h"
 #include "robusto_proxy_frame.h"
 
+#ifdef ESP_PLATFORM
+#include "esp_app_format.h"
+#include "robusto_system.h"
+#else
+#ifndef ROBUSTO_VERSION
+#define ROBUSTO_VERSION "unknown"
+#endif
+static uint64_t get_free_mem(void)
+{
+    return 0U;
+}
+static uint64_t get_free_mem_spi(void)
+{
+    return 0U;
+}
+#endif
+
+static uint8_t bounded_string_length(const char *value, uint8_t maximum)
+{
+    uint8_t length = 0U;
+
+    if (value == NULL)
+    {
+        return 0U;
+    }
+    while (length < maximum && value[length] != '\0')
+    {
+        ++length;
+    }
+    return length;
+}
+
+static const char *delegate_identity_string(void)
+{
+    const char *identity = ROBUSTO_VERSION;
+
+#ifdef ESP_PLATFORM
+#ifdef CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY
+    if (CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY[0] != '\0')
+    {
+        return CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY;
+    }
+#endif
+    {
+        const esp_app_desc_t *description = esp_app_get_description();
+        if (description != NULL && description->app_elf_sha256[0] != '\0')
+        {
+            identity = description->app_elf_sha256;
+        }
+    }
+#endif
+    return identity;
+}
+
 static uint64_t available_features(const robusto_proxy_service_t *service)
 {
     uint64_t features = ROBUSTO_PROXY_FEATURE_PUBSUB_V1;
@@ -59,6 +113,19 @@ void robusto_proxy_service_set_pubsub_adapter(
     }
     service->pubsub_adapter = adapter;
     service->pubsub_adapter_context = context;
+}
+
+void robusto_proxy_service_set_reboot_handler(
+    robusto_proxy_service_t *service,
+    robusto_proxy_reboot_request_fn reboot_request,
+    void *context)
+{
+    if (service == NULL)
+    {
+        return;
+    }
+    service->reboot_request = reboot_request;
+    service->reboot_request_context = context;
 }
 
 uint16_t robusto_proxy_service_tick(
@@ -361,6 +428,104 @@ bool robusto_proxy_service_handle_control_request(
 
         service->requests += 1U;
         *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_CAPABILITY_RESPONSE_SIZE_BYTES;
+        return true;
+    }
+
+    if (opcode == ROBUSTO_PROXY_OPCODE_SYSTEM_INFO)
+    {
+        robusto_proxy_system_info_response_t response;
+        const char *robusto_version = ROBUSTO_VERSION;
+        const char *delegate_identity = delegate_identity_string();
+
+        if (request_payload_size != 0U ||
+            response_buffer_size < (ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES +
+                                    ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES))
+        {
+            return false;
+        }
+
+        (void)request_payload;
+        if (service->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED)
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_HANDSHAKE_REQUIRED;
+            if (robusto_proxy_encode_response_prefix(response_buffer, response_buffer_size, &prefix) != ROBUSTO_PROXY_RESULT_OK)
+            {
+                return false;
+            }
+
+            service->errors += 1U;
+            *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES;
+            return true;
+        }
+
+        memset(&response, 0, sizeof(response));
+        response.proxy_boot_id = service->session.local_boot_id;
+        response.available_memory_bytes = (uint32_t)get_free_mem();
+        response.available_spi_memory_bytes = (uint32_t)get_free_mem_spi();
+        response.robusto_version_length = bounded_string_length(
+            robusto_version, sizeof(response.robusto_version));
+        memcpy(response.robusto_version, robusto_version,
+               response.robusto_version_length);
+         response.delegate_version_length = bounded_string_length(
+             delegate_identity, sizeof(response.delegate_version));
+         memcpy(response.delegate_version, delegate_identity,
+               response.delegate_version_length);
+
+        prefix.status = ROBUSTO_PROXY_STATUS_OK;
+        if (robusto_proxy_encode_response_prefix(response_buffer, response_buffer_size, &prefix) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            return false;
+        }
+        if (robusto_proxy_encode_system_info_response(
+                response_buffer + ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                response_buffer_size - ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                &response) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            return false;
+        }
+
+        service->requests += 1U;
+        *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES +
+                         ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES;
+        return true;
+    }
+
+    if (opcode == ROBUSTO_PROXY_OPCODE_REBOOT)
+    {
+        if (request_payload_size != 0U ||
+            response_buffer_size < ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES)
+        {
+            return false;
+        }
+
+        (void)request_payload;
+        if (service->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED)
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_HANDSHAKE_REQUIRED;
+        }
+        else if (service->reboot_request == NULL)
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_CAPABILITY_UNAVAILABLE;
+        }
+        else if (!service->reboot_request(service->reboot_request_context))
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_INTERNAL;
+        }
+        else
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_OK;
+        }
+
+        if (robusto_proxy_encode_response_prefix(response_buffer, response_buffer_size, &prefix) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            return false;
+        }
+        if (prefix.status != ROBUSTO_PROXY_STATUS_OK)
+        {
+            service->errors += 1U;
+        }
+        service->requests += 1U;
+        *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES;
         return true;
     }
 
@@ -841,7 +1006,7 @@ robusto_proxy_result_t robusto_proxy_service_handle_frame(
 {
     const robusto_proxy_frame_header_t *request_header;
     robusto_proxy_frame_header_t response_header;
-    uint8_t response_payload[ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES + ROBUSTO_PROXY_HEALTH_RESPONSE_SIZE_BYTES];
+    uint8_t response_payload[ROBUSTO_PROXY_MAX_PAYLOAD_BYTES];
     size_t response_payload_size = 0U;
     robusto_proxy_result_t result;
 

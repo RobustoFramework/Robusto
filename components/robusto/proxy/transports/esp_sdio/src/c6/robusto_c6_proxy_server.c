@@ -34,6 +34,14 @@ static proxy_frame_item_t worker_frame;
 static uint8_t worker_response[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
 static uint8_t delivery_payload[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
 static uint8_t delivery_event[ROBUSTO_PROXY_SLOT_SIZE_BYTES];
+static bool reboot_requested;
+
+static bool proxy_reboot_request(void *context)
+{
+    (void)context;
+    reboot_requested = true;
+    return true;
+}
 
 static void frame_request_callback(uint32_t msg_id,
                                    const uint8_t *data,
@@ -123,6 +131,11 @@ static void bridge_task_main(void *context)
                     ESP_LOGE(TAG, "Send logical response: %s",
                              esp_err_to_name(error));
                 }
+                if (error == ESP_OK && reboot_requested) {
+                    ESP_LOGI(TAG, "Reboot requested by controller");
+                    reboot_requested = false;
+                    esp_restart();
+                }
             } else {
                 if (result == ROBUSTO_PROXY_RESULT_BAD_CRC) {
                     ++proxy_service.rx_crc_errors;
@@ -160,6 +173,8 @@ esp_err_t robusto_c6_proxy_server_init(void)
         &proxy_service,
         robusto_proxy_pubsub_server_adapter_operations(),
         &pubsub_adapter);
+    robusto_proxy_service_set_reboot_handler(
+        &proxy_service, proxy_reboot_request, NULL);
 
     frame_queue = xQueueCreate(ROBUSTO_PROXY_SDIO_QUEUE_CAPACITY,
                                sizeof(proxy_frame_item_t));

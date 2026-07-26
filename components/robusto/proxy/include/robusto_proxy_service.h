@@ -12,6 +12,14 @@
 extern "C" {
 #endif
 
+/**
+ * Callback invoked when a REBOOT control request is accepted.
+ *
+ * Return true to indicate reboot has been scheduled and the service should
+ * report success; return false to report internal failure.
+ */
+typedef bool (*robusto_proxy_reboot_request_fn)(void *context);
+
 typedef struct robusto_proxy_pubsub_adapter {
     uint16_t (*publish)(void *context,
                         const robusto_proxy_pubsub_publish_request_t *request,
@@ -47,6 +55,8 @@ typedef struct robusto_proxy_service {
     uint32_t queue_high_water;
     const robusto_proxy_pubsub_adapter_t *pubsub_adapter;
     void *pubsub_adapter_context;
+    robusto_proxy_reboot_request_fn reboot_request;
+    void *reboot_request_context;
 } robusto_proxy_service_t;
 
 void robusto_proxy_service_init(
@@ -63,6 +73,12 @@ void robusto_proxy_service_set_pubsub_adapter(
     const robusto_proxy_pubsub_adapter_t *adapter,
     void *context);
 
+/** Registers a reboot callback used by ROBUSTO_PROXY_OPCODE_REBOOT. */
+void robusto_proxy_service_set_reboot_handler(
+    robusto_proxy_service_t *service,
+    robusto_proxy_reboot_request_fn reboot_request,
+    void *context);
+
 uint16_t robusto_proxy_service_tick(
     robusto_proxy_service_t *service,
     uint32_t now_ms);
@@ -72,6 +88,7 @@ bool robusto_proxy_service_build_health_response(
     uint32_t now_ms,
     robusto_proxy_health_response_t *response);
 
+/** Handles one decoded control request payload and encodes response payload. */
 bool robusto_proxy_service_handle_control_request(
     robusto_proxy_service_t *service,
     uint8_t opcode,
@@ -108,6 +125,11 @@ robusto_proxy_result_t robusto_proxy_service_build_pubsub_event(
     size_t event_frame_size,
     size_t *encoded_size);
 
+/**
+ * Validates, dispatches, and encodes a full proxy frame transaction.
+ *
+ * response_size is set to zero when no response frame is produced.
+ */
 robusto_proxy_result_t robusto_proxy_service_handle_frame(
     robusto_proxy_service_t *service,
     const uint8_t *request_frame,

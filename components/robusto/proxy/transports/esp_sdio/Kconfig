@@ -41,6 +41,16 @@ if IDF_TARGET_ESP32C6
 
 comment "ESP32-C6 SDIO slave pins are fixed by the peripheral"
 
+config ROBUSTO_PROXY_C6_DELEGATE_IDENTITY
+    string "Delegate identity string"
+    default ""
+    help
+        Optional operator-defined delegate identity returned by the proxy
+        SYSTEM_INFO control response. Set this to the deployment identity
+        that the controller/operator expects (for example app version,
+        release tag, or fleet rollout marker). If left empty, Robusto falls
+        back to the ESP app ELF SHA-256 identity when available.
+
 endif
 
 endmenu

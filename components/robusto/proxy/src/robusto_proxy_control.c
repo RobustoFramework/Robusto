@@ -349,6 +349,70 @@ robusto_proxy_result_t robusto_proxy_decode_health_response(
     return ROBUSTO_PROXY_RESULT_OK;
 }
 
+robusto_proxy_result_t robusto_proxy_encode_system_info_response(
+    uint8_t *buffer,
+    size_t buffer_size,
+    const robusto_proxy_system_info_response_t *response)
+{
+    if (check_io(buffer, (void *)response, buffer_size,
+                 ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES) !=
+            ROBUSTO_PROXY_RESULT_OK ||
+        response == NULL)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    if (response->robusto_version_length > sizeof(response->robusto_version) ||
+        response->delegate_version_length > sizeof(response->delegate_version))
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+
+    memset(buffer, 0, ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES);
+    write_le64(buffer + 0U, response->proxy_boot_id);
+    write_le32(buffer + 8U, response->available_memory_bytes);
+    write_le32(buffer + 12U, response->available_spi_memory_bytes);
+    buffer[16] = response->robusto_version_length;
+    buffer[17] = response->delegate_version_length;
+    memcpy(buffer + 20U, response->robusto_version,
+           response->robusto_version_length);
+    memcpy(buffer + 52U, response->delegate_version,
+           response->delegate_version_length);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_decode_system_info_response(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_system_info_response_t *response)
+{
+    if (check_io(buffer, response, buffer_size,
+                 ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES) !=
+            ROBUSTO_PROXY_RESULT_OK ||
+        response == NULL)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+
+    memset(response, 0, sizeof(*response));
+    response->proxy_boot_id = read_le64(buffer + 0U);
+    response->available_memory_bytes = read_le32(buffer + 8U);
+    response->available_spi_memory_bytes = read_le32(buffer + 12U);
+    response->robusto_version_length = buffer[16];
+    response->delegate_version_length = buffer[17];
+    memcpy(response->reserved, buffer + 18U, sizeof(response->reserved));
+    if (response->reserved[0] != 0U || response->reserved[1] != 0U ||
+        response->robusto_version_length > sizeof(response->robusto_version) ||
+        response->delegate_version_length > sizeof(response->delegate_version))
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_RESERVED;
+    }
+    memcpy(response->robusto_version, buffer + 20U,
+           response->robusto_version_length);
+    memcpy(response->delegate_version, buffer + 52U,
+           response->delegate_version_length);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
 robusto_proxy_result_t robusto_proxy_decode_hello_response_message(
     const uint8_t *buffer,
     size_t buffer_size,
@@ -392,4 +456,19 @@ robusto_proxy_result_t robusto_proxy_decode_health_response_message(
         response,
         sizeof(*response),
         (robusto_proxy_result_t (*)(const uint8_t *, size_t, void *))robusto_proxy_decode_health_response);
+}
+
+robusto_proxy_result_t robusto_proxy_decode_system_info_response_message(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_response_prefix_t *prefix,
+    robusto_proxy_system_info_response_t *response)
+{
+    return decode_response_message(
+        buffer,
+        buffer_size,
+        prefix,
+        response,
+        sizeof(*response),
+        (robusto_proxy_result_t (*)(const uint8_t *, size_t, void *))robusto_proxy_decode_system_info_response);
 }

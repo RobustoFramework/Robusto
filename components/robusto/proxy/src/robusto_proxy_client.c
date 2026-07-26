@@ -471,3 +471,60 @@ rob_ret_val_t robusto_proxy_client_query_health(
     }
     return ROB_OK;
 }
+
+rob_ret_val_t robusto_proxy_client_query_system_info(
+    robusto_proxy_client_t *client,
+    robusto_proxy_system_info_response_t *response)
+{
+    const uint8_t *response_payload;
+    size_t response_payload_size;
+    rob_ret_val_t result;
+
+    if (client == NULL || response == NULL)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    result = robusto_proxy_client_request(
+        client, ROBUSTO_PROXY_DOMAIN_CONTROL, ROBUSTO_PROXY_OPCODE_SYSTEM_INFO,
+        NULL, 0U, false, &response_payload, &response_payload_size);
+    if (result != ROB_OK)
+    {
+        return result;
+    }
+    if (robusto_proxy_decode_system_info_response(
+            response_payload, response_payload_size, response) !=
+        ROBUSTO_PROXY_RESULT_OK)
+    {
+        return ROB_ERR_PARSING_FAILED;
+    }
+    if (response->proxy_boot_id != client->session.peer_boot_id)
+    {
+        client->session.state = ROBUSTO_PROXY_SESSION_RESET;
+        robusto_proxy_pubsub_session_reset(client);
+        return ROB_ERR_NOT_READY;
+    }
+    return ROB_OK;
+}
+
+rob_ret_val_t robusto_proxy_client_reboot_delegate(
+    robusto_proxy_client_t *client)
+{
+    const uint8_t *response_payload;
+    size_t response_payload_size;
+    rob_ret_val_t result;
+
+    if (client == NULL)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    result = robusto_proxy_client_request(
+        client, ROBUSTO_PROXY_DOMAIN_CONTROL, ROBUSTO_PROXY_OPCODE_REBOOT,
+        NULL, 0U, true, &response_payload, &response_payload_size);
+    if (result != ROB_OK)
+    {
+        return result;
+    }
+    client->session.state = ROBUSTO_PROXY_SESSION_RESET;
+    robusto_proxy_pubsub_session_reset(client);
+    return ROB_OK;
+}

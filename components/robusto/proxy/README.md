@@ -62,6 +62,72 @@ profile. The portable standard profile remains native-tested but is not
 selectable for these targets until matching runtime capacities are implemented
 and measured.
 
+For ESP32-C6 delegate builds, the transport also exposes an operator-defined
+identity string:
+
+- `CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY`
+
+Set this when you need a deployment-specific marker that the controller can
+verify at runtime (for example release tag, rollout marker, or product build
+identity).
+
+## Control API
+
+The control domain now includes two additional operations beyond HELLO,
+CAPABILITY_QUERY, and HEALTH:
+
+- `ROBUSTO_PROXY_OPCODE_SYSTEM_INFO`
+- `ROBUSTO_PROXY_OPCODE_REBOOT`
+
+Controller-side API (public):
+
+- `robusto_proxy_client_query_system_info(...)`
+- `robusto_proxy_client_reboot_delegate(...)`
+
+### SYSTEM_INFO response
+
+`robusto_proxy_system_info_response_t` provides:
+
+- `proxy_boot_id`
+- `available_memory_bytes`
+- `available_spi_memory_bytes`
+- `robusto_version`
+- `delegate_version`
+
+Memory values reuse Robusto system APIs on the delegate:
+
+- `get_free_mem()`
+- `get_free_mem_spi()`
+
+Delegate identity/version selection precedence is:
+
+1. `CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY` when non-empty
+2. delegate ELF SHA-256 from `esp_app_get_description()`
+3. `ROBUSTO_VERSION` fallback
+
+This lets operators validate that the delegate is exactly the expected
+deployment artifact while still providing robust fallbacks.
+
+### REBOOT behavior
+
+`robusto_proxy_client_reboot_delegate(...)` requests a delegate reboot through
+the control channel. On success, the client moves to reset state and must
+re-establish HELLO before further service use.
+
+Service-side reboot behavior is callback-driven through
+`robusto_proxy_service_set_reboot_handler(...)`.
+
+## Recommended operator check
+
+For production startup verification:
+
+1. call `robusto_proxy_client_query_system_info(...)`
+2. compare `delegate_version` with the expected deployment identity
+3. fail fast (or enter maintenance flow) on mismatch
+
+This gives an explicit "correct delegate image" gate without relying only on
+framework/library versioning.
+
 ## Support status
 
 | Surface | Status |
