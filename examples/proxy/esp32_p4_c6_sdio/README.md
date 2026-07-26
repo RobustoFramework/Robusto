@@ -66,6 +66,11 @@ idf.py -C $p4Controller -B (Join-Path $p4Controller "build") build
 idf.py -C $provisioning -B (Join-Path $provisioning "build") build
 ```
 
+If you are using this example only to build delegate binaries, prefer an
+out-of-tree build directory outside the repository checkout so the example
+does not leave local build artifacts behind. For example, point `-B` at a
+scratch directory under `%TEMP%` or another workspace-specific build root.
+
 Keep the explicit project-local `-B` arguments. Relative build directories are
 resolved from the shell's working directory, not from the project selected by
 `-C`; changing these commands back to `-B build-bootstrap` breaks the
