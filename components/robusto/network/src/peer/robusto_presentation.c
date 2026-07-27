@@ -41,6 +41,8 @@
 
 static char *presentation_log_prefix;
 
+#define PRESENTATION_QUEUE_WAIT_MS (6000U)
+
 #define HI_POS 0
 #define PROT_VER_POS 1
 #define PROT_VER_MIN_POS 2
@@ -113,7 +115,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
             ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %i", queue_ret, media_type);
             ret_val_flag = queue_ret;
         }
-        else if (!robusto_waitfor_queue_state(q_state, 1000, &ret_val_flag))
+        else if (!robusto_waitfor_queue_state(q_state, PRESENTATION_QUEUE_WAIT_MS, &ret_val_flag))
         {
             peer->state = failstate;
 
@@ -122,7 +124,13 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                                    (q_progress == QUEUE_STATE_RUNNING) ||
                                    (q_progress == QUEUE_STATE_TRYING_MEDIAS);
 
-            if (!queue_in_flight && info->state == media_state_working) {
+            if (ret_val_flag == ROB_ERR_TIMEOUT && q_progress == QUEUE_STATE_SUCCEEDED) {
+                // Queue completed around the timeout boundary; treat this as success.
+                ret_val_flag = ROB_OK;
+            }
+
+            if (ret_val_flag != ROB_ERR_TIMEOUT && !queue_in_flight &&
+                info->state == media_state_working) {
                 set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
             }
             
