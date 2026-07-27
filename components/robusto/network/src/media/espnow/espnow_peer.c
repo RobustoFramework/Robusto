@@ -52,6 +52,50 @@ static char * espnow_peer_log_prefix;
 uint32_t espnow_unknown_failures = 0;
 uint32_t espnow_crc_failures = 0;
 
+static void espnow_configure_peer_rate(const uint8_t *mac_address)
+{
+    if (mac_address == NULL) {
+        return;
+    }
+
+    esp_now_rate_config_t rate_config = {
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+        .phymode = WIFI_PHY_MODE_LR,
+        .rate = WIFI_PHY_RATE_LORA_500K,
+#else
+        .phymode = WIFI_PHY_MODE_HT20,
+        .rate = WIFI_PHY_RATE_MCS7_LGI,
+#endif
+        .ersu = false,
+        .dcm = false,
+    };
+    esp_err_t err = esp_now_set_peer_rate_config(mac_address, &rate_config);
+
+    if (err != ESP_OK) {
+        ROB_LOGW(espnow_peer_log_prefix,
+                 "Failed setting ESP-NOW rate config for peer %02x:%02x:%02x:%02x:%02x:%02x: %s",
+                 mac_address[0],
+                 mac_address[1],
+                 mac_address[2],
+                 mac_address[3],
+                 mac_address[4],
+                 mac_address[5],
+                 esp_err_to_name(err));
+        return;
+    }
+
+    ROB_LOGI(espnow_peer_log_prefix,
+             "Configured ESP-NOW rate for peer %02x:%02x:%02x:%02x:%02x:%02x: phymode=%u rate=%u",
+             mac_address[0],
+             mac_address[1],
+             mac_address[2],
+             mac_address[3],
+             mac_address[4],
+             mac_address[5],
+             (unsigned)rate_config.phymode,
+             (unsigned)rate_config.rate);
+}
+
 
 #if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW) 
 esp_now_peer_info_t* espnow_add_peer(uint8_t *mac_adress)
@@ -60,6 +104,7 @@ esp_now_peer_info_t* espnow_add_peer(uint8_t *mac_adress)
     if (esp_now_get_peer(mac_adress, esp_now_peer) == ESP_OK) {
         ROB_LOGI(espnow_peer_log_prefix, "Tried to re-add an already existing ESP-NOW-peer. MAC address:");
         rob_log_bit_mesh(ROB_LOG_INFO, espnow_peer_log_prefix, mac_adress, ROBUSTO_MAC_ADDR_LEN);
+        espnow_configure_peer_rate(mac_adress);
         return esp_now_peer;
     }
     /* Add broadcast peer information to peer list. */
@@ -93,7 +138,11 @@ esp_now_peer_info_t* espnow_add_peer(uint8_t *mac_adress)
             ROB_LOGE(espnow_peer_log_prefix,"Error adding ESP-NOW-peer: Peer has existed");
         } 
 
+        free(esp_now_peer);
+        return NULL;
     }
+
+    espnow_configure_peer_rate(mac_adress);
     return esp_now_peer;
 }
 #endif

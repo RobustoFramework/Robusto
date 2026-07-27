@@ -63,9 +63,10 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     
     ROB_LOGD(espnow_log_prefix, "esp_now_send_check, sending %lu bytes.", data_length);
 
-    int rc = esp_now_send((uint8_t *)&peer->base_mac_address, data, data_length);
     send_status = -1;
     has_receipt = false;
+
+    int rc = esp_now_send((uint8_t *)&peer->base_mac_address, data, data_length);
 
     if (rc != ESP_OK)
     {
@@ -127,6 +128,9 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
     // We assume 1 mbit/s speed for ESP-NOW which is ~125 kB/s, so a 250 byte message should be sent in 1 ms
     // so we calculate the maximum wait time
     int32_t wait_time = (data_length / 125) + 30; // +30 ms for the Robusto response
+    if (wait_time < CONFIG_ROB_RECEIPT_TIMEOUT_MS) {
+        wait_time = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
+    }
     int32_t start_send = r_millis();
     while ((send_status < 0) && (r_millis() < start_send + wait_time))
     {

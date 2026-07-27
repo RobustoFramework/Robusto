@@ -116,11 +116,22 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         else if (!robusto_waitfor_queue_state(q_state, 1000, &ret_val_flag))
         {
             peer->state = failstate;
-            if (info->state == media_state_working) {
+
+            uint8_t q_progress = q_state[0][0];
+            bool queue_in_flight = (q_progress == QUEUE_STATE_QUEUED) ||
+                                   (q_progress == QUEUE_STATE_RUNNING) ||
+                                   (q_progress == QUEUE_STATE_TRYING_MEDIAS);
+
+            if (!queue_in_flight && info->state == media_state_working) {
                 set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
             }
             
             ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t *)q_state[0], ret_val_flag);
+            if (queue_in_flight) {
+                ROB_LOGW(presentation_log_prefix,
+                         ">> Presentation timeout while queue state still in-flight (%hhu), keeping media state unchanged",
+                         q_progress);
+            }
         }
         else {
             
