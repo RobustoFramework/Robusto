@@ -141,6 +141,8 @@ static esp_err_t exchange_identity(
 esp_err_t robusto_c6_update_get_identity(
     robusto_c6_recovery_record_t *identity)
 {
+    ESP_LOGI(TAG, "Identity request: send READ and wait up to %lu ms",
+             (unsigned long)UPDATE_TIMEOUT_MS);
     return exchange_identity(ROBUSTO_C6_RECOVERY_IDENTITY_COMMAND_READ, NULL, identity);
 }
 
@@ -148,6 +150,8 @@ esp_err_t robusto_c6_update_confirm_identity(
     const uint8_t build_sha256[ROBUSTO_C6_RECOVERY_BUILD_SHA256_SIZE],
     robusto_c6_recovery_record_t *identity)
 {
+    ESP_LOGI(TAG, "Identity request: send CONFIRM and wait up to %lu ms",
+             (unsigned long)UPDATE_TIMEOUT_MS);
     return exchange_identity(ROBUSTO_C6_RECOVERY_IDENTITY_COMMAND_CONFIRM,
                              build_sha256, identity);
 }

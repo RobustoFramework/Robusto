@@ -48,6 +48,40 @@
 /* The log prefix for all logging */
 static char *espnow_log_prefix;
 
+static void log_wifi_signal_config(void)
+{
+    int8_t max_tx_power = 0;
+    esp_err_t tx_power_rc = esp_wifi_get_max_tx_power(&max_tx_power);
+    if (tx_power_rc == ESP_OK)
+    {
+        ROB_LOGW(espnow_log_prefix, "Wi-Fi max TX power now %d (0.25 dBm units, %d dBm)",
+                 (int)max_tx_power,
+                 (int)(max_tx_power / 4));
+    }
+    else
+    {
+        ROB_LOGW(espnow_log_prefix, "esp_wifi_get_max_tx_power failed rc=%d", (int)tx_power_rc);
+    }
+
+    wifi_country_t country = {0};
+    esp_err_t country_rc = esp_wifi_get_country(&country);
+    if (country_rc == ESP_OK)
+    {
+        ROB_LOGW(espnow_log_prefix,
+                 "Wi-Fi country %c%c policy=%d schan=%u nchan=%u country_max_tx_power=%d",
+                 country.cc[0],
+                 country.cc[1],
+                 (int)country.policy,
+                 (unsigned)country.schan,
+                 (unsigned)country.nchan,
+                 (int)country.max_tx_power);
+    }
+    else
+    {
+        ROB_LOGW(espnow_log_prefix, "esp_wifi_get_country failed rc=%d", (int)country_rc);
+    }
+}
+
 void init_wifi()
 {
     ROB_LOGI(espnow_log_prefix, "Creating default event loop.");
@@ -66,10 +100,15 @@ void init_wifi()
     ROB_LOGI(espnow_log_prefix, "esp_wifi_start done.");
     ESP_ERROR_CHECK(esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
     ROB_LOGI(espnow_log_prefix, "esp_wifi_set_channel done.");
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(84));
+    ROB_LOGI(espnow_log_prefix, "esp_wifi_set_max_tx_power set to maximum allowed level");
 
 #if CONFIG_ESPNOW_ENABLE_LONG_RANGE
     ESP_ERROR_CHECK(esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR));
+    ROB_LOGI(espnow_log_prefix, "ESP-NOW long-range protocol enabled");
 #endif
+
+    log_wifi_signal_config();
 
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > -1
     ROB_LOGE("----", "ESP-NOW KILL SWITCH ENABLED - GPIO %i", CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH);

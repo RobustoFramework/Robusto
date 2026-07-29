@@ -256,8 +256,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)esp_now_info->src_addr);
     if (peer != NULL)
     {
-        ROB_LOGD(espnow_log_prefix, "<< espnow_recv_cb got a message from a peer. rssi: %i, rate %u, data:",
-                 esp_now_info->rx_ctrl->rssi, esp_now_info->rx_ctrl->rate);
+        ROB_LOGI(espnow_log_prefix,
+                 "<< espnow_recv_cb peer=%s rssi=%i dBm rate=%u src_mac:",
+                 peer->name,
+                 esp_now_info->rx_ctrl->rssi,
+                 esp_now_info->rx_ctrl->rate);
+        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
     }
     else
@@ -276,6 +280,12 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
         }
 
         peer = robusto_add_init_new_peer(NULL, (rob_mac_address *)esp_now_info->src_addr, robusto_mt_espnow);
+    }
+
+    if (peer != NULL && esp_now_info->rx_ctrl != NULL)
+    {
+        peer->espnow_info.latest_rssi_dbm = esp_now_info->rx_ctrl->rssi;
+        peer->espnow_info.latest_rssi_valid = true;
     }
 
     bool is_heartbeat = data[ROBUSTO_CRC_LENGTH] == HEARTBEAT_CONTEXT;

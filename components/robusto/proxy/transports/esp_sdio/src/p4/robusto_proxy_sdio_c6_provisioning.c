@@ -81,10 +81,14 @@ esp_err_t robusto_proxy_sdio_c6_provision(
                sizeof(candidate_sha256)) != 0) {
         return ESP_ERR_INVALID_CRC;
     }
+
+    ESP_LOGI(TAG, "Provision stage: candidate image hash verified, initializing raw SDIO host");
     error = robusto_proxy_sdio_host_init();
     if (error != ESP_OK) {
         return error;
     }
+
+    ESP_LOGI(TAG, "Provision stage: raw SDIO host initialized, requesting C6 identity");
     error = robusto_c6_update_get_identity(&identity);
     if (error != ESP_OK) {
         esp_err_t cleanup_error = robusto_proxy_sdio_host_deinit();
@@ -96,9 +100,14 @@ esp_err_t robusto_proxy_sdio_c6_provision(
         return error;
     }
     *identity_received = true;
+    ESP_LOGI(TAG,
+             "Provision stage: received C6 identity subtype=0x%02x boot_state=%u",
+             identity.partition_subtype,
+             (unsigned int)identity.boot_state);
     if (memcmp(identity.build_sha256, config->elf_sha256,
                sizeof(identity.build_sha256)) == 0) {
         if (identity.boot_state == ROBUSTO_C6_RECOVERY_BOOT_PENDING_VERIFY) {
+            ESP_LOGI(TAG, "Provision stage: C6 matches target ELF and needs confirmation");
             error = robusto_c6_update_confirm_identity(config->elf_sha256,
                                                        &identity);
             if (error != ESP_OK) {
@@ -115,10 +124,14 @@ esp_err_t robusto_proxy_sdio_c6_provision(
         error = ESP_OK;
         goto cleanup;
     }
+
+    ESP_LOGI(TAG, "Provision stage: C6 identity differs from target ELF, checking updater status");
     error = robusto_c6_update_require_revision_2();
     if (error != ESP_OK) {
         goto cleanup;
     }
+
+    ESP_LOGI(TAG, "Provision stage: updater ready, transferring final image");
     error = robusto_c6_update_install(candidate, config->image_offset,
                                       config->image_size,
                                       config->image_sha256);
@@ -142,21 +155,30 @@ esp_err_t robusto_proxy_sdio_c6_confirm_after_activation(
         return ESP_ERR_INVALID_ARG;
     }
     *identity_received = false;
+
+    ESP_LOGI(TAG, "Confirm stage: initializing raw SDIO host without reset");
     error = robusto_proxy_sdio_host_init_without_reset();
     if (error != ESP_OK) {
         return error;
     }
+
+    ESP_LOGI(TAG, "Confirm stage: requesting C6 identity");
     error = robusto_c6_update_get_identity(&identity);
     if (error != ESP_OK) {
         goto cleanup;
     }
     *identity_received = true;
+    ESP_LOGI(TAG,
+             "Confirm stage: received C6 identity subtype=0x%02x boot_state=%u",
+             identity.partition_subtype,
+             (unsigned int)identity.boot_state);
     if (memcmp(identity.build_sha256, config->elf_sha256,
                sizeof(identity.build_sha256)) != 0) {
         error = ESP_ERR_INVALID_STATE;
         goto cleanup;
     }
     if (identity.boot_state == ROBUSTO_C6_RECOVERY_BOOT_PENDING_VERIFY) {
+        ESP_LOGI(TAG, "Confirm stage: C6 matches target ELF and needs confirmation");
         error = robusto_c6_update_confirm_identity(config->elf_sha256,
                                                    &identity);
         if (error != ESP_OK) {

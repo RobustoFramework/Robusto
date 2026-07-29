@@ -172,6 +172,10 @@ extern "C"
         uint32_t send_successes;
         /* Number of times we have succeeed eceiving data from a peer since last check */
         uint32_t receive_successes;
+        /* Latest received signal strength in dBm for media that expose it. */
+        int16_t latest_rssi_dbm;
+        /* True when latest_rssi_dbm contains a value from a real received frame. */
+        bool latest_rssi_valid;
 
     } robusto_media_t;
 

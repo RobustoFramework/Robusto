@@ -128,6 +128,28 @@ static esp_err_t store_phase(migration_phase_t phase)
     return error;
 }
 
+static esp_err_t clear_phase(void)
+{
+    nvs_handle_t handle;
+    esp_err_t error = nvs_open(MIGRATION_NAMESPACE, NVS_READWRITE, &handle);
+
+    if (error == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_OK;
+    }
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = nvs_erase_key(handle, MIGRATION_PHASE_KEY);
+    if (error == ESP_ERR_NVS_NOT_FOUND) {
+        error = ESP_OK;
+    }
+    if (error == ESP_OK) {
+        error = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    return error;
+}
+
 static esp_err_t provision_raw(
     const robusto_proxy_sdio_c6_provisioning_config_t *config,
     bool *restart_required,
@@ -175,6 +197,10 @@ void app_main(void)
         halt();
     }
 
+    /* Any phase resumed after activating a C6 image must confirm the exact
+     * running ELF first. Reinstall is only valid if confirmation proves the
+     * active image is not the expected artifact. */
+
     if (phase == MIGRATION_PHASE_DISCOVER) {
         error = provision_raw(&final, &restart_required, &identity_received);
         if (error == ESP_OK) {
@@ -182,41 +208,60 @@ void app_main(void)
                                      : MIGRATION_PHASE_FINAL_VERIFY;
             error = store_phase(phase);
             if (error == ESP_OK) {
-                restart_for_phase("Final raw C6 found or installed; restarting for verification");
+                restart_for_phase(restart_required
+                                      ? "Final raw C6 installed; restarting for confirmation"
+                                      : "Final raw C6 already confirmed; restarting for durability check");
             }
         } else if (!identity_received) {
-            error = store_phase(MIGRATION_PHASE_BOOTSTRAP_PENDING);
+            error = c6_factory_bootstrap_install(&factory_bootstrap);
             if (error == ESP_OK) {
-                error = c6_factory_bootstrap_install(&factory_bootstrap);
+                error = store_phase(MIGRATION_PHASE_BOOTSTRAP_PENDING);
             }
             if (error == ESP_OK) {
-                restart_for_phase("Factory bootstrap transferred; restarting for raw identity");
+                restart_for_phase("Factory bootstrap transferred; restarting for exact confirmation");
             }
         }
     } else if (phase == MIGRATION_PHASE_BOOTSTRAP_PENDING) {
-        error = provision_raw(&bootstrap, &restart_required,
-                              &identity_received);
-        if (error != ESP_OK && !identity_received) {
-            error = c6_factory_bootstrap_install(&factory_bootstrap);
-            if (error == ESP_OK) {
-                restart_for_phase("Factory bootstrap retransferred; restarting for raw identity");
-            }
-        } else if (error == ESP_OK && restart_required) {
-            restart_for_phase("Bootstrap activated; restarting for exact confirmation");
-        } else if (error == ESP_OK) {
+        error = robusto_proxy_sdio_c6_confirm_after_activation(
+            &bootstrap, &identity_received);
+        if (error == ESP_OK && identity_received) {
             error = store_phase(MIGRATION_PHASE_BOOTSTRAP_READY);
             if (error == ESP_OK) {
-                restart_for_phase("Bootstrap confirmed; restarting for final installation");
+                restart_for_phase("Bootstrap confirmed after activation; restarting for final installation");
+            }
+        } else {
+            if (!identity_received) {
+                esp_err_t phase_error = clear_phase();
+                if (phase_error != ESP_OK) {
+                    ESP_LOGE(TAG, "Clear stale bootstrap phase: %s",
+                             esp_err_to_name(phase_error));
+                    error = phase_error;
+                }
+            }
+            if (error != ESP_OK && identity_received) {
+                halt();
+            }
+            error = provision_raw(&bootstrap, &restart_required,
+                                  &identity_received);
+            if (error != ESP_OK && !identity_received) {
+                error = c6_factory_bootstrap_install(&factory_bootstrap);
+                if (error == ESP_OK) {
+                    restart_for_phase("Factory bootstrap retransferred; restarting for exact confirmation");
+                }
+            } else if (error == ESP_OK && restart_required) {
+                restart_for_phase("Bootstrap image updated; restarting for exact confirmation");
+            } else if (error == ESP_OK) {
+                error = store_phase(MIGRATION_PHASE_BOOTSTRAP_READY);
+                if (error == ESP_OK) {
+                    restart_for_phase("Bootstrap confirmed; restarting for final installation");
+                }
             }
         }
     } else if (phase == MIGRATION_PHASE_BOOTSTRAP_READY) {
-        error = store_phase(MIGRATION_PHASE_FINAL_PENDING);
-        if (error == ESP_OK) {
-            error = provision_raw(&final, &restart_required,
-                                  &identity_received);
-        }
+        error = provision_raw(&final, &restart_required,
+                              &identity_received);
         if (error == ESP_OK && restart_required) {
-            error = store_phase(MIGRATION_PHASE_FINAL_VERIFY);
+            error = store_phase(MIGRATION_PHASE_FINAL_PENDING);
             if (error == ESP_OK) {
                 restart_for_phase("Final C6 activated; restarting for confirmation");
             }
@@ -227,16 +272,26 @@ void app_main(void)
             }
         }
     } else if (phase == MIGRATION_PHASE_FINAL_PENDING) {
-        error = provision_raw(&final, &restart_required, &identity_received);
-        if (error == ESP_OK && restart_required) {
+        error = robusto_proxy_sdio_c6_confirm_after_activation(
+            &final, &identity_received);
+        if (error == ESP_OK && identity_received) {
             error = store_phase(MIGRATION_PHASE_FINAL_VERIFY);
             if (error == ESP_OK) {
-                restart_for_phase("Final C6 transfer resumed; restarting for confirmation");
+                restart_for_phase("Final C6 confirmed after activation; restarting for durability check");
             }
-        } else if (error == ESP_OK) {
-            error = store_phase(MIGRATION_PHASE_FINAL_VERIFY);
-            if (error == ESP_OK) {
-                restart_for_phase("Final C6 confirmed; restarting for durability check");
+        } else {
+            error = provision_raw(&final, &restart_required,
+                                  &identity_received);
+            if (error == ESP_OK && restart_required) {
+                error = store_phase(MIGRATION_PHASE_FINAL_PENDING);
+                if (error == ESP_OK) {
+                    restart_for_phase("Final C6 reinstalled; restarting for confirmation");
+                }
+            } else if (error == ESP_OK) {
+                error = store_phase(MIGRATION_PHASE_FINAL_VERIFY);
+                if (error == ESP_OK) {
+                    restart_for_phase("Final C6 confirmed; restarting for durability check");
+                }
             }
         }
     } else if (phase == MIGRATION_PHASE_FINAL_VERIFY) {

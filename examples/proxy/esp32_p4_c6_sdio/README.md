@@ -66,6 +66,9 @@ idf.py -C $p4Controller -B (Join-Path $p4Controller "build") build
 idf.py -C $provisioning -B (Join-Path $provisioning "build") build
 ```
 
+These build directories are local outputs created by the commands above. They
+are not checked into the repository.
+
 If you are using this example only to build delegate binaries, prefer an
 out-of-tree build directory outside the repository checkout so the example
 does not leave local build artifacts behind. For example, point `-B` at a
@@ -92,12 +95,27 @@ stored in P4 NVS so an interrupted run resumes at its recorded boundary. The
 user is never expected to identify the installed C6 image or connect to C6
 UART.
 
+Treat this example's provisioning state machine as the authoritative contract
+for activation restarts: after any C6 image activation, the next P4 boot is a
+confirmation pass first. The provisioner must call
+`robusto_proxy_sdio_c6_confirm_after_activation()` before attempting another
+transfer, and it may reinstall only when that confirmation proves the running
+image is not the expected exact ELF.
+
+For emergency UART recovery, the example also has a fixed post-recovery
+acceptance sequence. Use the same provisioner build unchanged, allow at most one
+intermediate transport-recovery pass immediately after the UART restore, and
+then require the ordered identity/transfer/confirm markers documented in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 The complete dual-image build and P4 application build were validated with
 ESP-IDF v6.0.2 on 2026-07-23. Factory migration on hardware remains a separate
 qualification gate. See
 [`docs/ESP32-P4-C6-Proxy-PubSub.md`](../../../docs/ESP32-P4-C6-Proxy-PubSub.md)
 for the complete procedure, the optional Waveshare C6 UART pad wiring, the
-recovery boundary, and requirements for other P4 Wi-Fi coprocessor boards.
+recovery boundary, and requirements for other P4 Wi-Fi coprocessor boards. For
+failure triage and the stale-`ota_1`/invalid-`ota_0` recovery signature, see
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Bidirectional large PubSub data
 

@@ -19,6 +19,7 @@
 static const char *TAG = "c6_factory_bootstrap";
 static StaticSemaphore_t transport_up_storage;
 static SemaphoreHandle_t transport_up;
+static volatile int32_t transport_event_state;
 static uint8_t ota_chunk[FACTORY_OTA_CHUNK_SIZE];
 
 int __real_esp_hosted_init(void);
@@ -36,8 +37,15 @@ static void hosted_event_callback(void *context,
 {
     (void)context;
     (void)event_data;
-    if (event_base == ESP_HOSTED_EVENT &&
-        event_id == ESP_HOSTED_EVENT_TRANSPORT_UP) {
+    if (event_base != ESP_HOSTED_EVENT) {
+        return;
+    }
+    if (event_id == ESP_HOSTED_EVENT_TRANSPORT_UP) {
+        transport_event_state = ESP_HOSTED_EVENT_TRANSPORT_UP;
+        xSemaphoreGive(transport_up);
+    } else if (event_id == ESP_HOSTED_EVENT_TRANSPORT_FAILURE ||
+               event_id == ESP_HOSTED_EVENT_TRANSPORT_DOWN) {
+        transport_event_state = event_id;
         xSemaphoreGive(transport_up);
     }
 }
@@ -161,6 +169,7 @@ esp_err_t c6_factory_bootstrap_install(
     if (transport_up == NULL) {
         return ESP_ERR_NO_MEM;
     }
+    transport_event_state = -1;
     while (xSemaphoreTake(transport_up, 0) == pdTRUE) {
     }
     error = esp_event_loop_create_default();
@@ -180,10 +189,15 @@ esp_err_t c6_factory_bootstrap_install(
     }
     hosted_initialized = true;
     error = esp_hosted_connect_to_slave();
-    if (error == ESP_OK &&
-        xSemaphoreTake(transport_up,
-                       pdMS_TO_TICKS(FACTORY_CONNECT_TIMEOUT_MS)) != pdTRUE) {
-        error = ESP_ERR_TIMEOUT;
+    if (error == ESP_OK) {
+        if (xSemaphoreTake(transport_up,
+                           pdMS_TO_TICKS(FACTORY_CONNECT_TIMEOUT_MS)) !=
+            pdTRUE) {
+            error = ESP_ERR_TIMEOUT;
+        } else if (transport_event_state == ESP_HOSTED_EVENT_TRANSPORT_FAILURE ||
+                   transport_event_state == ESP_HOSTED_EVENT_TRANSPORT_DOWN) {
+            error = ESP_FAIL;
+        }
     }
     if (error != ESP_OK) {
         goto cleanup;

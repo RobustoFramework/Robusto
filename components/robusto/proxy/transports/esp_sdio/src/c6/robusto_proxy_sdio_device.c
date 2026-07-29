@@ -213,17 +213,25 @@ esp_err_t robusto_proxy_sdio_device_init(void)
     if (frontend_mutex != NULL) {
         return ESP_ERR_INVALID_STATE;
     }
+
+    ESP_LOGI(TAG, "C6 SDIO stage: create frontend mutex");
     frontend_mutex = xSemaphoreCreateMutex();
     if (frontend_mutex == NULL) {
         return ESP_ERR_NO_MEM;
     }
+
+    ESP_LOGI(TAG, "C6 SDIO stage: sdio_slave_initialize()");
     esp_err_t error = sdio_slave_initialize(&config);
     if (error != ESP_OK) {
         vSemaphoreDelete(frontend_mutex);
         frontend_mutex = NULL;
         return error;
     }
+
     for (size_t index = 0; index < RX_BUFFER_COUNT; ++index) {
+        ESP_LOGI(TAG, "C6 SDIO stage: register rx buffer %u/%u",
+                 (unsigned int)(index + 1U),
+                 (unsigned int)RX_BUFFER_COUNT);
         sdio_slave_buf_handle_t handle = sdio_slave_recv_register_buf(rx_buffers[index]);
         if (handle == NULL) {
             sdio_slave_deinit();
@@ -231,6 +239,10 @@ esp_err_t robusto_proxy_sdio_device_init(void)
             frontend_mutex = NULL;
             return ESP_ERR_NO_MEM;
         }
+
+        ESP_LOGI(TAG, "C6 SDIO stage: load rx buffer %u/%u",
+                 (unsigned int)(index + 1U),
+                 (unsigned int)RX_BUFFER_COUNT);
         error = sdio_slave_recv_load_buf(handle);
         if (error != ESP_OK) {
             sdio_slave_deinit();
@@ -239,6 +251,8 @@ esp_err_t robusto_proxy_sdio_device_init(void)
             return error;
         }
     }
+
+    ESP_LOGI(TAG, "C6 SDIO stage: enable host new-packet interrupt");
     sdio_slave_set_host_intena(SDIO_SLAVE_HOSTINT_SEND_NEW_PACKET);
     return ESP_OK;
 }
@@ -248,10 +262,14 @@ esp_err_t robusto_proxy_sdio_device_start(void)
     if (frontend_mutex == NULL || frontend_started) {
         return ESP_ERR_INVALID_STATE;
     }
+
+    ESP_LOGI(TAG, "C6 SDIO stage: sdio_slave_start()");
     esp_err_t error = sdio_slave_start();
     if (error != ESP_OK) {
         return error;
     }
+
+    ESP_LOGI(TAG, "C6 SDIO stage: create receive task");
     if (xTaskCreate(receive_task_main, "robusto_rsd1_rx",
                     RECEIVE_TASK_STACK_SIZE, NULL, 6, NULL) != pdPASS) {
         sdio_slave_stop();

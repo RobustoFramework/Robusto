@@ -134,6 +134,10 @@ writing it. Do not use UART flashing to bypass a provisioning failure or for a
 routine update. After restoring C6 communication, disconnect the UART adapter
 and return to the normal P4 USB and onboard-SDIO provisioning workflow.
 
+For the example's fast failure signatures, including the stale-`ota_1` /
+invalid-`ota_0` case where the P4 provisioner has no usable transport left, see
+[examples/proxy/esp32_p4_c6_sdio/TROUBLESHOOTING.md](../examples/proxy/esp32_p4_c6_sdio/TROUBLESHOOTING.md).
+
 ## Other P4 Wi-Fi coprocessor boards
 
 Do not assume that another ESP32-P4 board uses the Waveshare wiring, an
@@ -300,6 +304,11 @@ If the target image is already confirmed, no OTA write occurs. If it was armed
 but left pending, the next C6 reset can roll it back before the provisioner
 connects; rerunning the same provisioner then reinstalls and confirms the exact
 target.
+
+Do not treat post-recovery reruns as open-ended experimentation. After an
+emergency UART restore of a valid C6 slot, continue with the same provisioner
+build unchanged and require the ordered success markers documented in
+[examples/proxy/esp32_p4_c6_sdio/TROUBLESHOOTING.md](../examples/proxy/esp32_p4_c6_sdio/TROUBLESHOOTING.md).
 
 ## Recovery boundary
 

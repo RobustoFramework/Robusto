@@ -120,6 +120,8 @@ void peer_stat_reset(robusto_media_t *stats)
     stats->receive_successes = 0;
     stats->receive_failures = 0;
     stats->score_count = 0;
+    stats->latest_rssi_dbm = 0;
+    stats->latest_rssi_valid = false;
     
     stats->last_send = r_millis();
     stats->last_peer_receive = stats->last_send;

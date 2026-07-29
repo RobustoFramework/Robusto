@@ -12,6 +12,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "sdmmc_cmd.h"
+#include "sd_protocol_defs.h"
 
 #include "robusto_rsd1_protocol.h"
 
@@ -19,12 +20,14 @@
 #define PROXY_SDIO_RESET_DELAY_MS 1500U
 #define PROXY_SDIO_CARD_INIT_RETRIES 15U
 #define PROXY_SDIO_CARD_INIT_RETRY_MS 100U
+#define PROXY_SDIO_READY_POLL_MS 10U
 
 typedef struct robusto_proxy_sdio_host_state {
     sdmmc_card_t card;
     essl_handle_t link;
     uint32_t next_sequence;
     size_t buffered_receive_size;
+    bool card_initialized;
     bool host_initialized;
     bool receive_interrupt_registered;
 } robusto_proxy_sdio_host_state_t;
@@ -147,6 +150,8 @@ static esp_err_t initialize_card(void)
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     esp_err_t error = ESP_FAIL;
 
+    memset(&state.card, 0, sizeof(state.card));
+    state.card_initialized = false;
     host.slot = PROXY_SDIO_SLOT;
     host.max_freq_khz = CONFIG_ROBUSTO_PROXY_SDIO_P4_CLOCK_KHZ;
     host.flags = SDMMC_HOST_FLAG_1BIT | SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
@@ -155,11 +160,137 @@ static esp_err_t initialize_card(void)
          ++attempt) {
         error = sdmmc_card_init(&host, &state.card);
         if (error == ESP_OK) {
+            state.card_initialized = true;
             return ESP_OK;
         }
         vTaskDelay(pdMS_TO_TICKS(PROXY_SDIO_CARD_INIT_RETRY_MS));
     }
     return error;
+}
+
+static esp_err_t initialize_link(essl_handle_t link, uint32_t ready_timeout_ms)
+{
+    TickType_t start_tick;
+    uint8_t io_enable = 0;
+    uint8_t io_ready = 0;
+    uint8_t interrupt_enable = 0;
+    uint8_t bus_width = 0;
+    uint16_t block_size = 512;
+    uint16_t block_size_read = 0;
+    uint8_t *block_size_read_bytes = (uint8_t *)&block_size_read;
+    const uint8_t *block_size_bytes = (const uint8_t *)&block_size;
+    size_t function_1_offset = SD_IO_FBR_START;
+    esp_err_t error;
+
+    if (link == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (state.link != link || !state.host_initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    error = sdmmc_io_read_byte(&state.card, 0, SD_IO_CCCR_FN_ENABLE, &io_enable);
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = sdmmc_io_read_byte(&state.card, 0, SD_IO_CCCR_FN_READY, &io_ready);
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    io_enable |= BIT(1);
+    error = sdmmc_io_write_byte(&state.card, 0, SD_IO_CCCR_FN_ENABLE, io_enable,
+                                &io_enable);
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    start_tick = xTaskGetTickCount();
+    while ((io_ready & BIT(1)) == 0U) {
+        error = sdmmc_io_read_byte(&state.card, 0, SD_IO_CCCR_FN_READY, &io_ready);
+        if (error != ESP_OK) {
+            return error;
+        }
+        if ((io_ready & BIT(1)) != 0U) {
+            break;
+        }
+        if (pdTICKS_TO_MS(xTaskGetTickCount() - start_tick) >=
+            ready_timeout_ms) {
+            ESP_LOGW(TAG,
+                     "Host init: SDIO function 1 never became ready within %lu ms (IOR=0x%02x)",
+                     (unsigned long)ready_timeout_ms,
+                     (unsigned int)io_ready);
+            return ESP_ERR_TIMEOUT;
+        }
+        vTaskDelay(pdMS_TO_TICKS(PROXY_SDIO_READY_POLL_MS));
+    }
+
+    error = sdmmc_io_read_byte(&state.card, 0, SD_IO_CCCR_INT_ENABLE,
+                               &interrupt_enable);
+    if (error != ESP_OK) {
+        return error;
+    }
+    interrupt_enable |= BIT(0) | BIT(1);
+    error = sdmmc_io_write_byte(&state.card, 0, SD_IO_CCCR_INT_ENABLE,
+                                interrupt_enable, &interrupt_enable);
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    error = sdmmc_io_read_byte(&state.card, 0, SD_IO_CCCR_BUS_WIDTH, &bus_width);
+    if (error != ESP_OK) {
+        return error;
+    }
+    bus_width |= CCCR_BUS_WIDTH_ECSI;
+    error = sdmmc_io_write_byte(&state.card, 0, SD_IO_CCCR_BUS_WIDTH, bus_width,
+                                &bus_width);
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    error = sdmmc_io_write_byte(&state.card, 0, SD_IO_CCCR_BLKSIZEL,
+                                block_size_bytes[0], NULL);
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = sdmmc_io_write_byte(&state.card, 0, SD_IO_CCCR_BLKSIZEH,
+                                block_size_bytes[1], NULL);
+    if (error != ESP_OK) {
+        return error;
+    }
+
+    error = sdmmc_io_write_byte(&state.card, 0,
+                                function_1_offset + SD_IO_CCCR_BLKSIZEL,
+                                block_size_bytes[0], NULL);
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = sdmmc_io_write_byte(&state.card, 0,
+                                function_1_offset + SD_IO_CCCR_BLKSIZEH,
+                                block_size_bytes[1], NULL);
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = sdmmc_io_read_byte(&state.card, 0,
+                               function_1_offset + SD_IO_CCCR_BLKSIZEL,
+                               &block_size_read_bytes[0]);
+    if (error != ESP_OK) {
+        return error;
+    }
+    error = sdmmc_io_read_byte(&state.card, 0,
+                               function_1_offset + SD_IO_CCCR_BLKSIZEH,
+                               &block_size_read_bytes[1]);
+    if (error != ESP_OK) {
+        return error;
+    }
+    if (block_size_read != block_size) {
+        ESP_LOGW(TAG,
+                 "Host init: function 1 block size read back as %u instead of %u",
+                 (unsigned int)block_size_read,
+                 (unsigned int)block_size);
+    }
+
+    return ESP_OK;
 }
 
 static esp_err_t initialize_host(bool reset_before_connect)
@@ -173,11 +304,13 @@ static esp_err_t initialize_host(bool reset_before_connect)
     }
 
     if (reset_before_connect) {
+        ESP_LOGI(TAG, "Host init: resetting C6 before SDIO connect");
         error = reset_c6();
         if (error != ESP_OK) {
             return error;
         }
     }
+    ESP_LOGI(TAG, "Host init: sdmmc_host_init()");
     error = sdmmc_host_init();
     if (error != ESP_OK) {
         return error;
@@ -191,10 +324,12 @@ static esp_err_t initialize_host(bool reset_before_connect)
     slot.d1 = CONFIG_ROBUSTO_PROXY_SDIO_P4_DAT1_GPIO;
     slot.d2 = -1;
     slot.d3 = -1;
+    ESP_LOGI(TAG, "Host init: sdmmc_host_init_slot()");
     error = sdmmc_host_init_slot(PROXY_SDIO_SLOT, &slot);
     if (error != ESP_OK) {
         goto cleanup;
     }
+    ESP_LOGI(TAG, "Host init: initialize_card()");
     error = initialize_card();
     if (error != ESP_OK) {
         goto cleanup;
@@ -202,19 +337,23 @@ static esp_err_t initialize_host(bool reset_before_connect)
 
     link_config.card = &state.card;
     link_config.recv_buffer_size = ROBUSTO_RSD1_MAX_PACKET_SIZE;
+    ESP_LOGI(TAG, "Host init: essl_sdio_init_dev()");
     error = essl_sdio_init_dev(&state.link, &link_config);
     if (error != ESP_OK) {
         goto cleanup;
     }
-    error = essl_init(state.link, PROXY_SDIO_RESET_DELAY_MS);
+    ESP_LOGI(TAG, "Host init: essl_init()");
+    error = initialize_link(state.link, PROXY_SDIO_RESET_DELAY_MS);
     if (error != ESP_OK) {
         goto cleanup;
     }
+    ESP_LOGI(TAG, "Host init: initialize_receive_interrupt()");
     error = initialize_receive_interrupt();
     if (error != ESP_OK) {
         goto cleanup;
     }
 
+    ESP_LOGI(TAG, "Host init: ready");
     state.next_sequence = 1U;
     return ESP_OK;
 
@@ -402,9 +541,16 @@ esp_err_t robusto_proxy_sdio_host_deinit(void)
             error = link_error;
         }
     }
+    if (state.card_initialized && state.card.host.dma_aligned_buffer != NULL) {
+        free(state.card.host.dma_aligned_buffer);
+        state.card.host.dma_aligned_buffer = NULL;
+    }
     if (state.host_initialized) {
-        esp_err_t host_error = sdmmc_host_deinit();
+        esp_err_t host_error;
+
+        host_error = sdmmc_host_deinit();
         state.host_initialized = false;
+        state.card_initialized = false;
         if (error == ESP_OK) {
             error = host_error;
         }
