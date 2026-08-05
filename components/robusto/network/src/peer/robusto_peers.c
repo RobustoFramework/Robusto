@@ -59,11 +59,17 @@ struct robusto_peers robusto_peers;
 static char *peers_log_prefix;
    
 static callback_new_peer_t *on_new_peer_cb = NULL;
+static callback_delete_peer_t *on_delete_peer_cb = NULL;
 
 void robusto_register_on_new_peer(callback_new_peer_t *_on_new_peer_cb)
 {
     on_new_peer_cb = _on_new_peer_cb;
 } 
+
+void robusto_register_on_delete_peer(callback_delete_peer_t *_on_delete_peer_cb)
+{
+    on_delete_peer_cb = _on_delete_peer_cb;
+}
 
 
 void robusto_print_peers()
@@ -77,11 +83,18 @@ void robusto_print_peers()
 
 }
 
+
 bool notify_on_new_peer(robusto_peer_t *peer) {
     if (on_new_peer_cb) {
         return on_new_peer_cb(peer);
     }
     return true;
+}
+
+void notify_on_delete_peer(robusto_peer_t *peer) {
+    if (on_delete_peer_cb) {
+        on_delete_peer_cb(peer);
+    }
 }
 
 robusto_peer_t *
@@ -275,6 +288,8 @@ int robusto_peers_delete_peer(uint16_t peer_handle)
 #endif
 
     SLIST_REMOVE(&robusto_peers, peer, robusto_peer, next);
+
+    notify_on_delete_peer(peer);
 
     // TODO: This needs to do more for stats and some of the media types
     robusto_free(peer);
@@ -527,6 +542,7 @@ struct robusto_peers *get_peer_list()
 int robusto_peers_init(char *_log_prefix)
 {
     on_new_peer_cb = NULL;
+    on_delete_peer_cb = NULL;
     peers_log_prefix = _log_prefix;
 
     /* Free memory first in case this function gets called more than once. */

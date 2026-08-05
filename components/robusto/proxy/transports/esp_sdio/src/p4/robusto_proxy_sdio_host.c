@@ -404,6 +404,19 @@ esp_err_t robusto_proxy_sdio_host_send(uint32_t message_id,
     error = essl_send_packet(state.link, send_packet, packet_size, timeout_ms);
     if (error == ESP_OK) {
         advance_sequence();
+    } else {
+        ESP_LOGE(TAG,
+                 "SDIO send failed msg=0x%08lx payload=%u packet=%u timeout_ms=%u seq=%lu host_init=%u card_init=%u buffered_rx=%u dat1=%d: %s",
+                 (unsigned long)message_id,
+                 (unsigned int)payload_size,
+                 (unsigned int)packet_size,
+                 (unsigned int)timeout_ms,
+                 (unsigned long)state.next_sequence,
+                 state.host_initialized ? 1U : 0U,
+                 state.card_initialized ? 1U : 0U,
+                 (unsigned int)state.buffered_receive_size,
+                 gpio_get_level(CONFIG_ROBUSTO_PROXY_SDIO_P4_DAT1_GPIO),
+                 esp_err_to_name(error));
     }
     return error;
 }

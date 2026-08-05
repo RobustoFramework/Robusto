@@ -222,6 +222,13 @@ extern "C"
      */
     void robusto_register_on_new_peer(callback_new_peer_t *_on_new_peer_cb);
 
+    /**
+     * @brief Sets a callback that will be called before a peer is deleted
+     *
+     * @param _on_delete_peer_cb A pointer to the function to call
+     */
+    void robusto_register_on_delete_peer(callback_delete_peer_t *_on_delete_peer_cb);
+
     // TODO: Clarify difference here
 
     /**
@@ -232,6 +239,13 @@ extern "C"
      * @return false If the peer should not be added
      */
     bool notify_on_new_peer(robusto_peer_t *peer);
+
+    /**
+     * @brief Sends a notification that a peer is about to be deleted
+     *
+     * @param peer The peer to be deleted
+     */
+    void notify_on_delete_peer(robusto_peer_t *peer);
 
     /*
      * Relation management

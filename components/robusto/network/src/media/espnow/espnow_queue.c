@@ -35,12 +35,34 @@
 #include <robusto_sys_queue.h>
 
 #include <robusto_logging.h>
+#include <robusto_system.h>
 #include <string.h>
 
 // The queue context
 queue_context_t espnow_queue_context;
 
 static char *espnow_worker_log_prefix;
+
+static bool espnow_drop_full_item(void *queued_item)
+{
+    media_queue_item_t *item = (media_queue_item_t *)queued_item;
+
+    if (item == NULL) {
+        return false;
+    }
+
+    if (item->important || item->queue_item_type != media_qit_normal) {
+        return false;
+    }
+
+    robusto_set_queue_state_result(item->state, ROB_ERR_QUEUE_FULL);
+    if (item->data != NULL) {
+        robusto_free(item->data);
+        item->data = NULL;
+    }
+
+    return true;
+}
 
 /* Expands to a declaration for the work queue */
 STAILQ_HEAD(espnow_work_q, media_queue_item ) 
@@ -104,6 +126,7 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     espnow_queue_context.max_task_count = 1;
     espnow_queue_context.normal_max_count = 3;
     espnow_queue_context.important_max_count = 5;
+    espnow_queue_context.item_drop_cb = espnow_drop_full_item;
     espnow_queue_context.multitasking = false;
     // This queue cannot start processing items until espnow is initialized
     espnow_queue_context.blocked = true;

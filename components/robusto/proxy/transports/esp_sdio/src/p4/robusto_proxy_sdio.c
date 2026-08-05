@@ -109,6 +109,32 @@ static rob_ret_val_t map_exchange_error(esp_err_t error)
     }
 }
 
+static void recover_host_after_send_failure(esp_err_t error)
+{
+    esp_err_t recovery_error;
+
+    if (error != ESP_ERR_TIMEOUT) {
+        return;
+    }
+
+    ESP_LOGW(TAG, "recovering SDIO host after send timeout");
+    recovery_error = robusto_proxy_sdio_host_deinit();
+    if (recovery_error != ESP_OK) {
+        ESP_LOGE(TAG, "host recovery deinit failed: %s",
+                 esp_err_to_name(recovery_error));
+        return;
+    }
+
+    recovery_error = robusto_proxy_sdio_host_init_without_reset();
+    if (recovery_error != ESP_OK) {
+        ESP_LOGE(TAG, "host recovery init_without_reset failed: %s",
+                 esp_err_to_name(recovery_error));
+        return;
+    }
+
+    ESP_LOGI(TAG, "SDIO host recovery completed after send timeout");
+}
+
 static rob_ret_val_t p4_exchange(
     void *context,
     const uint8_t *request,
@@ -168,6 +194,7 @@ static rob_ret_val_t p4_exchange(
         portEXIT_CRITICAL(&binding->response_lock);
         ESP_LOGE(TAG, "send opcode=%u: %s", request_header->opcode,
                  esp_err_to_name(error));
+        recover_host_after_send_failure(error);
         rob_ret_val_t result = map_exchange_error(error);
         xSemaphoreGive(binding->exchange_mutex);
         return result;

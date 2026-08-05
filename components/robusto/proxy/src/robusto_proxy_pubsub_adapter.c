@@ -10,8 +10,10 @@
 static uint8_t *allocate_publish_data(uint32_t data_length)
 {
 #ifdef ESP_PLATFORM
-    return heap_caps_malloc(data_length,
-                            MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    return heap_caps_malloc_prefer(
+        data_length, 2U,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT,
+        MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
 #else
     return malloc(data_length);
 #endif

@@ -131,6 +131,8 @@ bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_re
 
 rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bool important)
 {
+    bool queue_full;
+
     if (q_context->shutdown)
     {
         ROB_LOGE(q_context->log_prefix, "The queue is shut down.");
@@ -139,7 +141,8 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
     
     
 
-    if (q_context->count > q_context->normal_max_count && q_context->item_drop_cb != NULL) {
+    queue_full = q_context->count > q_context->normal_max_count;
+    if (queue_full && q_context->item_drop_cb != NULL) {
         /* If the queue is full, for each item in the STAILQ, call item_drop_cb and if it returns true, drop the item */
         // Use the STAILQ_FOREACH_SAFE macro to iterate and remove items safely
         work_queue_item_t *item, *temp_item;
@@ -154,8 +157,10 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
                 break;
             }
         }
+        queue_full = q_context->count > q_context->normal_max_count;
+    }
 
-
+    if (queue_full) {
         if (!important) {
             ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping normal message.", q_context->count);
             return ROB_ERR_QUEUE_FULL;

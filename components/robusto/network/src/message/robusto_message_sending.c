@@ -175,6 +175,10 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     if (queue_ctx != NULL)
     {
         media_queue_item_t *new_item = robusto_malloc(sizeof(media_queue_item_t));
+        if (new_item == NULL)
+        {
+            return ROB_ERR_OUT_OF_MEMORY;
+        }
         new_item->peer = peer;
         new_item->data = data;
         new_item->data_length = data_length;
@@ -185,6 +189,10 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         new_item->state = state;
         new_item->important = important;
         retval = robusto_set_queue_state_queued_on_ok(new_item->state, safe_add_work_queue(queue_ctx, new_item, important));
+        if (retval != ROB_OK)
+        {
+            robusto_free(new_item);
+        }
     }
     else
     {

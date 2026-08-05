@@ -119,36 +119,10 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         add_to_history(&peer->espnow_info, true, rc);
     }
     #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
-    // We interpret no receipt request as fire-and-forget in ESP-NOW as there is built in acknowledgement.
     if (!receipt)
     {
         return rc;
     }
-    // We will wait here until the message was sent.
-    // We assume 1 mbit/s speed for ESP-NOW which is ~125 kB/s, so a 250 byte message should be sent in 1 ms
-    // so we calculate the maximum wait time
-    int32_t wait_time = (data_length / 125) + 30; // +30 ms for the Robusto response
-    if (wait_time < CONFIG_ROB_RECEIPT_TIMEOUT_MS) {
-        wait_time = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
-    }
-    int32_t start_send = r_millis();
-    while ((send_status < 0) && (r_millis() < start_send + wait_time))
-    {
-        robusto_yield();
-    }
-
-    if (send_status == ESP_NOW_SEND_FAIL) {
-        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission failed completing after %lu ms. Peer: %s", r_millis() - start_send, peer->name);
-        return ROB_FAIL;
-    }
-    if (send_status < 0) {
-        ROB_LOGE(espnow_log_prefix, "ESP-NOW transmission didn't complete within wait time (%lu ms). Peer: %s Data length: %lu", wait_time, peer->name, data_length);
-        // Print a stack trace
-        ROB_LOG_STACK_TRACE(3);
-        return ROB_FAIL;
-    }
-
-    peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
     return rc;
     #else
     if (!receipt)

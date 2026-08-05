@@ -205,6 +205,7 @@ This library assumes this and may fail using other lengths for this setting.
     robusto_peer_t *get_host_peer();
 
     typedef bool(callback_new_peer_t)(robusto_peer_t *peer);
+        typedef void(callback_delete_peer_t)(robusto_peer_t *peer);
 
 #ifdef __cplusplus
 } /* extern "C" */

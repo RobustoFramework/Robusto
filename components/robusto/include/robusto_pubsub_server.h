@@ -131,6 +131,14 @@ uint32_t robusto_pubsub_server_unsubscribe_with_context(pubsub_server_subscriber
                                                         uint32_t topic);
 
 /**
+ * @brief Unregister all topic subscriptions owned by a peer
+ *
+ * @param peer The peer being removed or replaced
+ * @return uint32_t Number of subscriptions removed
+ */
+uint32_t robusto_pubsub_server_unsubscribe_peer_from_all(robusto_peer_t *peer);
+
+/**
  * @brief Create a new topic or return a matching one
  * 
  * @param name A null-terminated string of the with the name (i.e. nmea.12345)

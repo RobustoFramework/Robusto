@@ -3,9 +3,32 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "esp_log.h"
+
 #include "robusto_proxy_control.h"
 #include "robusto_proxy_frame.h"
 #include "robusto_proxy_pubsub_client.h"
+
+static const char *TAG = "rob_proxy_client";
+
+static const char *proxy_session_state_name(robusto_proxy_session_state_t state)
+{
+    switch (state)
+    {
+        case ROBUSTO_PROXY_SESSION_RESET:
+            return "reset";
+        case ROBUSTO_PROXY_SESSION_NEGOTIATING:
+            return "negotiating";
+        case ROBUSTO_PROXY_SESSION_ESTABLISHED:
+            return "established";
+        case ROBUSTO_PROXY_SESSION_DEGRADED:
+            return "degraded";
+        case ROBUSTO_PROXY_SESSION_INCOMPATIBLE:
+            return "incompatible";
+        default:
+            return "unknown";
+    }
+}
 
 static uint64_t nonzero_u64(uint64_t value)
 {
@@ -341,6 +364,13 @@ rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client)
     {
         return ROB_ERR_INVALID_ARG;
     }
+    ESP_LOGI(TAG,
+             "connect start: state=%s local_boot=0x%016llx peer_boot=0x%016llx features=0x%016llx inflight_limit=%u",
+             proxy_session_state_name(client->session.state),
+             (unsigned long long)client->session.local_boot_id,
+             (unsigned long long)client->session.peer_boot_id,
+             (unsigned long long)client->session.enabled_features,
+             (unsigned int)client->session.local_limits.max_in_flight);
     previous_peer_boot_id = client->session.peer_boot_id;
     memset(&request, 0, sizeof(request));
     request.controller_boot_id = client->session.local_boot_id;
@@ -367,6 +397,11 @@ rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client)
         &response_payload, &response_payload_size);
     if (result != ROB_OK)
     {
+        ESP_LOGW(TAG,
+                 "connect hello failed: result=%d state=%s previous_peer_boot=0x%016llx",
+                 result,
+                 proxy_session_state_name(client->session.state),
+                 (unsigned long long)previous_peer_boot_id);
         client->session.state = ROBUSTO_PROXY_SESSION_RESET;
         return result;
     }
@@ -375,6 +410,14 @@ rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client)
         (response.enabled_features & ROBUSTO_PROXY_FEATURE_PUBSUB_V1) == 0U ||
         !robusto_proxy_session_apply_hello_response(&client->session, &response))
     {
+        ESP_LOGW(TAG,
+                 "connect hello incompatible: payload_size=%u enabled_features=0x%016llx protocol=%u.%u max_payload=%u max_in_flight=%u",
+                 (unsigned int)response_payload_size,
+                 (unsigned long long)response.enabled_features,
+                 (unsigned int)response.selected_protocol_major,
+                 (unsigned int)response.selected_protocol_minor,
+                 (unsigned int)response.selected_max_payload,
+                 (unsigned int)response.selected_max_in_flight);
         client->session.state = ROBUSTO_PROXY_SESSION_INCOMPATIBLE;
         return ROB_ERR_NOT_SUPPORTED;
     }
@@ -390,6 +433,24 @@ rob_ret_val_t robusto_proxy_client_connect(robusto_proxy_client_t *client)
     if (result != ROB_OK)
     {
         client->session.state = ROBUSTO_PROXY_SESSION_DEGRADED;
+        ESP_LOGW(TAG,
+                 "connect reconcile failed: result=%d state=%s peer_boot=0x%016llx features=0x%016llx",
+                 result,
+                 proxy_session_state_name(client->session.state),
+                 (unsigned long long)client->session.peer_boot_id,
+                 (unsigned long long)client->session.enabled_features);
+    }
+    else
+    {
+        ESP_LOGI(TAG,
+                 "connect established: state=%s peer_boot=0x%016llx features=0x%016llx protocol=%u.%u request_pool=%u max_in_flight=%u",
+                 proxy_session_state_name(client->session.state),
+                 (unsigned long long)client->session.peer_boot_id,
+                 (unsigned long long)client->session.enabled_features,
+                 (unsigned int)client->session.selected_protocol_major,
+                 (unsigned int)client->session.selected_protocol_minor,
+                 (unsigned int)client->session.negotiated_limits.request_pool_bytes,
+                 (unsigned int)client->session.negotiated_limits.max_in_flight);
     }
     return result;
 }

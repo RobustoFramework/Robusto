@@ -654,6 +654,10 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             ROB_LOGW(fragmentation_log_prefix, "Sending fragmented message is retrying.");
             continue;
             break;
+        case ROB_ST_PAUSED:
+            ROB_LOGD(fragmentation_log_prefix, "Sending fragmented message is waiting for fragment status.");
+            continue;
+            break;
         default:
             ROB_LOGE(fragmentation_log_prefix, "Internal error: Sending fragmented message ended in an unexpected state: %u.", frag_msg->state);
             rc = ROB_FAIL;
