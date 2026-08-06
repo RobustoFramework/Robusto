@@ -132,49 +132,48 @@ bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_re
 rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bool important)
 {
     bool queue_full;
+    rob_ret_val_t result = ROB_OK;
 
     if (q_context->shutdown)
     {
         ROB_LOGE(q_context->log_prefix, "The queue is shut down.");
         return ROB_ERR_MUTEX;
     } 
-    
-    
-
-    queue_full = q_context->count > q_context->normal_max_count;
-    if (queue_full && q_context->item_drop_cb != NULL) {
-        /* If the queue is full, for each item in the STAILQ, call item_drop_cb and if it returns true, drop the item */
-        // Use the STAILQ_FOREACH_SAFE macro to iterate and remove items safely
-        work_queue_item_t *item, *temp_item;
-        STAILQ_FOREACH_SAFE(item, (STAILQ_HEAD(, queue_item) *)q_context->work_queue, items, temp_item) {
-            if (q_context->item_drop_cb(item)) {
-                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping item.", q_context->count);
-                STAILQ_REMOVE((STAILQ_HEAD(, queue_item) *)q_context->work_queue, item, queue_item, items);
-                robusto_free(item);
-                q_context->count--;
-            } else {
-                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, but item_drop_cb returned false, keeping item.", q_context->count);
-                break;
-            }
-        }
-        queue_full = q_context->count > q_context->normal_max_count;
-    }
-
-    if (queue_full) {
-        if (!important) {
-            ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping normal message.", q_context->count);
-            return ROB_ERR_QUEUE_FULL;
-        } else 
-        if (q_context->count > q_context->important_max_count) {
-            ROB_LOGE(q_context->log_prefix, "The queue is full at %d items, dropping important message.", q_context->count);
-            return ROB_ERR_QUEUE_FULL;
-        } 
-    } 
 
     if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, (q_context->watchdog_timeout-1) * 1000)) // TODO: Not fond of max delay here, what should it be?
     {
+        queue_full = q_context->count >= q_context->normal_max_count;
+        while (queue_full && q_context->item_drop_cb != NULL) {
+            void *item = q_context->first_queue_item_cb(q_context);
+
+            if (item == NULL) {
+                break;
+            }
+            if (!q_context->item_drop_cb(item)) {
+                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, but item_drop_cb returned false, keeping item.", q_context->count);
+                break;
+            }
+
+            ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping item.", q_context->count);
+            q_context->remove_first_queueitem_cb(q_context);
+            robusto_free(item);
+            queue_full = q_context->count >= q_context->normal_max_count;
+        }
+
+        if (queue_full) {
+            if (!important) {
+                ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping normal message.", q_context->count);
+                result = ROB_ERR_QUEUE_FULL;
+            } else if (q_context->count >= q_context->important_max_count) {
+                ROB_LOGE(q_context->log_prefix, "The queue is full at %d items, dropping important message.", q_context->count);
+                result = ROB_ERR_QUEUE_FULL;
+            }
+        }
+
         /* As the worker takes the queue from the head, and we want a LIFO, add the item to the tail */
-        q_context->insert_tail_cb(q_context, new_item);
+        if (result == ROB_OK) {
+            q_context->insert_tail_cb(q_context, new_item);
+        }
         robusto_mutex_give(q_context->__x_queue_mutex);
     }
     else
@@ -183,7 +182,7 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
         return ROB_ERR_MUTEX;
     }
     
-    return ROB_OK;
+    return result;
 }
 
 

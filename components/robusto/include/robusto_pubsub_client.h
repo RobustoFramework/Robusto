@@ -93,6 +93,7 @@ rob_ret_val_t robusto_pubsub_client_start();
  * 
  */
 void robusto_pubsub_check_topics();
+void robusto_pubsub_client_recover_peer_subscriptions(robusto_peer_t *peer, e_presentation_reason reason);
 /**
  * @brief Initialize client (not start)
  * 

@@ -15,6 +15,7 @@ static char *pubsub_client_log_prefix;
 
 static void incoming_callback(robusto_message_t *message);
 static void shutdown_callback();
+static void create_topic_recovery_task(subscribed_topic_t *topic);
 
 static subscribed_topic_t *first_subscribed_topic = NULL;
 static subscribed_topic_t *last_subscribed_topic = NULL;
@@ -340,7 +341,7 @@ void recover_topic(subscribed_topic_t *topic)
     robusto_delete_current_task();
 }
 
-void create_topic_recovery_task(subscribed_topic_t *topic)
+static void create_topic_recovery_task(subscribed_topic_t *topic)
 {
     
 
@@ -359,6 +360,32 @@ void create_topic_recovery_task(subscribed_topic_t *topic)
         ROB_LOGE(pubsub_client_log_prefix, "Failed creating a recovery task for %s topic, peer %s", topic->topic_name, topic->peer->name);
     }
     robusto_free(task_name);
+}
+
+void robusto_pubsub_client_recover_peer_subscriptions(robusto_peer_t *peer, e_presentation_reason reason)
+{
+    subscribed_topic_t *curr_topic = first_subscribed_topic;
+
+    if (peer == NULL)
+    {
+        return;
+    }
+
+    while (curr_topic)
+    {
+        if (curr_topic->peer == peer && curr_topic->callback != NULL &&
+            curr_topic->state != TOPIC_STATE_RECOVERING &&
+            curr_topic->state != TOPIC_STATE_REMOVING)
+        {
+            ROB_LOGW(pubsub_client_log_prefix,
+                     "Recovering subscription for %s after peer %s presentation reason %u",
+                     curr_topic->topic_name,
+                     peer->name,
+                     (unsigned)reason);
+            create_topic_recovery_task(curr_topic);
+        }
+        curr_topic = curr_topic->next;
+    }
 }
 
 void robusto_pubsub_check_topics()

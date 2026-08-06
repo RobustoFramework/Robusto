@@ -145,13 +145,21 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         if (rc == ROB_FAIL)
         {
 
-            ROB_LOGE(espnow_log_prefix, "ESP-NOW got a negative receipt. Peer: %s", peer->name);
+            ROB_LOGE(espnow_log_prefix,
+                     "ESP-NOW got a negative receipt. Peer: %s rssi_valid=%u rssi_dbm=%i",
+                     peer->name,
+                     peer->espnow_info.latest_rssi_valid ? 1U : 0U,
+                     (int)peer->espnow_info.latest_rssi_dbm);
             return ROB_FAIL;
         }
     }
     else
     {
-        ROB_LOGE(espnow_log_prefix, "ESP-NOW timed out waiting for receipt, timeout. Peer: %s", peer->name);
+        ROB_LOGE(espnow_log_prefix,
+                 "ESP-NOW timed out waiting for receipt, timeout. Peer: %s rssi_valid=%u rssi_dbm=%i",
+                 peer->name,
+                 peer->espnow_info.latest_rssi_valid ? 1U : 0U,
+                 (int)peer->espnow_info.latest_rssi_dbm);
         return ROB_ERR_NO_RECEIPT;
     }
     return rc;
@@ -353,7 +361,19 @@ rob_ret_val_t esp_now_send_message(robusto_peer_t *peer, uint8_t *data, uint32_t
 void espnow_do_on_work_cb(media_queue_item_t *work_item)
 {
 
-    ROB_LOGD(espnow_log_prefix, ">> In ESP-NOW work callback.");
+    queue_context_t *queue_context = espnow_get_queue_context();
+    ROB_LOGW(espnow_log_prefix,
+             ">> ESP-NOW work callback start peer=%s bytes=%lu qtype=%hhu important=%u receipt=%u count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+             work_item->peer->name,
+             work_item->data_length,
+             work_item->queue_item_type,
+             work_item->important,
+             work_item->receipt,
+             queue_context->count,
+             queue_context->blocked,
+             queue_context->task_count,
+             work_item->peer->espnow_info.latest_rssi_valid ? 1U : 0U,
+             (int)work_item->peer->espnow_info.latest_rssi_dbm);
     send_work_item(work_item, &(work_item->peer->espnow_info), robusto_mt_espnow, &esp_now_send_message, NULL, espnow_get_queue_context());
 }
 

@@ -121,6 +121,8 @@ static uint8_t *build_peer_publish_message(uint32_t topic_hash,
     uint8_t *payload;
     uint32_t crc32;
 
+    *message_length_out = message_length;
+
     if (message == NULL) {
         return NULL;
     }
@@ -142,7 +144,6 @@ static uint8_t *build_peer_publish_message(uint32_t topic_hash,
                           message_length - ROBUSTO_PREFIX_BYTES - ROBUSTO_CRC_LENGTH);
     memcpy(message + ROBUSTO_PREFIX_BYTES, &crc32, ROBUSTO_CRC_LENGTH);
 
-    *message_length_out = message_length;
     return message;
 }
 
@@ -171,18 +172,13 @@ static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
         return ROB_FAIL;
     }
 
-    if (data_length <= 500U) {
-        *media_type_out = media_type;
-        return ROB_OK;
-    }
-
     media_info = get_media_info(peer, media_type);
     if (media_info == NULL) {
         return ROB_FAIL;
     }
     if (media_info->state != media_state_working) {
         ROB_LOGW(pubsub_log_prefix,
-                 "Skipping large publish of %s to peer %s using %s: state=%u problem=%u len=%lu",
+                 "Skipping publish of %s to peer %s using %s: state=%u problem=%u len=%lu",
                  topic_name,
                  peer->name,
                  media_type_to_str(media_type),
@@ -190,6 +186,22 @@ static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
                  media_info->problem,
                  (unsigned long)data_length);
         return ROB_FAIL;
+    }
+
+    if (data_length <= 500U) {
+        *media_type_out = media_type;
+        return ROB_OK;
+    }
+
+    if (media_type == robusto_mt_espnow &&
+        !robusto_send_queue_accepts_large_message(media_type)) {
+        ROB_LOGW(pubsub_log_prefix,
+                 "Skipping large publish of %s to peer %s using %s: send queue busy len=%lu",
+                 topic_name,
+                 peer->name,
+                 media_type_to_str(media_type),
+                 (unsigned long)data_length);
+        return ROB_ERR_QUEUE_FULL;
     }
 
     *media_type_out = media_type;
@@ -546,8 +558,9 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
         bool prefer_spiram = robusto_has_spiram();
         uint32_t message_length = 0U;
 
-        if (prepare_peer_publish(subscriber->peer, topic->name, data_length, &media_type) != ROB_OK) {
-            return ROB_FAIL;
+        rob_ret_val_t prepare_rc = prepare_peer_publish(subscriber->peer, topic->name, data_length, &media_type);
+        if (prepare_rc != ROB_OK) {
+            return prepare_rc;
         }
 
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);

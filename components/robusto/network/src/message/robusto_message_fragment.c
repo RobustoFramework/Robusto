@@ -54,6 +54,11 @@
 #define SKIP_FRAGMENT_TEST 1
 #endif
 
+#define FRAG_RUNNING_WAIT_MS 30000
+#define FRAG_RESULT_WAIT_MS (CONFIG_ROB_RECEIPT_TIMEOUT_MS * 20)
+#define FRAG_STATUS_WAIT_MS (CONFIG_ROB_RECEIPT_TIMEOUT_MS * 20)
+#define FRAG_TOTAL_WAIT_MS (FRAG_RUNNING_WAIT_MS + FRAG_RESULT_WAIT_MS + FRAG_STATUS_WAIT_MS)
+
 static char *fragmentation_log_prefix = "NOT SET";
 
 SLIST_HEAD(slist_fragmented_messages_head, fragmented_message);
@@ -564,6 +569,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
     frag_msg->abort_transmission = false;
     frag_msg->state = ROB_ST_RUNNING;
+    frag_msg->start_time = (uint32_t)r_millis();
     SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
 
     // Encode into a message
@@ -596,16 +602,36 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     // A state machine that handles the probes
     while (1)
     {
+        if ((uint32_t)(r_millis() - frag_msg->start_time) > FRAG_TOTAL_WAIT_MS)
+        {
+            robusto_media_t *media = get_media_info(peer, media_type);
+            ROB_LOGE(fragmentation_log_prefix,
+                     "Fragmented message exceeded total timeout (%lu ms), closing the transmission. peer=%s mt=%hhu bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
+                     (uint32_t)FRAG_TOTAL_WAIT_MS,
+                     peer->name,
+                     media_type,
+                     data_length,
+                     fragment_count,
+                     frag_msg->state,
+                     media != NULL && media->latest_rssi_valid ? 1U : 0U,
+                     media != NULL ? (int)media->latest_rssi_dbm : 0);
+            frag_msg->abort_transmission = true;
+            rc = ROB_ERR_TIMEOUT;
+            goto finish;
+        }
+
         starttime = r_millis();
+        uint32_t wait_ms = frag_msg->state == ROB_ST_PAUSED ? FRAG_STATUS_WAIT_MS : FRAG_RUNNING_WAIT_MS;
         // First, we identify that we are at least done.
-        while (frag_msg->state < ROB_ST_DONE && (r_millis() < starttime + 30000))
+        while (frag_msg->state < ROB_ST_DONE && (r_millis() < starttime + wait_ms))
         {
             robusto_yield();
         }
-        if (r_millis() > (starttime + 30000))
+        if (r_millis() > (starttime + wait_ms))
         {
-            ROB_LOGE(fragmentation_log_prefix, "Waited for fragmented message too long, timing out and closing the transmission.");
+            ROB_LOGE(fragmentation_log_prefix, "Waited for fragmented message state %u too long (%lu ms), timing out and closing the transmission.", frag_msg->state, wait_ms);
             frag_msg->abort_transmission = true;
+            rc = ROB_ERR_TIMEOUT;
             r_delay(1000);
             goto finish;
         }
@@ -614,7 +640,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         {
             // If we are in done state, await result or timeout //TODO: ESP need about 500, BLE 2000, be media-specific?
             starttime = r_millis();
-            while ((frag_msg->state == ROB_ST_DONE) && (r_millis() < starttime + 2000))
+            while ((frag_msg->state == ROB_ST_DONE) && (r_millis() < starttime + FRAG_RESULT_WAIT_MS))
             {
                 robusto_yield();
             }

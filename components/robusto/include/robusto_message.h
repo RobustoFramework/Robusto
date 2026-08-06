@@ -105,6 +105,7 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
  * @return rob_ret_val_t Was the message successfully built and put on the queue for sending?
  */
 rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  uint8_t *data, uint32_t data_length, queue_state *state, bool receipt);
+bool robusto_send_queue_accepts_large_message(e_media_type media_type);
 /**
  * @brief For internal use, like send_message_raw but takes more parameters for recursion and heartbeats
  * @internal

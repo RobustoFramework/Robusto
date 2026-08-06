@@ -57,6 +57,15 @@ void *safe_get_head_work_item(queue_context_t *q_context)
         if (curr_work != NULL)
         {
             q_context->remove_first_queueitem_cb(q_context);
+            ROB_LOGW(robusto_worker_log_prefix,
+                     ">> Queue dequeue queue=%s count=%u normal_max=%u important_max=%u blocked=%u tasks=%u multitasking=%u",
+                     q_context->worker_task_name,
+                     q_context->count,
+                     q_context->normal_max_count,
+                     q_context->important_max_count,
+                     q_context->blocked,
+                     q_context->task_count,
+                     q_context->multitasking);
         }
         robusto_mutex_give(q_context->__x_queue_mutex);
         return curr_work;

@@ -36,6 +36,9 @@
 #include "robusto_peer.h"
 #include "robusto_queue.h"
 #include "robusto_qos.h"
+#if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
+#include "robusto_pubsub_client.h"
+#endif
 #include "string.h"
 #include <robusto_time.h>
 
@@ -103,11 +106,11 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
          * no receipt as a reply requires know outgoing id, which is only available after presentation is parsed
          * only send to the mentioned media type
          * if reason is recovery, set that as the type so that the presentation isn't purged from the queue
-         * send as important
+         * replies are triggered by remote HI messages, so do not let them consume the important queue reserve
         */
         rob_ret_val_t queue_ret = send_message_raw_internal(peer, media_type, msg, msg_len, q_state, false, 
             (reason == presentation_recover) ?  media_qit_recovery : media_qit_normal, 
-            0, peer->supported_media_types & ~media_type, true);
+            0, peer->supported_media_types & ~media_type, !is_reply || reason == presentation_recover);
 
         if (queue_ret != ROB_OK)
         {
@@ -129,7 +132,8 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                 ret_val_flag = ROB_OK;
             }
 
-            if (ret_val_flag != ROB_ERR_TIMEOUT && !queue_in_flight &&
+            if (!is_reply &&
+                ret_val_flag != ROB_ERR_TIMEOUT && !queue_in_flight &&
                 info->state == media_state_working) {
                 set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
             }
@@ -254,6 +258,10 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     );
     // We now know this peer.
     message->peer->state = PEER_KNOWN_INSECURE;
+
+#if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
+    robusto_pubsub_client_recover_peer_subscriptions(message->peer, message->binary_data[REASON_POS]);
+#endif
     
     ROB_LOGI(presentation_log_prefix, "<< Peer %s now more informed.", message->peer->name);
     log_peer_info(presentation_log_prefix, message->peer);

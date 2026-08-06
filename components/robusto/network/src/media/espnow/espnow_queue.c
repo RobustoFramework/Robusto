@@ -51,9 +51,34 @@ static bool espnow_drop_full_item(void *queued_item)
         return false;
     }
 
-    if (item->important || item->queue_item_type != media_qit_normal) {
+    if (item->important ||
+        item->queue_item_type == media_qit_heartbeat ||
+        item->queue_item_type == media_qit_recovery) {
+        ROB_LOGW(espnow_worker_log_prefix,
+                 "ESP-NOW queue full keep item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u rssi_valid=%u rssi_dbm=%i",
+                 item->peer != NULL ? item->peer->name : "<null>",
+                 item->data_length,
+                 item->queue_item_type,
+                 item->important,
+                 espnow_queue_context.count,
+                 espnow_queue_context.normal_max_count,
+                 espnow_queue_context.important_max_count,
+                 item->peer != NULL && item->peer->espnow_info.latest_rssi_valid ? 1U : 0U,
+                 item->peer != NULL ? (int)item->peer->espnow_info.latest_rssi_dbm : 0);
         return false;
     }
+
+    ROB_LOGW(espnow_worker_log_prefix,
+             "ESP-NOW queue full drop normal item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u rssi_valid=%u rssi_dbm=%i",
+             item->peer != NULL ? item->peer->name : "<null>",
+             item->data_length,
+             item->queue_item_type,
+             item->important,
+             espnow_queue_context.count,
+             espnow_queue_context.normal_max_count,
+             espnow_queue_context.important_max_count,
+             item->peer != NULL && item->peer->espnow_info.latest_rssi_valid ? 1U : 0U,
+             item->peer != NULL ? (int)item->peer->espnow_info.latest_rssi_dbm : 0);
 
     robusto_set_queue_state_result(item->state, ROB_ERR_QUEUE_FULL);
     if (item->data != NULL) {
@@ -117,6 +142,7 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     // Initialize the work queue
     STAILQ_INIT(&espnow_work_q);
 
+    espnow_queue_context.work_queue = &espnow_work_q;
     espnow_queue_context.first_queue_item_cb = espnow_first_queueitem; 
     espnow_queue_context.remove_first_queueitem_cb = espnow_remove_first_queue_item; 
     espnow_queue_context.insert_tail_cb = espnow_insert_tail;
