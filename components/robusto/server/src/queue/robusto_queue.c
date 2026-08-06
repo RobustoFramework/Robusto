@@ -143,21 +143,29 @@ rob_ret_val_t safe_add_work_queue(queue_context_t *q_context, void *new_item, bo
     if (ROB_OK == robusto_mutex_take(q_context->__x_queue_mutex, (q_context->watchdog_timeout-1) * 1000)) // TODO: Not fond of max delay here, what should it be?
     {
         queue_full = q_context->count >= q_context->normal_max_count;
-        while (queue_full && q_context->item_drop_cb != NULL) {
+        while (queue_full && q_context->item_drop_cb != NULL && q_context->next_queueitem_cb != NULL && q_context->remove_queueitem_cb != NULL) {
             void *item = q_context->first_queue_item_cb(q_context);
+            bool dropped = false;
 
-            if (item == NULL) {
-                break;
-            }
-            if (!q_context->item_drop_cb(item)) {
+            while (item != NULL) {
+                void *next_item = q_context->next_queueitem_cb(item);
+
+                if (q_context->item_drop_cb(item)) {
+                    ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping item.", q_context->count);
+                    q_context->remove_queueitem_cb(q_context, item);
+                    robusto_free(item);
+                    queue_full = q_context->count >= q_context->normal_max_count;
+                    dropped = true;
+                    break;
+                }
+
                 ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, but item_drop_cb returned false, keeping item.", q_context->count);
-                break;
+                item = next_item;
             }
 
-            ROB_LOGI(q_context->log_prefix, "The queue is full at %d items, dropping item.", q_context->count);
-            q_context->remove_first_queueitem_cb(q_context);
-            robusto_free(item);
-            queue_full = q_context->count >= q_context->normal_max_count;
+            if (!dropped) {
+                break;
+            }
         }
 
         if (queue_full) {

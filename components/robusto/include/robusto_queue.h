@@ -141,7 +141,9 @@ extern "C"
     typedef struct queue_context queue_context_t;
 
     typedef void *(first_queueitem)(queue_context_t *q_context);
+    typedef void *(next_queueitem)(void *item);
     typedef void(remove_first_queueitem)(queue_context_t *q_context);
+    typedef void(remove_queueitem)(queue_context_t *q_context, void *item);
 
     typedef void(insert_queue_item)(queue_context_t *q_context, void *new_item);
     typedef bool(drop_full_cb)(void *new_item);
@@ -153,7 +155,9 @@ extern "C"
     {
         /* Queue management callbacks, needed because of the difficulties in passing queues as pointers */
         first_queueitem *first_queue_item_cb;
+        next_queueitem *next_queueitem_cb;
         remove_first_queueitem *remove_first_queueitem_cb;
+        remove_queueitem *remove_queueitem_cb;
         insert_queue_item *insert_tail_cb;
         insert_queue_item *insert_head_cb;
         /* Mandatory callback that handles incoming work items */

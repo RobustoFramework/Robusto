@@ -99,10 +99,22 @@ void *espnow_first_queueitem(queue_context_t *q_context)
     return STAILQ_FIRST(&espnow_work_q); 
 }
 
+void *espnow_next_queueitem(void *item)
+{
+    return STAILQ_NEXT((media_queue_item_t *)item, items);
+}
+
 void espnow_remove_first_queue_item(queue_context_t * q_context){
     STAILQ_REMOVE_HEAD(&espnow_work_q, items);
     q_context->count--;
 }
+
+void espnow_remove_queue_item(queue_context_t *q_context, void *item)
+{
+    STAILQ_REMOVE(&espnow_work_q, (media_queue_item_t *)item, media_queue_item, items);
+    q_context->count--;
+}
+
 void espnow_insert_tail(queue_context_t * q_context, void *new_item) { 
     STAILQ_INSERT_TAIL(&espnow_work_q, (media_queue_item_t *)new_item, items);
     q_context->count++;
@@ -144,7 +156,9 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
 
     espnow_queue_context.work_queue = &espnow_work_q;
     espnow_queue_context.first_queue_item_cb = espnow_first_queueitem; 
+    espnow_queue_context.next_queueitem_cb = espnow_next_queueitem;
     espnow_queue_context.remove_first_queueitem_cb = espnow_remove_first_queue_item; 
+    espnow_queue_context.remove_queueitem_cb = espnow_remove_queue_item;
     espnow_queue_context.insert_tail_cb = espnow_insert_tail;
     espnow_queue_context.insert_head_cb = espnow_insert_head;
     espnow_queue_context.on_work_cb = work_cb; 
