@@ -96,7 +96,7 @@ rob_ret_val_t robusto_proxy_client_query_health(
  *
  * On ESP32-C6 delegates, delegate_version resolves in this order:
  * 1) CONFIG_ROBUSTO_PROXY_C6_DELEGATE_IDENTITY
- * 2) delegate ELF SHA-256 identity
+ * 2) delegate ELF SHA-256 as 64 uppercase hexadecimal characters
  * 3) ROBUSTO_VERSION fallback
  */
 rob_ret_val_t robusto_proxy_client_query_system_info(

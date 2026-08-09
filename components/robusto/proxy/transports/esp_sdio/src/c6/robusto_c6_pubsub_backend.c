@@ -78,7 +78,18 @@ static uint16_t backend_publish(void *context,
     *delivery_count = robusto_topic->subscriber_count;
     result = robusto_pubsub_server_publish(robusto_topic->hash,
                                            (uint8_t *)data, data_length);
-    return map_robusto_publish_result(result);
+    uint16_t status = map_robusto_publish_result(result);
+    if (result != ROB_OK)
+    {
+        ESP_LOGE(TAG,
+                 "Backend publish failed topic=%s bytes=%lu subscribers=%lu backend_rc=%d mapped_status=0x%04x",
+                 topic,
+                 (unsigned long)data_length,
+                 (unsigned long)robusto_topic->subscriber_count,
+                 (int)result,
+                 (unsigned)status);
+    }
+    return status;
 }
 
 static uint16_t backend_subscribe(void *context,

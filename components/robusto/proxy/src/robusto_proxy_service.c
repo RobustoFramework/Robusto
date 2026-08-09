@@ -51,9 +51,21 @@ static const char *delegate_identity_string(void)
 #endif
     {
         const esp_app_desc_t *description = esp_app_get_description();
-        if (description != NULL && description->app_elf_sha256[0] != '\0')
+        if (description != NULL)
         {
-            identity = (const char *)description->app_elf_sha256;
+            static const char hex_digits[] = "0123456789ABCDEF";
+            static char elf_sha256_hex[65];
+
+            for (size_t index = 0U;
+                 index < sizeof(description->app_elf_sha256);
+                 ++index)
+            {
+                uint8_t byte = description->app_elf_sha256[index];
+                elf_sha256_hex[index * 2U] = hex_digits[byte >> 4U];
+                elf_sha256_hex[index * 2U + 1U] = hex_digits[byte & 0x0FU];
+            }
+            elf_sha256_hex[sizeof(description->app_elf_sha256) * 2U] = '\0';
+            identity = elf_sha256_hex;
         }
     }
 #endif

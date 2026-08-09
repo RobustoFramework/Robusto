@@ -194,7 +194,7 @@ typedef struct robusto_proxy_system_info_response {
     uint8_t reserved[2];
     /** Robusto framework version bytes (not guaranteed NUL-terminated). */
     uint8_t robusto_version[32];
-    /** Delegate identity/version bytes (not guaranteed NUL-terminated). */
+    /** Delegate identity/version text (not guaranteed NUL-terminated). */
     uint8_t delegate_version[64];
 } robusto_proxy_system_info_response_t;
 

@@ -52,7 +52,6 @@ static bool espnow_drop_full_item(void *queued_item)
     }
 
     if (item->important ||
-        item->queue_item_type == media_qit_heartbeat ||
         item->queue_item_type == media_qit_recovery) {
         ROB_LOGW(espnow_worker_log_prefix,
                  "ESP-NOW queue full keep item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u rssi_valid=%u rssi_dbm=%i",

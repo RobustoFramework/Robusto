@@ -150,10 +150,10 @@ bool robusto_send_queue_accepts_large_message(e_media_type media_type)
 
     accepts = !queue_ctx->blocked &&
               !queue_ctx->shutdown &&
-              queue_ctx->count < queue_ctx->important_max_count;
+              queue_ctx->count < queue_ctx->normal_max_count;
 
     ROB_LOGD(message_sending_log_prefix,
-             "Large send queue preflight media=%hhu accepts=%u count=%u normal_max=%u important_max=%u blocked=%u tasks=%u shutdown=%u",
+             "Large normal send queue preflight media=%hhu accepts=%u count=%u normal_max=%u important_max=%u blocked=%u tasks=%u shutdown=%u",
              media_type,
              accepts ? 1U : 0U,
              queue_ctx->count,
