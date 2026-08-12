@@ -78,11 +78,13 @@ CAPABILITY_QUERY, and HEALTH:
 
 - `ROBUSTO_PROXY_OPCODE_SYSTEM_INFO`
 - `ROBUSTO_PROXY_OPCODE_REBOOT`
+- `ROBUSTO_PROXY_OPCODE_FRAGMENT_STATS`
 
 Controller-side API (public):
 
 - `robusto_proxy_client_query_system_info(...)`
 - `robusto_proxy_client_reboot_delegate(...)`
+- `robusto_proxy_client_query_fragment_stats(...)`
 
 ### SYSTEM_INFO response
 
@@ -116,6 +118,26 @@ re-establish HELLO before further service use.
 
 Service-side reboot behavior is callback-driven through
 `robusto_proxy_service_set_reboot_handler(...)`.
+
+### FRAGMENT_STATS response
+
+`robusto_proxy_client_query_fragment_stats(...)` reads the delegate's
+fragmented-message statistics through the control channel. The response type is
+`robusto_proxy_fragment_stats_response_t` and provides:
+
+- `proxy_boot_id`
+- `stats_level`
+- `total`
+- `delta_since_last_read`
+
+The `total` and `delta_since_last_read` fields are both
+`robusto_fragment_stats_t`. `total` is cumulative since delegate initialization
+or `robusto_fragment_stats_reset()`. `delta_since_last_read` is the difference
+since the previous proxy `FRAGMENT_STATS` request that reached the delegate, and
+that request advances the delegate-side delta snapshot.
+
+The proxy does not store minute buckets. Poll this operation from the
+controller/Central and calculate the time-window rates there.
 
 ## Recommended operator check
 

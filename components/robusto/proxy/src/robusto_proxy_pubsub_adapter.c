@@ -207,6 +207,10 @@ static uint16_t adapter_publish(void *context,
     status = adapter->backend->publish(adapter->backend_context, topic,
                                        request->data, request->data_length,
                                        &response->topic_hash, &response->delivery_count);
+    adapter->last_publish_status = status;
+    adapter->last_publish_topic_hash = response->topic_hash;
+    adapter->last_publish_delivery_count = response->delivery_count;
+    adapter->last_publish_bytes = request->data_length;
     if (status != ROBUSTO_PROXY_STATUS_OK)
     {
         adapter->pubsub_errors += 1U;
@@ -548,6 +552,10 @@ static uint16_t adapter_status(void *context,
     response->delivery_drops = adapter->delivery_drops;
     response->duplicate_operations = adapter->duplicate_operations;
     response->pubsub_errors = adapter->pubsub_errors;
+    response->last_publish_status = adapter->last_publish_status;
+    response->last_publish_topic_hash = adapter->last_publish_topic_hash;
+    response->last_publish_delivery_count = adapter->last_publish_delivery_count;
+    response->last_publish_bytes = adapter->last_publish_bytes;
     adapter_give(adapter);
     return ROBUSTO_PROXY_STATUS_OK;
 }

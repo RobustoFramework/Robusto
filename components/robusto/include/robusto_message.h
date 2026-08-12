@@ -179,7 +179,7 @@ typedef struct fragmented_message
     uint8_t *received_fragments; // TODO: This should instead be a bitmap to save space.
     /* When the frag_msg was created, a non-used element */
     uint32_t start_time;
-    /* If not 0, we have requested things to be sent again, and this is the last fragment we requested */
+    /* If not UINT32_MAX, we have requested things to be sent again, and this is the last fragment we requested */
     uint32_t last_requested;
     /* The state of the fragment */
     e_rob_state_t state;
@@ -197,6 +197,63 @@ typedef struct fragmented_message
  * @return fragmented_message_t * 
  */
 fragmented_message_t * get_last_frag_message();
+
+typedef enum robusto_stats_level
+{
+    ROBUSTO_STATS_LEVEL_OFF = 0,
+    ROBUSTO_STATS_LEVEL_ERRORS = 1,
+    ROBUSTO_STATS_LEVEL_BASIC = 2,
+    ROBUSTO_STATS_LEVEL_VERBOSE = 3,
+} robusto_stats_level_t;
+
+typedef struct robusto_fragment_stats
+{
+    uint32_t send_started;
+    uint32_t send_succeeded;
+    uint32_t send_failed;
+    uint32_t send_timed_out;
+    uint32_t request_received;
+    uint32_t message_received;
+    uint32_t resend_request_sent;
+    uint32_t resend_request_received;
+    uint32_t check_sent;
+    uint32_t check_received;
+    uint32_t result_ok_received;
+    uint32_t result_fail_received;
+    uint32_t missing_fragments_reported;
+    uint32_t invalid_fragment_reference;
+    uint32_t invalid_fragment_index;
+    uint32_t wrong_fragment_length;
+    uint32_t wrong_resend_map_length;
+    uint32_t full_message_crc_mismatch;
+    uint32_t fragment_oom;
+    uint32_t invalid_fragment_type;
+    uint32_t fragments_sent;
+    uint32_t fragments_resent;
+} robusto_fragment_stats_t;
+
+/**
+ * @brief Set the runtime collection level for fragmented-message statistics.
+ */
+void robusto_fragment_stats_set_level(robusto_stats_level_t level);
+
+/**
+ * @brief Get the current fragmented-message statistics collection level.
+ */
+robusto_stats_level_t robusto_fragment_stats_get_level(void);
+
+/**
+ * @brief Read fragmented-message statistics.
+ *
+ * @param total Receives cumulative counters since init or reset. May be NULL.
+ * @param delta_since_last_read Receives counters since the previous delta read and advances the delta snapshot. May be NULL.
+ */
+void robusto_fragment_stats_get(robusto_fragment_stats_t *total, robusto_fragment_stats_t *delta_since_last_read);
+
+/**
+ * @brief Clear fragmented-message cumulative counters and the delta snapshot.
+ */
+void robusto_fragment_stats_reset(void);
 
 
 // A callback that can be used to send messages

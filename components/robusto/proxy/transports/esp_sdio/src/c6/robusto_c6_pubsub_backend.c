@@ -1,10 +1,24 @@
 #include "robusto_c6_pubsub_backend.h"
 
 #include "esp_log.h"
+#include "robusto_proxy_protocol.h"
 #include "robusto_pubsub_server.h"
 #include "robusto_retval.h"
 
 static const char *TAG = "c6_pubsub";
+static robusto_c6_pubsub_topic_hook_t s_subscribe_hook = NULL;
+static robusto_c6_pubsub_topic_hook_t s_unsubscribe_hook = NULL;
+static void *s_hook_context = NULL;
+
+void robusto_c6_pubsub_backend_set_topic_hooks(
+    robusto_c6_pubsub_topic_hook_t subscribe_hook,
+    robusto_c6_pubsub_topic_hook_t unsubscribe_hook,
+    void *hook_context)
+{
+    s_subscribe_hook = subscribe_hook;
+    s_unsubscribe_hook = unsubscribe_hook;
+    s_hook_context = hook_context;
+}
 
 static uint16_t map_robusto_publish_result(rob_ret_val_t result)
 {
@@ -108,6 +122,14 @@ static uint16_t backend_subscribe(void *context,
     {
         return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
     }
+    if (s_subscribe_hook != NULL)
+    {
+        uint16_t hook_status = s_subscribe_hook(s_hook_context, topic);
+        if (hook_status != ROBUSTO_PROXY_STATUS_OK)
+        {
+            return hook_status;
+        }
+    }
     hash = robusto_pubsub_server_subscribe_with_context(
         robusto_delivery_callback, subscription, (char *)topic);
     if (hash == 0U)
@@ -132,6 +154,15 @@ static uint16_t backend_unsubscribe(void *context,
         subscription->delivery_callback_context != callback_context)
     {
         return ROBUSTO_PROXY_STATUS_INVALID_ARGUMENT;
+    }
+    if (s_unsubscribe_hook != NULL)
+    {
+        uint16_t hook_status = s_unsubscribe_hook(s_hook_context,
+                                                  subscription->topic);
+        if (hook_status != ROBUSTO_PROXY_STATUS_OK)
+        {
+            return hook_status;
+        }
     }
     removed_hash = robusto_pubsub_server_unsubscribe_with_context(
         robusto_delivery_callback, subscription, topic_hash);

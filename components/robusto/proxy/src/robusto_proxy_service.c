@@ -503,6 +503,55 @@ bool robusto_proxy_service_handle_control_request(
         return true;
     }
 
+    if (opcode == ROBUSTO_PROXY_OPCODE_FRAGMENT_STATS)
+    {
+        robusto_proxy_fragment_stats_response_t response;
+
+        if (request_payload_size != 0U ||
+            response_buffer_size < (ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES +
+                                    ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES))
+        {
+            return false;
+        }
+
+        (void)request_payload;
+        if (service->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED)
+        {
+            prefix.status = ROBUSTO_PROXY_STATUS_HANDSHAKE_REQUIRED;
+            if (robusto_proxy_encode_response_prefix(response_buffer, response_buffer_size, &prefix) != ROBUSTO_PROXY_RESULT_OK)
+            {
+                return false;
+            }
+
+            service->errors += 1U;
+            *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES;
+            return true;
+        }
+
+        memset(&response, 0, sizeof(response));
+        response.proxy_boot_id = service->session.local_boot_id;
+        response.stats_level = (uint8_t)robusto_fragment_stats_get_level();
+        robusto_fragment_stats_get(&response.total, &response.delta_since_last_read);
+
+        prefix.status = ROBUSTO_PROXY_STATUS_OK;
+        if (robusto_proxy_encode_response_prefix(response_buffer, response_buffer_size, &prefix) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            return false;
+        }
+        if (robusto_proxy_encode_fragment_stats_response(
+                response_buffer + ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                response_buffer_size - ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES,
+                &response) != ROBUSTO_PROXY_RESULT_OK)
+        {
+            return false;
+        }
+
+        service->requests += 1U;
+        *response_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES +
+                         ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES;
+        return true;
+    }
+
     if (opcode == ROBUSTO_PROXY_OPCODE_REBOOT)
     {
         if (request_payload_size != 0U ||

@@ -522,6 +522,11 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_status_response(
     write_le32(buffer + 24U, response->delivery_drops);
     write_le32(buffer + 28U, response->duplicate_operations);
     write_le32(buffer + 32U, response->pubsub_errors);
+    write_le16(buffer + 36U, response->last_publish_status);
+    write_le16(buffer + 38U, response->reserved);
+    write_le32(buffer + 40U, response->last_publish_topic_hash);
+    write_le32(buffer + 44U, response->last_publish_delivery_count);
+    write_le32(buffer + 48U, response->last_publish_bytes);
     return ROBUSTO_PROXY_RESULT_OK;
 }
 
@@ -546,6 +551,15 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_status_response(
     response->delivery_drops = read_le32(buffer + 24U);
     response->duplicate_operations = read_le32(buffer + 28U);
     response->pubsub_errors = read_le32(buffer + 32U);
+    response->last_publish_status = read_le16(buffer + 36U);
+    response->reserved = read_le16(buffer + 38U);
+    response->last_publish_topic_hash = read_le32(buffer + 40U);
+    response->last_publish_delivery_count = read_le32(buffer + 44U);
+    response->last_publish_bytes = read_le32(buffer + 48U);
+    if (response->reserved != 0U)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_RESERVED;
+    }
     return response->state <= 3U ? ROBUSTO_PROXY_RESULT_OK : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
 }
 

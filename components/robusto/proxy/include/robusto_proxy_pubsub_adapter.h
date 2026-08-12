@@ -93,6 +93,10 @@ typedef struct robusto_proxy_pubsub_server_adapter {
     uint32_t delivery_drops;
     uint32_t duplicate_operations;
     uint32_t pubsub_errors;
+    uint16_t last_publish_status;
+    uint32_t last_publish_topic_hash;
+    uint32_t last_publish_delivery_count;
+    uint32_t last_publish_bytes;
 } robusto_proxy_pubsub_server_adapter_t;
 
 bool robusto_proxy_pubsub_server_adapter_init(

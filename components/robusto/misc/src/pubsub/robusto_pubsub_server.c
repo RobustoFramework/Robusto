@@ -706,10 +706,29 @@ void incoming_callback(robusto_message_t *message) {
         rob_log_bit_mesh(ROB_LOG_INFO, pubsub_log_prefix, response, 5);
         SEND_LOGGED("Failed sending a unsubscription response to ", message->peer, message->conversation_id, response, 5);
     } else if (*message->binary_data == PUBSUB_PUBLISH) {
-        ROB_LOGD(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, message->binary_data_length - 5);
+        uint32_t topic_hash = *(uint32_t *)(message->binary_data + 1);
+        uint32_t publish_length = message->binary_data_length - 5;
+        ROB_LOGD(pubsub_log_prefix, "Got a publish from %s peer, publishing %lu bytes.", message->peer->name, publish_length);
+        if (publish_length > 8192U) {
+            ROB_LOGW(pubsub_log_prefix,
+                     "Large incoming publish peer=%s topic_hash=%lu bytes=%lu conv=%u",
+                     message->peer->name,
+                     (unsigned long)topic_hash,
+                     (unsigned long)publish_length,
+                     message->conversation_id);
+        }
         rob_log_bit_mesh(ROB_LOG_DEBUG, pubsub_log_prefix, message->binary_data + 5, message->binary_data_length - 5);
         // We only respond if it is an invalid topic hash
-        if (robusto_pubsub_server_publish( *(uint32_t *)(message->binary_data + 1), message->binary_data + 5, message->binary_data_length - 5) == ROB_ERR_INVALID_ID) {
+        rob_ret_val_t publish_retval = robusto_pubsub_server_publish(topic_hash, message->binary_data + 5, publish_length);
+        if (publish_length > 8192U) {
+            ROB_LOGW(pubsub_log_prefix,
+                     "Large incoming publish result peer=%s topic_hash=%lu bytes=%lu retval=%i",
+                     message->peer->name,
+                     (unsigned long)topic_hash,
+                     (unsigned long)publish_length,
+                     publish_retval);
+        }
+        if (publish_retval == ROB_ERR_INVALID_ID) {
             uint8_t *response = robusto_malloc(5);
             response[0] = PUBSUB_PUBLISH_UNKNOWN_TOPIC;
             memcpy(response + 1, message->binary_data + 1, 4);

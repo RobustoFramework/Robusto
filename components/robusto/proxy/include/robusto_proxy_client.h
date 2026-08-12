@@ -103,6 +103,11 @@ rob_ret_val_t robusto_proxy_client_query_system_info(
     robusto_proxy_client_t *client,
     robusto_proxy_system_info_response_t *response);
 
+/** Queries delegate fragmented-message statistics. */
+rob_ret_val_t robusto_proxy_client_query_fragment_stats(
+    robusto_proxy_client_t *client,
+    robusto_proxy_fragment_stats_response_t *response);
+
 /**
  * Requests a controlled reboot of the delegate.
  *

@@ -21,6 +21,8 @@ extern "C" {
 #define ROBUSTO_PROXY_HEALTH_RESPONSE_SIZE_BYTES 40U
 /** Encoded payload size for SYSTEM_INFO response payload. */
 #define ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES 116U
+/** Encoded payload size for FRAGMENT_STATS response payload. */
+#define ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES 188U
 
 /** Encodes a control response prefix into buffer. */
 robusto_proxy_result_t robusto_proxy_encode_response_prefix(
@@ -89,6 +91,18 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response(
     size_t buffer_size,
     robusto_proxy_system_info_response_t *response);
 
+/** Encodes FRAGMENT_STATS response payload (without response prefix). */
+robusto_proxy_result_t robusto_proxy_encode_fragment_stats_response(
+    uint8_t *buffer,
+    size_t buffer_size,
+    const robusto_proxy_fragment_stats_response_t *response);
+
+/** Decodes FRAGMENT_STATS response payload (without response prefix). */
+robusto_proxy_result_t robusto_proxy_decode_fragment_stats_response(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_fragment_stats_response_t *response);
+
 robusto_proxy_result_t robusto_proxy_decode_hello_response_message(
     const uint8_t *buffer,
     size_t buffer_size,
@@ -113,6 +127,13 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response_message(
     size_t buffer_size,
     robusto_proxy_response_prefix_t *prefix,
     robusto_proxy_system_info_response_t *response);
+
+/** Decodes prefixed FRAGMENT_STATS response message into prefix and payload. */
+robusto_proxy_result_t robusto_proxy_decode_fragment_stats_response_message(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_response_prefix_t *prefix,
+    robusto_proxy_fragment_stats_response_t *response);
 
 #ifdef __cplusplus
 }

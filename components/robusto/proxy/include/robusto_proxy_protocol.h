@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <robusto_message.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,6 +35,7 @@ extern "C" {
 #define ROBUSTO_PROXY_OPCODE_HEALTH 0x03U
 #define ROBUSTO_PROXY_OPCODE_SYSTEM_INFO 0x04U
 #define ROBUSTO_PROXY_OPCODE_REBOOT 0x05U
+#define ROBUSTO_PROXY_OPCODE_FRAGMENT_STATS 0x06U
 
 #define ROBUSTO_PROXY_PUBSUB_OPCODE_PUBLISH 0x01U
 #define ROBUSTO_PROXY_PUBSUB_OPCODE_SUBSCRIBE 0x02U
@@ -197,6 +200,19 @@ typedef struct robusto_proxy_system_info_response {
     /** Delegate identity/version text (not guaranteed NUL-terminated). */
     uint8_t delegate_version[64];
 } robusto_proxy_system_info_response_t;
+
+typedef struct robusto_proxy_fragment_stats_response {
+    /** Delegate boot ID from the active proxy session. */
+    uint64_t proxy_boot_id;
+    /** Current fragmented-message statistics collection level. */
+    uint8_t stats_level;
+    /** Reserved for future expansion. */
+    uint8_t reserved[3];
+    /** Cumulative fragmented-message counters since init or reset. */
+    robusto_fragment_stats_t total;
+    /** Counter delta since the previous proxy FRAGMENT_STATS read. */
+    robusto_fragment_stats_t delta_since_last_read;
+} robusto_proxy_fragment_stats_response_t;
 
 typedef struct robusto_proxy_response_prefix {
     uint16_t status;

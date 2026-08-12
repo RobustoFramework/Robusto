@@ -42,6 +42,58 @@ static uint64_t read_le64(const uint8_t *bytes)
            ((uint64_t)read_le32(bytes + 4U) << 32U);
 }
 
+static void write_fragment_stats(uint8_t *buffer, const robusto_fragment_stats_t *stats)
+{
+    write_le32(buffer + 0U, stats->send_started);
+    write_le32(buffer + 4U, stats->send_succeeded);
+    write_le32(buffer + 8U, stats->send_failed);
+    write_le32(buffer + 12U, stats->send_timed_out);
+    write_le32(buffer + 16U, stats->request_received);
+    write_le32(buffer + 20U, stats->message_received);
+    write_le32(buffer + 24U, stats->resend_request_sent);
+    write_le32(buffer + 28U, stats->resend_request_received);
+    write_le32(buffer + 32U, stats->check_sent);
+    write_le32(buffer + 36U, stats->check_received);
+    write_le32(buffer + 40U, stats->result_ok_received);
+    write_le32(buffer + 44U, stats->result_fail_received);
+    write_le32(buffer + 48U, stats->missing_fragments_reported);
+    write_le32(buffer + 52U, stats->invalid_fragment_reference);
+    write_le32(buffer + 56U, stats->invalid_fragment_index);
+    write_le32(buffer + 60U, stats->wrong_fragment_length);
+    write_le32(buffer + 64U, stats->wrong_resend_map_length);
+    write_le32(buffer + 68U, stats->full_message_crc_mismatch);
+    write_le32(buffer + 72U, stats->fragment_oom);
+    write_le32(buffer + 76U, stats->invalid_fragment_type);
+    write_le32(buffer + 80U, stats->fragments_sent);
+    write_le32(buffer + 84U, stats->fragments_resent);
+}
+
+static void read_fragment_stats(const uint8_t *buffer, robusto_fragment_stats_t *stats)
+{
+    stats->send_started = read_le32(buffer + 0U);
+    stats->send_succeeded = read_le32(buffer + 4U);
+    stats->send_failed = read_le32(buffer + 8U);
+    stats->send_timed_out = read_le32(buffer + 12U);
+    stats->request_received = read_le32(buffer + 16U);
+    stats->message_received = read_le32(buffer + 20U);
+    stats->resend_request_sent = read_le32(buffer + 24U);
+    stats->resend_request_received = read_le32(buffer + 28U);
+    stats->check_sent = read_le32(buffer + 32U);
+    stats->check_received = read_le32(buffer + 36U);
+    stats->result_ok_received = read_le32(buffer + 40U);
+    stats->result_fail_received = read_le32(buffer + 44U);
+    stats->missing_fragments_reported = read_le32(buffer + 48U);
+    stats->invalid_fragment_reference = read_le32(buffer + 52U);
+    stats->invalid_fragment_index = read_le32(buffer + 56U);
+    stats->wrong_fragment_length = read_le32(buffer + 60U);
+    stats->wrong_resend_map_length = read_le32(buffer + 64U);
+    stats->full_message_crc_mismatch = read_le32(buffer + 68U);
+    stats->fragment_oom = read_le32(buffer + 72U);
+    stats->invalid_fragment_type = read_le32(buffer + 76U);
+    stats->fragments_sent = read_le32(buffer + 80U);
+    stats->fragments_resent = read_le32(buffer + 84U);
+}
+
 static robusto_proxy_result_t check_output(void *output, size_t buffer_size, size_t required_size)
 {
     if (output == NULL || buffer_size < required_size)
@@ -413,6 +465,55 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response(
     return ROBUSTO_PROXY_RESULT_OK;
 }
 
+robusto_proxy_result_t robusto_proxy_encode_fragment_stats_response(
+    uint8_t *buffer,
+    size_t buffer_size,
+    const robusto_proxy_fragment_stats_response_t *response)
+{
+    if (check_io(buffer, (void *)response, buffer_size,
+                 ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES) !=
+            ROBUSTO_PROXY_RESULT_OK ||
+        response == NULL)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+
+    memset(buffer, 0, ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES);
+    write_le64(buffer + 0U, response->proxy_boot_id);
+    buffer[8] = response->stats_level;
+    write_fragment_stats(buffer + 12U, &response->total);
+    write_fragment_stats(buffer + 100U, &response->delta_since_last_read);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
+robusto_proxy_result_t robusto_proxy_decode_fragment_stats_response(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_fragment_stats_response_t *response)
+{
+    if (check_io(buffer, response, buffer_size,
+                 ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES) !=
+            ROBUSTO_PROXY_RESULT_OK ||
+        response == NULL)
+    {
+        return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+
+    memset(response, 0, sizeof(*response));
+    response->proxy_boot_id = read_le64(buffer + 0U);
+    response->stats_level = buffer[8];
+    memcpy(response->reserved, buffer + 9U, sizeof(response->reserved));
+    if (response->reserved[0] != 0U || response->reserved[1] != 0U ||
+        response->reserved[2] != 0U ||
+        response->stats_level > ROBUSTO_STATS_LEVEL_VERBOSE)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_RESERVED;
+    }
+    read_fragment_stats(buffer + 12U, &response->total);
+    read_fragment_stats(buffer + 100U, &response->delta_since_last_read);
+    return ROBUSTO_PROXY_RESULT_OK;
+}
+
 robusto_proxy_result_t robusto_proxy_decode_hello_response_message(
     const uint8_t *buffer,
     size_t buffer_size,
@@ -471,4 +572,19 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response_message(
         response,
         sizeof(*response),
         (robusto_proxy_result_t (*)(const uint8_t *, size_t, void *))robusto_proxy_decode_system_info_response);
+}
+
+robusto_proxy_result_t robusto_proxy_decode_fragment_stats_response_message(
+    const uint8_t *buffer,
+    size_t buffer_size,
+    robusto_proxy_response_prefix_t *prefix,
+    robusto_proxy_fragment_stats_response_t *response)
+{
+    return decode_response_message(
+        buffer,
+        buffer_size,
+        prefix,
+        response,
+        sizeof(*response),
+        (robusto_proxy_result_t (*)(const uint8_t *, size_t, void *))robusto_proxy_decode_fragment_stats_response);
 }

@@ -38,12 +38,58 @@
 #include <robusto_logging.h>
 #include <string.h>
 
+#if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
+#include <robusto_pubsub.h>
+#define ROBUSTO_TRACE_PUBSUB_MESSAGES 1
+#else
+#define ROBUSTO_TRACE_PUBSUB_MESSAGES 0
+#endif
+
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
 #include "esp_heap_trace.h"
 #endif
 static char *incoming_log_prefix;
 
 static incoming_callback_cb *incoming_callback = NULL;
+
+static bool is_large_pubsub_publish(const robusto_message_t *message)
+{
+#if !ROBUSTO_TRACE_PUBSUB_MESSAGES
+    (void)message;
+    return false;
+#else
+    return message != NULL &&
+           message->context.is_service_call &&
+           message->service_id == PUBSUB_SERVER_ID &&
+           message->binary_data != NULL &&
+           message->binary_data_length > 5U &&
+           message->binary_data[0] == PUBSUB_PUBLISH &&
+           (message->binary_data_length - 5U) > 8192U;
+#endif
+}
+
+static void log_large_pubsub_message(const char *phase, const robusto_message_t *message)
+{
+    uint32_t topic_hash = 0U;
+    uint32_t payload_length = 0U;
+
+    if (!is_large_pubsub_publish(message)) {
+        return;
+    }
+
+    memcpy(&topic_hash, message->binary_data + 1, sizeof(topic_hash));
+    payload_length = message->binary_data_length - 5U;
+
+    ROB_LOGW(incoming_log_prefix,
+             "Large PubSub %s peer=%s media=%hhu topic_hash=%lu payload=%lu raw=%lu conv=%u",
+             phase,
+             message->peer->name,
+             message->media_type,
+             (unsigned long)topic_hash,
+             (unsigned long)payload_length,
+             (unsigned long)message->raw_data_length,
+             message->conversation_id);
+}
 
 rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robusto_peer_t *peer, e_media_type media_type, int offset)
 {
@@ -57,7 +103,6 @@ rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robus
     ESP_ERROR_CHECK(heap_trace_start(HEAP_TRACE_LEAKS));
 #endif
     rob_ret_val_t parse_retval = robusto_network_parse_message(data, data_length, peer, &message, offset);
-    message->media_type = media_type;
 
 #ifdef CONFIG_HEAP_TRACING_STANDALONE
     ESP_ERROR_CHECK(heap_trace_stop());
@@ -73,11 +118,34 @@ rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robus
         return ROB_FAIL;
     }
 
+    message->media_type = media_type;
+    log_large_pubsub_message("parsed", message);
+
     // Add it to the work queue
     incoming_queue_item_t *queue_item = robusto_malloc(sizeof(incoming_queue_item_t));
+    if (queue_item == NULL)
+    {
+        ROB_LOGE(incoming_log_prefix, "Failed allocating incoming queue item.");
+        robusto_message_free(message);
+        return ROB_ERR_OUT_OF_MEMORY;
+    }
     queue_item->message = message;
 
-    incoming_safe_add_work_queue(queue_item);
+    rob_ret_val_t queue_retval = incoming_safe_add_work_queue(queue_item);
+    if (queue_retval != ROB_OK)
+    {
+        log_large_pubsub_message("queue_rejected", message);
+        ROB_LOGW(incoming_log_prefix,
+                 "Failed adding incoming message to queue, retval=%i peer=%s media=%hhu raw=%lu",
+                 queue_retval,
+                 peer->name,
+                 media_type,
+                 (unsigned long)data_length);
+        robusto_message_free(message);
+        robusto_free(queue_item);
+        return queue_retval;
+    }
+    log_large_pubsub_message("queued", message);
     ROB_LOGD(incoming_log_prefix, "Added a message to the incoming queue.");
 
     return ROB_OK;
@@ -87,6 +155,7 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
 {
 
     ROB_LOGD(incoming_log_prefix, "In incoming_do_on_incoming_cb");
+    log_large_pubsub_message("worker_begin", queue_item->message);
     queue_item->recipient_frees_message = false;
     if (queue_item->message->context.message_type == MSG_NETWORK)
     {
@@ -111,6 +180,7 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
             rob_log_bit_mesh(ROB_LOG_ERROR, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length > 20 ? 20: queue_item->message->raw_data_length );
         }
     }
+    log_large_pubsub_message("worker_end", queue_item->message);
     if (!queue_item->recipient_frees_message)
     {
         if (strcmp(queue_item->message->peer->name, "") == 0)

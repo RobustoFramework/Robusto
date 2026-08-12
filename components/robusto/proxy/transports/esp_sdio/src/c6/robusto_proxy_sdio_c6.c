@@ -2,6 +2,7 @@
 
 #include "nvs_flash.h"
 #include "robusto_c6_control_frontend.h"
+#include "robusto_c6_pubsub_backend.h"
 #include "robusto_c6_proxy_binding.h"
 #include "robusto_c6_recovery.h"
 #include "robusto_init.h"
@@ -10,6 +11,16 @@
 #include "esp_log.h"
 
 static const char *TAG = "C6Proxy";
+
+void robusto_proxy_sdio_c6_set_pubsub_topic_hooks(
+    robusto_proxy_sdio_c6_topic_hook_t subscribe_hook,
+    robusto_proxy_sdio_c6_topic_hook_t unsubscribe_hook,
+    void *hook_context)
+{
+    robusto_c6_pubsub_backend_set_topic_hooks(subscribe_hook,
+                                              unsubscribe_hook,
+                                              hook_context);
+}
 
 esp_err_t robusto_proxy_sdio_c6_start(void)
 {

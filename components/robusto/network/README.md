@@ -10,6 +10,34 @@ This implemects the Robusto communication protocols:
 * parse messages from receive queue.
 * fragments and reassembles messages that are to big for single transmissions
 
+### Fragmentation statistics
+
+The fragmented-message protocol keeps cumulative in-memory statistics for large-message send and receive activity. The counters are intentionally cheap: Robusto stores one total counter set and one last-read snapshot used to calculate deltas. It does not keep rolling time buckets, so a controller, central, or diagnostics task that wants "last minute" numbers should poll the counters and calculate the interval externally.
+
+Statistics collection is controlled at runtime with `robusto_fragment_stats_set_level()`:
+
+* `ROBUSTO_STATS_LEVEL_OFF` disables all counter updates.
+* `ROBUSTO_STATS_LEVEL_ERRORS` records protocol and resource errors, such as bad fragment references, invalid fragment indexes, wrong fragment lengths, CRC mismatches, out-of-memory events, invalid fragment types, send failures, and timeouts.
+* `ROBUSTO_STATS_LEVEL_BASIC` also records message-level activity, such as fragmented sends started/succeeded, resend requests sent/received, missing fragments reported, and final result counts.
+* `ROBUSTO_STATS_LEVEL_VERBOSE` also records high-frequency protocol activity, such as individual fragment messages received, checks sent/received, requests received, and fragments sent or resent.
+
+The default level is `ROBUSTO_STATS_LEVEL_VERBOSE` when the fragmentation module is initialized. This is useful while diagnosing link or fragmentation behavior, and can be reduced later on smaller delegates if the extra counter writes are not needed.
+
+Use `robusto_fragment_stats_get()` to read the counters:
+
+```c
+robusto_fragment_stats_t total;
+robusto_fragment_stats_t delta;
+
+robusto_fragment_stats_get(&total, &delta);
+```
+
+The `total` output receives the cumulative counters since initialization or the last `robusto_fragment_stats_reset()`. The `delta` output receives the difference since the previous call that requested a delta, and updates the internal last-read snapshot. Either output pointer may be `NULL` if only one form is needed.
+
+Use `robusto_fragment_stats_get_level()` to inspect the current level and `robusto_fragment_stats_reset()` to clear both the cumulative counters and the delta snapshot.
+
+When fragmentation runs on a proxy delegate, the controller can read the same counters through `robusto_proxy_client_query_fragment_stats()`. That proxy request returns both cumulative and delta counters from the delegate, so the controller or Central can log interval rates without adding rolling buckets to the delegate.
+
 ## Media
 The implementations of the physical layers of the communitation.
 Here, much of the functionality is platform specific, it is a bit of #ifdef-city here.

@@ -24,7 +24,7 @@ extern "C" {
 #define ROBUSTO_PROXY_PUBSUB_PUBLISH_RESPONSE_SIZE_BYTES 8U
 #define ROBUSTO_PROXY_PUBSUB_SUBSCRIBE_RESPONSE_SIZE_BYTES 12U
 #define ROBUSTO_PROXY_PUBSUB_UNSUBSCRIBE_RESPONSE_SIZE_BYTES 4U
-#define ROBUSTO_PROXY_PUBSUB_STATUS_RESPONSE_SIZE_BYTES 36U
+#define ROBUSTO_PROXY_PUBSUB_STATUS_RESPONSE_SIZE_BYTES 52U
 #define ROBUSTO_PROXY_PUBSUB_DELIVERY_HEADER_SIZE_BYTES 12U
 #define ROBUSTO_PROXY_PUBSUB_DELIVERY_BEGIN_SIZE_BYTES 12U
 #define ROBUSTO_PROXY_PUBSUB_DELIVERY_CHUNK_HEADER_SIZE_BYTES 16U
@@ -95,6 +95,11 @@ typedef struct robusto_proxy_pubsub_status_response {
     uint32_t delivery_drops;
     uint32_t duplicate_operations;
     uint32_t pubsub_errors;
+    uint16_t last_publish_status;
+    uint16_t reserved;
+    uint32_t last_publish_topic_hash;
+    uint32_t last_publish_delivery_count;
+    uint32_t last_publish_bytes;
 } robusto_proxy_pubsub_status_response_t;
 
 typedef struct robusto_proxy_pubsub_delivery {

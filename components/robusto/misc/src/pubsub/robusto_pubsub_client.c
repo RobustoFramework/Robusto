@@ -6,6 +6,7 @@
 #include <robusto_repeater.h>
 #include <robusto_pubsub.h>
 #include <robusto_queue.h>
+#include <robusto_system.h>
 #include <string.h>
 #include <robusto_time.h>
 
@@ -144,6 +145,34 @@ subscribed_topic_t *find_subscribed_topic_by_name(char *topic_name)
     }
     return NULL;
 }
+
+static void log_subscribed_topics(const char *reason)
+{
+    subscribed_topic_t *curr_topic = first_subscribed_topic;
+
+    ROB_LOGW(pubsub_client_log_prefix,
+             "Subscribed topic dump: %s",
+             reason != NULL ? reason : "no reason provided");
+
+    if (curr_topic == NULL)
+    {
+        ROB_LOGW(pubsub_client_log_prefix, "No subscribed topics registered in client.");
+        return;
+    }
+
+    while (curr_topic)
+    {
+        ROB_LOGW(pubsub_client_log_prefix,
+                 "Registered topic name=%s hash=%lu conv=%u state=%u peer=%s",
+                 curr_topic->topic_name != NULL ? curr_topic->topic_name : "<null>",
+                 (unsigned long)curr_topic->topic_hash,
+                 curr_topic->conversation_id,
+                 curr_topic->state,
+                 curr_topic->peer != NULL && curr_topic->peer->name != NULL ? curr_topic->peer->name : "<null>");
+        curr_topic = curr_topic->next;
+    }
+}
+
 void incoming_callback(robusto_message_t *message)
 {
     ROB_LOGD(pubsub_client_log_prefix, "Got pubsub data from %s peer, first byte %hu", message->peer->name, *message->binary_data);
@@ -166,6 +195,14 @@ void incoming_callback(robusto_message_t *message)
         subscribed_topic_t *curr_topic = find_subscribed_topic_by_conversation_id(message->conversation_id);
         if (curr_topic)
         {
+            if (curr_topic->topic_hash != 0U && curr_topic->topic_hash != *(uint32_t *)(message->binary_data + 1))
+            {
+                ROB_LOGW(pubsub_client_log_prefix,
+                         "Server returned different hash for %s: local=%lu remote=%lu",
+                         curr_topic->topic_name,
+                         (unsigned long)curr_topic->topic_hash,
+                         (unsigned long)*(uint32_t *)(message->binary_data + 1));
+            }
             memcpy(&curr_topic->topic_hash, message->binary_data + 1, 4);
             ROB_LOGI(pubsub_client_log_prefix, "Topic hash for %s set to %lu", curr_topic->topic_name, curr_topic->topic_hash);
             curr_topic->last_data_time = r_millis();
@@ -208,7 +245,14 @@ void incoming_callback(robusto_message_t *message)
         else
         {
             ROB_LOGE(pubsub_client_log_prefix, "Invalid topic hash %lu!", *(uint32_t *)(message->binary_data + 1));
+            log_subscribed_topics("incoming pubsub data with unknown topic hash");
         }
+    }
+    else if (*message->binary_data == PUBSUB_UNSUBSCRIBE_RESPONSE)
+    {
+        ROB_LOGI(pubsub_client_log_prefix,
+                 "Received unsubscribe response for topic hash %lu",
+                 (unsigned long)(*(uint32_t *)(message->binary_data + 1)));
     }
     else
     {
@@ -219,6 +263,46 @@ void incoming_callback(robusto_message_t *message)
 
 void shutdown_callback()
 {
+}
+
+rob_ret_val_t robusto_pubsub_client_unsubscribe(subscribed_topic_t *topic)
+{
+    uint8_t request[5];
+    rob_ret_val_t ret_msg;
+
+    if (topic == NULL || topic->peer == NULL || topic->topic_hash == 0U)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    if (topic->peer->state == PEER_UNKNOWN)
+    {
+        ROB_LOGE(pubsub_client_log_prefix,
+                 "Could not unsubscribe %s from %s, peer still unknown.",
+                 topic->topic_name,
+                 topic->peer->name);
+        set_topic_state(topic, TOPIC_STATE_PROBLEM);
+        return ROB_ERR_NOT_READY;
+    }
+
+    request[0] = PUBSUB_UNSUBSCRIBE;
+    memcpy(request + 1, &topic->topic_hash, sizeof(topic->topic_hash));
+    ret_msg = send_message_binary(topic->peer,
+                                  PUBSUB_SERVER_ID,
+                                  pubsub_conversation_id++,
+                                  request,
+                                  sizeof(request),
+                                  NULL);
+    if (ret_msg != ROB_OK)
+    {
+        ROB_LOGE(pubsub_client_log_prefix,
+                 "Pub Sub client: Unsubscribe failed for %s.",
+                 topic->topic_name);
+        set_topic_state(topic, TOPIC_STATE_PROBLEM);
+        return ret_msg;
+    }
+
+    robusto_pubsub_remove_topic(topic);
+    return ROB_OK;
 }
 
 rob_ret_val_t robusto_pubsub_client_publish(subscribed_topic_t *topic, uint8_t *data, uint32_t data_length)
@@ -256,9 +340,10 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
     strcpy(new_topic->topic_name, topic_name);
     new_topic->next = NULL;
     new_topic->peer = peer;
-    new_topic->topic_hash = 0;
+    new_topic->topic_hash = robusto_crc32(0, (const uint8_t *)topic_name, strlen(topic_name));
     new_topic->callback = callback;
     new_topic->display_offset = display_offset;
+    new_topic->conversation_id = 0;
     new_topic->state = TOPIC_STATE_UNSET;
 
     // TODO: Odd to not use the linked list macros here? Or anywhere else?
@@ -271,6 +356,14 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
         last_subscribed_topic->next = new_topic;
     }
     last_subscribed_topic = new_topic;
+
+    ROB_LOGW(pubsub_client_log_prefix,
+             "Added subscribed topic name=%s conv=%u peer=%s callback=%s",
+             new_topic->topic_name,
+             new_topic->conversation_id,
+             new_topic->peer != NULL && new_topic->peer->name != NULL ? new_topic->peer->name : "<null>",
+             new_topic->callback != NULL ? "set" : "null");
+    log_subscribed_topics("after adding topic to client list");
 
     return new_topic;
 }
@@ -308,15 +401,24 @@ subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *
     if (ret_sub != ROB_OK) {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, failed to queue or send message %s.", new_topic->topic_name);
         set_topic_state(new_topic, TOPIC_STATE_PROBLEM);
+        log_subscribed_topics("subscription send failed");
     } else
     if (!new_topic->topic_hash && !robusto_waitfor_uint32_t_change(&new_topic->topic_hash, 1000))
     {
         ROB_LOGE(pubsub_client_log_prefix, "Pub Sub client: Subscription failed, no response with topic hash for %s.", new_topic->topic_name);
         set_topic_state(new_topic, TOPIC_STATE_PROBLEM);
+        log_subscribed_topics("subscription timed out waiting for topic hash");
     }
     else
     {
+        ROB_LOGW(pubsub_client_log_prefix,
+                 "Subscription ready name=%s conv=%u hash=%lu state=%u",
+                 new_topic->topic_name,
+                 new_topic->conversation_id,
+                 (unsigned long)new_topic->topic_hash,
+                 new_topic->state);
         set_topic_state(new_topic, TOPIC_STATE_INACTIVE);
+        log_subscribed_topics("subscription completed");
     }
 
     return new_topic;

@@ -52,8 +52,41 @@ static char *espnow_log_prefix;
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
-static bool has_receipt = false;
-static int send_status = -1;
+static volatile bool has_receipt = false;
+static volatile int send_status = -1;
+
+static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32_t data_length)
+{
+    int32_t wait_time = (data_length / 125) + 30;
+    int32_t start_send = r_millis();
+    while ((send_status < 0) && (r_millis() < start_send + wait_time))
+    {
+        robusto_yield();
+    }
+
+    if (send_status == ESP_NOW_SEND_FAIL)
+    {
+        ROB_LOGE(espnow_log_prefix,
+                 "ESP-NOW transmission failed completing after %lu ms. Peer: %s Data length: %lu",
+                 r_millis() - start_send,
+                 peer->name,
+                 data_length);
+        return ROB_FAIL;
+    }
+    if (send_status < 0)
+    {
+        ROB_LOGE(espnow_log_prefix,
+                 "ESP-NOW transmission did not complete within wait time (%lu ms). Peer: %s Data length: %lu",
+                 wait_time,
+                 peer->name,
+                 data_length);
+        ROB_LOG_STACK_TRACE(3);
+        return ROB_FAIL;
+    }
+
+    peer->espnow_info.last_peer_receive = peer->espnow_info.last_receive;
+    return ROB_OK;
+}
 
 
 rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt)
@@ -118,17 +151,21 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
-    #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
     if (!receipt)
     {
         return rc;
     }
+
+    rc = esp_now_wait_for_send_complete(peer, data_length);
+    if (rc != ROB_OK)
+    {
+        add_to_history(&peer->espnow_info, false, rc);
+        return rc;
+    }
+
+    #ifndef ROBUSTO_ESP_NOW_USE_RECEIPT
     return rc;
     #else
-    if (!receipt)
-    {
-        return rc;
-    }
     
     // We want to wait to make sure the transmission is received successfully.
     int32_t start = r_millis();
@@ -238,12 +275,6 @@ static void espnow_recv_cb(const esp_now_recv_info_t *esp_now_info, const uint8_
     robusto_peer_t *peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)esp_now_info->src_addr);
     if (peer != NULL)
     {
-        ROB_LOGI(espnow_log_prefix,
-                 "<< espnow_recv_cb peer=%s rssi=%i dBm rate=%u src_mac:",
-                 peer->name,
-                 esp_now_info->rx_ctrl->rssi,
-                 esp_now_info->rx_ctrl->rate);
-        rob_log_bit_mesh(ROB_LOG_INFO, espnow_log_prefix, esp_now_info->src_addr, ROBUSTO_MAC_ADDR_LEN);
         rob_log_bit_mesh(ROB_LOG_DEBUG, espnow_log_prefix, data, len);
     }
     else

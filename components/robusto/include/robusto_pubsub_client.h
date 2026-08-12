@@ -64,6 +64,8 @@ struct subscribed_topic
  * @param topic 
  */
 void robusto_pubsub_remove_topic(subscribed_topic_t * topic);
+
+rob_ret_val_t robusto_pubsub_client_unsubscribe(subscribed_topic_t *topic);
 /**
  * @brief Get a new topic from the server 
  * 
