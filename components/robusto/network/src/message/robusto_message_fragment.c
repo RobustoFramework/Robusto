@@ -161,6 +161,13 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     if (!frag_msg)
     {
         frag_msg = robusto_malloc(sizeof(fragmented_message_t));
+        if (frag_msg == NULL)
+        {
+            ROB_LOGE(fragmentation_log_prefix, "Fragmented request failed because fragmented message allocation failed.");
+            add_to_history(media, false, ROB_ERR_OUT_OF_MEMORY);
+            return;
+        }
+        memset(frag_msg, 0, sizeof(fragmented_message_t));
         SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
     }
     else
@@ -560,6 +567,13 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     // First, tell the peer that we are going to send it a fragmented message
     // This is a message saying just that
     fragmented_message_t *frag_msg = robusto_malloc(sizeof(fragmented_message_t));
+    if (frag_msg == NULL)
+    {
+        ROB_LOGE(fragmentation_log_prefix, "Could not initiate fragmented messaging, fragmented message allocation failed.");
+        rc = ROB_ERR_OUT_OF_MEMORY;
+        goto finish_buffer_only;
+    }
+    memset(frag_msg, 0, sizeof(fragmented_message_t));
     frag_msg->send_data_length = data_length;
     frag_msg->send_data = data;
     frag_msg->fragment_count = fragment_count;
@@ -693,6 +707,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     }
 finish:
     remove_fragmented_message(frag_msg);
+finish_buffer_only:
     robusto_free(buffer);
 
     return rc;
