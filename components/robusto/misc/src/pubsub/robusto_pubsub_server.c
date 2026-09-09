@@ -162,29 +162,48 @@ static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
 
     media_rc = set_suitable_media(peer, (uint16_t)(data_length + 5U), robusto_mt_none, &media_type);
     if (media_rc != ROB_OK || media_type == robusto_mt_none) {
-        if (data_length > 500U) {
-            ROB_LOGW(pubsub_log_prefix,
-                     "Skipping large publish of %s to peer %s: no suitable media available len=%lu",
-                     topic_name,
-                     peer->name,
-                     (unsigned long)data_length);
-        }
+        ROB_LOGW(pubsub_log_prefix,
+                 "PubSub prepare failed topic=%s peer=%s data_len=%lu stage=set_suitable_media rc=%d selected_media=%s peer_state=%u supported=0x%02x problematic=0x%02x",
+                 topic_name,
+                 peer->name,
+                 (unsigned long)data_length,
+                 (int)media_rc,
+                 media_type_to_str(media_type),
+                 peer->state,
+                 peer->supported_media_types,
+                 peer->problematic_media_types);
         return ROB_FAIL;
     }
 
     media_info = get_media_info(peer, media_type);
     if (media_info == NULL) {
+        ROB_LOGW(pubsub_log_prefix,
+                 "PubSub prepare failed topic=%s peer=%s data_len=%lu stage=get_media_info rc=%d selected_media=%s peer_state=%u supported=0x%02x problematic=0x%02x",
+                 topic_name,
+                 peer->name,
+                 (unsigned long)data_length,
+                 (int)ROB_FAIL,
+                 media_type_to_str(media_type),
+                 peer->state,
+                 peer->supported_media_types,
+                 peer->problematic_media_types);
         return ROB_FAIL;
     }
     if (media_info->state != media_state_working) {
         ROB_LOGW(pubsub_log_prefix,
-                 "Skipping publish of %s to peer %s using %s: state=%u problem=%u len=%lu",
+                 "PubSub prepare failed topic=%s peer=%s data_len=%lu stage=media_not_working rc=%d selected_media=%s peer_state=%u media_state=%u media_problem=%u send_failures=%lu send_successes=%lu rssi_valid=%u rssi_dbm=%d",
                  topic_name,
                  peer->name,
+                 (unsigned long)data_length,
+                 (int)ROB_FAIL,
                  media_type_to_str(media_type),
+                 peer->state,
                  media_info->state,
                  media_info->problem,
-                 (unsigned long)data_length);
+                 (unsigned long)media_info->send_failures,
+                 (unsigned long)media_info->send_successes,
+                 media_info->latest_rssi_valid ? 1U : 0U,
+                 (int)media_info->latest_rssi_dbm);
         return ROB_FAIL;
     }
 
@@ -196,11 +215,19 @@ static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
     if (media_type == robusto_mt_espnow &&
         !robusto_send_queue_accepts_large_message(media_type)) {
         ROB_LOGW(pubsub_log_prefix,
-                 "Skipping large publish of %s to peer %s using %s: send queue busy len=%lu",
+                 "PubSub prepare failed topic=%s peer=%s data_len=%lu stage=queue_preflight rc=%d selected_media=%s peer_state=%u media_state=%u media_problem=%u send_failures=%lu send_successes=%lu rssi_valid=%u rssi_dbm=%d",
                  topic_name,
                  peer->name,
+                 (unsigned long)data_length,
+                 (int)ROB_ERR_QUEUE_FULL,
                  media_type_to_str(media_type),
-                 (unsigned long)data_length);
+                 peer->state,
+                 media_info->state,
+                 media_info->problem,
+                 (unsigned long)media_info->send_failures,
+                 (unsigned long)media_info->send_successes,
+                 media_info->latest_rssi_valid ? 1U : 0U,
+                 (int)media_info->latest_rssi_dbm);
         return ROB_ERR_QUEUE_FULL;
     }
 
@@ -560,6 +587,14 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
 
         rob_ret_val_t prepare_rc = prepare_peer_publish(subscriber->peer, topic->name, data_length, &media_type);
         if (prepare_rc != ROB_OK) {
+            ROB_LOGW(pubsub_log_prefix,
+                     "PubSub publish failed topic=%s peer=%s data_len=%lu stage=prepare_peer_publish rc=%d selected_media=%s peer_state=%u",
+                     topic->name,
+                     subscriber->peer->name,
+                     (unsigned long)data_length,
+                     (int)prepare_rc,
+                     media_type_to_str(media_type),
+                     subscriber->peer->state);
             return prepare_rc;
         }
 
@@ -586,10 +621,23 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
                                                    NULL,
                                                    true);
         if (pubretval != ROB_OK) {
+            robusto_media_t *media_info = get_media_info(subscriber->peer, media_type);
             robusto_free(msg);
-        }
-        if (pubretval != ROB_OK) {
-            ROB_LOGW(pubsub_log_prefix, "Failed publishing %s to peer %s, retval: %i.", topic->name, subscriber->peer->name, pubretval);
+            ROB_LOGW(pubsub_log_prefix,
+                     "PubSub publish failed topic=%s peer=%s data_len=%lu msg_len=%lu stage=send_message_raw rc=%d selected_media=%s peer_state=%u media_state=%u media_problem=%u send_failures=%lu send_successes=%lu rssi_valid=%u rssi_dbm=%d",
+                     topic->name,
+                     subscriber->peer->name,
+                     (unsigned long)data_length,
+                     (unsigned long)message_length,
+                     (int)pubretval,
+                     media_type_to_str(media_type),
+                     subscriber->peer->state,
+                     media_info != NULL ? media_info->state : media_state_problem,
+                     media_info != NULL ? media_info->problem : media_problem_bug,
+                     (unsigned long)(media_info != NULL ? media_info->send_failures : 0U),
+                     (unsigned long)(media_info != NULL ? media_info->send_successes : 0U),
+                     media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
+                     media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
         }
         
         return pubretval;
@@ -628,7 +676,24 @@ rob_ret_val_t robusto_pubsub_server_publish(uint32_t topic_hash, uint8_t *data, 
     int fail_count = 0;
     pubsub_server_subscriber_t *curr_subscriber = curr_topic->first_subscriber;
     while (curr_subscriber) {
-        if (publish_topic(curr_topic, curr_subscriber, data, data_length) != ROB_OK) {
+        rob_ret_val_t publish_rc = publish_topic(curr_topic, curr_subscriber, data, data_length);
+        if (publish_rc != ROB_OK) {
+            if (curr_subscriber->peer != NULL) {
+                ROB_LOGW(pubsub_log_prefix,
+                         "PubSub topic delivery failed topic=%s peer=%s data_len=%lu stage=publish_topic rc=%d",
+                         curr_topic->name,
+                         curr_subscriber->peer->name,
+                         (unsigned long)data_length,
+                         (int)publish_rc);
+            } else {
+                ROB_LOGW(pubsub_log_prefix,
+                         "PubSub topic delivery failed topic=%s local_subscriber=%u data_len=%lu stage=publish_topic rc=%d",
+                         curr_topic->name,
+                         (curr_subscriber->local_callback != NULL ||
+                          curr_subscriber->local_context_callback != NULL) ? 1U : 0U,
+                         (unsigned long)data_length,
+                         (int)publish_rc);
+            }
             fail_count++;
         }
         pub_count++;
