@@ -446,6 +446,8 @@ static rob_ret_val_t publish_chunked(
     {
         return ROB_ERR_PARSING_FAILED;
     }
+    client->pubsub_last_publish_topic_hash = response.topic_hash;
+    client->pubsub_last_publish_delivery_count = response.delivery_count;
     return ROB_OK;
 }
 
@@ -510,6 +512,8 @@ rob_ret_val_t robusto_proxy_pubsub_publish(
     {
         return ROB_ERR_PARSING_FAILED;
     }
+    client->pubsub_last_publish_topic_hash = response.topic_hash;
+    client->pubsub_last_publish_delivery_count = response.delivery_count;
     return ROB_OK;
 }
 

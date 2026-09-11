@@ -61,6 +61,8 @@ typedef struct robusto_proxy_client {
     uint32_t last_retry_after_ms;
     void *pubsub_subscriptions;
     uint16_t pubsub_subscription_capacity;
+    uint32_t pubsub_last_publish_topic_hash;
+    uint32_t pubsub_last_publish_delivery_count;
     uint32_t pubsub_delivery_events;
     uint32_t pubsub_unknown_deliveries;
     uint32_t pubsub_delivery_sequence_gaps;
