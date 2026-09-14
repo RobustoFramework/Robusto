@@ -41,6 +41,8 @@
 // The queue context
 queue_context_t espnow_queue_context;
 
+#define ESPNOW_QUEUE_LARGE_NORMAL_BYTES 500U
+
 static char *espnow_worker_log_prefix;
 
 static bool espnow_drop_full_item(void *queued_item)
@@ -52,7 +54,8 @@ static bool espnow_drop_full_item(void *queued_item)
     }
 
     if (item->important ||
-        item->queue_item_type == media_qit_recovery) {
+        item->queue_item_type == media_qit_recovery ||
+        item->data_length <= ESPNOW_QUEUE_LARGE_NORMAL_BYTES) {
         ROB_LOGW(espnow_worker_log_prefix,
                  "ESP-NOW queue full keep item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u rssi_valid=%u rssi_dbm=%i",
                  item->peer != NULL ? item->peer->name : "<null>",

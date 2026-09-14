@@ -179,6 +179,8 @@ typedef struct fragmented_message
     uint8_t *received_fragments; // TODO: This should instead be a bitmap to save space.
     /* When the frag_msg was created, a non-used element */
     uint32_t start_time;
+    /* When retrying/resending fragments started */
+    uint32_t retry_start_time;
     /* If not UINT32_MAX, we have requested things to be sent again, and this is the last fragment we requested */
     uint32_t last_requested;
     /* The state of the fragment */
