@@ -60,6 +60,7 @@
 #define FRAG_RUNNING_WAIT_MS 500
 #define FRAG_RESULT_WAIT_MS 250
 #define FRAG_STATUS_WAIT_MS 250
+#define FRAG_SEND_TOTAL_WAIT_MS 30000
 #define FRAG_NO_REQUESTED_FRAGMENT UINT32_MAX
 
 static char *fragmentation_log_prefix = "NOT SET";
@@ -796,6 +797,7 @@ rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fra
 rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, uint32_t fragment_size, cb_send_message *send_message)
 {
     int rc = ROB_FAIL;
+    robusto_media_t *media = get_media_info(peer, media_type);
     fragment_stats_add(&fragment_stats.send_started, 1U, ROBUSTO_STATS_LEVEL_BASIC);
     // How many parts will it have?
     uint32_t fragment_count = data_length / fragment_size;
@@ -877,11 +879,28 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     // A state machine that handles the probes
     while (1)
     {
+        if ((uint32_t)(r_millis() - frag_msg->start_time) > FRAG_SEND_TOTAL_WAIT_MS)
+        {
+            ROB_LOGE(fragmentation_log_prefix,
+                     "Fragmented message exceeded send timeout (%lu ms), closing the transmission. peer=%s mt=%hhu bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
+                     (uint32_t)FRAG_SEND_TOTAL_WAIT_MS,
+                     peer->name,
+                     media_type,
+                     data_length,
+                     fragment_count,
+                     frag_msg->state,
+                     media != NULL && media->latest_rssi_valid ? 1U : 0U,
+                     media != NULL ? (int)media->latest_rssi_dbm : 0);
+            frag_msg->abort_transmission = true;
+            rc = ROB_ERR_TIMEOUT;
+            fragment_stats_add(&fragment_stats.send_timed_out, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+            goto finish;
+        }
+
         if (frag_msg->state == ROB_ST_RETRYING &&
             frag_msg->retry_start_time != 0U &&
             (uint32_t)(r_millis() - frag_msg->retry_start_time) > FRAG_RETRY_TOTAL_WAIT_MS)
         {
-            robusto_media_t *media = get_media_info(peer, media_type);
             ROB_LOGE(fragmentation_log_prefix,
                      "Fragmented message exceeded retry timeout (%lu ms), closing the transmission. peer=%s mt=%hhu bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
                      (uint32_t)FRAG_RETRY_TOTAL_WAIT_MS,
@@ -975,6 +994,10 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         }
     }
 finish:
+    if (media != NULL)
+    {
+        media->postpone_qos = false;
+    }
     remove_fragmented_message(frag_msg);
 finish_buffer_only:
     robusto_free(buffer);

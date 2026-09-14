@@ -36,6 +36,7 @@
 
 #include <robusto_logging.h>
 #include <robusto_system.h>
+#include <robusto_time.h>
 #include <string.h>
 
 // The queue context
@@ -44,6 +45,14 @@ queue_context_t espnow_queue_context;
 #define ESPNOW_QUEUE_LARGE_NORMAL_BYTES 500U
 
 static char *espnow_worker_log_prefix;
+static uint32_t espnow_worker_last_poll_ms;
+static uint32_t espnow_worker_last_dequeue_ms;
+
+static void espnow_worker_poll(void *queue_context)
+{
+    (void)queue_context;
+    espnow_worker_last_poll_ms = (uint32_t)r_millis();
+}
 
 static bool espnow_drop_full_item(void *queued_item)
 {
@@ -56,8 +65,9 @@ static bool espnow_drop_full_item(void *queued_item)
     if (item->important ||
         item->queue_item_type == media_qit_recovery ||
         item->data_length <= ESPNOW_QUEUE_LARGE_NORMAL_BYTES) {
+        uint32_t now_ms = (uint32_t)r_millis();
         ROB_LOGW(espnow_worker_log_prefix,
-                 "ESP-NOW queue full keep item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u rssi_valid=%u rssi_dbm=%i",
+                 "ESP-NOW queue full keep item peer=%s bytes=%lu qtype=%hhu important=%u count=%u normal_max=%u important_max=%u worker_poll_age_ms=%lu dequeue_age_ms=%lu worker=%p rssi_valid=%u rssi_dbm=%i",
                  item->peer != NULL ? item->peer->name : "<null>",
                  item->data_length,
                  item->queue_item_type,
@@ -65,6 +75,9 @@ static bool espnow_drop_full_item(void *queued_item)
                  espnow_queue_context.count,
                  espnow_queue_context.normal_max_count,
                  espnow_queue_context.important_max_count,
+                 (unsigned long)(now_ms - espnow_worker_last_poll_ms),
+                 (unsigned long)(now_ms - espnow_worker_last_dequeue_ms),
+                 (void *)espnow_queue_context.worker_task_handle,
                  item->peer != NULL && item->peer->espnow_info.latest_rssi_valid ? 1U : 0U,
                  item->peer != NULL ? (int)item->peer->espnow_info.latest_rssi_dbm : 0);
         return false;
@@ -109,6 +122,7 @@ void *espnow_next_queueitem(void *item)
 void espnow_remove_first_queue_item(queue_context_t * q_context){
     STAILQ_REMOVE_HEAD(&espnow_work_q, items);
     q_context->count--;
+    espnow_worker_last_dequeue_ms = (uint32_t)r_millis();
 }
 
 void espnow_remove_queue_item(queue_context_t *q_context, void *item)
@@ -164,7 +178,7 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     espnow_queue_context.insert_tail_cb = espnow_insert_tail;
     espnow_queue_context.insert_head_cb = espnow_insert_head;
     espnow_queue_context.on_work_cb = work_cb; 
-    espnow_queue_context.on_poll_cb = poll_cb;
+    espnow_queue_context.on_poll_cb = poll_cb != NULL ? poll_cb : espnow_worker_poll;
     espnow_queue_context.max_task_count = 1;
     espnow_queue_context.normal_max_count = 3;
     espnow_queue_context.important_max_count = 5;
@@ -174,6 +188,8 @@ rob_ret_val_t espnow_init_worker(work_callback work_cb, poll_callback poll_cb, c
     espnow_queue_context.blocked = true;
   /* If set, worker will shut down */
     espnow_queue_context.watchdog_timeout = CONFIG_ROB_RECEIPT_TIMEOUT_MS;
+        espnow_worker_last_poll_ms = (uint32_t)r_millis();
+        espnow_worker_last_dequeue_ms = espnow_worker_last_poll_ms;
     
 
     return init_work_queue(&espnow_queue_context, _log_prefix, "ESP-NOW Queue");      

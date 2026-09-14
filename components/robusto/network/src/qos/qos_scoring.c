@@ -219,7 +219,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
             curr_info->send_successes = 0;
             curr_info->send_failures = FAILURE_COUNT;
         }
-        else if (failure_quotient < (1 / FAILURE_COUNT))
+        else if (failure_quotient < (1.0f / FAILURE_COUNT))
         {
             curr_info->send_successes = FAILURE_COUNT;
             curr_info->send_failures = 0;
