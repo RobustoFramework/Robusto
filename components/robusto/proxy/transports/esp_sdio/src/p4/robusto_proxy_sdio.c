@@ -24,6 +24,7 @@ static const char *TAG = "robusto_p4_proxy";
 #define P4_TASK_STOP_TIMEOUT_MS 1000U
 #define P4_RECEIVE_TASK_STOPPED BIT0
 #define P4_EVENT_TASK_STOPPED BIT1
+#define P4_RECEIVE_TASK_PAUSED BIT2
 #define P4_PROXY_REQUEST_TIMEOUT_MS 2000U
 #define P4_PROXY_RUNLEVEL 1U
 #define ROBUSTO_PROXY_SDIO_EVENT_QUEUE_CAPACITY 4U
@@ -60,6 +61,8 @@ typedef struct robusto_proxy_sdio {
     bool awaiting_response;
     bool transport_started;
     bool stopping;
+    volatile bool recovery_requested;
+    bool host_ready;
     uint32_t dropped_events;
     robusto_proxy_pubsub_client_subscription_t *subscriptions;
     uint16_t subscription_capacity;
@@ -109,15 +112,30 @@ static rob_ret_val_t map_exchange_error(esp_err_t error)
     }
 }
 
-static void recover_host_after_send_failure(esp_err_t error)
+static void recover_host_after_send_failure(robusto_proxy_sdio_t *binding,
+                                            esp_err_t error)
 {
     esp_err_t recovery_error;
 
-    if (error != ESP_ERR_TIMEOUT) {
+    if (binding == NULL || error != ESP_ERR_TIMEOUT) {
         return;
     }
 
     ESP_LOGW(TAG, "recovering SDIO host after send timeout");
+    if (binding->transport_started && binding->receive_task != NULL) {
+        xEventGroupClearBits(binding->worker_events, P4_RECEIVE_TASK_PAUSED);
+        binding->recovery_requested = true;
+        EventBits_t paused = xEventGroupWaitBits(
+            binding->worker_events, P4_RECEIVE_TASK_PAUSED,
+            pdFALSE, pdTRUE, pdMS_TO_TICKS(P4_TASK_STOP_TIMEOUT_MS));
+        if ((paused & P4_RECEIVE_TASK_PAUSED) == 0U) {
+            binding->recovery_requested = false;
+            ESP_LOGE(TAG, "host recovery aborted: receive worker did not pause");
+            return;
+        }
+    }
+
+    binding->host_ready = false;
     recovery_error = robusto_proxy_sdio_host_deinit();
     if (recovery_error != ESP_OK) {
         ESP_LOGE(TAG, "host recovery deinit failed: %s",
@@ -132,6 +150,8 @@ static void recover_host_after_send_failure(esp_err_t error)
         return;
     }
 
+    binding->host_ready = true;
+    binding->recovery_requested = false;
     ESP_LOGI(TAG, "SDIO host recovery completed after send timeout");
 }
 
@@ -162,6 +182,10 @@ static rob_ret_val_t p4_exchange(
     if (xSemaphoreTake(binding->exchange_mutex,
                        pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
         return ROB_ERR_TIMEOUT;
+    }
+    if (!binding->host_ready) {
+        xSemaphoreGive(binding->exchange_mutex);
+        return ROB_ERR_NOT_READY;
     }
     *response_size = 0U;
     *acceptance = ROBUSTO_PROXY_TRANSFER_NOT_ACCEPTED;
@@ -194,7 +218,7 @@ static rob_ret_val_t p4_exchange(
         portEXIT_CRITICAL(&binding->response_lock);
         ESP_LOGE(TAG, "send opcode=%u: %s", request_header->opcode,
                  esp_err_to_name(error));
-        recover_host_after_send_failure(error);
+        recover_host_after_send_failure(binding, error);
         rob_ret_val_t result = map_exchange_error(error);
         xSemaphoreGive(binding->exchange_mutex);
         return result;
@@ -312,6 +336,7 @@ static rob_ret_val_t p4_transport_init(void *context, char *log_prefix)
         return ROB_ERR_INVALID_ARG;
     }
     error = robusto_proxy_sdio_host_init();
+    binding->host_ready = error == ESP_OK;
     if (error == ESP_OK) {
         return ROB_OK;
     }
@@ -325,6 +350,15 @@ static void receive_task_main(void *context)
     uint32_t message_id;
 
     while (!binding->stopping) {
+        if (binding->recovery_requested) {
+            xEventGroupSetBits(binding->worker_events, P4_RECEIVE_TASK_PAUSED);
+            while (binding->recovery_requested && !binding->stopping) {
+                vTaskDelay(pdMS_TO_TICKS(10U));
+            }
+            xEventGroupClearBits(binding->worker_events,
+                                 P4_RECEIVE_TASK_PAUSED);
+            continue;
+        }
         item->size = 0U;
         esp_err_t error = robusto_proxy_sdio_host_receive(
             &message_id, item->bytes, sizeof(item->bytes), &item->size,
@@ -334,6 +368,7 @@ static void receive_task_main(void *context)
         }
         if (error != ESP_OK) {
             ESP_LOGE(TAG, "receive worker: %s", esp_err_to_name(error));
+            vTaskDelay(pdMS_TO_TICKS(10U));
             continue;
         }
         if (message_id == ROBUSTO_PROXY_SDIO_RESPONSE_MSG_ID) {
@@ -418,8 +453,10 @@ static rob_ret_val_t p4_transport_start(void *context)
         return ROB_ERR_OUT_OF_MEMORY;
     }
     binding->stopping = false;
+    binding->recovery_requested = false;
     xEventGroupClearBits(binding->worker_events,
-                         P4_RECEIVE_TASK_STOPPED | P4_EVENT_TASK_STOPPED);
+                         P4_RECEIVE_TASK_STOPPED | P4_EVENT_TASK_STOPPED |
+                             P4_RECEIVE_TASK_PAUSED);
     if (xTaskCreate(receive_task_main, "proxy_rx", P4_RECEIVE_TASK_STACK_SIZE,
                     binding, 6, &binding->receive_task) != pdPASS) {
         binding->receive_task = NULL;
@@ -447,6 +484,7 @@ static rob_ret_val_t p4_transport_stop(void *context)
     }
     if (binding->transport_started) {
         binding->stopping = true;
+        binding->recovery_requested = false;
         stopped = xEventGroupWaitBits(
             binding->worker_events,
             P4_RECEIVE_TASK_STOPPED | P4_EVENT_TASK_STOPPED,
@@ -457,7 +495,9 @@ static rob_ret_val_t p4_transport_stop(void *context)
         }
         binding->transport_started = false;
     }
-    return map_exchange_error(robusto_proxy_sdio_host_deinit());
+    rob_ret_val_t result = map_exchange_error(robusto_proxy_sdio_host_deinit());
+    binding->host_ready = false;
+    return result;
 }
 
 rob_ret_val_t robusto_proxy_sdio_register(
