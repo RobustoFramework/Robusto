@@ -155,6 +155,7 @@ rob_ret_val_t robusto_proxy_client_init(
     client->wait_ms = config->wait_ms;
     client->retry_jitter_ms = config->retry_jitter_ms;
     client->clock_context = config->clock_context;
+    client->consume_reconnect_request = config->consume_reconnect_request;
     client->request_frame = config->request_frame;
     client->request_frame_size = config->request_frame_size;
     client->response_frame = config->response_frame;
@@ -348,6 +349,23 @@ rob_ret_val_t robusto_proxy_client_request(
         break;
     }
     (void)robusto_proxy_inflight_complete(&client->inflight, correlation_id);
+    if (client->consume_reconnect_request != NULL &&
+        client->consume_reconnect_request(client->transport_context))
+    {
+        rob_ret_val_t reconnect_result;
+
+        ESP_LOGW(TAG, "transport requested bounded proxy reconnect");
+        reconnect_result = robusto_proxy_client_connect(client);
+        if (reconnect_result != ROB_OK)
+        {
+            ESP_LOGE(TAG, "bounded proxy reconnect failed: result=%d",
+                     reconnect_result);
+        }
+        else
+        {
+            ESP_LOGI(TAG, "bounded proxy reconnect completed");
+        }
+    }
     return result;
 }
 

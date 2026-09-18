@@ -62,6 +62,7 @@ typedef struct robusto_proxy_sdio {
     bool transport_started;
     bool stopping;
     volatile bool recovery_requested;
+    volatile bool reconnect_requested;
     bool host_ready;
     uint32_t dropped_events;
     robusto_proxy_pubsub_client_subscription_t *subscriptions;
@@ -112,6 +113,13 @@ static rob_ret_val_t map_exchange_error(esp_err_t error)
     }
 }
 
+static void mark_recovery_failed(robusto_proxy_sdio_t *binding)
+{
+    binding->host_ready = false;
+    binding->client.session.state = ROBUSTO_PROXY_SESSION_RESET;
+    robusto_proxy_pubsub_session_reset(&binding->client);
+}
+
 static void recover_host_after_send_failure(robusto_proxy_sdio_t *binding,
                                             esp_err_t error)
 {
@@ -140,6 +148,7 @@ static void recover_host_after_send_failure(robusto_proxy_sdio_t *binding,
     if (recovery_error != ESP_OK) {
         ESP_LOGE(TAG, "host recovery deinit failed: %s",
                  esp_err_to_name(recovery_error));
+        mark_recovery_failed(binding);
         return;
     }
 
@@ -147,12 +156,38 @@ static void recover_host_after_send_failure(robusto_proxy_sdio_t *binding,
     if (recovery_error != ESP_OK) {
         ESP_LOGE(TAG, "host recovery init_without_reset failed: %s",
                  esp_err_to_name(recovery_error));
-        return;
+        ESP_LOGW(TAG, "attempting one bounded C6 reset recovery");
+        recovery_error = robusto_proxy_sdio_host_init();
+        if (recovery_error != ESP_OK) {
+            ESP_LOGE(TAG, "bounded C6 reset recovery failed: %s",
+                     esp_err_to_name(recovery_error));
+            mark_recovery_failed(binding);
+            return;
+        }
+        binding->client.session.state = ROBUSTO_PROXY_SESSION_RESET;
+        robusto_proxy_pubsub_session_reset(&binding->client);
+        binding->reconnect_requested = true;
     }
 
     binding->host_ready = true;
     binding->recovery_requested = false;
-    ESP_LOGI(TAG, "SDIO host recovery completed after send timeout");
+    if (binding->reconnect_requested) {
+        ESP_LOGI(TAG,
+                 "SDIO host recovered after C6 reset; proxy reconnect pending");
+    } else {
+        ESP_LOGI(TAG, "SDIO host recovery completed after send timeout");
+    }
+}
+
+static bool consume_reconnect_request(void *context)
+{
+    robusto_proxy_sdio_t *binding = context;
+
+    if (binding == NULL || !binding->reconnect_requested) {
+        return false;
+    }
+    binding->reconnect_requested = false;
+    return true;
 }
 
 static rob_ret_val_t p4_exchange(
@@ -534,6 +569,8 @@ rob_ret_val_t robusto_proxy_sdio_register(
     binding->service_config.client_config.now_ms = p4_now_ms;
     binding->service_config.client_config.wait_ms = p4_wait_ms;
     binding->service_config.client_config.retry_jitter_ms = p4_jitter_ms;
+    binding->service_config.client_config.consume_reconnect_request =
+        consume_reconnect_request;
     binding->service_config.client_config.request_frame = binding->request_frame;
     binding->service_config.client_config.request_frame_size =
         sizeof(binding->request_frame);

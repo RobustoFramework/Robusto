@@ -16,6 +16,7 @@ extern "C" {
 typedef uint32_t (*robusto_proxy_clock_now_ms)(void *context);
 typedef void (*robusto_proxy_clock_wait_ms)(void *context, uint32_t delay_ms);
 typedef uint32_t (*robusto_proxy_retry_jitter_ms)(void *context, uint32_t maximum_ms);
+typedef bool (*robusto_proxy_consume_reconnect_request)(void *context);
 
 /**
  * Configuration for robusto_proxy_client_init.
@@ -35,6 +36,7 @@ typedef struct robusto_proxy_client_config {
     robusto_proxy_clock_wait_ms wait_ms;
     robusto_proxy_retry_jitter_ms retry_jitter_ms;
     void *clock_context;
+    robusto_proxy_consume_reconnect_request consume_reconnect_request;
     uint8_t *request_frame;
     size_t request_frame_size;
     uint8_t *response_frame;
@@ -50,6 +52,7 @@ typedef struct robusto_proxy_client {
     robusto_proxy_clock_wait_ms wait_ms;
     robusto_proxy_retry_jitter_ms retry_jitter_ms;
     void *clock_context;
+    robusto_proxy_consume_reconnect_request consume_reconnect_request;
     uint8_t *request_frame;
     size_t request_frame_size;
     uint8_t *response_frame;
