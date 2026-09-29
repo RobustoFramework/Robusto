@@ -185,6 +185,8 @@ typedef struct robusto_proxy_health_response {
 typedef struct robusto_proxy_system_info_response {
     /** Delegate boot ID from the active proxy session. */
     uint64_t proxy_boot_id;
+    /** Delegate base MAC address from ESP_MAC_BASE when available. */
+    uint8_t delegate_base_mac[6];
     /** Current free general-purpose memory on the delegate. */
     uint32_t available_memory_bytes;
     /** Current free SPI-capable memory on the delegate. */

@@ -210,8 +210,19 @@ rob_ret_val_t robusto_proxy_client_request(
     {
         return ROB_ERR_INVALID_ARG;
     }
-    if (!(domain == ROBUSTO_PROXY_DOMAIN_CONTROL && opcode == ROBUSTO_PROXY_OPCODE_HELLO) &&
-        client->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED)
+    bool is_hello = domain == ROBUSTO_PROXY_DOMAIN_CONTROL &&
+                    opcode == ROBUSTO_PROXY_OPCODE_HELLO;
+    if (!is_hello && client->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED &&
+        client->consume_reconnect_request != NULL &&
+        client->consume_reconnect_request(client->transport_context))
+    {
+        rob_ret_val_t reconnect_result = robusto_proxy_client_connect(client);
+        if (reconnect_result != ROB_OK)
+        {
+            return reconnect_result;
+        }
+    }
+    if (!is_hello && client->session.state != ROBUSTO_PROXY_SESSION_ESTABLISHED)
     {
         return ROB_ERR_NOT_READY;
     }

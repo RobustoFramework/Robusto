@@ -47,21 +47,121 @@
 
 /* The log prefix for all logging */
 static char *espnow_log_prefix;
+static bool espnow_signal_status_valid;
+static int8_t espnow_tx_power_qdbm;
+static uint8_t espnow_primary_channel;
+static uint8_t espnow_protocol_bitmap;
 
-static void log_wifi_signal_config(void)
+#ifdef CONFIG_ESP_PHY_MAX_WIFI_TX_POWER
+#define ROBUSTO_ESPNOW_CONFIG_TX_POWER_DBM ((int8_t)CONFIG_ESP_PHY_MAX_WIFI_TX_POWER)
+#define ROBUSTO_ESPNOW_REQUESTED_TX_POWER_QDBM ((int8_t)(ROBUSTO_ESPNOW_CONFIG_TX_POWER_DBM * 4))
+#else
+#error "CONFIG_ESP_PHY_MAX_WIFI_TX_POWER must be defined when ESP-NOW support is enabled"
+#endif
+
+static int8_t espnow_expected_tx_power_readback(int8_t requested_tx_power_qdbm)
+{
+    if (requested_tx_power_qdbm <= 19) { return 8; }
+    if (requested_tx_power_qdbm <= 27) { return 20; }
+    if (requested_tx_power_qdbm <= 33) { return 28; }
+    if (requested_tx_power_qdbm <= 43) { return 34; }
+    if (requested_tx_power_qdbm <= 51) { return 44; }
+    if (requested_tx_power_qdbm <= 55) { return 52; }
+    if (requested_tx_power_qdbm <= 59) { return 56; }
+    if (requested_tx_power_qdbm <= 65) { return 60; }
+    if (requested_tx_power_qdbm <= 71) { return 66; }
+    if (requested_tx_power_qdbm <= 79) { return 72; }
+    return 80;
+}
+
+static void log_wifi_signal_config(int8_t requested_tx_power_qdbm, int8_t expected_tx_power_qdbm)
 {
     int8_t max_tx_power = 0;
     esp_err_t tx_power_rc = esp_wifi_get_max_tx_power(&max_tx_power);
+    bool tx_power_valid = false;
+    bool channel_valid = false;
+    bool protocol_valid = false;
+    uint8_t primary_channel = 0;
+    uint8_t protocol_bitmap = 0;
     if (tx_power_rc == ESP_OK)
     {
-        ROB_LOGW(espnow_log_prefix, "Wi-Fi max TX power now %d (0.25 dBm units, %d dBm)",
+        tx_power_valid = true;
+        espnow_tx_power_qdbm = max_tx_power;
+        ROB_LOGW(espnow_log_prefix,
+                 "Wi-Fi max TX power readback=%d qdbm, requested=%d qdbm, expected_readback=%d qdbm, sdkconfig=%d dBm",
                  (int)max_tx_power,
-                 (int)(max_tx_power / 4));
+                 (int)requested_tx_power_qdbm,
+                 (int)expected_tx_power_qdbm,
+                 (int)ROBUSTO_ESPNOW_CONFIG_TX_POWER_DBM);
+        if (max_tx_power != expected_tx_power_qdbm)
+        {
+            ROB_LOGE(espnow_log_prefix,
+                     "Wi-Fi TX power readback mismatch: requested=%d expected_readback=%d actual=%d (0.25 dBm units)",
+                     (int)requested_tx_power_qdbm,
+                     (int)expected_tx_power_qdbm,
+                     (int)max_tx_power);
+        }
     }
     else
     {
         ROB_LOGW(espnow_log_prefix, "esp_wifi_get_max_tx_power failed rc=%d", (int)tx_power_rc);
     }
+
+    wifi_second_chan_t second_channel = WIFI_SECOND_CHAN_NONE;
+    esp_err_t channel_rc = esp_wifi_get_channel(&primary_channel, &second_channel);
+    if (channel_rc == ESP_OK)
+    {
+        channel_valid = true;
+        espnow_primary_channel = primary_channel;
+        ROB_LOGW(espnow_log_prefix,
+                 "Wi-Fi channel readback primary=%u second=%u expected=%u",
+                 (unsigned)primary_channel,
+                 (unsigned)second_channel,
+                 (unsigned)CONFIG_ESPNOW_CHANNEL);
+        if (primary_channel != CONFIG_ESPNOW_CHANNEL || second_channel != WIFI_SECOND_CHAN_NONE)
+        {
+            ROB_LOGE(espnow_log_prefix,
+                     "Wi-Fi channel readback mismatch: expected primary=%u second=%u actual primary=%u second=%u",
+                     (unsigned)CONFIG_ESPNOW_CHANNEL,
+                     (unsigned)WIFI_SECOND_CHAN_NONE,
+                     (unsigned)primary_channel,
+                     (unsigned)second_channel);
+        }
+    }
+    else
+    {
+        ROB_LOGW(espnow_log_prefix, "esp_wifi_get_channel failed rc=%d", (int)channel_rc);
+    }
+
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+    const unsigned expected_lr = 1U;
+#else
+    const unsigned expected_lr = 0U;
+#endif
+    esp_err_t protocol_rc = esp_wifi_get_protocol(ESPNOW_WIFI_IF, &protocol_bitmap);
+    if (protocol_rc == ESP_OK)
+    {
+        protocol_valid = true;
+        espnow_protocol_bitmap = protocol_bitmap;
+        ROB_LOGW(espnow_log_prefix,
+                 "Wi-Fi protocol readback bitmap=0x%02x expected_lr=%u",
+                 (unsigned)protocol_bitmap,
+                 expected_lr);
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+        if ((protocol_bitmap & WIFI_PROTOCOL_LR) == 0U)
+        {
+            ROB_LOGE(espnow_log_prefix,
+                     "Wi-Fi protocol readback missing WIFI_PROTOCOL_LR: bitmap=0x%02x",
+                     (unsigned)protocol_bitmap);
+        }
+#endif
+    }
+    else
+    {
+        ROB_LOGW(espnow_log_prefix, "esp_wifi_get_protocol failed rc=%d", (int)protocol_rc);
+    }
+
+    espnow_signal_status_valid = tx_power_valid && channel_valid && protocol_valid;
 
     wifi_country_t country = {0};
     esp_err_t country_rc = esp_wifi_get_country(&country);
@@ -82,6 +182,20 @@ static void log_wifi_signal_config(void)
     }
 }
 
+bool robusto_espnow_get_signal_status(int8_t *tx_power_qdbm,
+                                      uint8_t *primary_channel,
+                                      uint8_t *protocol_bitmap)
+{
+    if (!espnow_signal_status_valid || tx_power_qdbm == NULL || primary_channel == NULL || protocol_bitmap == NULL)
+    {
+        return false;
+    }
+    *tx_power_qdbm = espnow_tx_power_qdbm;
+    *primary_channel = espnow_primary_channel;
+    *protocol_bitmap = espnow_protocol_bitmap;
+    return true;
+}
+
 void init_wifi()
 {
     ROB_LOGI(espnow_log_prefix, "Creating default event loop.");
@@ -100,15 +214,20 @@ void init_wifi()
     ROB_LOGI(espnow_log_prefix, "esp_wifi_start done.");
     ESP_ERROR_CHECK(esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
     ROB_LOGI(espnow_log_prefix, "esp_wifi_set_channel done.");
-    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(84));
-    ROB_LOGI(espnow_log_prefix, "esp_wifi_set_max_tx_power set to maximum allowed level");
+    const int8_t expected_tx_power_qdbm = espnow_expected_tx_power_readback(ROBUSTO_ESPNOW_REQUESTED_TX_POWER_QDBM);
+    ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(ROBUSTO_ESPNOW_REQUESTED_TX_POWER_QDBM));
+    ROB_LOGI(espnow_log_prefix,
+             "esp_wifi_set_max_tx_power requested=%d qdbm expected_readback=%d qdbm sdkconfig=%d dBm",
+             (int)ROBUSTO_ESPNOW_REQUESTED_TX_POWER_QDBM,
+             (int)expected_tx_power_qdbm,
+             (int)ROBUSTO_ESPNOW_CONFIG_TX_POWER_DBM);
 
 #if CONFIG_ESPNOW_ENABLE_LONG_RANGE
     ESP_ERROR_CHECK(esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR));
     ROB_LOGI(espnow_log_prefix, "ESP-NOW long-range protocol enabled");
 #endif
 
-    log_wifi_signal_config();
+    log_wifi_signal_config(ROBUSTO_ESPNOW_REQUESTED_TX_POWER_QDBM, expected_tx_power_qdbm);
 
 #if CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH > -1
     ROB_LOGE("----", "ESP-NOW KILL SWITCH ENABLED - GPIO %i", CONFIG_ROB_NETWORK_TEST_ESP_NOW_KILL_SWITCH);

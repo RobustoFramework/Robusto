@@ -20,7 +20,7 @@ extern "C" {
 /** Encoded payload size for HEALTH response payload. */
 #define ROBUSTO_PROXY_HEALTH_RESPONSE_SIZE_BYTES 40U
 /** Encoded payload size for SYSTEM_INFO response payload. */
-#define ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES 116U
+#define ROBUSTO_PROXY_SYSTEM_INFO_RESPONSE_SIZE_BYTES 124U
 /** Encoded payload size for FRAGMENT_STATS response payload. */
 #define ROBUSTO_PROXY_FRAGMENT_STATS_RESPONSE_SIZE_BYTES 188U
 

@@ -187,6 +187,9 @@ static bool consume_reconnect_request(void *context)
         return false;
     }
     binding->reconnect_requested = false;
+    if (binding->event_queue != NULL) {
+        xQueueReset(binding->event_queue);
+    }
     return true;
 }
 
@@ -451,7 +454,13 @@ static void event_task_main(void *context)
         }
         rob_ret_val_t result = robusto_proxy_pubsub_handle_event(
             &binding->client, item->bytes, item->size);
-        if (result != ROB_OK) {
+        if (result == ROB_ERR_NOT_READY) {
+            if (!binding->reconnect_requested) {
+                binding->reconnect_requested = true;
+                ESP_LOGE(TAG,
+                         "delivery received while proxy session is not ready; reconnect requested");
+            }
+        } else if (result != ROB_OK) {
             ESP_LOGE(TAG, "dispatch delivery event result=%d", result);
         }
     }

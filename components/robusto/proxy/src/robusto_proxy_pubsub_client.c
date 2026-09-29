@@ -1,5 +1,6 @@
 #include "robusto_proxy_pubsub_client.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,6 +23,37 @@ typedef struct robusto_proxy_pubsub_client_subscription_fields {
     bool active;
     char topic[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
 } robusto_proxy_pubsub_client_subscription_fields_t;
+
+#define ROBUSTO_PROXY_ESPNOW_ROUTE_PREFIX "$robusto/espnow/"
+
+static rob_ret_val_t build_espnow_route(char *route,
+                                        size_t route_size,
+                                        const char *peer_name,
+                                        const uint8_t peer_mac[6],
+                                        const char *topic_name)
+{
+    int written;
+
+    if (route == NULL || route_size == 0U || peer_name == NULL || peer_name[0] == '\0' ||
+        peer_mac == NULL || topic_name == NULL || topic_name[0] == '\0' ||
+        strchr(peer_name, '/') != NULL)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    written = snprintf(route,
+                       route_size,
+                       ROBUSTO_PROXY_ESPNOW_ROUTE_PREFIX
+                       "%02X%02X%02X%02X%02X%02X/%s/%s",
+                       peer_mac[0], peer_mac[1], peer_mac[2],
+                       peer_mac[3], peer_mac[4], peer_mac[5],
+                       peer_name, topic_name);
+    if (written <= 0 || (size_t)written >= route_size ||
+        (size_t)written > ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES)
+    {
+        return ROB_ERR_INVALID_ARG;
+    }
+    return ROB_OK;
+}
 
 _Static_assert(sizeof(robusto_proxy_pubsub_client_subscription_fields_t) <=
                    ROBUSTO_PROXY_PUBSUB_CLIENT_SUBSCRIPTION_STORAGE_BYTES,
@@ -244,6 +276,27 @@ rob_ret_val_t robusto_proxy_pubsub_subscribe(
     memcpy(fields->topic, topic_name, topic_length + 1U);
     *subscription = free_subscription;
     return ROB_OK;
+}
+
+rob_ret_val_t robusto_proxy_pubsub_subscribe_espnow(
+    robusto_proxy_client_t *client,
+    const char *peer_name,
+    const uint8_t peer_mac[6],
+    const char *topic_name,
+    robusto_proxy_pubsub_callback *callback,
+    void *callback_context,
+    robusto_proxy_pubsub_client_subscription_t **subscription)
+{
+    char route[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
+    rob_ret_val_t result = build_espnow_route(route, sizeof(route), peer_name,
+                                               peer_mac, topic_name);
+
+    if (result != ROB_OK)
+    {
+        return result;
+    }
+    return robusto_proxy_pubsub_subscribe(client, route, callback,
+                                           callback_context, subscription);
 }
 
 rob_ret_val_t robusto_proxy_pubsub_unsubscribe(
@@ -515,6 +568,25 @@ rob_ret_val_t robusto_proxy_pubsub_publish(
     client->pubsub_last_publish_topic_hash = response.topic_hash;
     client->pubsub_last_publish_delivery_count = response.delivery_count;
     return ROB_OK;
+}
+
+rob_ret_val_t robusto_proxy_pubsub_publish_espnow(
+    robusto_proxy_client_t *client,
+    const char *peer_name,
+    const uint8_t peer_mac[6],
+    const char *topic_name,
+    uint8_t *data,
+    uint32_t data_length)
+{
+    char route[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
+    rob_ret_val_t result = build_espnow_route(route, sizeof(route), peer_name,
+                                               peer_mac, topic_name);
+
+    if (result != ROB_OK)
+    {
+        return result;
+    }
+    return robusto_proxy_pubsub_publish(client, route, data, data_length);
 }
 
 rob_ret_val_t robusto_proxy_pubsub_query_status(

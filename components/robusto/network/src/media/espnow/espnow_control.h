@@ -30,6 +30,9 @@
  */
 
 #pragma once
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <robconfig.h>
 #ifdef CONFIG_ROBUSTO_SUPPORTS_ESP_NOW
 
@@ -46,6 +49,10 @@
 void robusto_espnow_stop();
 void robusto_espnow_start();
 void robusto_espnow_init(char * _log_prefix);
+
+bool robusto_espnow_get_signal_status(int8_t *tx_power_qdbm,
+									  uint8_t *primary_channel,
+									  uint8_t *protocol_bitmap);
 
 
 #endif

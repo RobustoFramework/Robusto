@@ -429,6 +429,8 @@ robusto_proxy_result_t robusto_proxy_encode_system_info_response(
            response->robusto_version_length);
     memcpy(buffer + 52U, response->delegate_version,
            response->delegate_version_length);
+        memcpy(buffer + 116U, response->delegate_base_mac,
+            sizeof(response->delegate_base_mac));
     return ROBUSTO_PROXY_RESULT_OK;
 }
 
@@ -453,6 +455,7 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response(
     response->delegate_version_length = buffer[17];
     memcpy(response->reserved, buffer + 18U, sizeof(response->reserved));
     if (response->reserved[0] != 0U || response->reserved[1] != 0U ||
+        buffer[122] != 0U || buffer[123] != 0U ||
         response->robusto_version_length > sizeof(response->robusto_version) ||
         response->delegate_version_length > sizeof(response->delegate_version))
     {
@@ -462,6 +465,8 @@ robusto_proxy_result_t robusto_proxy_decode_system_info_response(
            response->robusto_version_length);
     memcpy(response->delegate_version, buffer + 52U,
            response->delegate_version_length);
+        memcpy(response->delegate_base_mac, buffer + 116U,
+            sizeof(response->delegate_base_mac));
     return ROBUSTO_PROXY_RESULT_OK;
 }
 

@@ -54,6 +54,31 @@ static void espnow_deinit(espnow_send_param_t *send_param);
 
 static volatile bool has_receipt = false;
 static volatile int send_status = -1;
+static volatile bool espnow_tx_rate_evidence_logged = false;
+static volatile bool espnow_tx_rate_mismatch_logged = false;
+static volatile bool espnow_tx_rate_status_valid = false;
+static volatile uint8_t espnow_tx_rate = 0U;
+static volatile uint8_t espnow_expected_rate = 0U;
+
+static wifi_phy_rate_t espnow_expected_tx_rate(void)
+{
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+    return WIFI_PHY_RATE_LORA_500K;
+#else
+    return WIFI_PHY_RATE_MCS7_LGI;
+#endif
+}
+
+bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate)
+{
+    if (!espnow_tx_rate_status_valid || tx_rate == NULL || expected_rate == NULL)
+    {
+        return false;
+    }
+    *tx_rate = espnow_tx_rate;
+    *expected_rate = espnow_expected_rate;
+    return true;
+}
 
 static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32_t data_length)
 {
@@ -220,6 +245,45 @@ void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t st
     }
 #endif
     send_status = status;
+    if (tx_info != NULL)
+    {
+        const wifi_phy_rate_t expected_rate = espnow_expected_tx_rate();
+        espnow_tx_rate = (uint8_t)tx_info->rate;
+        espnow_expected_rate = (uint8_t)expected_rate;
+        espnow_tx_rate_status_valid = true;
+        if (!espnow_tx_rate_evidence_logged)
+        {
+            espnow_tx_rate_evidence_logged = true;
+            ROB_LOGI_ISR(espnow_log_prefix,
+                         ">> ESP-NOW TX rate evidence: dst %02x:%02x:%02x:%02x:%02x:%02x ifidx=%u rate=%u expected_rate=%u status=%u",
+                         tx_info->des_addr[0],
+                         tx_info->des_addr[1],
+                         tx_info->des_addr[2],
+                         tx_info->des_addr[3],
+                         tx_info->des_addr[4],
+                         tx_info->des_addr[5],
+                         (unsigned)tx_info->ifidx,
+                         (unsigned)tx_info->rate,
+                         (unsigned)expected_rate,
+                         (unsigned)status);
+        }
+        if (tx_info->rate != expected_rate && !espnow_tx_rate_mismatch_logged)
+        {
+            espnow_tx_rate_mismatch_logged = true;
+            ROB_LOGE_ISR(espnow_log_prefix,
+                         ">> ESP-NOW TX rate mismatch: dst %02x:%02x:%02x:%02x:%02x:%02x ifidx=%u rate=%u expected_rate=%u status=%u",
+                         tx_info->des_addr[0],
+                         tx_info->des_addr[1],
+                         tx_info->des_addr[2],
+                         tx_info->des_addr[3],
+                         tx_info->des_addr[4],
+                         tx_info->des_addr[5],
+                         (unsigned)tx_info->ifidx,
+                         (unsigned)tx_info->rate,
+                         (unsigned)expected_rate,
+                         (unsigned)status);
+        }
+    }
     if (status == ESP_NOW_SEND_SUCCESS)
     {
         ROB_LOGD_ISR(espnow_log_prefix, ">> In espnow_send_cb, send success.");

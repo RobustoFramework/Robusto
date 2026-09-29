@@ -527,6 +527,12 @@ robusto_proxy_result_t robusto_proxy_pubsub_encode_status_response(
     write_le32(buffer + 40U, response->last_publish_topic_hash);
     write_le32(buffer + 44U, response->last_publish_delivery_count);
     write_le32(buffer + 48U, response->last_publish_bytes);
+    buffer[52] = response->espnow_tx_rate_valid;
+    buffer[53] = response->espnow_tx_rate;
+    buffer[54] = response->espnow_expected_tx_rate;
+    buffer[57] = response->espnow_radio_valid;
+    buffer[58] = (uint8_t)response->espnow_tx_power_qdbm;
+    buffer[59] = response->espnow_radio_flags;
     return ROBUSTO_PROXY_RESULT_OK;
 }
 
@@ -556,7 +562,13 @@ robusto_proxy_result_t robusto_proxy_pubsub_decode_status_response(
     response->last_publish_topic_hash = read_le32(buffer + 40U);
     response->last_publish_delivery_count = read_le32(buffer + 44U);
     response->last_publish_bytes = read_le32(buffer + 48U);
-    if (response->reserved != 0U)
+    response->espnow_tx_rate_valid = buffer[52];
+    response->espnow_tx_rate = buffer[53];
+    response->espnow_expected_tx_rate = buffer[54];
+    response->espnow_radio_valid = buffer[57];
+    response->espnow_tx_power_qdbm = (int8_t)buffer[58];
+    response->espnow_radio_flags = buffer[59];
+    if (response->reserved != 0U || buffer[55] != 0U || buffer[56] != 0U)
     {
         return ROBUSTO_PROXY_RESULT_BAD_RESERVED;
     }

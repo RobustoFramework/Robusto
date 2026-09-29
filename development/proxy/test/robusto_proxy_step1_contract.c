@@ -1701,6 +1701,7 @@ typedef enum fake_client_exchange_mode {
 
 typedef struct fake_client_transport {
     robusto_proxy_service_t *service;
+    bool reconnect_requested;
     uint32_t now_ms;
     uint32_t exchanges;
     uint32_t last_timeout_ms;
@@ -1715,6 +1716,15 @@ typedef struct fake_client_transport {
     uint8_t last_flags;
     fake_client_exchange_mode_t mode;
 } fake_client_transport_t;
+
+static bool fake_client_consume_reconnect_request(void *context)
+{
+    fake_client_transport_t *transport = context;
+    bool requested = transport->reconnect_requested;
+
+    transport->reconnect_requested = false;
+    return requested;
+}
 
 static uint32_t fake_client_now_ms(void *context)
 {
@@ -1860,6 +1870,7 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
         .wait_ms = fake_client_wait_ms,
         .retry_jitter_ms = fake_client_retry_jitter_ms,
         .clock_context = &transport,
+        .consume_reconnect_request = fake_client_consume_reconnect_request,
         .request_frame = request_frame,
         .request_frame_size = sizeof(request_frame),
         .response_frame = response_frame,
@@ -2206,9 +2217,12 @@ static void test_proxy_client_connect_publish_and_acceptance(void)
     TEST_ASSERT_FALSE(robusto_proxy_pubsub_is_ready(&client));
 
     transport.mode = FAKE_CLIENT_EXCHANGE_RESPONSE;
-    TEST_ASSERT_EQUAL_INT(ROB_OK, robusto_proxy_client_connect(&client));
+    transport.reconnect_requested = true;
+    TEST_ASSERT_EQUAL_INT(ROB_OK,
+                          robusto_proxy_client_query_health(&client, &health));
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_SESSION_ESTABLISHED,
                           client.session.state);
+    TEST_ASSERT_FALSE(transport.reconnect_requested);
     TEST_ASSERT_EQUAL_U32(0U, client.consecutive_health_timeouts);
 }
 

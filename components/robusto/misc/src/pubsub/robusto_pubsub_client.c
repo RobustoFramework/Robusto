@@ -370,7 +370,12 @@ subscribed_topic_t *_add_topic_and_conv(robusto_peer_t *peer, char *topic_name, 
 
 subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, char *topic_name, subscription_cb *subscription_callback, uint8_t display_offset)
 {
-    subscribed_topic_t *new_topic = find_subscribed_topic_by_name(topic_name);
+    subscribed_topic_t *new_topic = first_subscribed_topic;
+    while (new_topic != NULL &&
+           (new_topic->peer != peer || strcmp(new_topic->topic_name, topic_name) != 0))
+    {
+        new_topic = new_topic->next;
+    }
     // We want to call the server even if we have the topic locally as it might have crashed.
     if (new_topic)
     {

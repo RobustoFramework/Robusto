@@ -8,6 +8,7 @@
 #ifdef ESP_PLATFORM
 #include "esp_app_desc.h"
 #include "esp_app_format.h"
+#include "esp_mac.h"
 #include "robusto_system.h"
 #else
 #ifndef ROBUSTO_VERSION
@@ -475,6 +476,9 @@ bool robusto_proxy_service_handle_control_request(
         response.proxy_boot_id = service->session.local_boot_id;
         response.available_memory_bytes = (uint32_t)get_free_mem();
         response.available_spi_memory_bytes = (uint32_t)get_free_mem_spi();
+#ifdef ESP_PLATFORM
+        (void)esp_read_mac(response.delegate_base_mac, ESP_MAC_BASE);
+#endif
         response.robusto_version_length = bounded_string_length(
             robusto_version, sizeof(response.robusto_version));
         memcpy(response.robusto_version, robusto_version,

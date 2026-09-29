@@ -36,12 +36,29 @@ rob_ret_val_t robusto_proxy_pubsub_subscribe(
     void *callback_context,
     robusto_proxy_pubsub_client_subscription_t **subscription);
 
+rob_ret_val_t robusto_proxy_pubsub_subscribe_espnow(
+    robusto_proxy_client_t *client,
+    const char *peer_name,
+    const uint8_t peer_mac[6],
+    const char *topic_name,
+    robusto_proxy_pubsub_callback *callback,
+    void *callback_context,
+    robusto_proxy_pubsub_client_subscription_t **subscription);
+
 rob_ret_val_t robusto_proxy_pubsub_unsubscribe(
     robusto_proxy_client_t *client,
     robusto_proxy_pubsub_client_subscription_t *subscription);
 
 rob_ret_val_t robusto_proxy_pubsub_publish(
     robusto_proxy_client_t *client,
+    const char *topic_name,
+    uint8_t *data,
+    uint32_t data_length);
+
+rob_ret_val_t robusto_proxy_pubsub_publish_espnow(
+    robusto_proxy_client_t *client,
+    const char *peer_name,
+    const uint8_t peer_mac[6],
     const char *topic_name,
     uint8_t *data,
     uint32_t data_length);

@@ -3,6 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW)
+#include <esp_wifi_types.h>
+
+bool robusto_espnow_get_signal_status(int8_t *tx_power_qdbm,
+                                      uint8_t *primary_channel,
+                                      uint8_t *protocol_bitmap);
+bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate);
+#endif
+
 #ifdef ESP_PLATFORM
 #include "esp_heap_caps.h"
 #endif
@@ -556,6 +565,37 @@ static uint16_t adapter_status(void *context,
     response->last_publish_topic_hash = adapter->last_publish_topic_hash;
     response->last_publish_delivery_count = adapter->last_publish_delivery_count;
     response->last_publish_bytes = adapter->last_publish_bytes;
+#if defined(CONFIG_ROBUSTO_SUPPORTS_ESP_NOW)
+    {
+        int8_t tx_power_qdbm = 0;
+        uint8_t primary_channel = 0;
+        uint8_t protocol_bitmap = 0;
+        if (robusto_espnow_get_signal_status(&tx_power_qdbm, &primary_channel, &protocol_bitmap))
+        {
+            response->espnow_radio_valid = 1U;
+            response->espnow_tx_power_qdbm = tx_power_qdbm;
+            response->espnow_radio_flags = 0U;
+            if (primary_channel == CONFIG_ESPNOW_CHANNEL)
+            {
+                response->espnow_radio_flags |= 0x01U;
+            }
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+            if ((protocol_bitmap & WIFI_PROTOCOL_LR) != 0U)
+            {
+                response->espnow_radio_flags |= 0x02U;
+            }
+#endif
+        }
+        uint8_t tx_rate = 0U;
+        uint8_t expected_rate = 0U;
+        if (robusto_espnow_get_tx_rate_status(&tx_rate, &expected_rate))
+        {
+            response->espnow_tx_rate_valid = 1U;
+            response->espnow_tx_rate = tx_rate;
+            response->espnow_expected_tx_rate = expected_rate;
+        }
+    }
+#endif
     adapter_give(adapter);
     return ROBUSTO_PROXY_STATUS_OK;
 }

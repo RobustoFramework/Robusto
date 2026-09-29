@@ -81,6 +81,8 @@ typedef struct {
     espnow_event_info_t info;
 } espnow_event_t;
 
+bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate);
+
 enum {
     ESPNOW_DATA_BROADCAST,
     ESPNOW_DATA_UNICAST,
