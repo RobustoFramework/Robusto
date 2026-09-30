@@ -283,7 +283,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         new_item->receipt = receipt;
         new_item->state = state;
         new_item->important = important;
-        ROB_LOGW(message_sending_log_prefix,
+        ROB_LOGD(message_sending_log_prefix,
                  ">> Queue add attempt peer=%s mt=%hhu bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
                  peer->name,
                  media_type,
@@ -300,18 +300,26 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
                  media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
                  media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
         retval = robusto_set_queue_state_queued_on_ok(new_item->state, safe_add_work_queue(queue_ctx, new_item, important));
-        ROB_LOGW(message_sending_log_prefix,
-                 ">> Queue add result peer=%s mt=%hhu retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-                 peer->name,
-                 media_type,
-                 retval,
-                 queue_ctx->count,
-                 queue_ctx->normal_max_count,
-                 queue_ctx->important_max_count,
-                 queue_ctx->blocked,
-                 queue_ctx->task_count,
-                 media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
-                 media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
+        if (retval == ROB_OK)
+        {
+            ROB_LOGD(message_sending_log_prefix,
+                     ">> Queue add result peer=%s mt=%hhu retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                     peer->name, media_type, retval, queue_ctx->count,
+                     queue_ctx->normal_max_count, queue_ctx->important_max_count,
+                     queue_ctx->blocked, queue_ctx->task_count,
+                     media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
+                     media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
+        }
+        else
+        {
+            ROB_LOGW(message_sending_log_prefix,
+                     ">> Queue add failed peer=%s mt=%hhu retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                     peer->name, media_type, retval, queue_ctx->count,
+                     queue_ctx->normal_max_count, queue_ctx->important_max_count,
+                     queue_ctx->blocked, queue_ctx->task_count,
+                     media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
+                     media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
+        }
         if (retval != ROB_OK)
         {
             robusto_free(new_item);
@@ -418,7 +426,7 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
     int retval = ROB_FAIL;
     int send_retries = 0;
 
-    ROB_LOGW(message_sending_log_prefix,
+    ROB_LOGD(message_sending_log_prefix,
              ">> Work send start peer=%s mt=%hhu bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu media_state=%hhu media_problem=%hhu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
              queue_item->peer->name,
              media_type,
@@ -484,24 +492,26 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
         ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %i is recovering, we might need to try some other media for a message (%i, %i)", queue_item->peer->name, media_type, info->state, queue_item->queue_item_type);
     }
 
-    ROB_LOGW(message_sending_log_prefix,
-             ">> Work send result peer=%s mt=%hhu retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-             queue_item->peer->name,
-             media_type,
-             retval,
-             send_retries,
-             queue_item->queue_item_type,
-             queue_item->important,
-             queue_item->receipt,
-             info->state,
-             info->problem,
-             info->send_failures,
-             info->send_successes,
-             queue_context->count,
-             queue_context->blocked,
-             queue_context->task_count,
-             info->latest_rssi_valid ? 1U : 0U,
-             (int)info->latest_rssi_dbm);
+    if (retval == ROB_OK)
+    {
+        ROB_LOGD(message_sending_log_prefix,
+                 ">> Work send result peer=%s mt=%hhu retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                 queue_item->peer->name, media_type, retval, send_retries,
+                 queue_item->queue_item_type, queue_item->important, queue_item->receipt,
+                 info->state, info->problem, info->send_failures, info->send_successes,
+                 queue_context->count, queue_context->blocked, queue_context->task_count,
+                 info->latest_rssi_valid ? 1U : 0U, (int)info->latest_rssi_dbm);
+    }
+    else
+    {
+        ROB_LOGW(message_sending_log_prefix,
+                 ">> Work send failed peer=%s mt=%hhu retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                 queue_item->peer->name, media_type, retval, send_retries,
+                 queue_item->queue_item_type, queue_item->important, queue_item->receipt,
+                 info->state, info->problem, info->send_failures, info->send_successes,
+                 queue_context->count, queue_context->blocked, queue_context->task_count,
+                 info->latest_rssi_valid ? 1U : 0U, (int)info->latest_rssi_dbm);
+    }
 
     if ((retval != ROB_OK) &&                                                           // We only try other medias if we have failed..
         (queue_item->receipt) &&                                                        // ..and if it is receipt required, then we infer that we will try with multiple medias

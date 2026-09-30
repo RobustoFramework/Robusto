@@ -49,6 +49,8 @@
 static char *espnow_log_prefix;
 
 #define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN_V2 - 10)
+#define ESPNOW_SEND_COMPLETE_TIMEOUT_BASE_MS (30U)
+#define ESPNOW_SEND_COMPLETE_TIMEOUT_DIVISOR (125U)
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
@@ -82,7 +84,7 @@ bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate)
 
 static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32_t data_length)
 {
-    int32_t wait_time = (data_length / 125) + 30;
+    uint32_t wait_time = (data_length / ESPNOW_SEND_COMPLETE_TIMEOUT_DIVISOR) + ESPNOW_SEND_COMPLETE_TIMEOUT_BASE_MS;
     int32_t start_send = r_millis();
     while ((send_status < 0) && (r_millis() < start_send + wait_time))
     {
@@ -101,8 +103,9 @@ static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32
     if (send_status < 0)
     {
         ROB_LOGE(espnow_log_prefix,
-                 "ESP-NOW transmission did not complete within wait time (%lu ms). Peer: %s Data length: %lu",
+                 "ESP-NOW transmission did not complete within wait time (%lu ms, elapsed %lu ms). Peer: %s Data length: %lu",
                  wait_time,
+                 r_millis() - start_send,
                  peer->name,
                  data_length);
         ROB_LOG_STACK_TRACE(3);
@@ -176,15 +179,15 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
-    if (!receipt)
-    {
-        return rc;
-    }
-
     rc = esp_now_wait_for_send_complete(peer, data_length);
     if (rc != ROB_OK)
     {
         add_to_history(&peer->espnow_info, false, rc);
+        return rc;
+    }
+
+    if (!receipt)
+    {
         return rc;
     }
 
@@ -457,7 +460,7 @@ void espnow_do_on_work_cb(media_queue_item_t *work_item)
 {
 
     queue_context_t *queue_context = espnow_get_queue_context();
-    ROB_LOGW(espnow_log_prefix,
+    ROB_LOGD(espnow_log_prefix,
              ">> ESP-NOW work callback start peer=%s bytes=%lu qtype=%hhu important=%u receipt=%u count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
              work_item->peer->name,
              work_item->data_length,

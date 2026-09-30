@@ -57,7 +57,7 @@ void *safe_get_head_work_item(queue_context_t *q_context)
         if (curr_work != NULL)
         {
             q_context->remove_first_queueitem_cb(q_context);
-            ROB_LOGW(robusto_worker_log_prefix,
+            ROB_LOGD(robusto_worker_log_prefix,
                      ">> Queue dequeue queue=%s count=%u normal_max=%u important_max=%u blocked=%u tasks=%u multitasking=%u",
                      q_context->worker_task_name,
                      q_context->count,
