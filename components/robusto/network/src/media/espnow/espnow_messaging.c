@@ -147,7 +147,11 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         }
         else if (rc == ESP_ERR_ESPNOW_NO_MEM)
         {
-            ROB_LOGE(espnow_log_prefix, "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Available memory: %u bytes. Will delay a short while to let it free its memory.", heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
+            ROB_LOGE(espnow_log_prefix,
+                     "ESP-NOW error: ESP_ERR_ESPNOW_NO_MEM - Internal free: %u bytes, largest block: %u bytes, minimum free: %u bytes. Will delay a short while to let it free its memory.",
+                     (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+                     (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+                     (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT));
             r_delay(300);
         }
         else if (rc == ESP_ERR_ESPNOW_FULL)

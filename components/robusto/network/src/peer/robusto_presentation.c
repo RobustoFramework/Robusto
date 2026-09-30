@@ -321,6 +321,10 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     uint16_t data_len = MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination.
     // TODO: Null termination should be done at reception instead.
     uint8_t *data = robusto_malloc(data_len);
+    if (data == NULL)
+    {
+        return ROB_ERR_OUT_OF_MEMORY;
+    }
     data[HI_POS] = is_reply ? NET_HIR : NET_HI;
     /* Set the protocol versions*/
     data[PROT_VER_POS] = ROBUSTO_PROTOCOL_VERSION;
@@ -349,7 +353,10 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     peer->relation_id_incoming = relation_id_incoming;
     memcpy(data + MAC_ADDR_POS, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
     strcpy((char *)data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, (char *)&get_host_peer()->name);
-    return robusto_make_multi_message_internal(MSG_NETWORK, 0, 0, NULL, 0, data, data_len, msg);
+    int message_length = robusto_make_multi_message_internal(
+        MSG_NETWORK, 0, 0, NULL, 0, data, data_len, msg);
+    robusto_free(data);
+    return message_length;
 }
 
 void robusto_presentation_init(char *_log_prefix)
