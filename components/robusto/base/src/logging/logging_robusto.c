@@ -30,6 +30,16 @@
  */
 
 #include "robusto_logging.h"
+
+static rob_log_observer_t s_log_observer = NULL;
+static void *s_log_observer_context = NULL;
+
+void rob_log_set_observer(rob_log_observer_t observer, void *context)
+{
+    s_log_observer = observer;
+    s_log_observer_context = context;
+}
+
 #if (ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE)
 #include <stdarg.h>
 #include <stdio.h>
@@ -37,7 +47,7 @@
 
 #define ROW_LEN (8 * 9) + 1
 #define ASCII_CODE_SPACE 32
-
+#define ROB_LOG_OBSERVER_MESSAGE_MAX 512
 
 void rob_log_write(rob_log_level_t level,
                    const char *tag,
@@ -45,6 +55,17 @@ void rob_log_write(rob_log_level_t level,
 {
     va_list list;
     va_start(list, format);
+
+    if (s_log_observer != NULL)
+    {
+        char message[ROB_LOG_OBSERVER_MESSAGE_MAX];
+        va_list observer_args;
+        va_copy(observer_args, list);
+        vsnprintf(message, sizeof(message), format, observer_args);
+        va_end(observer_args);
+        s_log_observer(level, tag, message, s_log_observer_context);
+    }
+
     compat_rob_log_writev(level, tag, format, list);
     va_end(list);
 }

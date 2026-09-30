@@ -65,6 +65,19 @@ typedef enum
     ROB_LOG_VERBOSE /*!< Bigger chunks of debugging information, or frequent messages which can potentially flood the output. */
 } rob_log_level_t;
 
+/**
+ * @brief Synchronous observer for rendered Robusto log lines.
+ *
+ * The message is valid only for the duration of the callback. Observers must
+ * not call Robusto logging functions recursively.
+ */
+typedef void (*rob_log_observer_t)(rob_log_level_t level,
+                                   const char *tag,
+                                   const char *message,
+                                   void *context);
+
+void rob_log_set_observer(rob_log_observer_t observer, void *context);
+
 
 #if ROB_LOG_LOCAL_LEVEL > ROB_LOG_NONE
 
