@@ -200,8 +200,33 @@ void remove_fragmented_message(fragmented_message_t *frag_msg)
     {
         last_frag_msg = NULL;
     }
+    if (frag_msg->receive_buffer != NULL)
+    {
+        robusto_free(frag_msg->receive_buffer);
+    }
     robusto_free(frag_msg->received_fragments);
     robusto_free(frag_msg);
+}
+
+static void remove_stale_fragment_receives(uint32_t now)
+{
+    fragmented_message_t *frag_msg = SLIST_FIRST(&fragmented_messages_head);
+
+    while (frag_msg != NULL)
+    {
+        fragmented_message_t *next = SLIST_NEXT(frag_msg, fragmented_messages);
+        if (frag_msg->receive_buffer != NULL &&
+            (uint32_t)(now - frag_msg->start_time) > FRAG_SEND_TOTAL_WAIT_MS)
+        {
+            ROB_LOGW(fragmentation_log_prefix,
+                     "Removing stale fragmented receive hash=%lu bytes=%lu age_ms=%lu.",
+                     (unsigned long)frag_msg->hash,
+                     (unsigned long)frag_msg->receive_buffer_length,
+                     (unsigned long)(now - frag_msg->start_time));
+            remove_fragmented_message(frag_msg);
+        }
+        frag_msg = next;
+    }
 }
 
 fragmented_message_t *find_fragmented_message(uint32_t hash)
@@ -284,8 +309,17 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
 
     uint32_t hash;
     memcpy(&hash, data + ROBUSTO_CRC_LENGTH + 14, 4);
+    remove_stale_fragment_receives((uint32_t)r_millis());
+
+    uint32_t receive_buffer_length;
+    uint32_t fragment_count;
+    uint32_t requested_fragment_size;
+    memcpy(&receive_buffer_length, data + ROBUSTO_CRC_LENGTH + 2, 4);
+    memcpy(&fragment_count, data + ROBUSTO_CRC_LENGTH + 6, 4);
+    memcpy(&requested_fragment_size, data + ROBUSTO_CRC_LENGTH + 10, 4);
 
     fragmented_message_t *frag_msg = find_fragmented_message(hash);
+    bool new_fragment_message = false;
     if (!frag_msg)
     {
         frag_msg = robusto_malloc(sizeof(fragmented_message_t));
@@ -298,22 +332,73 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
         }
         memset(frag_msg, 0, sizeof(fragmented_message_t));
         frag_msg->last_requested = FRAG_NO_REQUESTED_FRAGMENT;
-        SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
+        frag_msg->receive_buffer_length = receive_buffer_length;
+        frag_msg->fragment_count = fragment_count;
+        frag_msg->fragment_size = requested_fragment_size;
+        frag_msg->hash = hash;
+        new_fragment_message = true;
     }
     else
     {
-        ROB_LOGI(fragmentation_log_prefix, "The fragment transmission is already added, assuming same properties. Might be duplicate try or or testing.");
+        if (frag_msg->receive_buffer_length != receive_buffer_length ||
+            frag_msg->fragment_count != fragment_count ||
+            frag_msg->fragment_size != requested_fragment_size)
+        {
+            fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+            ROB_LOGE(fragmentation_log_prefix,
+                     "Duplicate fragment request metadata mismatch for hash %lu.",
+                     (unsigned long)hash);
+            return;
+        }
+        if (frag_msg->receive_buffer != NULL)
+        {
+            ROB_LOGI(fragmentation_log_prefix,
+                     "Duplicate fragment request ignored for active hash %lu.",
+                     (unsigned long)hash);
+            frag_msg->start_time = (uint32_t)r_millis();
+            media->last_receive = r_millis();
+            return;
+        }
     }
-    memcpy(&frag_msg->receive_buffer_length, data + ROBUSTO_CRC_LENGTH + 2, 4);
-    memcpy(&frag_msg->fragment_count, data + ROBUSTO_CRC_LENGTH + 6, 4);
-    memcpy(&frag_msg->fragment_size, data + ROBUSTO_CRC_LENGTH + 10, 4);
-    frag_msg->hash = hash;
+
     // TODO: How big should we allow before SPIRAM and more?
-    frag_msg->receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);
-    frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
+    uint8_t *receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);
+    uint8_t *received_fragments = frag_msg->received_fragments;
+    if (received_fragments == NULL)
+    {
+        received_fragments = robusto_malloc(frag_msg->fragment_count);
+    }
+    if (receive_buffer == NULL || received_fragments == NULL)
+    {
+        fragment_stats_add(&fragment_stats.fragment_oom, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+        ROB_LOGE(fragmentation_log_prefix,
+                 "Fragmented request failed allocating %lu-byte receive buffer and %lu-byte fragment map.",
+                 (unsigned long)frag_msg->receive_buffer_length,
+                 (unsigned long)frag_msg->fragment_count);
+        if (receive_buffer != NULL)
+        {
+            robusto_free(receive_buffer);
+        }
+        if (frag_msg->received_fragments == NULL && received_fragments != NULL)
+        {
+            robusto_free(received_fragments);
+        }
+        if (new_fragment_message)
+        {
+            robusto_free(frag_msg);
+        }
+        add_to_history(media, false, ROB_ERR_OUT_OF_MEMORY);
+        return;
+    }
+    frag_msg->receive_buffer = receive_buffer;
+    frag_msg->received_fragments = received_fragments;
     frag_msg->abort_transmission = false;
     frag_msg->state = ROB_ST_RUNNING;
     memset(frag_msg->received_fragments, 0, frag_msg->fragment_count);
+    if (new_fragment_message)
+    {
+        SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
+    }
     ROB_LOGD(fragmentation_log_prefix, "Fragmented initialization received, info:\n \
         data_length: %lu bytes, fragment_count: %lu, fragment_size: %lu, hash: %lu.",
              frag_msg->receive_buffer_length, frag_msg->fragment_count, frag_msg->fragment_size, frag_msg->hash);
@@ -405,6 +490,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
                      (unsigned long)frag_msg->fragment_count);
 
             add_to_history(get_media_info(peer, media_type), false, robusto_handle_incoming(frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, media_type, 0));
+            frag_msg->receive_buffer = NULL;
             remove_fragmented_message(frag_msg);
             return;
         }

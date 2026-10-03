@@ -183,15 +183,16 @@ rob_ret_val_t esp_now_send_check(robusto_peer_t *peer, uint8_t *data, uint32_t d
         rc = ROB_OK;
         add_to_history(&peer->espnow_info, true, rc);
     }
+
+    if (!receipt)
+    {
+        return rc;
+    }
+
     rc = esp_now_wait_for_send_complete(peer, data_length);
     if (rc != ROB_OK)
     {
         add_to_history(&peer->espnow_info, false, rc);
-        return rc;
-    }
-
-    if (!receipt)
-    {
         return rc;
     }
 
