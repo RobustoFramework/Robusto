@@ -17,6 +17,24 @@
 static int tests_failed = 0;
 static int tests_run = 0;
 
+robusto_stats_level_t robusto_fragment_stats_get_level(void)
+{
+    return ROBUSTO_STATS_LEVEL_OFF;
+}
+
+void robusto_fragment_stats_get(robusto_fragment_stats_t *total,
+                                robusto_fragment_stats_t *delta_since_last_read)
+{
+    if (total != NULL)
+    {
+        memset(total, 0, sizeof(*total));
+    }
+    if (delta_since_last_read != NULL)
+    {
+        memset(delta_since_last_read, 0, sizeof(*delta_since_last_read));
+    }
+}
+
 #define TEST_ASSERT_TRUE(condition) test_assert_true((condition), #condition, __FILE__, __LINE__)
 #define TEST_ASSERT_FALSE(condition) test_assert_true(!(condition), "!(" #condition ")", __FILE__, __LINE__)
 #define TEST_ASSERT_EQUAL_U32(expected, actual) test_assert_equal_u32((expected), (actual), #actual, __FILE__, __LINE__)
@@ -1485,7 +1503,9 @@ static void test_pubsub_response_and_delivery_round_trips(void)
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
                           robusto_proxy_pubsub_encode_status_response(buffer, sizeof(buffer), &status));
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
-                          robusto_proxy_pubsub_decode_status_response(buffer, 36U, &decoded_status));
+                          robusto_proxy_pubsub_decode_status_response(
+                              buffer, ROBUSTO_PROXY_PUBSUB_STATUS_RESPONSE_SIZE_BYTES,
+                              &decoded_status));
     TEST_ASSERT_EQUAL_U32(2U, decoded_status.active_subscriptions);
     TEST_ASSERT_EQUAL_U32(9U, decoded_status.pubsub_errors);
     TEST_ASSERT_EQUAL_INT(ROBUSTO_PROXY_RESULT_OK,
@@ -2261,7 +2281,7 @@ static void test_service_pubsub_dispatch_and_gates(void)
     robusto_proxy_pubsub_status_response_t decoded_status;
     robusto_proxy_response_prefix_t prefix;
     uint8_t request[64];
-    uint8_t response[64];
+    uint8_t response[128];
     size_t request_size = 0U;
     size_t response_size = 0U;
 

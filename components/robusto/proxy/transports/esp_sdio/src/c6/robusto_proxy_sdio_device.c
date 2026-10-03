@@ -34,6 +34,7 @@ static DMA_ATTR uint8_t rx_buffers[RX_BUFFER_COUNT][ROBUSTO_RSD1_MAX_PACKET_SIZE
 static DMA_ATTR tx_slot_t tx_slots[TX_BUFFER_COUNT];
 static frontend_callback_t callbacks[CALLBACK_COUNT];
 static SemaphoreHandle_t frontend_mutex;
+static bool transport_enabled;
 static bool frontend_started;
 static uint32_t next_sequence = 1U;
 
@@ -257,9 +258,9 @@ esp_err_t robusto_proxy_sdio_device_init(void)
     return ESP_OK;
 }
 
-esp_err_t robusto_proxy_sdio_device_start(void)
+esp_err_t robusto_proxy_sdio_device_enable_transport(void)
 {
-    if (frontend_mutex == NULL || frontend_started) {
+    if (frontend_mutex == NULL || transport_enabled) {
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -268,11 +269,21 @@ esp_err_t robusto_proxy_sdio_device_start(void)
     if (error != ESP_OK) {
         return error;
     }
+    transport_enabled = true;
+    return ESP_OK;
+}
+
+esp_err_t robusto_proxy_sdio_device_start(void)
+{
+    if (frontend_mutex == NULL || !transport_enabled || frontend_started) {
+        return ESP_ERR_INVALID_STATE;
+    }
 
     ESP_LOGI(TAG, "C6 SDIO stage: create receive task");
     if (xTaskCreate(receive_task_main, "robusto_rsd1_rx",
                     RECEIVE_TASK_STACK_SIZE, NULL, 6, NULL) != pdPASS) {
         sdio_slave_stop();
+        transport_enabled = false;
         return ESP_ERR_NO_MEM;
     }
     frontend_started = true;

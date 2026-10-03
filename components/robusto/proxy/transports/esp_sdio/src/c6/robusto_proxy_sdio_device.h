@@ -24,4 +24,5 @@ _Static_assert(ROBUSTO_PROXY_SDIO_SLAVE_MAX_DELIVERY_CHUNK_DATA_SIZE == 4028U,
 			   "C6 SDIO delivery chunk budget changed");
 
 esp_err_t robusto_proxy_sdio_device_init(void);
+esp_err_t robusto_proxy_sdio_device_enable_transport(void);
 esp_err_t robusto_proxy_sdio_device_start(void);

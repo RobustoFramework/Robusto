@@ -115,6 +115,11 @@ def main() -> int:
                     extra_includes,
                     output_directory,
                 )
+            subprocess.run(
+                [sys.executable, str(TEST_DIRECTORY / "run_c6_startup_order_contract.py")],
+                cwd=REPOSITORY_ROOT,
+                check=True,
+            )
     except (RuntimeError, subprocess.CalledProcessError) as error:
         print(f"Proxy contract failure: {error}", file=sys.stderr)
         return 1

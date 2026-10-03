@@ -12,4 +12,6 @@ void robusto_proxy_sdio_c6_set_pubsub_topic_hooks(
 	robusto_proxy_sdio_c6_topic_hook_t unsubscribe_hook,
 	void *hook_context);
 
+esp_err_t robusto_proxy_sdio_c6_prepare(void);
+esp_err_t robusto_proxy_sdio_c6_start_device(void);
 esp_err_t robusto_proxy_sdio_c6_start(void);

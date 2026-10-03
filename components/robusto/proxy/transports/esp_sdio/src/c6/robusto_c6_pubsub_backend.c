@@ -107,28 +107,13 @@ static robusto_peer_t *resolve_espnow_peer(const robusto_c6_espnow_target_t *tar
                  target->mac[0], target->mac[1], target->mac[2],
                  target->mac[3], target->mac[4], target->mac[5]);
     }
-    if (peer->state < PEER_KNOWN_INSECURE &&
-        !peer_waitfor_at_least_state(peer, PEER_KNOWN_INSECURE, 1000U))
-    {
-        ESP_LOGE(TAG, "ESP-NOW proxy peer not ready name=%s state=%u",
-                 target->peer_name, (unsigned)peer->state);
-        return NULL;
-    }
     return peer;
 }
 
 #if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
-static bool wait_for_topic_ready(subscribed_topic_t *topic)
+static bool topic_request_accepted(const subscribed_topic_t *topic)
 {
-    uint32_t started_ms = r_millis();
-
-    while (topic != NULL && topic->state == TOPIC_STATE_UNSET &&
-           (r_millis() - started_ms) < 750U)
-    {
-        r_delay(10U);
-    }
     return topic != NULL && topic->topic_hash != 0U &&
-           topic->state != TOPIC_STATE_UNSET &&
            topic->state != TOPIC_STATE_PROBLEM &&
            topic->state != TOPIC_STATE_UNKNOWN;
 }
@@ -180,6 +165,8 @@ static uint16_t map_robusto_publish_result(rob_ret_val_t result)
         case ROB_ERR_MUTEX:
         case ROB_ERR_QUEUE_FULL:
             return ROBUSTO_PROXY_STATUS_BUSY;
+        case ROB_ERR_NOT_READY:
+            return ROBUSTO_PROXY_STATUS_NOT_READY;
         case ROB_ERR_SEND_FAIL:
         case ROB_ERR_SEND_SOME_FAIL:
             return ROBUSTO_PROXY_STATUS_PUBSUB_DELIVERY_FAILED;
@@ -241,7 +228,7 @@ static uint16_t backend_publish(void *context,
             return ROBUSTO_PROXY_STATUS_NOT_READY;
         }
         remote_topic = robusto_pubsub_client_get_topic(peer, (char *)target.topic, NULL, 0);
-        if (!wait_for_topic_ready(remote_topic))
+        if (!topic_request_accepted(remote_topic))
         {
             ESP_LOGE(TAG, "ESP-NOW proxy publish topic lookup failed peer=%s topic=%s",
                      target.peer_name, target.topic);
@@ -326,7 +313,7 @@ static uint16_t backend_subscribe(void *context,
         route->delivery_context = callback_context;
         route->remote_topic = robusto_pubsub_client_get_topic(
             peer, (char *)target.topic, espnow_remote_delivery, 0);
-        if (!wait_for_topic_ready(route->remote_topic))
+        if (!topic_request_accepted(route->remote_topic))
         {
             ESP_LOGE(TAG, "ESP-NOW proxy subscribe failed peer=%s topic=%s",
                      target.peer_name, target.topic);
