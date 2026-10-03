@@ -16,6 +16,7 @@ PROXY_SOURCE_DIRECTORY = PROXY_DIRECTORY / "src"
 RSD1_DIRECTORY = PROXY_DIRECTORY / "transports" / "rsd1"
 
 COMMON_INCLUDES = (
+    TEST_DIRECTORY / "support",
     ROBUSTO_DIRECTORY / "include",
     PROXY_DIRECTORY / "include",
     RSD1_DIRECTORY / "include",

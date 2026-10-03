@@ -35,6 +35,9 @@
 #ifdef CONFIG_ROBUSTO_PUBSUB_SERVER
 #include <robusto_pubsub_server.h>
 #endif
+#ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
+#include <robusto_pubsub_client.h>
+#endif
 #ifdef CONFIG_ROBUSTO_UMTS_SERVER
 #include <robusto_umts.h>
 #endif
@@ -48,8 +51,7 @@ void robusto_misc_start() {
     robusto_pubsub_server_start();
     #endif
     #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-    //  Note that this has been deliberately commented is, that this probably has to be like this.
-    //  robusto_pubsub_client_start();
+    robusto_pubsub_client_start();
     #endif
 }
 
@@ -60,10 +62,6 @@ void robusto_misc_init(char * _log_prefix) {
     robusto_pubsub_server_init(_log_prefix);
     #endif
     
-    #ifdef CONFIG_ROBUSTO_PUBSUB_CLIENT
-    //  Note that this has been deliberately commented is, that this probably has to be like this.
-    //  robusto_pubsub_client_init();
-    #endif   
     #ifdef CONFIG_ROBUSTO_UMTS_SERVER
     robusto_umts_init(_log_prefix);
     #endif
@@ -72,7 +70,7 @@ void robusto_misc_init(char * _log_prefix) {
 
 
 void register_misc_service() {
-    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_UMTS_SERVER) 
+    #if defined(CONFIG_ROBUSTO_PUBSUB_SERVER) || defined(CONFIG_ROBUSTO_PUBSUB_CLIENT) || defined(CONFIG_ROBUSTO_UMTS_SERVER)
     register_service(robusto_misc_init, robusto_misc_start, robusto_misc_stop, 2, "Miscellaneous");    
     #endif
 }

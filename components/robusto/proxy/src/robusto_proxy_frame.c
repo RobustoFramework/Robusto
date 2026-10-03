@@ -219,7 +219,13 @@ robusto_proxy_result_t robusto_proxy_frame_encode(
         return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
     }
 
-    memset(buffer, 0, required_size);
+    if (header->payload_length > 0U &&
+        payload != buffer + ROBUSTO_PROXY_HEADER_SIZE_BYTES)
+    {
+        memmove(buffer + ROBUSTO_PROXY_HEADER_SIZE_BYTES,
+                payload,
+                header->payload_length);
+    }
     buffer[0] = header->magic[0];
     buffer[1] = header->magic[1];
     buffer[2] = header->protocol_major;
@@ -231,11 +237,6 @@ robusto_proxy_result_t robusto_proxy_frame_encode(
     write_le32(buffer + 8U, header->correlation_id);
     write_le32(buffer + 12U, header->sequence);
     write_le32(buffer + 16U, header->payload_length);
-    if (header->payload_length > 0U)
-    {
-        memcpy(buffer + ROBUSTO_PROXY_HEADER_SIZE_BYTES, payload, header->payload_length);
-    }
-
     crc = robusto_proxy_crc32_iso_hdlc(buffer, required_size - ROBUSTO_PROXY_CRC_SIZE_BYTES);
     write_le32(buffer + required_size - ROBUSTO_PROXY_CRC_SIZE_BYTES, crc);
     *frame_size = required_size;

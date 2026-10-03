@@ -58,7 +58,25 @@ static robusto_proxy_pubsub_subscription_t *find_topic(
     for (uint16_t index = 0U; index < adapter->subscription_capacity; ++index)
     {
         robusto_proxy_pubsub_subscription_t *subscription = &adapter->subscriptions[index];
-        if (subscription->active && subscription->topic_length == topic_length &&
+        if (subscription->active && !subscription->pending &&
+            subscription->topic_length == topic_length &&
+            memcmp(subscription->topic, topic, topic_length) == 0)
+        {
+            return subscription;
+        }
+    }
+    return NULL;
+}
+
+static robusto_proxy_pubsub_subscription_t *find_pending_topic(
+    robusto_proxy_pubsub_server_adapter_t *adapter,
+    const uint8_t *topic,
+    uint16_t topic_length)
+{
+    for (uint16_t index = 0U; index < adapter->subscription_capacity; ++index)
+    {
+        robusto_proxy_pubsub_subscription_t *subscription = &adapter->subscriptions[index];
+        if (subscription->pending && subscription->topic_length == topic_length &&
             memcmp(subscription->topic, topic, topic_length) == 0)
         {
             return subscription;
@@ -87,7 +105,8 @@ static robusto_proxy_pubsub_subscription_t *find_free(
 {
     for (uint16_t index = 0U; index < adapter->subscription_capacity; ++index)
     {
-        if (!adapter->subscriptions[index].active)
+        if (!adapter->subscriptions[index].active &&
+            !adapter->subscriptions[index].pending)
         {
             return &adapter->subscriptions[index];
         }
@@ -465,6 +484,11 @@ static uint16_t adapter_subscribe(void *context,
         adapter_give(adapter);
         return ROBUSTO_PROXY_STATUS_OK;
     }
+    if (find_pending_topic(adapter, request->topic, request->topic_length) != NULL)
+    {
+        adapter_give(adapter);
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
     subscription = find_free(adapter);
     if (subscription == NULL)
     {
@@ -481,9 +505,16 @@ static uint16_t adapter_subscribe(void *context,
     subscription->topic_length = request->topic_length;
     memcpy(subscription->topic, request->topic, request->topic_length);
     subscription->active = true;
+    subscription->pending = true;
+    adapter_give(adapter);
+
     status = adapter->backend->subscribe(adapter->backend_context, subscription->topic,
                                          queue_delivery, subscription,
                                          &subscription->topic_hash);
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
     if (status != ROBUSTO_PROXY_STATUS_OK)
     {
         memset(subscription, 0, sizeof(*subscription));
@@ -491,6 +522,7 @@ static uint16_t adapter_subscribe(void *context,
         adapter_give(adapter);
         return status;
     }
+    subscription->pending = false;
     adapter->active_subscriptions += 1U;
     response->subscription_id = subscription->subscription_id;
     response->topic_hash = subscription->topic_hash;
@@ -523,16 +555,24 @@ static uint16_t adapter_unsubscribe(void *context,
         adapter_give(adapter);
         return ROBUSTO_PROXY_STATUS_OK;
     }
+    subscription->pending = true;
+    adapter_give(adapter);
+
     status = adapter->backend->unsubscribe(adapter->backend_context,
                                            subscription->topic_hash,
                                            queue_delivery, subscription);
+    if (!adapter_take(adapter))
+    {
+        return ROBUSTO_PROXY_STATUS_BUSY;
+    }
     if (status != ROBUSTO_PROXY_STATUS_OK)
     {
+        subscription->pending = false;
         adapter->pubsub_errors += 1U;
         adapter_give(adapter);
         return status;
     }
-    subscription->active = false;
+    memset(subscription, 0, sizeof(*subscription));
     adapter->active_subscriptions -= 1U;
     response->removed = 1U;
     adapter_give(adapter);

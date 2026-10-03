@@ -1,0 +1,3 @@
+#pragma once
+
+#define CONFIG_ROBUSTO_PEER_NAME_LENGTH 16

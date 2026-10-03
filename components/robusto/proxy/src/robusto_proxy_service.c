@@ -14,14 +14,16 @@
 #ifndef ROBUSTO_VERSION
 #define ROBUSTO_VERSION "unknown"
 #endif
-static uint64_t get_free_mem(void)
+static uint64_t proxy_get_free_mem(void)
 {
     return 0U;
 }
-static uint64_t get_free_mem_spi(void)
+static uint64_t proxy_get_free_mem_spi(void)
 {
     return 0U;
 }
+#define get_free_mem proxy_get_free_mem
+#define get_free_mem_spi proxy_get_free_mem_spi
 #endif
 
 static uint8_t bounded_string_length(const char *value, uint8_t maximum)
@@ -1070,15 +1072,20 @@ robusto_proxy_result_t robusto_proxy_service_handle_frame(
     size_t response_frame_size,
     size_t *response_size)
 {
-    const robusto_proxy_frame_header_t *request_header;
+    robusto_proxy_frame_header_t request_header;
     robusto_proxy_frame_header_t response_header;
-    uint8_t response_payload[ROBUSTO_PROXY_MAX_PAYLOAD_BYTES];
+    uint8_t *response_payload;
+    size_t response_payload_capacity;
     size_t response_payload_size = 0U;
     robusto_proxy_result_t result;
 
     if (service == NULL || request_frame == NULL || response_frame == NULL || response_size == NULL)
     {
         return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
+    }
+    if (response_frame_size < ROBUSTO_PROXY_HEADER_SIZE_BYTES + ROBUSTO_PROXY_CRC_SIZE_BYTES)
+    {
+        return ROBUSTO_PROXY_RESULT_BAD_LENGTH;
     }
 
     result = robusto_proxy_frame_validate_buffer(request_frame, request_frame_size, NULL);
@@ -1087,30 +1094,34 @@ robusto_proxy_result_t robusto_proxy_service_handle_frame(
         return result;
     }
 
-    request_header = (const robusto_proxy_frame_header_t *)request_frame;
-    if ((request_header->flags & ROBUSTO_PROXY_FLAG_REQUEST) == 0U ||
-        request_header->correlation_id == 0U)
+    memcpy(&request_header, request_frame, sizeof(request_header));
+    if ((request_header.flags & ROBUSTO_PROXY_FLAG_REQUEST) == 0U ||
+        request_header.correlation_id == 0U)
     {
         return ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
     }
+    response_payload = response_frame + ROBUSTO_PROXY_HEADER_SIZE_BYTES;
+    response_payload_capacity = response_frame_size -
+                                ROBUSTO_PROXY_HEADER_SIZE_BYTES -
+                                ROBUSTO_PROXY_CRC_SIZE_BYTES;
 
-    if (request_header->domain == ROBUSTO_PROXY_DOMAIN_CONTROL)
+    if (request_header.domain == ROBUSTO_PROXY_DOMAIN_CONTROL)
     {
         result = robusto_proxy_service_handle_control_request(
-            service, request_header->opcode,
+            service, request_header.opcode,
             request_frame + ROBUSTO_PROXY_HEADER_SIZE_BYTES,
-            request_header->payload_length, now_ms, response_payload,
-            sizeof(response_payload), &response_payload_size)
+            request_header.payload_length, now_ms, response_payload,
+            response_payload_capacity, &response_payload_size)
                      ? ROBUSTO_PROXY_RESULT_OK
                      : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
     }
-    else if (request_header->domain == ROBUSTO_PROXY_DOMAIN_PUBSUB)
+    else if (request_header.domain == ROBUSTO_PROXY_DOMAIN_PUBSUB)
     {
         result = robusto_proxy_service_handle_pubsub_request(
-            service, request_header->opcode,
+            service, request_header.opcode,
             request_frame + ROBUSTO_PROXY_HEADER_SIZE_BYTES,
-            request_header->payload_length, response_payload,
-            sizeof(response_payload), &response_payload_size)
+            request_header.payload_length, response_payload,
+            response_payload_capacity, &response_payload_size)
                      ? ROBUSTO_PROXY_RESULT_OK
                      : ROBUSTO_PROXY_RESULT_INVALID_ARGUMENT;
     }
@@ -1120,7 +1131,7 @@ robusto_proxy_result_t robusto_proxy_service_handle_frame(
         memset(&prefix, 0, sizeof(prefix));
         prefix.status = ROBUSTO_PROXY_STATUS_UNSUPPORTED_DOMAIN;
         result = robusto_proxy_encode_response_prefix(response_payload,
-                                                       sizeof(response_payload),
+                                                       response_payload_capacity,
                                                        &prefix);
         response_payload_size = ROBUSTO_PROXY_RESPONSE_PREFIX_SIZE_BYTES;
         service->errors += 1U;
@@ -1133,9 +1144,9 @@ robusto_proxy_result_t robusto_proxy_service_handle_frame(
     robusto_proxy_frame_header_init(
         &response_header,
         ROBUSTO_PROXY_FLAG_RESPONSE,
-        request_header->domain,
-        request_header->opcode,
-        request_header->correlation_id,
+        request_header.domain,
+        request_header.opcode,
+        request_header.correlation_id,
         robusto_proxy_session_take_sequence(&service->session),
         (uint32_t)response_payload_size);
     return robusto_proxy_frame_encode(

@@ -44,6 +44,7 @@ typedef struct robusto_proxy_pubsub_subscription {
     uint32_t next_delivery_sequence;
     uint16_t topic_length;
     bool active;
+    bool pending;
     char topic[ROBUSTO_PROXY_PUBSUB_MAX_TOPIC_BYTES + 1U];
 } robusto_proxy_pubsub_subscription_t;
 

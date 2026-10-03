@@ -1446,7 +1446,16 @@ static void test_pubsub_response_and_delivery_round_trips(void)
     robusto_proxy_pubsub_unsubscribe_response_t unsubscribe = {1U};
     robusto_proxy_pubsub_unsubscribe_response_t decoded_unsubscribe;
     robusto_proxy_pubsub_status_response_t status = {
-        1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U};
+        .state = 1U,
+        .active_subscriptions = 2U,
+        .publish_requests = 3U,
+        .subscribe_requests = 4U,
+        .unsubscribe_requests = 5U,
+        .delivery_events = 6U,
+        .delivery_drops = 7U,
+        .duplicate_operations = 8U,
+        .pubsub_errors = 9U,
+    };
     robusto_proxy_pubsub_status_response_t decoded_status;
     robusto_proxy_pubsub_delivery_t delivery = {7U, 1U, data, sizeof(data)};
     robusto_proxy_pubsub_delivery_t decoded_delivery;
@@ -2338,9 +2347,16 @@ static void test_service_pubsub_dispatch_and_gates(void)
     TEST_ASSERT_EQUAL_U32(1U, state.publish_calls);
 }
 
+typedef struct fake_server_lock_state {
+    bool held;
+} fake_server_lock_state_t;
+
 typedef struct fake_server_backend_state {
     robusto_proxy_pubsub_local_callback_t callback;
     void *callback_context;
+    fake_server_lock_state_t *lock_state;
+    bool subscribe_called_while_locked;
+    bool unsubscribe_called_while_locked;
     uint32_t subscribe_calls;
     uint32_t unsubscribe_calls;
     uint32_t publish_calls;
@@ -2349,6 +2365,23 @@ typedef struct fake_server_backend_state {
     uint16_t publish_status;
     uint16_t unsubscribe_status;
 } fake_server_backend_state_t;
+
+static bool fake_server_lock_take(void *context)
+{
+    fake_server_lock_state_t *state = context;
+    if (state->held)
+    {
+        return false;
+    }
+    state->held = true;
+    return true;
+}
+
+static void fake_server_lock_give(void *context)
+{
+    fake_server_lock_state_t *state = context;
+    state->held = false;
+}
 
 static uint16_t fake_server_publish(void *context, const char *topic,
                                     const uint8_t *data, uint32_t data_length,
@@ -2504,6 +2537,8 @@ static uint16_t fake_server_subscribe(void *context, const char *topic,
 {
     fake_server_backend_state_t *state = context;
     (void)topic;
+    state->subscribe_called_while_locked =
+        state->lock_state != NULL && state->lock_state->held;
     state->callback = callback;
     state->callback_context = callback_context;
     state->subscribe_calls += 1U;
@@ -2517,6 +2552,8 @@ static uint16_t fake_server_unsubscribe(void *context, uint32_t topic_hash,
 {
     fake_server_backend_state_t *state = context;
     (void)topic_hash;
+    state->unsubscribe_called_while_locked =
+        state->lock_state != NULL && state->lock_state->held;
     if (state->callback != callback || state->callback_context != callback_context)
     {
         return ROBUSTO_PROXY_STATUS_INTERNAL;
@@ -2540,7 +2577,10 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
     static uint8_t large_data[5000U];
     const robusto_proxy_pubsub_backend_t backend = {
         fake_server_publish, fake_server_subscribe, fake_server_unsubscribe};
-    fake_server_backend_state_t backend_state = {0};
+    fake_server_lock_state_t lock_state = {0};
+    fake_server_backend_state_t backend_state = {.lock_state = &lock_state};
+    robusto_proxy_pubsub_lock_t lock = {
+        fake_server_lock_take, fake_server_lock_give, &lock_state};
     robusto_proxy_pubsub_server_adapter_t adapter;
     robusto_proxy_pubsub_subscription_t subscriptions[1];
     uint8_t event_pool[4];
@@ -2565,13 +2605,14 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
 
     TEST_ASSERT_TRUE(robusto_proxy_pubsub_server_adapter_init(
         &adapter, &backend, &backend_state, subscriptions, 1U,
-        event_pool, sizeof(event_pool), (robusto_proxy_pubsub_lock_t){0}));
+        event_pool, sizeof(event_pool), lock));
     operations = robusto_proxy_pubsub_server_adapter_operations();
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->subscribe(&adapter, &subscribe, &subscribe_response));
     TEST_ASSERT_EQUAL_U32(1U, subscribe_response.subscription_id);
     TEST_ASSERT_EQUAL_U32(1U, subscribe_response.created);
     TEST_ASSERT_EQUAL_U32(1U, backend_state.subscribe_calls);
+    TEST_ASSERT_FALSE(backend_state.subscribe_called_while_locked);
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->subscribe(&adapter, &subscribe, &subscribe_response));
     TEST_ASSERT_EQUAL_U32(0U, subscribe_response.created);
@@ -2725,6 +2766,7 @@ static void test_pubsub_server_adapter_subscription_delivery_and_overflow(void)
                           operations->unsubscribe(&adapter, &unsubscribe, &unsubscribe_response));
     TEST_ASSERT_EQUAL_U32(1U, unsubscribe_response.removed);
     TEST_ASSERT_EQUAL_U32(1U, backend_state.unsubscribe_calls);
+    TEST_ASSERT_FALSE(backend_state.unsubscribe_called_while_locked);
     TEST_ASSERT_EQUAL_U32(ROBUSTO_PROXY_STATUS_OK,
                           operations->unsubscribe(&adapter, &unsubscribe, &unsubscribe_response));
     TEST_ASSERT_EQUAL_U32(0U, unsubscribe_response.removed);
