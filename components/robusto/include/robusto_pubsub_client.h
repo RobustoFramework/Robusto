@@ -27,6 +27,8 @@ typedef enum
     TOPIC_STATE_PUBLISHED, /* We have recently published data */
     TOPIC_STATE_STALE, /* Haven't gotten or published data in stale_time_ms */
     TOPIC_STATE_REMOVING, /* Topic is about to be removed */
+    TOPIC_STATE_WAITING_FOR_PEER, /* Desired topic is waiting for its peer */
+    TOPIC_STATE_SUBSCRIBING, /* Subscription request has been queued */
 
 } topic_state_t;
 
@@ -74,7 +76,7 @@ rob_ret_val_t robusto_pubsub_client_unsubscribe(subscribed_topic_t *topic);
  * @param callback What function to call when data arrives
  * @return subscribed_topic_t* The topic structure
  */
-subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t * peer, char * topic_name, subscription_cb * callback, uint8_t display_offset);
+subscribed_topic_t *robusto_pubsub_client_get_topic(robusto_peer_t *peer, const char *topic_name, subscription_cb *callback, uint8_t display_offset);
 /**
  * @brief Publish data to a topic on the server (create if not existing)
  * 
@@ -96,6 +98,7 @@ rob_ret_val_t robusto_pubsub_client_start();
  */
 void robusto_pubsub_check_topics();
 void robusto_pubsub_client_recover_peer_subscriptions(robusto_peer_t *peer, e_presentation_reason reason);
+void robusto_pubsub_client_configure(topic_state_cb *on_state_change);
 /**
  * @brief Initialize client (not start)
  * 

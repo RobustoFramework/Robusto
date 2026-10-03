@@ -223,9 +223,11 @@ The C6 startup sequence is:
 1. Initialize NVS without erasing it and apply the hash-bound boot guard.
 2. Initialize the raw SDIO frontend.
 3. Register the revision-2 updater and recovery identity endpoints.
-4. Register the proxy server checked service at runlevel 1.
-5. Call `init_robusto_checked()`.
-6. Start raw SDIO receive processing.
+4. Enable the SDIO transport so the P4 can enumerate function 1; incoming
+    packets remain buffered because receive processing has not started.
+5. Register the proxy server checked service at runlevel 1.
+6. Call `init_robusto_checked()` and prepare application-owned bridge state.
+7. Start raw SDIO receive processing.
 
 The server binding adapts the local `robusto_pubsub_server_*` API to
 `robusto_proxy_pubsub_server_adapter_t`. Requests and DELIVERY events are
