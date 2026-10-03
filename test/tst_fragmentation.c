@@ -416,6 +416,104 @@ void tst_fragmentation_missing_fragments_does_not_leak_memory(void)
                              "Repeated FRAG_RESEND requests should not consume significant memory");
 }
 
+void tst_fragmentation_duplicate_request_reuses_receive_state(void)
+{
+    robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
+    TEST_ASSERT_NOT_NULL(local_peer);
+
+    reset_fragment_tracking();
+
+    uint32_t wrong_hash = 0x12345678;
+    uint8_t *request = build_frag_request_packet(2, 2, 1, wrong_hash);
+    bool req_receipt = handle_fragmented(local_peer, robusto_mt_mock, request,
+                                         ROBUSTO_CRC_LENGTH + 18,
+                                         TST_FRAG_SIZE,
+                                         &callback_capture_frag_responses);
+    TEST_ASSERT_TRUE(req_receipt);
+
+    fragmented_message_t *active = get_last_frag_message();
+    TEST_ASSERT_NOT_NULL(active);
+    uint8_t *receive_buffer = active->receive_buffer;
+    uint8_t *received_fragments = active->received_fragments;
+    uint64_t before_mem = get_free_mem();
+
+    for (int duplicate = 0; duplicate < 32; ++duplicate)
+    {
+        handle_fragmented(local_peer, robusto_mt_mock, request,
+                          ROBUSTO_CRC_LENGTH + 18,
+                          TST_FRAG_SIZE,
+                          &callback_capture_frag_responses);
+        TEST_ASSERT_EQUAL_PTR(active, get_last_frag_message());
+        TEST_ASSERT_EQUAL_PTR(receive_buffer, active->receive_buffer);
+        TEST_ASSERT_EQUAL_PTR(received_fragments, active->received_fragments);
+    }
+
+    uint64_t after_mem = get_free_mem();
+    TEST_ASSERT_TRUE_MESSAGE(memory_loss_bytes(before_mem, after_mem) < 256,
+                             "Duplicate FRAG_REQUEST packets must not allocate replacement receive state");
+
+    uint8_t p0[1] = {0xAA};
+    uint8_t p1[1] = {0xBB};
+    uint8_t *m0 = build_frag_message_packet(wrong_hash, 0, p0, 1);
+    uint8_t *m1 = build_frag_message_packet(wrong_hash, 1, p1, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, m0,
+                      TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    handle_fragmented(local_peer, robusto_mt_mock, m1,
+                      TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_NULL_MESSAGE(get_last_frag_message(),
+                             "Completed duplicate-request transfer should clean up state");
+
+    robusto_free(request);
+    robusto_free(m0);
+    robusto_free(m1);
+}
+
+void tst_fragmentation_stale_receive_is_reclaimed(void)
+{
+    robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
+    TEST_ASSERT_NOT_NULL(local_peer);
+
+    reset_fragment_tracking();
+    uint64_t before_mem = get_free_mem();
+
+    uint32_t stale_hash = 0x87654321;
+    uint8_t *stale_request = build_frag_request_packet(18000, 90, 200, stale_hash);
+    TEST_ASSERT_TRUE(handle_fragmented(local_peer, robusto_mt_mock, stale_request,
+                                       ROBUSTO_CRC_LENGTH + 18, TST_FRAG_SIZE,
+                                       &callback_capture_frag_responses));
+
+    fragmented_message_t *stale = get_last_frag_message();
+    TEST_ASSERT_NOT_NULL(stale);
+    stale->start_time = (uint32_t)r_millis() - 30001U;
+
+    uint32_t next_hash = 0x13572468;
+    uint8_t *next_request = build_frag_request_packet(1, 1, 1, next_hash);
+    TEST_ASSERT_TRUE(handle_fragmented(local_peer, robusto_mt_mock, next_request,
+                                       ROBUSTO_CRC_LENGTH + 18, TST_FRAG_SIZE,
+                                       &callback_capture_frag_responses));
+
+    fragmented_message_t *active = get_last_frag_message();
+    TEST_ASSERT_NOT_NULL(active);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(next_hash, active->hash,
+                                     "Next request should replace expired receive state");
+
+    uint8_t payload[1] = {0xAA};
+    uint8_t *message_packet = build_frag_message_packet(next_hash, 0, payload, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, message_packet,
+                      TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+
+    uint64_t after_mem = get_free_mem();
+    TEST_ASSERT_TRUE_MESSAGE(memory_loss_bytes(before_mem, after_mem) < 256,
+                             "Expired receive state should release its fragment buffers");
+
+    robusto_free(stale_request);
+    robusto_free(next_request);
+    robusto_free(message_packet);
+}
+
 void tst_fragmentation_short_request_does_not_create_state(void)
 {
     robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();

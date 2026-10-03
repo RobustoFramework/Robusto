@@ -136,6 +136,10 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
     RUN_TEST(tst_fragmentation_missing_fragments_does_not_leak_memory);
     robusto_yield();
+    RUN_TEST(tst_fragmentation_duplicate_request_reuses_receive_state);
+    robusto_yield();
+    RUN_TEST(tst_fragmentation_stale_receive_is_reclaimed);
+    robusto_yield();
     RUN_TEST(tst_fragmentation_interleaved_hashes_are_resolved);
     robusto_yield();
     RUN_TEST(tst_fragmentation_short_request_does_not_create_state);
