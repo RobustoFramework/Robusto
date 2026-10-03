@@ -39,6 +39,9 @@
 #if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
 #include "robusto_pubsub_client.h"
 #endif
+#if defined(CONFIG_ROBUSTO_PUBSUB_SERVER)
+#include "robusto_pubsub_server.h"
+#endif
 #include "string.h"
 #include <robusto_time.h>
 
@@ -258,6 +261,20 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     );
     // We now know this peer.
     message->peer->state = PEER_KNOWN_INSECURE;
+
+#if defined(CONFIG_ROBUSTO_PUBSUB_SERVER)
+    if (message->binary_data[HI_POS] == NET_HI)
+    {
+        uint32_t removed = robusto_pubsub_server_unsubscribe_peer_from_all(message->peer);
+        if (removed > 0U)
+        {
+            ROB_LOGI(presentation_log_prefix,
+                     "Removed %lu stale PubSub subscriptions for new %s session",
+                     (unsigned long)removed,
+                     message->peer->name);
+        }
+    }
+#endif
 
 #if defined(CONFIG_ROBUSTO_PUBSUB_CLIENT)
     robusto_pubsub_client_recover_peer_subscriptions(message->peer, message->binary_data[REASON_POS]);
