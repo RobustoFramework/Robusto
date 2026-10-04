@@ -157,6 +157,8 @@ int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t serv
 // TODO: Centralize fragmented handling for all medias (will a stream be similar?) This is the specific fragmented case
 typedef struct fragmented_message
 {
+    robusto_peer_t *peer;
+    e_media_type media_type;
     // The hash of the message, used to identify the message
     uint32_t hash;
     // We do not reuse the data pointer to:

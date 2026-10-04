@@ -103,7 +103,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
     uint16_t deka_ms_diff;
 
     if (info->postpone_qos) {
-        ROB_LOGW(heartbeat_log_prefix, "Postponing heartbeat to %s using %s", peer->name, media_type_to_str(media_type));
+        ROB_LOGD(heartbeat_log_prefix, "Postponing heartbeat to %s using %s", peer->name, media_type_to_str(media_type));
         return;
     }
     if (((info->last_send < curr_time - HEARTBEAT_PROBLEM_MARGIN_MS) && (info->problem != media_problem_none) ) || // Either we have a problem

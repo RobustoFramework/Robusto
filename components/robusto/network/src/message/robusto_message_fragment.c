@@ -229,9 +229,9 @@ static void remove_stale_fragment_receives(uint32_t now)
     }
 }
 
-fragmented_message_t *find_fragmented_message(uint32_t hash)
+fragmented_message_t *find_fragmented_message(robusto_peer_t *peer, e_media_type media_type, uint32_t hash)
 {
-    if (last_frag_msg && last_frag_msg->hash == hash)
+    if (last_frag_msg && last_frag_msg->peer == peer && last_frag_msg->media_type == media_type && last_frag_msg->hash == hash)
     {
         ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
         return last_frag_msg->abort_transmission ? NULL : last_frag_msg;
@@ -240,7 +240,7 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
     fragmented_message_t *curr = NULL;
     SLIST_FOREACH(curr, &fragmented_messages_head, fragmented_messages)
     {
-        if (curr->hash == hash)
+        if (curr->peer == peer && curr->media_type == media_type && curr->hash == hash)
         {
             last_frag_msg = curr;
             return curr->abort_transmission ? NULL : curr;
@@ -248,6 +248,25 @@ fragmented_message_t *find_fragmented_message(uint32_t hash)
     }
 
     return NULL;
+}
+
+static void remove_abandoned_fragment_receive(robusto_peer_t *peer, e_media_type media_type)
+{
+    fragmented_message_t *frag_msg = SLIST_FIRST(&fragmented_messages_head);
+
+    while (frag_msg != NULL)
+    {
+        fragmented_message_t *next = SLIST_NEXT(frag_msg, fragmented_messages);
+        if (frag_msg->receive_buffer != NULL && frag_msg->peer == peer && frag_msg->media_type == media_type)
+        {
+            ROB_LOGW(fragmentation_log_prefix,
+                     "Replacing abandoned fragmented receive hash=%lu bytes=%lu.",
+                     (unsigned long)frag_msg->hash,
+                     (unsigned long)frag_msg->receive_buffer_length);
+            remove_fragmented_message(frag_msg);
+        }
+        frag_msg = next;
+    }
 }
 /**
  * @brief Send the result of a fragmentation message transmission
@@ -318,7 +337,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     memcpy(&fragment_count, data + ROBUSTO_CRC_LENGTH + 6, 4);
     memcpy(&requested_fragment_size, data + ROBUSTO_CRC_LENGTH + 10, 4);
 
-    fragmented_message_t *frag_msg = find_fragmented_message(hash);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, hash);
     bool new_fragment_message = false;
     if (!frag_msg)
     {
@@ -331,6 +350,8 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
             return;
         }
         memset(frag_msg, 0, sizeof(fragmented_message_t));
+        frag_msg->peer = peer;
+        frag_msg->media_type = media_type;
         frag_msg->last_requested = FRAG_NO_REQUESTED_FRAGMENT;
         frag_msg->receive_buffer_length = receive_buffer_length;
         frag_msg->fragment_count = fragment_count;
@@ -352,7 +373,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
         }
         if (frag_msg->receive_buffer != NULL)
         {
-            ROB_LOGI(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Duplicate fragment request ignored for active hash %lu.",
                      (unsigned long)hash);
             frag_msg->start_time = (uint32_t)r_millis();
@@ -362,6 +383,8 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     }
 
     // TODO: How big should we allow before SPIRAM and more?
+    remove_abandoned_fragment_receive(peer, media_type);
+
     uint8_t *receive_buffer = robusto_malloc(frag_msg->receive_buffer_length);
     uint8_t *received_fragments = frag_msg->received_fragments;
     if (received_fragments == NULL)
@@ -414,27 +437,29 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
 
     // Check that we have no missing parts, we do this extra pass to save memory
     uint32_t missing_fragments = 0;
+    uint32_t last_missing = FRAG_NO_REQUESTED_FRAGMENT;
 
     for (uint32_t pass_one_count = 0; pass_one_count < frag_msg->fragment_count; pass_one_count++)
     {
         if (frag_msg->received_fragments[pass_one_count] == 0)
         {
             missing_fragments++;
-            frag_msg->last_requested = pass_one_count;
+            last_missing = pass_one_count;
         }
     }
     if (missing_fragments > 0)
     {
         if (!send_resend_request)
         {
-            ROB_LOGI(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Last fragment arrived with %lu missing fragment(s); waiting for in-flight fragments before requesting resend. first_missing=%lu last_missing=%lu hash=%lu",
                      (unsigned long)missing_fragments,
                      (unsigned long)fragment_first_missing(frag_msg),
-                     (unsigned long)frag_msg->last_requested,
+                     (unsigned long)last_missing,
                      (unsigned long)frag_msg->hash);
             return;
         }
+        frag_msg->last_requested = last_missing;
         // Gather missing fragments into an array
         fragment_stats_add(&fragment_stats.resend_request_sent, 1U, ROBUSTO_STATS_LEVEL_BASIC);
         fragment_stats_add(&fragment_stats.missing_fragments_reported, missing_fragments, ROBUSTO_STATS_LEVEL_BASIC);
@@ -454,7 +479,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
             missing[ROBUSTO_CRC_LENGTH + 2 + missing_counter] = frag_msg->received_fragments[missing_counter];
         }
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
-        send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, true);
+        send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, false);
         robusto_free(missing);
         return;
     }
@@ -483,7 +508,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
             {
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment OK result hash=%lu rc=%i", (unsigned long)frag_msg->hash, result_rc);
             }
-            ROB_LOGW(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Fragment receive complete hash=%lu bytes=%lu fragments=%lu",
                      (unsigned long)frag_msg->hash,
                      (unsigned long)frag_msg->receive_buffer_length,
@@ -511,7 +536,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     {
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
     }
-    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data);
     if (!frag_msg)
     {
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -560,7 +585,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
 
         if (missing_after_store == 0)
         {
-            ROB_LOGI(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Fragment boundary complete index=%lu hash=%lu state=%u",
                      (unsigned long)msg_frag_count,
                      (unsigned long)frag_msg->hash,
@@ -568,7 +593,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
         }
         else
         {
-            ROB_LOGI(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Fragment boundary pending index=%lu hash=%lu missing_after_store=%lu first_missing=%lu last_requested=%lu state=%u",
                      (unsigned long)msg_frag_count,
                      (unsigned long)frag_msg->hash,
@@ -654,7 +679,7 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         if (curr_fragment == 10U)
         {
-            ROB_LOGW(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "About to send fragment index=10 hash=%lu state=%u len=%lu total_frags=%lu total_bytes=%lu",
                      (unsigned long)frag_msg->hash,
                      frag_msg->state,
@@ -674,10 +699,10 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
                 fragment_stats_add(&fragment_stats.fragments_sent, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
             }
 
-            rob_ret_val_t send_retval = send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, true);
+            rob_ret_val_t send_retval = send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false);
             if (curr_fragment == 10U)
             {
-                ROB_LOGW(fragmentation_log_prefix,
+                ROB_LOGD(fragmentation_log_prefix,
                          "Sent fragment index=10 hash=%lu state=%u retval=%d len=%lu total_frags=%lu total_bytes=%lu",
                          (unsigned long)frag_msg->hash,
                          frag_msg->state,
@@ -727,7 +752,7 @@ void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uin
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_resend");
     robusto_media_t *media = get_media_info(peer, media_type);
 
-    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data);
     if (!frag_msg)
     {
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -773,7 +798,7 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
 {
     fragment_stats_add(&fragment_stats.check_received, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_check");
-    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data);
     if (!frag_msg)
     {
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -784,6 +809,7 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
         check_fragments(peer, media_type, frag_msg, send_message, true);
     }
 }
+
 /**
  * @brief Handle the success message
  *
@@ -799,7 +825,7 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, const uin
 {
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
     rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
-    fragmented_message_t *frag_msg = find_fragmented_message(*(uint32_t *)data);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data);
     if (!frag_msg)
     {
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -899,6 +925,7 @@ rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fra
     robusto_free(msg_frag_check);
     return rc;
 }
+
 /**
  * @brief Sends a fragmented message
  */
@@ -936,6 +963,8 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         goto finish_buffer_only;
     }
     memset(frag_msg, 0, sizeof(fragmented_message_t));
+    frag_msg->peer = peer;
+    frag_msg->media_type = media_type;
     frag_msg->last_requested = FRAG_NO_REQUESTED_FRAGMENT;
     frag_msg->send_data_length = data_length;
     frag_msg->send_data = data;
@@ -1071,7 +1100,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         }
         if (frag_msg->state == ROB_ST_SUCCEEDED)
         {
-            ROB_LOGW(fragmentation_log_prefix,
+            ROB_LOGD(fragmentation_log_prefix,
                      "Fragmented message sent successfully hash=%lu bytes=%lu fragments=%lu",
                      (unsigned long)frag_msg->hash,
                      (unsigned long)data_length,

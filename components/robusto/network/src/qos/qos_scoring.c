@@ -203,7 +203,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
     // We do not want large numbers at all, as this makes new change not matter
     if ((curr_info->send_successes + curr_info->send_failures) > 5)
     {
-        ROB_LOGI(scoring_log_prefix, "Resettings stats");
+        ROB_LOGD(scoring_log_prefix, "Resetting stats");
         float failure_quotient = 0;
         if (curr_info->send_successes > 0)
         {

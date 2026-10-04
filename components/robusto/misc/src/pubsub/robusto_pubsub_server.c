@@ -71,7 +71,7 @@ static void log_large_publish_snapshot(const char *phase,
                                        uint32_t fail_count)
 {
 #ifdef ESP_PLATFORM
-    ROB_LOGW(pubsub_log_prefix,
+    ROB_LOGD(pubsub_log_prefix,
              "Large publish %s topic=%s bytes=%lu count=%lu subs=%lu fail=%lu heap_8bit=%u internal_free=%u internal_largest=%u spiram_free=%u",
              phase,
              topic_name,
@@ -84,7 +84,7 @@ static void log_large_publish_snapshot(const char *phase,
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
              (unsigned)get_free_mem_spi());
 #else
-    ROB_LOGW(pubsub_log_prefix,
+    ROB_LOGD(pubsub_log_prefix,
              "Large publish %s topic=%s bytes=%lu count=%lu subs=%lu fail=%lu",
              phase,
              topic_name,

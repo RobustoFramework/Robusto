@@ -11,4 +11,5 @@ void tst_fragmentation_missing_fragments_does_not_leak_memory(void);
 void tst_fragmentation_duplicate_request_reuses_receive_state(void);
 void tst_fragmentation_stale_receive_is_reclaimed(void);
 void tst_fragmentation_short_request_does_not_create_state(void);
+void tst_fragmentation_waits_for_check_before_resend(void);
 void tst_fragmentation_interleaved_hashes_are_resolved(void);

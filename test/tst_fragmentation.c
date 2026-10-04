@@ -28,12 +28,14 @@ bool skip_fragments = false;
 uint8_t * test_data;
 uint32_t frag_request_count = 0;
 uint32_t frag_message_count = 0;
+uint32_t frag_message_receipt_count = 0;
 uint32_t zero_len_frag_message_count = 0;
 uint32_t announced_fragment_count = 0;
 static bool captured_request = false;
 static uint32_t captured_request_fragment_count = 0;
 static uint32_t sent_result_count = 0;
 static uint32_t sent_resend_count = 0;
+static bool sent_resend_receipt = true;
 
 static uint64_t memory_loss_bytes(uint64_t before_mem, uint64_t after_mem)
 {
@@ -44,12 +46,14 @@ static void reset_fragment_tracking(void)
 {
     frag_request_count = 0;
     frag_message_count = 0;
+    frag_message_receipt_count = 0;
     zero_len_frag_message_count = 0;
     announced_fragment_count = 0;
     captured_request = false;
     captured_request_fragment_count = 0;
     sent_result_count = 0;
     sent_resend_count = 0;
+    sent_resend_receipt = true;
 }
 
 static uint8_t *build_frag_request_packet(uint32_t receive_buffer_length, uint32_t fragment_count, uint32_t fragment_size, uint32_t hash)
@@ -86,6 +90,17 @@ static uint8_t *build_frag_message_packet(uint32_t hash, uint32_t index, const u
     return packet;
 }
 
+static uint8_t *build_frag_check_packet(uint32_t hash)
+{
+    uint8_t *packet = robusto_malloc(ROBUSTO_CRC_LENGTH + 2);
+    TEST_ASSERT_NOT_NULL_MESSAGE(packet, "Failed allocating FRAG_CHECK packet");
+
+    memcpy(packet, &hash, 4);
+    packet[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
+    packet[ROBUSTO_CRC_LENGTH + 1] = FRAG_CHECK;
+    return packet;
+}
+
 static rob_ret_val_t callback_capture_frag_responses(robusto_peer_t *peer, uint8_t *data, uint32_t len, bool receipt)
 {
     (void)peer;
@@ -101,6 +116,7 @@ static rob_ret_val_t callback_capture_frag_responses(robusto_peer_t *peer, uint8
         if (data[ROBUSTO_CRC_LENGTH + 1] == FRAG_RESEND)
         {
             sent_resend_count++;
+            sent_resend_receipt = receipt;
         }
     }
 
@@ -167,6 +183,10 @@ rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, i
         else if (frag_type == FRAG_MESSAGE)
         {
             frag_message_count++;
+            if (receipt)
+            {
+                frag_message_receipt_count++;
+            }
             if (len == TST_FRAG_HEADER_LEN)
             {
                 zero_len_frag_message_count++;
@@ -298,6 +318,8 @@ void tst_fragmentation_even_division_fragment_metadata(void)
                                      "Evenly divisible payload should announce exactly 5 fragments");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, frag_message_count,
                                      "Evenly divisible payload should emit exactly 5 FRAG_MESSAGE packets");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, frag_message_receipt_count,
+                                     "Fragment payload packets must use burst send semantics");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, zero_len_frag_message_count,
                                      "Evenly divisible payload must not emit zero-length fragments");
 }
@@ -314,6 +336,8 @@ void tst_fragmentation_non_division_fragment_metadata(void)
                                      "Non-divisible payload should announce ceil(payload/frag) fragments");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(6, frag_message_count,
                                      "Non-divisible payload should emit exactly 6 FRAG_MESSAGE packets");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, frag_message_receipt_count,
+                                     "Fragment payload packets must use burst send semantics");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, zero_len_frag_message_count,
                                      "Non-divisible payload must not emit zero-length fragments");
 }
@@ -540,6 +564,39 @@ void tst_fragmentation_short_request_does_not_create_state(void)
                                   "Short FRAG_REQUEST should not mutate active fragmented message state");
 }
 
+void tst_fragmentation_waits_for_check_before_resend(void)
+{
+    robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
+    TEST_ASSERT_NOT_NULL(local_peer);
+
+    reset_fragment_tracking();
+
+    uint8_t payload[4] = {0x31, 0x32, 0x33, 0x34};
+    uint32_t hash = robusto_crc32(0, payload, sizeof(payload));
+    uint8_t *request = build_frag_request_packet(sizeof(payload), 4, 1, hash);
+    handle_fragmented(local_peer, robusto_mt_mock, request, ROBUSTO_CRC_LENGTH + 18,
+                      TST_FRAG_SIZE, &callback_capture_frag_responses);
+
+    uint8_t *last = build_frag_message_packet(hash, 3, payload + 3, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, last, TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    uint8_t *in_flight = build_frag_message_packet(hash, 2, payload + 2, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, in_flight, TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, sent_resend_count,
+                                     "Expected in-flight fragments must not trigger a resend response");
+
+    uint8_t *check = build_frag_check_packet(hash);
+    handle_fragmented(local_peer, robusto_mt_mock, check, ROBUSTO_CRC_LENGTH + 2,
+                      TST_FRAG_SIZE, &callback_capture_frag_responses);
+
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, sent_resend_count,
+                                     "FRAG_CHECK should request fragments still missing after sender completion");
+    TEST_ASSERT_FALSE_MESSAGE(sent_resend_receipt,
+                              "FRAG_RESEND response must not wait for send completion in receive callback context");
+}
+
 void tst_fragmentation_interleaved_hashes_are_resolved(void)
 {
     robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
@@ -549,24 +606,36 @@ void tst_fragmentation_interleaved_hashes_are_resolved(void)
 
     uint8_t payload_a[2] = {0x31, 0x32};
     uint8_t payload_b[1] = {0x41};
-    uint32_t hash_a = robusto_crc32(0, payload_a, 2);
-    uint32_t hash_b = robusto_crc32(0, payload_b, 1);
+    uint32_t hash_a = robusto_crc32(0, payload_a, sizeof(payload_a));
+    uint32_t hash_b = robusto_crc32(0, payload_b, sizeof(payload_b));
 
-    uint8_t *request_a = build_frag_request_packet(2, 2, 1, hash_a);
-    uint8_t *request_b = build_frag_request_packet(1, 1, 1, hash_b);
-
+    uint8_t *request_a = build_frag_request_packet(sizeof(payload_a), 2, 1, hash_a);
+    uint8_t *request_b = build_frag_request_packet(sizeof(payload_b), 1, 1, hash_b);
     handle_fragmented(local_peer, robusto_mt_mock, request_a, ROBUSTO_CRC_LENGTH + 18,
                       TST_FRAG_SIZE, &callback_capture_frag_responses);
     handle_fragmented(local_peer, robusto_mt_mock, request_b, ROBUSTO_CRC_LENGTH + 18,
                       TST_FRAG_SIZE, &callback_capture_frag_responses);
 
-    // Last fragment for hash_a should trigger FRAG_RESEND for missing fragment 0.
-    uint8_t *a_last = build_frag_message_packet(hash_a, 1, payload_a + 1, 1);
-    handle_fragmented(local_peer, robusto_mt_mock, a_last, TST_FRAG_HEADER_LEN + 1, TST_FRAG_SIZE,
-                      &callback_capture_frag_responses);
+    fragmented_message_t *active = get_last_frag_message();
+    TEST_ASSERT_NOT_NULL(active);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(hash_b, active->hash,
+                                     "A new request must replace the same peer/media's abandoned receive");
 
-    TEST_ASSERT_TRUE_MESSAGE(sent_resend_count > 0,
-                             "Interleaved fragmented transmissions should resolve by hash and request missing parts");
+    uint8_t *a_last = build_frag_message_packet(hash_a, 1, payload_a + 1, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, a_last, TST_FRAG_HEADER_LEN + 1,
+                      TST_FRAG_SIZE, &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, sent_resend_count,
+                                     "Interleaved last fragment must wait for sender completion check");
+
+    uint8_t *check_a = build_frag_check_packet(hash_a);
+    handle_fragmented(local_peer, robusto_mt_mock, check_a, ROBUSTO_CRC_LENGTH + 2,
+                      TST_FRAG_SIZE, &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, sent_resend_count,
+                                     "The replaced transfer must no longer respond to status checks");
+
+    uint8_t *b_only = build_frag_message_packet(hash_b, 0, payload_b, 1);
+    handle_fragmented(local_peer, robusto_mt_mock, b_only, TST_FRAG_HEADER_LEN + 1,
+                      TST_FRAG_SIZE, &callback_capture_frag_responses);
 }
 
 #endif

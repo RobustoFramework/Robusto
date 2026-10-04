@@ -140,6 +140,8 @@ void runUnityTests(void *pvParameters)
     robusto_yield();
     RUN_TEST(tst_fragmentation_stale_receive_is_reclaimed);
     robusto_yield();
+    RUN_TEST(tst_fragmentation_waits_for_check_before_resend);
+    robusto_yield();
     RUN_TEST(tst_fragmentation_interleaved_hashes_are_resolved);
     robusto_yield();
     RUN_TEST(tst_fragmentation_short_request_does_not_create_state);

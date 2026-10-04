@@ -44,13 +44,20 @@
 #include <robusto_qos.h>
 #include "esp_crc.h"
 #include "esp_now.h"
+#include "freertos/FreeRTOS.h"
 #include <robusto_time.h>
 
 static char *espnow_log_prefix;
 
 #define ESPNOW_FRAGMENT_SIZE (ESP_NOW_MAX_DATA_LEN_V2 - 10)
-#define ESPNOW_SEND_COMPLETE_TIMEOUT_BASE_MS (30U)
-#define ESPNOW_SEND_COMPLETE_TIMEOUT_DIVISOR (125U)
+#define ESPNOW_DRIVER_MSDU_LIFETIME_UNITS (1024U)
+#define ESPNOW_DRIVER_MSDU_LIFETIME_UNIT_US (1024U)
+#define ESPNOW_DRIVER_MAX_SEND_ATTEMPTS (32U)
+#define ESPNOW_LR_PHY_RATE_BITS_PER_SECOND (500000U)
+#define ESPNOW_MCS7_LGI_PHY_RATE_BITS_PER_SECOND (65000000U)
+#define ESPNOW_SEND_COMPLETE_TIMEOUT_MARGIN_MS (151U)
+#define BITS_PER_BYTE (8U)
+#define MICROSECONDS_PER_MILLISECOND (1000U)
 
 static void espnow_deinit(espnow_send_param_t *send_param);
 
@@ -71,6 +78,54 @@ static wifi_phy_rate_t espnow_expected_tx_rate(void)
 #endif
 }
 
+static uint32_t espnow_configured_phy_rate_bits_per_second(void)
+{
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+    return ESPNOW_LR_PHY_RATE_BITS_PER_SECOND;
+#else
+    return ESPNOW_MCS7_LGI_PHY_RATE_BITS_PER_SECOND;
+#endif
+}
+
+static uint32_t espnow_payload_retry_airtime_ms(uint32_t data_length)
+{
+    const uint64_t airtime_numerator =
+        (uint64_t)data_length * BITS_PER_BYTE * ESPNOW_DRIVER_MAX_SEND_ATTEMPTS *
+        MICROSECONDS_PER_MILLISECOND;
+    const uint32_t phy_rate = espnow_configured_phy_rate_bits_per_second();
+
+    return (uint32_t)((airtime_numerator + phy_rate - 1U) / phy_rate);
+}
+
+static uint32_t espnow_calculate_send_complete_timeout_ms(uint32_t data_length,
+                                                          uint32_t *payload_airtime_ms_out,
+                                                          uint32_t *non_payload_budget_ms_out)
+{
+    const uint64_t lifetime_us = (uint64_t)ESPNOW_DRIVER_MSDU_LIFETIME_UNITS * ESPNOW_DRIVER_MSDU_LIFETIME_UNIT_US;
+    const uint32_t lifetime_ms = (uint32_t)((lifetime_us + MICROSECONDS_PER_MILLISECOND - 1U) /
+                                            MICROSECONDS_PER_MILLISECOND);
+    const uint32_t maximum_payload_airtime_ms = espnow_payload_retry_airtime_ms(ESP_NOW_MAX_DATA_LEN_V2);
+    const uint32_t non_payload_budget_ms = lifetime_ms > maximum_payload_airtime_ms
+                                               ? lifetime_ms - maximum_payload_airtime_ms
+                                               : 0U;
+    const uint32_t payload_airtime_ms = espnow_payload_retry_airtime_ms(data_length);
+    uint32_t driver_budget_ms = non_payload_budget_ms + payload_airtime_ms;
+
+    if (driver_budget_ms > lifetime_ms) {
+        driver_budget_ms = lifetime_ms;
+    }
+    if (payload_airtime_ms_out != NULL) {
+        *payload_airtime_ms_out = payload_airtime_ms;
+    }
+    if (non_payload_budget_ms_out != NULL) {
+        *non_payload_budget_ms_out = non_payload_budget_ms;
+    }
+
+    const uint32_t unrounded_timeout_ms = driver_budget_ms + ESPNOW_SEND_COMPLETE_TIMEOUT_MARGIN_MS;
+
+    return ((unrounded_timeout_ms + portTICK_PERIOD_MS - 1U) / portTICK_PERIOD_MS) * portTICK_PERIOD_MS;
+}
+
 bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate)
 {
     if (!espnow_tx_rate_status_valid || tx_rate == NULL || expected_rate == NULL)
@@ -84,9 +139,12 @@ bool robusto_espnow_get_tx_rate_status(uint8_t *tx_rate, uint8_t *expected_rate)
 
 static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32_t data_length)
 {
-    uint32_t wait_time = (data_length / ESPNOW_SEND_COMPLETE_TIMEOUT_DIVISOR) + ESPNOW_SEND_COMPLETE_TIMEOUT_BASE_MS;
-    int32_t start_send = r_millis();
-    while ((send_status < 0) && (r_millis() < start_send + wait_time))
+    uint32_t payload_airtime_ms;
+    uint32_t non_payload_budget_ms;
+    const uint32_t wait_time = espnow_calculate_send_complete_timeout_ms(
+        data_length, &payload_airtime_ms, &non_payload_budget_ms);
+    const uint32_t start_send = (uint32_t)r_millis();
+    while ((send_status < 0) && ((uint32_t)r_millis() - start_send < wait_time))
     {
         robusto_yield();
     }
@@ -103,9 +161,11 @@ static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32
     if (send_status < 0)
     {
         ROB_LOGE(espnow_log_prefix,
-                 "ESP-NOW transmission did not complete within wait time (%lu ms, elapsed %lu ms). Peer: %s Data length: %lu",
+                 "ESP-NOW transmission did not complete within wait time (%lu ms, elapsed %lu ms, payload_airtime_ms=%lu, non_payload_budget_ms=%lu). Peer: %s Data length: %lu",
                  wait_time,
-                 r_millis() - start_send,
+                 (uint32_t)r_millis() - start_send,
+                 payload_airtime_ms,
+                 non_payload_budget_ms,
                  peer->name,
                  data_length);
 #if defined(CONFIG_ROBUSTO_ESPNOW_TIMEOUT_BACKTRACE) && CONFIG_ROBUSTO_ESPNOW_TIMEOUT_BACKTRACE
@@ -513,6 +573,15 @@ static void espnow_deinit(espnow_send_param_t *send_param)
 void espnow_messaging_init(char *_log_prefix)
 {
     espnow_log_prefix = _log_prefix;
+    ROB_LOGI(espnow_log_prefix,
+             "ESP-NOW send completion timeout is length-dependent: 1-byte=%lu ms max-payload=%lu ms (rate=%lu bit/s, attempts=%lu, driver lifetime %lu units x %lu us, margin %lu ms)",
+             (unsigned long)espnow_calculate_send_complete_timeout_ms(1U, NULL, NULL),
+             (unsigned long)espnow_calculate_send_complete_timeout_ms(ESP_NOW_MAX_DATA_LEN_V2, NULL, NULL),
+             (unsigned long)espnow_configured_phy_rate_bits_per_second(),
+             (unsigned long)ESPNOW_DRIVER_MAX_SEND_ATTEMPTS,
+             (unsigned long)ESPNOW_DRIVER_MSDU_LIFETIME_UNITS,
+             (unsigned long)ESPNOW_DRIVER_MSDU_LIFETIME_UNIT_US,
+             (unsigned long)ESPNOW_SEND_COMPLETE_TIMEOUT_MARGIN_MS);
     rob_log_isr_init();
     espnow_init();
 }
