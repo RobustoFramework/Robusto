@@ -108,7 +108,9 @@ static rob_ret_val_t esp_now_wait_for_send_complete(robusto_peer_t *peer, uint32
                  r_millis() - start_send,
                  peer->name,
                  data_length);
+#if defined(CONFIG_ROBUSTO_ESPNOW_TIMEOUT_BACKTRACE) && CONFIG_ROBUSTO_ESPNOW_TIMEOUT_BACKTRACE
         ROB_LOG_STACK_TRACE(3);
+#endif
         return ROB_FAIL;
     }
 

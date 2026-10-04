@@ -58,6 +58,14 @@ menu "ESP-NOW-configuration"
 		help
 			When enabling long range, the PHY rate of ESP32 will be 512Kbps or 256Kbps
 
+	config ROBUSTO_ESPNOW_TIMEOUT_BACKTRACE
+		bool "Print backtrace on ESP-NOW send timeout"
+		default n
+		help
+			Print the current task backtrace when an ESP-NOW send completion times out.
+			This diagnostic is disabled by default because generating and printing the
+			backtrace can disturb time-sensitive communication.
+
 	menu "Testing"
 		config ROB_NETWORK_TEST_ESP_NOW_LOOP_INITIATOR
 			bool "This device begins and ends a test loop"
