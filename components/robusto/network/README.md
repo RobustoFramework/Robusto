@@ -8,7 +8,7 @@ These are the components of Robusto that pertains to being part of a network of 
 This implemects the Robusto communication protocols:
 * builds messages, puts it on the send queue from media queues. 
 * parse messages from receive queue.
-* fragments and reassembles messages that are to big for single transmissions
+* fragments and reassembles messages that are to big for single transmissions; see [Fragmented Message Protocol](fragmentation.md)
 
 ### Fragmentation statistics
 

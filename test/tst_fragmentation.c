@@ -34,6 +34,9 @@ uint32_t announced_fragment_count = 0;
 static bool captured_request = false;
 static uint32_t captured_request_fragment_count = 0;
 static uint32_t sent_result_count = 0;
+static uint32_t sent_result_hash = 0;
+static int16_t sent_result_value = ROB_FAIL;
+static robusto_peer_t *sent_result_peer = NULL;
 static uint32_t sent_resend_count = 0;
 static bool sent_resend_receipt = true;
 
@@ -52,6 +55,9 @@ static void reset_fragment_tracking(void)
     captured_request = false;
     captured_request_fragment_count = 0;
     sent_result_count = 0;
+    sent_result_hash = 0;
+    sent_result_value = ROB_FAIL;
+    sent_result_peer = NULL;
     sent_resend_count = 0;
     sent_resend_receipt = true;
 }
@@ -112,6 +118,9 @@ static rob_ret_val_t callback_capture_frag_responses(robusto_peer_t *peer, uint8
         if (data[ROBUSTO_CRC_LENGTH + 1] == FRAG_RESULT)
         {
             sent_result_count++;
+            sent_result_peer = peer;
+            memcpy(&sent_result_hash, data, sizeof(sent_result_hash));
+            memcpy(&sent_result_value, data + ROBUSTO_CRC_LENGTH + 2, sizeof(sent_result_value));
         }
         if (data[ROBUSTO_CRC_LENGTH + 1] == FRAG_RESEND)
         {
@@ -636,6 +645,105 @@ void tst_fragmentation_interleaved_hashes_are_resolved(void)
     uint8_t *b_only = build_frag_message_packet(hash_b, 0, payload_b, 1);
     handle_fragmented(local_peer, robusto_mt_mock, b_only, TST_FRAG_HEADER_LEN + 1,
                       TST_FRAG_SIZE, &callback_capture_frag_responses);
+}
+
+void tst_fragmentation_completed_result_is_replayed(void)
+{
+    robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
+    TEST_ASSERT_NOT_NULL(local_peer);
+
+    reset_fragment_tracking();
+
+    uint8_t payload[3] = {0xD1, 0xD2, 0xD3};
+    uint32_t hash = robusto_crc32(0, payload, sizeof(payload));
+    uint8_t *request = build_frag_request_packet(sizeof(payload), 1, sizeof(payload), hash);
+    TEST_ASSERT_TRUE(handle_fragmented(local_peer, robusto_mt_mock, request,
+                                       ROBUSTO_CRC_LENGTH + 18, TST_FRAG_SIZE,
+                                       &callback_capture_frag_responses));
+
+    uint8_t *message_packet = build_frag_message_packet(hash, 0, payload, sizeof(payload));
+    handle_fragmented(local_peer, robusto_mt_mock, message_packet,
+                      TST_FRAG_HEADER_LEN + sizeof(payload), TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, sent_result_count,
+                                     "Completing a transfer should send one result");
+    TEST_ASSERT_EQUAL_INT16(ROB_OK, sent_result_value);
+    TEST_ASSERT_EQUAL_UINT32(hash, sent_result_hash);
+    TEST_ASSERT_EQUAL_PTR(local_peer, sent_result_peer);
+    TEST_ASSERT_NULL_MESSAGE(get_last_frag_message(),
+                             "Completed receive state must release the payload buffer");
+
+    uint8_t *check = build_frag_check_packet(hash);
+    handle_fragmented(local_peer, robusto_mt_mock, check,
+                      ROBUSTO_CRC_LENGTH + 2, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, sent_result_count,
+                                     "A late FRAG_CHECK should replay the cached result");
+    TEST_ASSERT_EQUAL_INT16(ROB_OK, sent_result_value);
+
+    uint8_t *duplicate_request = build_frag_request_packet(sizeof(payload), 1, sizeof(payload), hash);
+    TEST_ASSERT_TRUE(handle_fragmented(local_peer, robusto_mt_mock, duplicate_request,
+                                       ROBUSTO_CRC_LENGTH + 18, TST_FRAG_SIZE,
+                                       &callback_capture_frag_responses));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(3, sent_result_count,
+                                     "A duplicate FRAG_REQUEST should replay the cached result");
+    TEST_ASSERT_NULL_MESSAGE(get_last_frag_message(),
+                             "A completed duplicate request must not allocate receive state");
+}
+
+void tst_fragmentation_completed_result_key_is_isolated(void)
+{
+    robusto_peer_t *local_peer = ensure_fragmentation_mock_peer();
+    TEST_ASSERT_NOT_NULL(local_peer);
+
+    reset_fragment_tracking();
+
+    uint8_t payload[2] = {0xE1, 0xE2};
+    uint32_t hash = robusto_crc32(0, payload, sizeof(payload));
+    uint8_t *request = build_frag_request_packet(sizeof(payload), 1, sizeof(payload), hash);
+    TEST_ASSERT_TRUE(handle_fragmented(local_peer, robusto_mt_mock, request,
+                                       ROBUSTO_CRC_LENGTH + 18, TST_FRAG_SIZE,
+                                       &callback_capture_frag_responses));
+    uint8_t *message_packet = build_frag_message_packet(hash, 0, payload, sizeof(payload));
+    handle_fragmented(local_peer, robusto_mt_mock, message_packet,
+                      TST_FRAG_HEADER_LEN + sizeof(payload), TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32(1, sent_result_count);
+
+    uint8_t *wrong_hash_check = build_frag_check_packet(hash + 1U);
+    handle_fragmented(local_peer, robusto_mt_mock, wrong_hash_check,
+                      ROBUSTO_CRC_LENGTH + 2, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, sent_result_count,
+                                     "A different hash must not match a completed transfer");
+
+    robusto_peer_t *other_peer = robusto_peers_find_peer_by_name("TEST_MOCK_2");
+    if (other_peer == NULL)
+    {
+        other_peer = robusto_add_init_new_peer("TEST_MOCK_2",
+                                               (rob_mac_address *)kconfig_mac_to_6_bytes(12),
+                                               robusto_mt_mock);
+        TEST_ASSERT_NOT_NULL(other_peer);
+        other_peer->protocol_version = 0;
+        other_peer->relation_id_incoming = TST_RELATIONID_01;
+        other_peer->peer_handle = 1;
+    }
+    uint8_t *other_peer_check = build_frag_check_packet(hash);
+    handle_fragmented(other_peer, robusto_mt_mock, other_peer_check,
+                      ROBUSTO_CRC_LENGTH + 2, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, sent_result_count,
+                                     "A different peer must not match a completed transfer");
+
+#if defined(CONFIG_ROBUSTO_SUPPORTS_CANBUS) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
+    uint8_t *other_media_check = build_frag_check_packet(hash);
+    handle_fragmented(local_peer, robusto_mt_canbus, other_media_check,
+                      ROBUSTO_CRC_LENGTH + 2, TST_FRAG_SIZE,
+                      &callback_capture_frag_responses);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, sent_result_count,
+                                     "A different media must not match a completed transfer");
+#endif
 }
 
 #endif

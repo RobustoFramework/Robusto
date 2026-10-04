@@ -13,3 +13,5 @@ void tst_fragmentation_stale_receive_is_reclaimed(void);
 void tst_fragmentation_short_request_does_not_create_state(void);
 void tst_fragmentation_waits_for_check_before_resend(void);
 void tst_fragmentation_interleaved_hashes_are_resolved(void);
+void tst_fragmentation_completed_result_is_replayed(void);
+void tst_fragmentation_completed_result_key_is_isolated(void);
