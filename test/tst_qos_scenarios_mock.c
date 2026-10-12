@@ -23,10 +23,11 @@ void tst_qos_scenario_full_cycle_mock(void)
 {
     
     // First, find the mocked peer
-    robusto_peer_t *peer = robusto_peers_find_peer_by_name("TEST_MOCK");
+    robusto_peer_t *peer = robusto_peers_find_peer_by_name("TEST_MOCK_1");
     uint64_t start_time = r_millis();
 
-    TEST_ASSERT_MESSAGE(peer->mock_info.state == media_state_working, "The TEST_MOCK peer isn't in a working state, it must be so in this case.");
+    TEST_ASSERT_NOT_NULL_MESSAGE(peer, "TEST_MOCK_1 peer not found");
+    TEST_ASSERT_MESSAGE(peer->mock_info.state == media_state_working, "The TEST_MOCK_1 peer isn't in a working state, it must be so in this case.");
     // Send a normal heartbeat to it
     //set_message_expectation(MMI_HEARTBEAT);
     uint64_t delay = CONFIG_ROBUSTO_REPEATER_DELAY_MS * CONFIG_ROBUSTO_PEER_HEARTBEAT_SKIP_COUNT;

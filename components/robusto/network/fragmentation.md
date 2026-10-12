@@ -17,13 +17,15 @@ The implementation is in `src/message/robusto_message_fragment.c`.
 
 ## Message identity and ownership
 
-A transfer is identified by:
+An active transfer is identified by:
 
 ```text
-(peer, media_type, payload_crc32)
+(direction, peer, media_type, payload_crc32)
 ```
 
-The CRC32 is both the transfer hash and the end-to-end integrity check. Active receive state is looked up using all three fields. Different peers can therefore transfer on the same medium independently.
+The direction distinguishes sender state from receiver state. This is required when a mock or other loopback transport sends to itself: both sides then use the same peer, medium, and hash but retain independent buffers and lifetimes. The CRC32 is both the transfer hash and the end-to-end integrity check. Different peers can transfer on the same medium independently.
+
+Completed receiver records are keyed by `(peer, media_type, payload_crc32)` because they only replay terminal receive results.
 
 The receiver permits one active receive transfer for each `(peer, media_type)` pair. A new request with a different hash replaces an abandoned receive for that same pair. It does not replace a transfer owned by another peer or medium.
 

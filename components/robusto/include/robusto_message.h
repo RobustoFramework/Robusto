@@ -159,6 +159,7 @@ typedef struct fragmented_message
 {
     robusto_peer_t *peer;
     e_media_type media_type;
+    bool is_receiver;
     // The hash of the message, used to identify the message
     uint32_t hash;
     // We do not reuse the data pointer to:
