@@ -39,6 +39,7 @@ static int16_t sent_result_value = ROB_FAIL;
 static robusto_peer_t *sent_result_peer = NULL;
 static uint32_t sent_resend_count = 0;
 static bool sent_resend_receipt = true;
+static bool loopback_roles_separated = false;
 
 static uint64_t memory_loss_bytes(uint64_t before_mem, uint64_t after_mem)
 {
@@ -60,6 +61,7 @@ static void reset_fragment_tracking(void)
     sent_result_peer = NULL;
     sent_resend_count = 0;
     sent_resend_receipt = true;
+    loopback_roles_separated = false;
 }
 
 static uint8_t *build_frag_request_packet(uint32_t receive_buffer_length, uint32_t fragment_count, uint32_t fragment_size, uint32_t hash)
@@ -180,12 +182,16 @@ rob_ret_val_t callback_response_message(robusto_peer_t *peer, const uint8_t *dat
 
 rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, int len, bool receipt) {
     ROB_LOGI(FRAG_TAG,"callback_send_message: call %lu", call_counter);
+    bool is_fragment_request = false;
+    fragmented_message_t *sender = NULL;
 
     if (len >= ROBUSTO_CRC_LENGTH + 2 && data[ROBUSTO_CRC_LENGTH] == MSG_FRAGMENTED)
     {
         uint8_t frag_type = data[ROBUSTO_CRC_LENGTH + 1];
         if (frag_type == FRAG_REQUEST && len >= ROBUSTO_CRC_LENGTH + 18)
         {
+            is_fragment_request = true;
+            sender = get_last_frag_message();
             frag_request_count++;
             memcpy(&announced_fragment_count, data + ROBUSTO_CRC_LENGTH + 6, sizeof(announced_fragment_count));
         }
@@ -210,6 +216,13 @@ rob_ret_val_t callback_send_message(robusto_peer_t *peer, const uint8_t *data, i
         uint8_t * tmp_data = robusto_malloc(len);
         memcpy(tmp_data, data, len);
         handle_fragmented(peer, robusto_mt_mock, tmp_data, len, TST_FRAG_SIZE, (cb_send_message *)&callback_response_message);
+        if (is_fragment_request)
+        {
+            fragmented_message_t *receiver = get_last_frag_message();
+            loopback_roles_separated = sender != NULL && receiver != NULL &&
+                                       sender != receiver && !sender->is_receiver &&
+                                       receiver->is_receiver;
+        }
     }
     
     call_counter ++;
@@ -238,6 +251,8 @@ void fake_message() {
     call_counter = 0;
     async_receive_flag = false;
     rob_ret_val_t res = send_message_fragmented(peer, robusto_mt_mock, msg  + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES, TST_FRAG_SIZE, (cb_send_message *)&callback_send_message);
+    TEST_ASSERT_TRUE_MESSAGE(loopback_roles_separated,
+                             "Loopback fragmentation must keep sender and receiver state separate");
     ROB_LOGI("Test", "tst_fragmentation_complete");
    if (robusto_waitfor_bool(&async_receive_flag, 10000)) {
         ROB_LOGI("Test", "tst_fragmentation_complete: Async receive flag was set to true.");
@@ -275,6 +290,8 @@ void fake_message_sized(uint32_t test_data_size)
     rob_ret_val_t res = send_message_fragmented(peer, robusto_mt_mock, msg + ROBUSTO_PREFIX_BYTES, msg_length - ROBUSTO_PREFIX_BYTES,
                                                 TST_FRAG_SIZE, (cb_send_message *)&callback_send_message);
     TEST_ASSERT_EQUAL_INT_MESSAGE(ROB_OK, res, "Fragmented send should complete in mock loopback");
+    TEST_ASSERT_TRUE_MESSAGE(loopback_roles_separated,
+                             "Loopback fragmentation must keep sender and receiver state separate");
 
     if (robusto_waitfor_bool(&async_receive_flag, 10000))
     {
