@@ -20,6 +20,7 @@ cache
 
 # cmake
 build
+build-mock-validation/
 
 # proxy
 build-proxy-integration/
