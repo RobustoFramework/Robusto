@@ -69,6 +69,25 @@ elseif(IDF_TARGET STREQUAL "esp32c6")
     )
 endif()
 
+if(CONFIG_ROBUSTO_SUPPORTS_LORA)
+    list(APPEND rob_network_requirements radiolib)
+endif()
+
+if(CONFIG_ROBUSTO_UI)
+    list(APPEND rob_ui_requirements lvgl esp_lvgl_port esp_lcd)
+    if(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106 OR
+       CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107)
+        list(APPEND rob_ui_requirements esp_lcd_sh1107)
+    endif()
+endif()
+
+if(CONFIG_ROBUSTO_UMTS_SERVER)
+    list(APPEND rob_umts_requirements esp_modem)
+    if(CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY)
+        list(APPEND rob_umts_requirements mqtt)
+    endif()
+endif()
+
 if(CONFIG_ROBUSTO_PROXY)
     if((IDF_TARGET STREQUAL "esp32p4" OR IDF_TARGET STREQUAL "esp32c6") AND
        CONFIG_ROBUSTO_PROXY_PROFILE_STANDARD)
@@ -132,12 +151,12 @@ idf_component_register(
         # Flash
         spiffs vfs
         # Networking dependecies
-        radiolib bt
+        bt ${rob_network_requirements}
         # ESP-NOW dependencies    
         esp_wifi esp_adc 
         # Screen
-        esp_lcd
+        ${rob_ui_requirements}
         # UMTS (note the esp_modem dependency)
-        esp_netif esp_modem esp_http_client esp-tls 
+        esp_netif esp_http_client esp-tls ${rob_umts_requirements}
     PRIV_REQUIRES ${rob_proxy_private_requirements}
 )

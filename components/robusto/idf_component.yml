@@ -6,13 +6,31 @@ license: "BSD-2-Clause"
 dependencies:
   # Required IDF version
   idf: ">=6.0"
-  espressif/esp_modem: "^1"
-  jgromes/radiolib: "^7.1"
+  espressif/esp_modem:
+    version: "^1"
+    rules:
+      - if: "$CONFIG{ROBUSTO_UMTS_SERVER} == True"
+  jgromes/radiolib:
+    version: "^7.1"
+    rules:
+      - if: "$CONFIG{ROBUSTO_SUPPORTS_LORA} == True"
   # Screen support
-  lvgl/lvgl: "^9" 
-  espressif/esp_lvgl_port: "^2"
-  espressif/esp_lcd_sh1107: "^1"
-  espressif/mqtt: "^1"
+  lvgl/lvgl:
+    version: "^9"
+    rules:
+      - if: "$CONFIG{ROBUSTO_UI} == True"
+  espressif/esp_lvgl_port:
+    version: "^2"
+    rules:
+      - if: "$CONFIG{ROBUSTO_UI} == True"
+  espressif/esp_lcd_sh1107:
+    version: "^1"
+    rules:
+      - if: "$CONFIG{ROBUSTO_UI} == True && ($CONFIG{ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106} == True || $CONFIG{ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1107} == True)"
+  espressif/mqtt:
+    version: "^1"
+    rules:
+      - if: "$CONFIG{ROBUSTO_UMTS_SERVER} == True && $CONFIG{ROBUSTO_UMTS_MQTT_GATEWAY} == True"
   espressif/cjson: "^1"
   espressif/esp_serial_slave_link:
     version: "==1.1.2"

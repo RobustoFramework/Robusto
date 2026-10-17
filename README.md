@@ -16,6 +16,47 @@ The easiest way is to:
 For more general information, the [Robusto web site](https://robustoframework.github.io/Robusto/index.html) will hold everything together.
 _(bit of a work in progress currently)_
 
+### Optional ESP-IDF dependencies
+
+Robusto resolves large managed components only when their owning Kconfig feature is enabled. Disabled
+features therefore do not download, configure, compile, or link their optional dependency:
+
+| Kconfig feature | Managed dependency |
+|---|---|
+| `CONFIG_ROBUSTO_SUPPORTS_LORA` | RadioLib |
+| `CONFIG_ROBUSTO_UI` | LVGL and ESP LVGL Port |
+| `CONFIG_ROBUSTO_UI` with SH1106 or SH1107 selected | ESP LCD SH1107 |
+| `CONFIG_ROBUSTO_UMTS_SERVER` | ESP Modem |
+| `CONFIG_ROBUSTO_UMTS_MQTT_GATEWAY` | ESP MQTT |
+
+Enable features through `sdkconfig.defaults` or `idf.py menuconfig`; do not add these packages merely to
+make an unrelated build pass. Robusto uses compatible version ranges in `idf_component.yml`, allowing
+the component manager to select suitable minor and patch releases. Dependency lockfiles are generated
+build outputs and should not replace those manifest constraints as project configuration.
+
+Each optional dependency is guarded twice: its manifest rule controls resolution, and the matching
+condition in `CMakeLists.txt` controls `REQUIRES`. Keep both conditions identical when adding or changing
+an optional feature.
+
+#### Migration for existing ESP-IDF projects
+
+This changes the transitive dependency graph. An existing application can fail after upgrading if it
+used LVGL, an LCD driver, MQTT, ESP Modem, or RadioLib directly while relying on Robusto to download that
+package for an unrelated disabled feature.
+
+- If the application uses the corresponding Robusto feature, enable its `CONFIG_ROBUSTO_*` option in
+  `sdkconfig.defaults` or through `idf.py menuconfig`. Robusto then resolves and links the dependency.
+- If application code uses the package independently of Robusto, declare that package in the
+  application's own `idf_component.yml` and add it to the owning component's `REQUIRES` or
+  `PRIV_REQUIRES` list. Do not enable an unrelated Robusto feature merely to recover a transitive package.
+- Delete the affected build directory once after changing the manifest or Kconfig defaults. The next
+  configure regenerates dependency resolution from the new ownership rules.
+- Do not edit `managed_components` or commit a generated dependency lock as a workaround.
+
+For example, an application that renders its own LVGL interface while `CONFIG_ROBUSTO_UI` is disabled
+must declare `lvgl/lvgl` and, when used, `espressif/esp_lvgl_port` itself. A project using Robusto's UI
+enables `CONFIG_ROBUSTO_UI=y` instead.
+
 <!-- omit from toc -->
 # Table of contents
 
