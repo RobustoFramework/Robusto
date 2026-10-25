@@ -256,6 +256,26 @@ int test_main(void)
     CHECK(robusto_halow_spi_parse(buffer, sizeof(mode_reply), &packet));
     CHECK(!packet.ap_mode);
 
+    const uint16_t settings[] = {
+        HGIC_CMD_SET_SSID, HGIC_CMD_SET_WPA_PSK, HGIC_CMD_SET_KEY_MGMT,
+        HGIC_CMD_SET_BSS_BW, HGIC_CMD_SET_CHAN_LIST, HGIC_CMD_RADIO_ONOFF,
+        HGIC_CMD_GET_SSID, HGIC_CMD_GET_KEY_MGMT,
+        HGIC_CMD_GET_BSS_BW, HGIC_CMD_GET_CHAN_LIST
+    };
+    for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); ++i) {
+        header(buffer, HGIC_HDR_TYPE_CMD2, CMD_HDR_LEN + 2);
+        put_unaligned_le16(settings[i], buffer + 8);
+        memcpy(buffer + CMD_HDR_LEN, "ab", 2);
+        buffer[CMD_HDR_LEN + 2] = 0xa5;
+        CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 4, &packet));
+        CHECK(packet.command_id == settings[i] && packet.command_length == 2);
+        CHECK(packet.command_payload == buffer + CMD_HDR_LEN);
+        CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 1, &packet));
+        put_unaligned_le16(0xffff, buffer + 10);
+        CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 2, &packet));
+        CHECK(packet.command_status == -1);
+    }
+
     header(buffer, HGIC_HDR_TYPE_CMD, CMD_HDR_LEN);
     buffer[8] = HGIC_CMD_GET_CONN_STATE;
     put_unaligned_le16(9, buffer + 10);
@@ -281,6 +301,40 @@ int test_main(void)
     buffer[8] = HGIC_CMD_GET_WPA_PSK;
     CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
 
+    header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN);
+    buffer[8] = HGIC_EVENT_CONECT_START;
+    memset(buffer + CMD_HDR_LEN, 0xa5, 4);
+    CHECK(robusto_halow_spi_parse(buffer, 16, &packet));
+    CHECK(packet.event && packet.event_id == HGIC_EVENT_CONECT_START && !packet.unsupported);
+    CHECK(packet.event_length == 0 && packet.frame == NULL && packet.length == 0);
+    const uint8_t details[] = {0, 0xa5, 0xff};
+    for (unsigned int type = 0; type < 2; ++type) {
+        for (unsigned int index = 0; index < sizeof(details); ++index) {
+            header(buffer, type == 0 ? HGIC_HDR_TYPE_EVENT : HGIC_HDR_TYPE_EVENT2,
+                   CMD_HDR_LEN + 1);
+            put_unaligned_le16(HGIC_EVENT_CONNECT_FAIL, buffer + 8);
+            buffer[CMD_HDR_LEN] = details[index];
+            memset(buffer + CMD_HDR_LEN + 1, 0x5a, 3);
+            hgic.status.conn_state = 1;
+            CHECK(robusto_halow_spi_parse(buffer, 16, &packet));
+            CHECK(packet.event && packet.event_id == HGIC_EVENT_CONNECT_FAIL);
+            CHECK(!packet.unsupported && packet.event_length == 1);
+            CHECK(packet.event_payload == buffer + CMD_HDR_LEN);
+            CHECK(packet.event_payload[0] == details[index]);
+            CHECK(packet.frame == NULL && packet.length == 0);
+            CHECK(hgic.status.conn_state == 1);
+            CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 1, &packet));
+            CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
+            put_unaligned_le16(CMD_HDR_LEN, buffer + 4);
+            CHECK(!robusto_halow_spi_parse(buffer, 16, &packet));
+            CHECK(!packet.unsupported);
+        }
+    }
+    header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN + 3);
+    buffer[8] = HGIC_EVENT_CONNECT_FAIL;
+    CHECK(robusto_halow_spi_parse(buffer, 16, &packet));
+    CHECK(packet.event_length == 3);
+
     header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN + 5);
     buffer[8] = HGIC_EVENT_CONECTED;
     CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 5, &packet));
@@ -299,11 +353,72 @@ int test_main(void)
     CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN + 1, &packet));
     header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN);
     buffer[8] = HGIC_EVENT_FWDBG_INFO;
-    CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
-    CHECK(packet.unsupported && packet.event && packet.event_id == HGIC_EVENT_FWDBG_INFO);
+    CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
+    CHECK(!packet.unsupported && packet.event && packet.event_id == HGIC_EVENT_FWDBG_INFO);
     buffer[8] = HGIC_EVENT_REQUEST_PARAM;
-    CHECK(!robusto_halow_spi_parse(buffer, 16, &packet));
-    CHECK(packet.unsupported && packet.event_id == HGIC_EVENT_REQUEST_PARAM);
+    CHECK(robusto_halow_spi_parse(buffer, 16, &packet));
+    CHECK(!packet.unsupported && packet.event_id == HGIC_EVENT_REQUEST_PARAM);
+    const size_t minimum_event_lengths[32] = {
+        [HGIC_EVENT_TX_BITRATE] = 4, [HGIC_EVENT_CONECTED] = 6,
+        [HGIC_EVENT_SIGNAL] = 2, [HGIC_EVENT_CONNECT_FAIL] = 1,
+        [HGIC_EVENT_EXCEPTION_INFO] = 4
+    };
+    for (unsigned int type = 0; type < 2; ++type) {
+        for (unsigned int id = 1; id <= 31; ++id) {
+            size_t minimum = minimum_event_lengths[id];
+            CHECK(robusto_halow_spi_event_name(id) != NULL);
+            header(buffer, type == 0 ? HGIC_HDR_TYPE_EVENT : HGIC_HDR_TYPE_EVENT2,
+                   CMD_HDR_LEN + minimum);
+            put_unaligned_le16(id, buffer + 8);
+            memset(buffer + CMD_HDR_LEN + minimum, 0xa5, 3);
+            hgic.status.conn_state = 1;
+            CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + minimum + 3, &packet));
+            CHECK(packet.event && packet.event_id == id && !packet.unsupported);
+            CHECK(packet.event_payload == buffer + CMD_HDR_LEN && packet.event_length == minimum);
+            CHECK(packet.frame == NULL && packet.length == 0);
+            if (id != HGIC_EVENT_CONECTED && id != HGIC_EVENT_DISCONECTED)
+                CHECK(hgic.status.conn_state == 1);
+            if (minimum > 0) {
+                put_unaligned_le16(CMD_HDR_LEN + minimum - 1, buffer + 4);
+                CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN + minimum + 3, &packet));
+                CHECK(!packet.unsupported);
+            }
+        }
+        const uint16_t unknown[] = {0, 32, 255, 256};
+        for (unsigned int i = 0; i < sizeof(unknown) / sizeof(unknown[0]); ++i) {
+            header(buffer, type == 0 ? HGIC_HDR_TYPE_EVENT : HGIC_HDR_TYPE_EVENT2, CMD_HDR_LEN);
+            put_unaligned_le16(unknown[i], buffer + 8);
+            CHECK(!robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
+            CHECK(packet.event && packet.unsupported);
+        }
+    }
+    CHECK(strcmp(robusto_halow_spi_event_name(2), "CH_SWICH") == 0);
+    CHECK(strcmp(robusto_halow_spi_event_name(30), "ACS_DONE") == 0);
+    CHECK(strcmp(robusto_halow_spi_event_name(31), "UNDOCUMENTED_31") == 0);
+    CHECK(robusto_halow_spi_event_name(32) == NULL);
+    const size_t exception_lengths[] = {4, 4, 12, 12, 4, 16, 16, 8, 4};
+    for (unsigned int code = 1; code <= 8; ++code) {
+        size_t minimum = exception_lengths[code];
+        for (size_t length = 0; length <= minimum; ++length) {
+            header(buffer, HGIC_HDR_TYPE_EVENT2, CMD_HDR_LEN + length);
+            put_unaligned_le16(HGIC_EVENT_EXCEPTION_INFO, buffer + 8);
+            put_unaligned_le32(code, buffer + CMD_HDR_LEN);
+            CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + minimum, &packet) ==
+                  (length == minimum));
+        }
+    }
+    for (size_t length = 0; length <= sizeof(hgic.paired_stas) + 6; ++length) {
+        header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN + length);
+        buffer[8] = HGIC_EVENT_PAIR_DONE;
+        memset(buffer + CMD_HDR_LEN, 0xab, length);
+        bool valid = length <= sizeof(hgic.paired_stas) && length % 6 == 0;
+        CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN + length, &packet) == valid);
+        if (valid) {
+            CHECK(hgic.paired_stas_cnt == length / 6);
+            if (length > 0) CHECK(hgic.paired_stas[length - 1] == 0xab);
+            if (length < sizeof(hgic.paired_stas)) CHECK(hgic.paired_stas[length] == 0);
+        }
+    }
     header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN + 4);
     buffer[8] = HGIC_EVENT_TX_BITRATE;
     put_unaligned_le32(123456, buffer + CMD_HDR_LEN);
@@ -403,6 +518,20 @@ int test_main(void)
             CHECK(submitted_block[i] ==
                   (i < sizeof(control_headers[command_index]) ? control_headers[command_index][i] : 0));
         }
+    }
+    cmd53_count = block_count = stop_count = 0;
+    cs_assert_count = cs_release_count = 0;
+    transfer_sequence_length = busy_read_count = 0;
+    unexpected_transfer = false;
+    CHECK(hgic_raw_set_radio_onoff(1) == CMD_HDR_LEN + 1);
+    const unsigned char radio_command[] = {
+        0x2b, 0x1a, 0x03, 0x01, 0x0d, 0, 0, 0, 0x41, 0, 0, 0, 1
+    };
+    CHECK(submitted_length == sizeof(radio_command) && !unexpected_transfer);
+    CHECK(cmd53_count == 1 && block_count == 1 && stop_count == 1);
+    CHECK(cs_assert_count == 1 && cs_release_count == 1 && !cs_active);
+    for (size_t i = 0; i < sizeof(submitted_block); ++i) {
+        CHECK(submitted_block[i] == (i < sizeof(radio_command) ? radio_command[i] : 0));
     }
     return 0;
 }

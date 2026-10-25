@@ -25,10 +25,169 @@ config ROBUSTO_HALOW_SPI_ROLE_AP
     help
         Set AP mode and require mode readback plus a raw-interface loopback.
         Local AP availability is separate from individual STA association
-        and Robusto peer readiness. Stored RF/security settings are retained.
-        This does not configure credentials, channels or regulatory settings.
+        and Robusto peer readiness. Stored RF/security settings are retained
+        unless "Apply AP network settings at startup" is explicitly enabled.
 
 endchoice
+
+config ROBUSTO_HALOW_SPI_STA_CONFIGURE
+    bool "Apply STA network settings at startup"
+    depends on ROBUSTO_HALOW_SPI_ROLE_STA
+    default n
+    help
+        Apply SSID, security/key, bandwidth and frequency list on every normal
+        startup, including after reset. Validate before opening the transport,
+        require acknowledgements and read back non-secret settings before
+        querying association. Disabled retains stored settings.
+        Existing STA_CONFIGURE users must now supply the complete network
+        configuration, not just SSID. The module may persist these changes.
+        Regulatory settings are retained; legality is not inferred.
+
+if ROBUSTO_HALOW_SPI_STA_CONFIGURE
+
+config ROBUSTO_HALOW_SPI_STA_SSID
+    string "STA SSID (1-31 bytes)"
+    default ""
+    help
+        Must exactly match the AP. Uses the conservative 31-byte limit shared
+        with the AP configuration and the module's AT interface.
+
+choice ROBUSTO_HALOW_SPI_STA_SECURITY
+    prompt "STA security"
+    default ROBUSTO_HALOW_SPI_STA_WPA_PSK
+
+config ROBUSTO_HALOW_SPI_STA_WPA_PSK
+    bool "WPA-PSK"
+
+config ROBUSTO_HALOW_SPI_STA_OPEN
+    bool "Open (unencrypted)"
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_STA_PSK
+    string "STA PSK (same 64 hexadecimal digits as AP, not a passphrase)"
+    depends on ROBUSTO_HALOW_SPI_STA_WPA_PSK
+    default ""
+    help
+        Required with WPA-PSK. Copy the existing AP key exactly; do not generate
+        another key or supply a passphrase. Never printed or queried by the
+        backend. Kconfig stores it in plaintext in configuration/build outputs
+        and embeds it in firmware. Keep real keys in local, uncommitted inputs.
+
+choice ROBUSTO_HALOW_SPI_STA_BANDWIDTH
+    prompt "STA BSS bandwidth"
+    default ROBUSTO_HALOW_SPI_STA_BW_1
+
+config ROBUSTO_HALOW_SPI_STA_BW_1
+    bool "1 MHz"
+
+config ROBUSTO_HALOW_SPI_STA_BW_2
+    bool "2 MHz"
+
+config ROBUSTO_HALOW_SPI_STA_BW_4
+    bool "4 MHz"
+
+config ROBUSTO_HALOW_SPI_STA_BW_8
+    bool "8 MHz"
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_STA_BSS_BW
+    int
+    default 8 if ROBUSTO_HALOW_SPI_STA_BW_8
+    default 4 if ROBUSTO_HALOW_SPI_STA_BW_4
+    default 2 if ROBUSTO_HALOW_SPI_STA_BW_2
+    default 1
+
+config ROBUSTO_HALOW_SPI_STA_FREQ_LIST
+    string "STA center frequencies (100 kHz units, comma-separated)"
+    default ""
+    help
+        Required: 1-16 distinct positive 16-bit integers, without spaces.
+        Must include the AP center frequency. 8655 means 865.5 MHz.
+        This explicit list overrides the module's stored frequency range.
+        Match the AP bandwidth and use channels lawful for the deployment.
+        Regulatory settings, transmit power and pairing are unchanged.
+
+endif
+
+config ROBUSTO_HALOW_SPI_AP_CONFIGURE
+    bool "Apply AP network settings at startup"
+    depends on ROBUSTO_HALOW_SPI_ROLE_AP
+    default n
+    help
+        Apply the settings below on every normal startup, including after an
+        explicit reset. Validate inputs before opening the transport, require
+        command acknowledgements and read back non-secret settings before
+        publishing local AP readiness. Disabled retains stored settings.
+        The module's existing auto-save policy may persist these changes.
+        This does not validate regional legality or prove RF connectivity.
+
+if ROBUSTO_HALOW_SPI_AP_CONFIGURE
+
+config ROBUSTO_HALOW_SPI_AP_SSID
+    string "AP SSID (1-31 bytes)"
+    help
+        Required. The AT guide specifies fewer than 32 characters; use the
+        conservative 31-byte limit shared with that interface.
+
+choice ROBUSTO_HALOW_SPI_AP_SECURITY
+    prompt "AP security"
+    default ROBUSTO_HALOW_SPI_AP_WPA_PSK
+
+config ROBUSTO_HALOW_SPI_AP_WPA_PSK
+    bool "WPA-PSK"
+
+config ROBUSTO_HALOW_SPI_AP_OPEN
+    bool "Open (unencrypted)"
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_AP_PSK
+    string "AP PSK (64 hexadecimal digits, not a passphrase)"
+    depends on ROBUSTO_HALOW_SPI_AP_WPA_PSK
+    default ""
+    help
+        Required with WPA-PSK. Never printed or queried by the backend.
+        Kconfig stores this in plaintext in configuration and build outputs,
+        and the key is embedded in firmware. Do not commit a real PSK.
+
+choice ROBUSTO_HALOW_SPI_AP_BANDWIDTH
+    prompt "AP BSS bandwidth"
+    default ROBUSTO_HALOW_SPI_AP_BW_1
+
+config ROBUSTO_HALOW_SPI_AP_BW_1
+    bool "1 MHz"
+
+config ROBUSTO_HALOW_SPI_AP_BW_2
+    bool "2 MHz"
+
+config ROBUSTO_HALOW_SPI_AP_BW_4
+    bool "4 MHz"
+
+config ROBUSTO_HALOW_SPI_AP_BW_8
+    bool "8 MHz"
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_AP_BSS_BW
+    int
+    default 8 if ROBUSTO_HALOW_SPI_AP_BW_8
+    default 4 if ROBUSTO_HALOW_SPI_AP_BW_4
+    default 2 if ROBUSTO_HALOW_SPI_AP_BW_2
+    default 1
+
+config ROBUSTO_HALOW_SPI_AP_FREQ_LIST
+    string "AP center frequencies (100 kHz units, comma-separated)"
+    help
+        Required: 1-16 distinct positive 16-bit integers, without spaces.
+        Each value is the center frequency in MHz multiplied by 10.
+        Supply frequencies and bandwidth appropriate for the module and local
+        regulations; no regional frequency plan is assumed. This explicit
+        channel list takes precedence over the module's frequency range.
+        Existing automatic channel selection and transmit power are unchanged.
+
+endif
 
 config ROBUSTO_HALOW_SPI_SCLK_GPIO
     int "SPI clock GPIO"

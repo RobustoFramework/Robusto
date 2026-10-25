@@ -235,7 +235,7 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
     return prefix_length;
 }
 
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important)
+static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask)
 {
 
     rob_ret_val_t retval = ROB_FAIL;
@@ -306,6 +306,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         new_item->receipt = receipt;
         new_item->state = state;
         new_item->important = important;
+        new_item->presentation_mask = presentation_mask;
         ROB_LOGD(message_sending_log_prefix,
                  ">> Queue add attempt peer=%s mt=%u bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
                  peer->name,
@@ -322,7 +323,9 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
                  queue_ctx->task_count,
                  media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
                  media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
-        retval = robusto_set_queue_state_queued_on_ok(new_item->state, safe_add_work_queue(queue_ctx, new_item, important));
+        /* Publish before admission: the worker may complete and free new_item as soon as it is visible. */
+        robusto_set_queue_state_queued_on_ok(state, ROB_OK);
+        retval = safe_add_work_queue(queue_ctx, new_item, important);
         if (retval == ROB_OK)
         {
             ROB_LOGD(message_sending_log_prefix,
@@ -345,6 +348,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         }
         if (retval != ROB_OK)
         {
+            robusto_set_queue_state_queued_on_ok(state, retval);
             robusto_free(new_item);
         }
     }
@@ -372,6 +376,16 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     }
 
     return retval;
+}
+
+rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important)
+{
+    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, 0);
+}
+
+rob_ret_val_t send_presentation_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask)
+{
+    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, presentation_mask);
 }
 
 rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt)

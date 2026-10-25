@@ -46,16 +46,15 @@ void robusto_set_queue_state_result(queue_state *state, rob_ret_val_t return_val
     if (*state[0] == QUEUE_STATE_DROPPED) {
         ROB_LOGW("----", "Queue item marked as dropped, freeing memory");
         robusto_free(state);
-    } else
-    if (return_value == ROB_OK) {
-        *state[0] = QUEUE_STATE_SUCCEEDED;
     } else {
         /* We set the result first, as that is the only thing that is NOT randomly accessed by several tasks until the state is set. */
-        memcpy(state + 1, &return_value, sizeof(rob_ret_val_t));
+        memcpy(&(*state)[1], &return_value, sizeof(rob_ret_val_t));
         /* NOTE: 8 bit value access is implicitly atomic on all relevant platforms, and can thus be set like this */
         /* meaning it is thread safe. */
-        ROB_LOGE("----", "Queue item marked as failed.");
-        *state[0] = QUEUE_STATE_FAILED;
+        if (return_value != ROB_OK) {
+            ROB_LOGE("----", "Queue item marked as failed.");
+        }
+        *state[0] = return_value == ROB_OK ? QUEUE_STATE_SUCCEEDED : QUEUE_STATE_FAILED;
     }
 }
 rob_ret_val_t robusto_set_queue_state_queued_on_ok(queue_state *state, rob_ret_val_t retval) {
@@ -97,12 +96,12 @@ void robusto_set_queue_state_queued(queue_state *state) {
 };
 
 void robusto_set_queue_state_running(queue_state *state) {
-    if (state == NULL) { return; }
+    if (state == NULL || *state[0] == QUEUE_STATE_DROPPED) { return; }
     *state[0] = QUEUE_STATE_RUNNING;  
 };
 
 void robusto_set_queue_state_trying(queue_state *state) {
-    if (state == NULL) { return; }
+    if (state == NULL || *state[0] == QUEUE_STATE_DROPPED) { return; }
     *state[0] = QUEUE_STATE_TRYING_MEDIAS;  
 };
 
@@ -123,7 +122,7 @@ bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_re
         *return_value = ROB_ERR_TIMEOUT;
         return false;
     } else {
-        memcpy(return_value, state + 1, sizeof(rob_ret_val_t));
+        memcpy(return_value, &(*state)[1], sizeof(rob_ret_val_t));
         return *state[0] == QUEUE_STATE_SUCCEEDED ? true:false;
     }
 }
@@ -207,7 +206,6 @@ void set_queue_blocked(queue_context_t *q_context, bool blocked)
         ROB_LOGE(q_context->log_prefix, "Error: Couldn't get semaphore to block/unblock it (blocked: %i, task_name: %s)!", (int)blocked, q_context->worker_task_name);
     }
 }
-
 
 
 

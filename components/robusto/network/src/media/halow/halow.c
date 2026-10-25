@@ -214,13 +214,53 @@ static void insert_head(queue_context_t *context, void *item)
 static void do_work(void *item)
 {
     media_queue_item_t *work = item;
+    robusto_peer_t *peer = work->peer;
+    uint8_t presentation_mask = work->presentation_mask;
     send_work_item(work, &work->peer->halow_info, robusto_mt_halow,
                    send_message, NULL, &queue);
+    robusto_halow_end_presentation(peer, presentation_mask);
 }
 
 queue_context_t *halow_get_queue_context(void)
 {
     return initialized ? &queue : NULL;
+}
+
+rob_ret_val_t robusto_halow_begin_presentation(robusto_peer_t *peer, uint8_t reason_mask)
+{
+    if (peer == NULL || reason_mask == 0 || (reason_mask & (reason_mask - 1U)) != 0 ||
+        reason_mask >= (1U << (presentation_reply + 1U))) {
+        return fail("Invalid presentation reservation", ROB_ERR_INVALID_ARG);
+    }
+    if (!initialized) {
+        return fail("Presentation queue not initialized", ROB_ERR_NOT_READY);
+    }
+    if (robusto_mutex_take(queue.__x_queue_mutex, 10000) != ROB_OK) {
+        return fail("Presentation reservation mutex", ROB_ERR_MUTEX);
+    }
+    rob_ret_val_t result = ROB_OK;
+    if (peer->halow_pending_presentations & reason_mask) {
+        ROB_LOGW(log_prefix, "HI already pending for peer %s (reason mask=0x%02x)",
+                 peer->name, reason_mask);
+        result = ROB_ERR_NOT_READY;
+    } else {
+        peer->halow_pending_presentations |= reason_mask;
+    }
+    robusto_mutex_give(queue.__x_queue_mutex);
+    return result;
+}
+
+void robusto_halow_end_presentation(robusto_peer_t *peer, uint8_t reason_mask)
+{
+    if (reason_mask == 0) {
+        return;
+    }
+    if (robusto_mutex_take(queue.__x_queue_mutex, 10000) != ROB_OK) {
+        fail("Presentation completion mutex", ROB_ERR_MUTEX);
+        return;
+    }
+    peer->halow_pending_presentations &= (uint8_t)~reason_mask;
+    robusto_mutex_give(queue.__x_queue_mutex);
 }
 
 void halow_peer_init_peer(robusto_peer_t *peer)

@@ -36,6 +36,8 @@ def main():
                 f"-I{component / 'base' / 'src' / 'system'}",
                 str(tests / "presentation_contract.c"),
                 str(component / "network" / "src" / "peer" / "robusto_presentation.c"),
+                str(component / "server" / "src" / "queue" / "robusto_queue.c"),
+                str(component / "network" / "src" / "message" / "robusto_message_sending.c"),
                 "-o", str(executable),
             ], capture_output=True, text=True)
             if compilation.returncode:

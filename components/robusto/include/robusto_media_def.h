@@ -215,6 +215,8 @@ extern "C"
         uint8_t depth;
         /* This is an important queue item */
         bool important;
+        /* Reserved presentation reason bit; zero for ordinary work and replies. */
+        uint8_t presentation_mask;
         /* Queue reference */
         STAILQ_ENTRY(media_queue_item)
         items;

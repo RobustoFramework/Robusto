@@ -14,6 +14,46 @@
 #define CONFIG_ROBUSTO_HALOW_SPI_IRQ_GPIO 40
 #define CONFIG_ROBUSTO_HALOW_SPI_DEBUG_RX_GPIO 12
 #define CONFIG_IDF_TARGET_ESP32P4 1
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE
+#ifdef TEST_STA_INVALID_SSID
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_SSID "01234567890123456789012345678901"
+#elif defined(TEST_STA_MAX_SSID)
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_SSID "0123456789012345678901234567890"
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_SSID "onwatch"
+#endif
+#ifdef TEST_STA_OPEN
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_OPEN 1
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_WPA_PSK 1
+#endif
+/* Synthetic host-test key, never a deployment credential. */
+#ifdef TEST_STA_INVALID_PSK
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_PSK "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0"
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_PSK "0123456789ABCDEF0123456789abcdef0123456789ABCDEF0123456789abcdef"
+#endif
+#ifdef TEST_STA_INVALID_BANDWIDTH
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_BSS_BW 3
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_BSS_BW 1
+#endif
+#ifdef TEST_STA_INVALID_FREQUENCIES
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_FREQ_LIST "8655,8655"
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_STA_FREQ_LIST "8655"
+#endif
+#endif
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE
+#ifdef TEST_AP_INVALID_SSID
+#define CONFIG_ROBUSTO_HALOW_SPI_AP_SSID "01234567890123456789012345678901"
+#else
+#define CONFIG_ROBUSTO_HALOW_SPI_AP_SSID "0123456789012345678901234567890"
+#endif
+#define CONFIG_ROBUSTO_HALOW_SPI_AP_PSK "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+#define CONFIG_ROBUSTO_HALOW_SPI_AP_BSS_BW 2
+#define CONFIG_ROBUSTO_HALOW_SPI_AP_FREQ_LIST "9080,9160"
+#endif
 #define IRAM_ATTR
 #define DMA_ATTR
 #define ESP_OK 0
@@ -28,8 +68,7 @@
 #define ESP_LOG_ERROR 1
 typedef int esp_err_t;
 static inline const char *esp_err_to_name(int error) { (void)error; return "test"; }
-static inline void test_log(const char *tag, const char *format, ...)
-{ (void)tag; (void)format; }
+void test_log(const char *tag, const char *format, ...);
 #define ESP_LOGI test_log
 #define ESP_LOGW test_log
 #define ESP_LOGE test_log

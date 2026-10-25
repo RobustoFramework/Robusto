@@ -115,6 +115,7 @@ bool robusto_send_queue_accepts_large_message(e_media_type media_type);
 
  */
 rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important);
+rob_ret_val_t send_presentation_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask);
 
 typedef rob_ret_val_t (send_callback_cb)(robusto_peer_t *peer, uint8_t *data, uint32_t data_length, bool receipt);
 

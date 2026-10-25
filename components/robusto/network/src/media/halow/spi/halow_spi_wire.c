@@ -33,6 +33,65 @@ bool robusto_halow_spi_register_response(const uint8_t response[18],
 _Static_assert(sizeof(struct hgic_frm_hdr2) + sizeof(struct eth_hdr) == 22,
                "Vendor raw frame overhead changed");
 
+const char *robusto_halow_spi_event_name(uint16_t id)
+{
+#define EVENT_NAME(name) case HGIC_EVENT_##name: return #name
+    switch (id) {
+    EVENT_NAME(STATE_CHG);
+    EVENT_NAME(CH_SWICH);
+    EVENT_NAME(DISCONNECT_REASON);
+    EVENT_NAME(ASSOC_STATUS);
+    EVENT_NAME(SCANNING);
+    EVENT_NAME(SCAN_DONE);
+    EVENT_NAME(TX_BITRATE);
+    EVENT_NAME(PAIR_START);
+    EVENT_NAME(PAIR_SUCCESS);
+    EVENT_NAME(PAIR_DONE);
+    EVENT_NAME(CONECT_START);
+    EVENT_NAME(CONECTED);
+    EVENT_NAME(DISCONECTED);
+    EVENT_NAME(SIGNAL);
+    EVENT_NAME(DISCONNET_LOG);
+    EVENT_NAME(REQUEST_PARAM);
+    EVENT_NAME(TESTMODE_STATE);
+    EVENT_NAME(FWDBG_INFO);
+    EVENT_NAME(CUSTOMER_MGMT);
+    EVENT_NAME(SLEEP_FAIL);
+    EVENT_NAME(DHCPC_DONE);
+    EVENT_NAME(CONNECT_FAIL);
+    EVENT_NAME(CUST_DRIVER_DATA);
+    EVENT_NAME(UNPAIR_STA);
+    EVENT_NAME(BLENC_DATA);
+    EVENT_NAME(HWSCAN_RESULT);
+    EVENT_NAME(EXCEPTION_INFO);
+    EVENT_NAME(DSLEEP_WAKEUP);
+    EVENT_NAME(STA_MIC_ERROR);
+    EVENT_NAME(ACS_DONE);
+    case ROBUSTO_HALOW_SPI_EVENT_UNDOCUMENTED_31:
+        return "UNDOCUMENTED_31";
+    default:
+        return NULL;
+    }
+#undef EVENT_NAME
+}
+
+static bool valid_exception(const uint8_t *payload, size_t length)
+{
+    if (length < 4) return false;
+    switch (get_unaligned_le32(payload)) {
+    case HGIC_EXCEPTION_TXDELAY_TOOLONG:
+    case HGIC_EXCEPTION_STRONG_BGRSSI:
+        return length >= 16;
+    case HGIC_EXCEPTION_HEAP_USED_OVERTOP:
+    case HGIC_EXCEPTION_WIFI_BUFFER_USED_OVERTOP:
+        return length >= 12;
+    case HGIC_EXCEPTION_TEMPERATURE_OVERTOP:
+        return length >= 8;
+    default:
+        return true;
+    }
+}
+
 bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
                            robusto_halow_spi_packet_t *packet)
 {
@@ -92,6 +151,8 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
         packet->command = true;
         packet->command_id = id;
         packet->command_status = status;
+        packet->command_payload = payload;
+        packet->command_length = payload_length;
         if (status < 0) {
             return true;
         }
@@ -108,6 +169,16 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
             hgic.status.conn_state = status == 9;
             break;
         case HGIC_CMD_SET_WORK_MODE:
+        case HGIC_CMD_RADIO_ONOFF:
+        case HGIC_CMD_SET_SSID:
+        case HGIC_CMD_SET_KEY_MGMT:
+        case HGIC_CMD_SET_WPA_PSK:
+        case HGIC_CMD_SET_BSS_BW:
+        case HGIC_CMD_SET_CHAN_LIST:
+        case HGIC_CMD_GET_SSID:
+        case HGIC_CMD_GET_KEY_MGMT:
+        case HGIC_CMD_GET_BSS_BW:
+        case HGIC_CMD_GET_CHAN_LIST:
             break;
         case HGIC_CMD_GET_MODE:
             if (payload_length >= 2 && memcmp(payload, "ap", 2) == 0 &&
@@ -127,7 +198,20 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
     if (type == HGIC_HDR_TYPE_EVENT || type == HGIC_HDR_TYPE_EVENT2) {
         packet->event = true;
         packet->event_id = id;
+        packet->event_payload = payload;
+        packet->event_length = payload_length;
+        if (robusto_halow_spi_event_name(id) == NULL) {
+            packet->unsupported = true;
+            return false;
+        }
         switch (id) {
+        case HGIC_EVENT_CONECT_START:
+            break;
+        case HGIC_EVENT_CONNECT_FAIL:
+            if (payload_length < 1) {
+                return false;
+            }
+            break;
         case HGIC_EVENT_TX_BITRATE:
             if (payload_length < 4) {
                 return false;
@@ -152,9 +236,19 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
             hgic.status.rssi = (int8_t)payload[0];
             hgic.status.evm = (int8_t)payload[1];
             break;
+        case HGIC_EVENT_PAIR_DONE:
+            if (payload_length > sizeof(hgic.paired_stas) || payload_length % 6 != 0) {
+                return false;
+            }
+            memset(hgic.paired_stas, 0, sizeof(hgic.paired_stas));
+            memcpy(hgic.paired_stas, payload, payload_length);
+            hgic.paired_stas_cnt = payload_length / 6;
+            break;
+        case HGIC_EVENT_EXCEPTION_INFO:
+            if (!valid_exception(payload, payload_length)) return false;
+            break;
         default:
-            packet->unsupported = true;
-            return false;
+            break;
         }
         return true;
     }

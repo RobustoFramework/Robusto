@@ -44,6 +44,9 @@
 #endif
 #include "string.h"
 #include <robusto_time.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
+#endif
 
 static char *presentation_log_prefix;
 
@@ -71,6 +74,11 @@ void do_presentation_callback(robusto_message_t *message)
 
 rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_types media_types, bool is_reply, e_presentation_reason reason)
 {
+    if (peer == NULL || reason < presentation_add || reason > presentation_reply)
+    {
+        ROB_LOGE(presentation_log_prefix, "Invalid presentation peer or reason");
+        return ROB_ERR_INVALID_ARG;
+    }
     if (peer->state == PEER_PRESENTING)
     {
         ROB_LOGE(presentation_log_prefix, "Will not send a presentation as that is already ongoing");
@@ -86,17 +94,6 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         peer->state = PEER_PRESENTING;
         failstate = PEER_UNKNOWN;
     }
-    uint8_t *msg;
-    int msg_len = robusto_make_presentation(peer, &msg, is_reply, reason);
-    if (msg_len < 0)
-    {
-        ROB_LOGE(presentation_log_prefix, ">> Failed making presentation message.");
-        peer->state = failstate; 
-        return ROB_FAIL;
-    }
-    ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
-    rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
-    queue_state *q_state = robusto_malloc(sizeof(queue_state));
     e_media_type supported_mt = get_host_supported_media_types();
     rob_ret_val_t ret_val_flag = ROB_FAIL;
     for (uint16_t media_type = 1; media_type < ROBUSTO_MEDIA_TYPE_LIMIT; media_type = media_type * 2)
@@ -105,6 +102,36 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         {
             continue;
         }
+        uint8_t presentation_mask = 0;
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (media_type == robusto_mt_halow && !is_reply)
+        {
+            presentation_mask = (uint8_t)(1U << reason);
+            ret_val_flag = robusto_halow_begin_presentation(peer, presentation_mask);
+            if (ret_val_flag != ROB_OK)
+            {
+                continue;
+            }
+        }
+#endif
+        queue_state *q_state = robusto_malloc(sizeof(queue_state));
+        uint8_t *msg = NULL;
+        int msg_len = q_state != NULL
+            ? robusto_make_presentation(peer, &msg, is_reply, reason)
+            : ROB_ERR_OUT_OF_MEMORY;
+        if (msg_len < 0)
+        {
+            ROB_LOGE(presentation_log_prefix, ">> Failed making presentation message: %i", msg_len);
+            robusto_free(q_state);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+            robusto_halow_end_presentation(peer, presentation_mask);
+#endif
+            ret_val_flag = msg_len;
+            continue;
+        }
+        (*q_state)[0] = QUEUE_STATE_QUEUEING_FAILED;
+        ROB_LOGD(presentation_log_prefix, ">> Presentation to send:");
+        rob_log_bit_mesh(ROB_LOG_DEBUG, presentation_log_prefix, msg, msg_len);
         robusto_media_t *info = get_media_info(peer, media_type);
         /* Send presentation:
          * no receipt as a reply requires know outgoing id, which is only available after presentation is parsed
@@ -112,14 +139,19 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
          * if reason is recovery, set that as the type so that the presentation isn't purged from the queue
          * replies are triggered by remote HI messages, so do not let them consume the important queue reserve
         */
-        rob_ret_val_t queue_ret = send_message_raw_internal(peer, media_type, msg, msg_len, q_state, false, 
+        bool presented = false;
+        rob_ret_val_t queue_ret = send_presentation_raw_internal(peer, media_type, msg, msg_len, q_state, false,
             (reason == presentation_recover) ?  media_qit_recovery : media_qit_normal, 
-            0, (robusto_media_types)(peer->supported_media_types & ~media_type), !is_reply || reason == presentation_recover);
+            0, (robusto_media_types)(peer->supported_media_types & ~media_type), !is_reply || reason == presentation_recover, presentation_mask);
 
         if (queue_ret != ROB_OK)
         {
 
             ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %u", queue_ret, (unsigned)media_type);
+            robusto_free(msg);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+            robusto_halow_end_presentation(peer, presentation_mask);
+#endif
             ret_val_flag = queue_ret;
         }
         else if (!robusto_waitfor_queue_state(q_state, PRESENTATION_QUEUE_WAIT_MS, &ret_val_flag))
@@ -166,13 +198,14 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                     r_delay(1000);
                 } else {
                     ret_val_flag = ROB_OK;
-                    break;
+                    presented = true;
                 }
 
             } 
         }
     
-        if (peer->state > PEER_PRESENTING)
+        robusto_free_queue_state(q_state);
+        if (presented || peer->state > PEER_PRESENTING)
         {
             break;
         }
@@ -182,7 +215,6 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         // This is kind of odd, we are in here while presenting or unknown.
         peer->state = failstate;
     }
-    robusto_free_queue_state(q_state);
     return ret_val_flag;
 }
 

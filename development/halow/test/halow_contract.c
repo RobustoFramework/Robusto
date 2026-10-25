@@ -33,6 +33,8 @@ static unsigned received_heartbeats;
 static rob_ret_val_t start_result = ROB_OK;
 static rob_ret_val_t stop_result = ROB_OK;
 static rob_ret_val_t work_result;
+static bool free_work_item;
+static bool reject_queue_lock;
 #ifdef ROBUSTO_HALOW_TEST_WITH_RESET
 static unsigned resets;
 static rob_ret_val_t reset_result;
@@ -99,17 +101,23 @@ void rob_log_write(rob_log_level_t level, const char *tag, const char *format, .
     ++logs;
 }
 
-mutex_ref_t robusto_mutex_init(void) { return malloc(1); }
+mutex_ref_t robusto_mutex_init(void) { return calloc(1, 1); }
 void robusto_mutex_deinit(mutex_ref_t mutex) { free(mutex); }
 rob_ret_val_t robusto_mutex_take(mutex_ref_t mutex, int timeout)
 {
     (void)timeout;
     assert(mutex != NULL);
+    if (reject_queue_lock && halow_get_queue_context() != NULL &&
+        mutex == halow_get_queue_context()->__x_queue_mutex) return ROB_ERR_MUTEX;
+    assert(*(uint8_t *)mutex == 0);
+    *(uint8_t *)mutex = 1;
     return ROB_OK;
 }
 rob_ret_val_t robusto_mutex_give(mutex_ref_t mutex)
 {
     assert(mutex != NULL);
+    assert(*(uint8_t *)mutex == 1);
+    *(uint8_t *)mutex = 0;
     return ROB_OK;
 }
 
@@ -118,6 +126,7 @@ rob_ret_val_t init_work_queue(queue_context_t *queue, const char *prefix, const 
     (void)prefix; (void)name;
     assert(queue->max_task_count == 1);
     assert(queue->normal_max_count == 3);
+    queue->__x_queue_mutex = robusto_mutex_init();
     return ROB_OK;
 }
 void set_queue_blocked(queue_context_t *queue, bool blocked) { queue->blocked = blocked; }
@@ -196,7 +205,16 @@ void send_work_item(media_queue_item_t *item, robusto_media_t *info, e_media_typ
 {
     (void)info; (void)poll; (void)queue;
     assert(medium == robusto_mt_halow);
+    if (item->presentation_mask != 0) {
+        /* Dequeued work must retain its reservation while the driver runs. */
+        assert(robusto_halow_begin_presentation(item->peer, item->presentation_mask) == ROB_ERR_NOT_READY);
+    }
     work_result = send(item->peer, item->data, item->data_length, item->receipt);
+    if (free_work_item) {
+        robusto_free(item->data);
+        memset(item, 0xA5, sizeof(*item));
+        robusto_free(item);
+    }
 }
 
 static rob_ret_val_t start(void *context) { (void)context; return start_result; }
@@ -223,6 +241,52 @@ static rob_ret_val_t send_payload(uint32_t length, bool receipt)
     item.receipt = receipt;
     halow_get_queue_context()->on_work_cb(&item);
     return work_result;
+}
+
+static void test_presentation_reservation(void)
+{
+    const uint8_t mask = 1U << presentation_recover;
+    queue_context_t *context = halow_get_queue_context();
+    assert(robusto_halow_begin_presentation(NULL, mask) == ROB_ERR_INVALID_ARG);
+    assert(robusto_halow_begin_presentation(&remote, 0) == ROB_ERR_INVALID_ARG);
+    assert(robusto_halow_begin_presentation(&remote, 3) == ROB_ERR_INVALID_ARG);
+    assert(robusto_halow_begin_presentation(&remote, 0x80) == ROB_ERR_INVALID_ARG);
+    reject_queue_lock = true;
+    assert(robusto_halow_begin_presentation(&remote, mask) == ROB_ERR_MUTEX);
+    assert(remote.halow_pending_presentations == 0);
+    reject_queue_lock = false;
+    assert(robusto_halow_begin_presentation(&remote, mask) == ROB_OK);
+    for (unsigned i = 0; i < 12; ++i) {
+        assert(robusto_halow_begin_presentation(&remote, mask) == ROB_ERR_NOT_READY);
+    }
+    halow_peer_init_peer(&remote);
+    assert(robusto_halow_begin_presentation(&remote, mask) == ROB_ERR_NOT_READY);
+    assert(send_payload(10, false) == ROB_ERR_NOT_READY);
+    assert(remote.halow_pending_presentations == mask); /* ordinary work cannot clear HI */
+    robusto_peer_t other = {0};
+    assert(robusto_halow_begin_presentation(&other, mask) == ROB_OK);
+    robusto_halow_end_presentation(&other, mask);
+
+    media_queue_item_t *item = calloc(1, sizeof(*item));
+    item->peer = &remote;
+    item->presentation_mask = mask;
+    item->data = calloc(1, ROBUSTO_PREFIX_BYTES + 10);
+    item->data_length = ROBUSTO_PREFIX_BYTES + 10;
+    assert(robusto_mutex_take(context->__x_queue_mutex, 10000) == ROB_OK);
+    context->insert_tail_cb(context, item);
+    assert(context->count == 1);
+    assert(context->first_queue_item_cb(context) == item);
+    context->remove_first_queueitem_cb(context);
+    assert(context->count == 0);
+    assert(robusto_mutex_give(context->__x_queue_mutex) == ROB_OK);
+    assert(robusto_halow_begin_presentation(&remote, mask) == ROB_ERR_NOT_READY);
+    free_work_item = true;
+    context->on_work_cb(item);
+    free_work_item = false;
+    assert(work_result == ROB_ERR_NOT_READY);
+    assert(remote.halow_pending_presentations == 0);
+    assert(robusto_halow_begin_presentation(&remote, mask) == ROB_OK);
+    robusto_halow_end_presentation(&remote, mask);
 }
 
 int main(void)
@@ -272,6 +336,7 @@ int main(void)
     assert(halow_get_queue_context()->blocked);
     assert(robusto_halow_bind_peer(&remote, radio_mac) == ROB_OK);
     assert(relation_updates == 1);
+    test_presentation_reservation();
     assert(robusto_halow_bind_peer(&remote, radio_mac) == ROB_OK);
     assert(relation_updates == 1);
     assert(robusto_halow_bind_peer(&remote, (uint8_t[6]){255,255,255,255,255,255}) == ROB_ERR_INVALID_ARG);

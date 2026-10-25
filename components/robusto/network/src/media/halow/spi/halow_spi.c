@@ -115,6 +115,7 @@ static control_trace_t control_trace[2];
 static spi_dma_desc_t *tx_descriptor;
 static bool control_buffer_changed;
 static unsigned int bitrate_logs;
+static unsigned int signal_logs;
 static sequence_trace_t sequence_trace[SEQUENCE_TRACE_MAX];
 static unsigned int sequence_count;
 static unsigned int sequence_dropped;
@@ -585,6 +586,113 @@ int raw_send(unsigned char *data, unsigned int length)
     return sent;
 }
 
+static void log_vendor_exception(const robusto_halow_spi_packet_t *packet)
+{
+    const uint8_t *payload = packet->event_payload;
+    uint32_t code = get_unaligned_le32(payload);
+    switch (code) {
+    case HGIC_EXCEPTION_CPU_USED_OVERTOP:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: CPU_USED_OVERTOP");
+        break;
+    case HGIC_EXCEPTION_HEAP_USED_OVERTOP:
+    case HGIC_EXCEPTION_WIFI_BUFFER_USED_OVERTOP:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: %s total=%u used=%u",
+                 code == HGIC_EXCEPTION_HEAP_USED_OVERTOP ? "HEAP_USED_OVERTOP" : "WIFI_BUFFER_USED_OVERTOP",
+                 (unsigned)get_unaligned_le32(payload + 4),
+                 (unsigned)get_unaligned_le32(payload + 8));
+        break;
+    case HGIC_EXCEPTION_TX_BLOCKED:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: TX_BLOCKED");
+        break;
+    case HGIC_EXCEPTION_TXDELAY_TOOLONG:
+    case HGIC_EXCEPTION_STRONG_BGRSSI:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: %s max=%ld avg=%ld min=%ld",
+                 code == HGIC_EXCEPTION_TXDELAY_TOOLONG ? "TXDELAY_TOOLONG" : "STRONG_BGRSSI",
+                 (long)(int32_t)get_unaligned_le32(payload + 4),
+                 (long)(int32_t)get_unaligned_le32(payload + 8),
+                 (long)(int32_t)get_unaligned_le32(payload + 12));
+        break;
+    case HGIC_EXCEPTION_TEMPERATURE_OVERTOP:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: TEMPERATURE_OVERTOP value=%ld",
+                 (long)(int32_t)get_unaligned_le32(payload + 4));
+        break;
+    case HGIC_EXCEPTION_WRONG_PASSWORD:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: WRONG_PASSWORD");
+        break;
+    default:
+        ESP_LOGE(TAG, "Vendor EXCEPTION_INFO: unknown code=%u payload=%u bytes (payload omitted)",
+                 (unsigned)code, (unsigned)packet->event_length);
+        break;
+    }
+}
+
+static void log_vendor_event(const robusto_halow_spi_packet_t *packet)
+{
+    switch (packet->event_id) {
+    case HGIC_EVENT_CONECT_START:
+        ESP_LOGI(TAG, "Connection attempt started (event 11)");
+        return;
+    case HGIC_EVENT_CONNECT_FAIL:
+        ESP_LOGW(TAG, "Connection failed (event 22): detail=0x%02x (%u), payload=%u bytes; detail meaning unverified",
+                 (unsigned int)packet->event_payload[0],
+                 (unsigned int)packet->event_payload[0],
+                 (unsigned int)packet->event_length);
+        return;
+    case HGIC_EVENT_CONECTED:
+        ESP_LOGI(TAG, "Vendor CONECTED (event 12): peer=%02x:%02x:%02x:%02x:%02x:%02x",
+                 packet->event_payload[0], packet->event_payload[1], packet->event_payload[2],
+                 packet->event_payload[3], packet->event_payload[4], packet->event_payload[5]);
+        return;
+    case HGIC_EVENT_DISCONECTED:
+        ESP_LOGI(TAG, "Vendor DISCONECTED (event 13)");
+        return;
+    case HGIC_EVENT_PAIR_DONE:
+        ESP_LOGI(TAG, "Vendor PAIR_DONE (event 10): paired stations=%u",
+                 hgic.paired_stas_cnt);
+        return;
+    case HGIC_EVENT_TX_BITRATE:
+        if (bitrate_logs < 4U) {
+            ++bitrate_logs;
+            ESP_LOGI(TAG, "Vendor TX_BITRATE (event 7): raw=%u (radio status, not SPI clock)",
+                     (unsigned)hgic.status.tx_bitrate);
+        } else if (bitrate_logs == 4U) {
+            ++bitrate_logs;
+            ESP_LOGI(TAG, "Further TX_BITRATE event logs suppressed until transport reinitialization");
+        }
+        return;
+    case HGIC_EVENT_SIGNAL:
+        if (signal_logs < 4U) {
+            ++signal_logs;
+            ESP_LOGI(TAG, "Vendor SIGNAL (event 14): rssi=%d evm=%d",
+                     hgic.status.rssi, hgic.status.evm);
+        } else if (signal_logs == 4U) {
+            ++signal_logs;
+            ESP_LOGI(TAG, "Further SIGNAL event logs suppressed until transport reinitialization");
+        }
+        return;
+    case HGIC_EVENT_EXCEPTION_INFO:
+        log_vendor_exception(packet);
+        return;
+    case HGIC_EVENT_DISCONNECT_REASON:
+    case HGIC_EVENT_ASSOC_STATUS:
+    case HGIC_EVENT_DISCONNET_LOG:
+    case HGIC_EVENT_REQUEST_PARAM:
+    case HGIC_EVENT_TESTMODE_STATE:
+    case HGIC_EVENT_SLEEP_FAIL:
+    case HGIC_EVENT_STA_MIC_ERROR:
+    case ROBUSTO_HALOW_SPI_EVENT_UNDOCUMENTED_31:
+        ESP_LOGW(TAG, "Vendor event %s (%u): payload=%u bytes; payload not decoded",
+                 robusto_halow_spi_event_name(packet->event_id), packet->event_id,
+                 (unsigned)packet->event_length);
+        return;
+    default:
+        ESP_LOGI(TAG, "Vendor event %s (%u): payload=%u bytes; payload not decoded",
+                 robusto_halow_spi_event_name(packet->event_id), packet->event_id,
+                 (unsigned)packet->event_length);
+        return;
+    }
+}
+
 static int read_packet(robusto_halow_spi_packet_t *packet)
 {
     capture_debug_uart();
@@ -611,7 +719,7 @@ static int read_packet(robusto_halow_spi_packet_t *packet)
     }
     if (!robusto_halow_spi_parse(rx_buffer, length, packet)) {
         if (packet->unsupported && packet->event) {
-            ESP_LOGW(TAG, "Unhandled vendor event %u (declared=%u read=%d bytes)",
+            ESP_LOGW(TAG, "Unknown vendor event %u (declared=%u read=%d bytes)",
                      packet->event_id, get_unaligned_le16(rx_buffer + 4), length);
         } else {
             ESP_LOGW(TAG, "%s vendor packet (read=%d bytes)",
@@ -624,13 +732,9 @@ static int read_packet(robusto_halow_spi_packet_t *packet)
             ESP_LOGW(TAG, "Rejected vendor header (payload omitted):");
             ESP_LOG_BUFFER_HEX_LEVEL(TAG, rx_buffer, header_length, ESP_LOG_WARN);
         }
-        if (packet->event && packet->event_id == HGIC_EVENT_TX_BITRATE && bitrate_logs < 4U) {
-            ++bitrate_logs;
-            ESP_LOGI(TAG, "Vendor TX_BITRATE: raw=%u (radio status, not SPI clock)",
-                     (unsigned int)hgic.status.tx_bitrate);
-        }
         return 0;
     }
+    if (packet->event) log_vendor_event(packet);
     if (packet->flow_control) {
         tx_window = packet->tx_window;
         window_pending = false;
@@ -665,6 +769,7 @@ static esp_err_t submit_command(int (*send)(void), uint16_t id)
                                     id == HGIC_CMD_SET_WORK_MODE ||
                                     id == HGIC_CMD_GET_CONN_STATE ||
                                     id == HGIC_CMD_GET_MODE ||
+                                    id == HGIC_CMD_RADIO_ONOFF ||
                                     id == HGIC_CMD_RESET);
     if (capture_submission) {
         memset(control_trace, 0, sizeof(control_trace));
@@ -723,6 +828,126 @@ static esp_err_t submit_command(int (*send)(void), uint16_t id)
     return ESP_OK;
 }
 
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+static bool string_setting_matches(const robusto_halow_spi_packet_t *packet,
+                                   const char *expected)
+{
+    size_t length = strlen(expected);
+    return (packet->command_length == length ||
+            (packet->command_length == length + 1 &&
+             packet->command_payload[length] == '\0')) &&
+           memcmp(packet->command_payload, expected, length) == 0;
+}
+
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE
+#define NETWORK_ROLE "STA"
+#define NETWORK_BANDWIDTH CONFIG_ROBUSTO_HALOW_SPI_STA_BSS_BW
+#define NETWORK_FREQUENCY_LIST CONFIG_ROBUSTO_HALOW_SPI_STA_FREQ_LIST
+static char network_ssid[] = CONFIG_ROBUSTO_HALOW_SPI_STA_SSID;
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_STA_WPA_PSK
+#define NETWORK_WPA_PSK
+static char network_psk[] = CONFIG_ROBUSTO_HALOW_SPI_STA_PSK;
+#endif
+#else
+#define NETWORK_ROLE "AP"
+#define NETWORK_BANDWIDTH CONFIG_ROBUSTO_HALOW_SPI_AP_BSS_BW
+#define NETWORK_FREQUENCY_LIST CONFIG_ROBUSTO_HALOW_SPI_AP_FREQ_LIST
+static char network_ssid[] = CONFIG_ROBUSTO_HALOW_SPI_AP_SSID;
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_AP_WPA_PSK
+#define NETWORK_WPA_PSK
+static char network_psk[] = CONFIG_ROBUSTO_HALOW_SPI_AP_PSK;
+#endif
+#endif
+static unsigned short network_frequencies[16];
+static int network_frequency_count;
+
+static bool parse_network_frequencies(const char *text, unsigned short frequencies[16],
+                                 int *count)
+{
+    *count = 0;
+    while (*text != '\0') {
+        if (*count == 16 || *text < '0' || *text > '9') return false;
+        unsigned int value = 0;
+        do {
+            value = value * 10U + (unsigned int)(*text++ - '0');
+            if (value > UINT16_MAX) return false;
+        } while (*text >= '0' && *text <= '9');
+        if (value == 0) return false;
+        for (int i = 0; i < *count; ++i) {
+            if (frequencies[i] == value) return false;
+        }
+        frequencies[(*count)++] = (unsigned short)value;
+        if (*text == '\0') return true;
+        if (*text++ != ',' || *text == '\0') return false;
+    }
+    return false;
+}
+
+static esp_err_t validate_network_configuration(void)
+{
+    size_t ssid_length = strlen(network_ssid);
+    if (ssid_length == 0 || ssid_length > 31) {
+        ESP_LOGE(TAG, "%s SSID must contain 1-31 bytes", NETWORK_ROLE);
+        return ESP_ERR_INVALID_ARG;
+    }
+#ifdef NETWORK_WPA_PSK
+    if (strlen(network_psk) != 64) {
+        ESP_LOGE(TAG, "%s WPA-PSK requires exactly 64 hexadecimal digits", NETWORK_ROLE);
+        return ESP_ERR_INVALID_ARG;
+    }
+    for (size_t i = 0; i < 64; ++i) {
+        char c = network_psk[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+              (c >= 'A' && c <= 'F'))) {
+            ESP_LOGE(TAG, "%s WPA-PSK contains a non-hexadecimal digit", NETWORK_ROLE);
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+#endif
+    if (NETWORK_BANDWIDTH != 1 && NETWORK_BANDWIDTH != 2 &&
+        NETWORK_BANDWIDTH != 4 && NETWORK_BANDWIDTH != 8) {
+        ESP_LOGE(TAG, "%s bandwidth must be 1, 2, 4 or 8 MHz", NETWORK_ROLE);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!parse_network_frequencies(NETWORK_FREQUENCY_LIST,
+                                   network_frequencies, &network_frequency_count)) {
+        ESP_LOGE(TAG, "%s frequency list must contain 1-16 distinct positive 16-bit integers", NETWORK_ROLE);
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_OK;
+}
+
+static bool network_setting_matches(const robusto_halow_spi_packet_t *packet)
+{
+    const char *expected;
+    switch (packet->command_id) {
+    case HGIC_CMD_GET_SSID:
+        expected = network_ssid;
+        break;
+    case HGIC_CMD_GET_KEY_MGMT:
+#ifdef NETWORK_WPA_PSK
+        expected = "WPA-PSK";
+#else
+        expected = "NONE";
+#endif
+        break;
+    case HGIC_CMD_GET_BSS_BW:
+        return packet->command_status == NETWORK_BANDWIDTH;
+    case HGIC_CMD_GET_CHAN_LIST:
+        if (packet->command_status != network_frequency_count * 2 ||
+            packet->command_length < (size_t)network_frequency_count * 2) return false;
+        for (int i = 0; i < network_frequency_count; ++i) {
+            if (get_unaligned_le16(packet->command_payload + i * 2) != network_frequencies[i])
+                return false;
+        }
+        return true;
+    default:
+        return true;
+    }
+    return string_setting_matches(packet, expected);
+}
+#endif
+
 static esp_err_t command(int (*send)(void), uint16_t id)
 {
     esp_err_t result = submit_command(send, id);
@@ -746,6 +971,12 @@ static esp_err_t command(int (*send)(void), uint16_t id)
                 ESP_LOGE(TAG, "Module did not confirm the configured AP role");
                 return ESP_ERR_INVALID_STATE;
             }
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+            if (!network_setting_matches(&packet)) {
+                ESP_LOGE(TAG, "%s configuration readback mismatch for command %u", NETWORK_ROLE, id);
+                return ESP_ERR_INVALID_STATE;
+            }
+#endif
             return ESP_OK;
         }
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -754,6 +985,56 @@ static esp_err_t command(int (*send)(void), uint16_t id)
     return ESP_ERR_TIMEOUT;
 }
 
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+static int set_network_ssid(void) { return hgic_raw_set_ssid(network_ssid); }
+static int set_network_security(void)
+{
+#ifdef NETWORK_WPA_PSK
+    return hgic_raw_set_key_mgmt("WPA-PSK");
+#else
+    return hgic_raw_set_key_mgmt("NONE");
+#endif
+}
+#ifdef NETWORK_WPA_PSK
+static int set_network_psk(void) { return hgic_raw_set_wpa_psk(network_psk); }
+#endif
+static int set_network_bandwidth(void)
+{ return hgic_raw_set_bss_bw(NETWORK_BANDWIDTH); }
+static int set_network_frequencies(void)
+{ return hgic_raw_set_chan_list(network_frequencies, network_frequency_count); }
+
+static esp_err_t apply_network_configuration(void)
+{
+    ESP_LOGW(TAG, "Applying configured %s settings; module auto-save policy may persist changes", NETWORK_ROLE);
+    esp_err_t result = command(set_network_ssid, HGIC_CMD_SET_SSID);
+#ifdef NETWORK_WPA_PSK
+    if (result == ESP_OK) result = command(set_network_psk, HGIC_CMD_SET_WPA_PSK);
+#endif
+    if (result == ESP_OK) result = command(set_network_security, HGIC_CMD_SET_KEY_MGMT);
+    if (result == ESP_OK) result = command(set_network_bandwidth, HGIC_CMD_SET_BSS_BW);
+    if (result == ESP_OK) result = command(set_network_frequencies, HGIC_CMD_SET_CHAN_LIST);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "%s configuration failed; module settings may be partially changed; no rollback or retry", NETWORK_ROLE);
+    }
+    return result;
+}
+
+static esp_err_t verify_network_configuration(void)
+{
+    esp_err_t result = command(hgic_raw_get_ssid, HGIC_CMD_GET_SSID);
+    if (result == ESP_OK) result = command(hgic_raw_get_key_mgmt, HGIC_CMD_GET_KEY_MGMT);
+    if (result == ESP_OK) result = command(hgic_raw_get_bss_bw, HGIC_CMD_GET_BSS_BW);
+    if (result == ESP_OK) result = command(hgic_raw_get_chan_list, HGIC_CMD_GET_CHAN_LIST);
+    if (result == ESP_OK) {
+        ESP_LOGI(TAG, "%s SSID/security/bandwidth/frequency-list readback verified", NETWORK_ROLE);
+#ifdef NETWORK_WPA_PSK
+        ESP_LOGI(TAG, "PSK write acknowledged, key not queried");
+#endif
+    }
+    return result;
+}
+#endif
+
 static int set_configured_mode(void)
 {
 #ifdef CONFIG_ROBUSTO_HALOW_SPI_ROLE_AP
@@ -761,6 +1042,11 @@ static int set_configured_mode(void)
 #else
     return hgic_raw_set_mode("sta");
 #endif
+}
+
+static int enable_radio(void)
+{
+    return hgic_raw_set_radio_onoff(1);
 }
 
 static int query_role_status(void)
@@ -1058,6 +1344,7 @@ static esp_err_t initialize_transport(void)
         init_register_count = 0;
         init_register_overflow = false;
         bitrate_logs = 0;
+        signal_logs = 0;
         ESP_LOGI(TAG, "Initializing SDSPI: SCLK=%d MOSI=%d MISO=%d CS=%d IRQ=%d mode=0 clock=40000000 CS=hardware-per-transfer pre=1 post=1",
                  HALOW_SCLK, HALOW_MOSI, HALOW_MISO, HALOW_CS, HALOW_IRQ);
         trace_initialization = HALOW_DIAGNOSTICS_ENABLED;
@@ -1121,7 +1408,11 @@ static rob_ret_val_t backend_start(void *context)
     }
     stopping = false;
     ap_interface_ready = false;
-    esp_err_t result = initialize_transport();
+    esp_err_t result = ESP_OK;
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+    result = validate_network_configuration();
+#endif
+    if (result == ESP_OK) result = initialize_transport();
     if (result == ESP_OK) {
         if (HALOW_DIAGNOSTIC_SKIP_FW_INFO) {
             ESP_LOGW(TAG, "Control-write diagnostic: skipping firmware-info command 43; "
@@ -1150,6 +1441,11 @@ static rob_ret_val_t backend_start(void *context)
             ESP_LOGE(TAG, "HaLow radio MAC unavailable: firmware-info command failed");
         }
     }
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+    if (result == ESP_OK && !HALOW_DIAGNOSTIC_SKIP_FW_INFO) {
+        result = apply_network_configuration();
+    }
+#endif
     if (result == ESP_OK) {
         result = command(set_configured_mode, HGIC_CMD_SET_WORK_MODE);
         esp_err_t health = check_interface("after command 41");
@@ -1157,6 +1453,19 @@ static rob_ret_val_t backend_start(void *context)
             result = health;
         }
     }
+    if (result == ESP_OK && !HALOW_DIAGNOSTIC_SKIP_FW_INFO) {
+        result = command(enable_radio, HGIC_CMD_RADIO_ONOFF);
+        if (result == ESP_OK) {
+            ESP_LOGI(TAG, "Radio enable command 65 acknowledged; RF operation not independently verified");
+        } else {
+            ESP_LOGE(TAG, "Radio enable failed; startup cannot publish link readiness");
+        }
+    }
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE
+    if (result == ESP_OK && !HALOW_DIAGNOSTIC_SKIP_FW_INFO) {
+        result = verify_network_configuration();
+    }
+#endif
     if (result == ESP_OK) {
         result = command(query_role_status, HALOW_STATUS_COMMAND);
         esp_err_t health = check_interface("after role status");
@@ -1164,6 +1473,11 @@ static rob_ret_val_t backend_start(void *context)
             result = health;
         }
 #ifdef CONFIG_ROBUSTO_HALOW_SPI_ROLE_AP
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE
+        if (result == ESP_OK && !HALOW_DIAGNOSTIC_SKIP_FW_INFO) {
+            result = verify_network_configuration();
+        }
+#endif
         if (result == ESP_OK) {
             result = probe_ap_interface();
             ap_interface_ready = result == ESP_OK;
@@ -1196,8 +1510,11 @@ static rob_ret_val_t backend_start(void *context)
             ESP_LOGE(TAG, "Failed-start cleanup failed: %s", esp_err_to_name(cleanup));
         }
     } else {
-        ESP_LOGI(TAG, "%s SPI2 40MHz started; associated=%d ap_interface_ready=%u; stored RF/security settings unchanged",
+        ESP_LOGI(TAG, "%s SPI2 40MHz started; associated=%d ap_interface_ready=%u",
                  HALOW_ROLE_NAME, hgic.status.conn_state, (unsigned)ap_interface_ready);
+#if !defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) && !defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+        ESP_LOGI(TAG, "Stored RF/security settings unchanged");
+#endif
 #ifdef CONFIG_ROBUSTO_HALOW_SPI_ROLE_AP
         ESP_LOGW(TAG, "AP readiness confirms mode and local raw interface, not beaconing, STA admission or RF delivery");
 #endif
@@ -1273,6 +1590,13 @@ static esp_err_t reset_and_reinitialize(void)
         ESP_LOGE(TAG, "Reset requires an application task and no unfinished stop");
         return ESP_ERR_INVALID_STATE;
     }
+#if defined(CONFIG_ROBUSTO_HALOW_SPI_AP_CONFIGURE) || defined(CONFIG_ROBUSTO_HALOW_SPI_STA_CONFIGURE)
+    esp_err_t validation = validate_network_configuration();
+    if (validation != ESP_OK) {
+        xSemaphoreGive(lock);
+        return validation;
+    }
+#endif
     const bool was_running = running;
     stopping = true;
     xSemaphoreGive(lock);

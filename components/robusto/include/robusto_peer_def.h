@@ -192,6 +192,8 @@ This library assumes this and may fail using other lengths for this setting.
         robusto_media_t halow_info;
         rob_mac_address halow_mac_address;
         bool halow_address_valid;
+        /* Pending HI reasons, protected by the HaLow queue mutex (not QoS statistics). */
+        uint8_t halow_pending_presentations;
 #endif
         SLIST_ENTRY(robusto_peer)
         next;

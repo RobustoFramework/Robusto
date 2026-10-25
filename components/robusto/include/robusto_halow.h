@@ -64,6 +64,9 @@ rob_ret_val_t robusto_halow_receive(const uint8_t source[6], const uint8_t *fram
 rob_ret_val_t robusto_halow_bind_peer(robusto_peer_t *peer, const uint8_t radio_mac[6]);
 
 queue_context_t *halow_get_queue_context(void);
+/* Internal HI reservation, held through queueing and worker completion. */
+rob_ret_val_t robusto_halow_begin_presentation(robusto_peer_t *peer, uint8_t reason_mask);
+void robusto_halow_end_presentation(robusto_peer_t *peer, uint8_t reason_mask);
 void halow_peer_init_peer(robusto_peer_t *peer);
 
 #ifdef __cplusplus

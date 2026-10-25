@@ -10,6 +10,9 @@
 #include <robusto_concurrency.h>
 #include <robusto_logging.h>
 #include <robusto_time.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
+#endif
 
 int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply, e_presentation_reason reason);
 
@@ -36,12 +39,40 @@ static bool last_relation_halow_valid = false;
 static uint8_t last_relation_halow_mac[6];
 #endif
 static robusto_media_t dummy_media;
+static bool track_allocations;
+static struct { void *pointer; bool live; } allocations[256];
+static unsigned allocation_count;
+static unsigned free_count;
+static unsigned long now_ms;
+static bool queue_sends;
+static bool complete_on_yield;
+static bool complete_at_timeout;
+static bool draining;
+static int fail_after = -1;
+static bool timeout_during_send;
+static queue_state *active_state;
+static bool drain_on_unlock;
+static queue_context_t send_queue;
+static STAILQ_HEAD(contract_queue, media_queue_item) pending;
+static void drain_one(void);
 
 /* Stubs for the framework dependencies of robusto_presentation.c */
 robusto_peer_t *get_host_peer() { return &host_peer; }
 robusto_media_types get_host_supported_media_types() { return host_media; }
 uint32_t calc_relation_id(uint8_t *mac_1, uint8_t *mac_2) { (void)mac_1; (void)mac_2; return RELATION_ID; }
-void *robusto_malloc(size_t size) { return malloc(size); }
+void *robusto_malloc(size_t size)
+{
+    if (fail_after == 0) return NULL;
+    if (fail_after > 0) --fail_after;
+    void *pointer = malloc(size);
+    memset(pointer, 0xA5, size);
+    if (track_allocations) {
+        CHECK(allocation_count < 256);
+        allocations[allocation_count].pointer = pointer;
+        allocations[allocation_count++].live = true;
+    }
+    return pointer;
+}
 char *media_type_to_str(robusto_media_types media_type) { (void)media_type; return "mt"; }
 void rob_log_bit_mesh(rob_log_level_t level, const char *tag, const uint8_t *data, int data_len) { (void)level; (void)tag; (void)data; (void)data_len; }
 void rob_log_write(rob_log_level_t level, const char *tag, const char *format, ...) { (void)level; (void)tag; (void)format; }
@@ -51,7 +82,22 @@ void init_supported_media_types(robusto_peer_t *peer) { (void)peer; init_media_c
 void log_peer_info(char *_log_prefix, robusto_peer_t *peer) { (void)_log_prefix; (void)peer; }
 bool notify_on_new_peer(robusto_peer_t *peer) { (void)peer; return false; }
 robusto_peer_t *robusto_peers_find_duplicate_by_base_mac_address(robusto_peer_t *check_peer) { (void)check_peer; return existing_peer_result; }
-void robusto_free(void *ptr) { free(ptr); }
+void robusto_free(void *ptr)
+{
+    if (track_allocations && ptr != NULL) {
+        bool found = false;
+        for (unsigned i = allocation_count; i > 0; --i) {
+            if (allocations[i - 1].pointer == ptr && allocations[i - 1].live) {
+                allocations[i - 1].live = false;
+                ++free_count;
+                found = true;
+                break;
+            }
+        }
+        CHECK(found);
+    }
+    free(ptr);
+}
 unsigned long r_micros() { return 0; }
 static e_msg_type_t last_envelope_type = MSG_HEARTBEAT;
 /* Envelope building is a separate production unit; capture the presentation payload verbatim. */
@@ -61,19 +107,104 @@ int robusto_make_multi_message_internal(e_msg_type_t message_type, uint16_t serv
 {
     (void)service_id; (void)conversation_id; (void)strings_data; (void)strings_length;
     last_envelope_type = message_type;
-    *dest_message = malloc(binary_length);
+    *dest_message = robusto_malloc(binary_length);
+    if (*dest_message == NULL) return ROB_ERR_OUT_OF_MEMORY;
     memcpy(*dest_message, binary_data, binary_length);
     return (int)binary_length;
 }
 int robusto_peers_delete_peer(uint16_t peer_handle) { deleted_handle = peer_handle; return 0; }
 rob_ret_val_t robusto_create_task(TaskFunction_t task_function, void *parameter, char *task_name, rob_task_handle_t **handle, int affinity) { (void)task_function; (void)parameter; (void)task_name; (void)handle; (void)affinity; return ROB_OK; }
 rob_ret_val_t robusto_delete_current_task() { return ROB_OK; }
-bool robusto_waitfor_byte(uint8_t *byte_ptr, uint8_t value, uint32_t timeout_ms) { (void)byte_ptr; (void)value; (void)timeout_ms; return false; }
+bool robusto_waitfor_byte(uint8_t *byte_ptr, uint8_t value, uint32_t timeout_ms) { (void)timeout_ms; return *byte_ptr == value; }
 void r_delay(unsigned long milliseconds) { (void)milliseconds; }
-bool robusto_waitfor_queue_state(queue_state *state, uint32_t timeout_ms, rob_ret_val_t *return_value) { (void)state; (void)timeout_ms; (void)return_value; return false; }
-queue_state *robusto_free_queue_state(queue_state *state) { free(state); return NULL; }
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important)
-{ (void)peer; (void)media_type; (void)data; (void)data_length; (void)state; (void)receipt; (void)queue_item_type; (void)depth; (void)exclude_media_types; (void)important; send_calls++; return ROB_FAIL; }
+unsigned long r_millis(void) { return now_ms; }
+void robusto_yield(void)
+{
+    if (!draining) now_ms += complete_at_timeout ? 6000 : 1;
+    if (complete_on_yield) {
+        complete_on_yield = false;
+        drain_one();
+    }
+}
+rob_ret_val_t robusto_mutex_take(mutex_ref_t mutex, int timeout) { (void)mutex; (void)timeout; return ROB_OK; }
+rob_ret_val_t robusto_mutex_give(mutex_ref_t mutex)
+{
+    (void)mutex;
+    if (drain_on_unlock && send_queue.count != 0) {
+        drain_on_unlock = false;
+        drain_one();
+    }
+    return ROB_OK;
+}
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+rob_ret_val_t robusto_halow_begin_presentation(robusto_peer_t *peer, uint8_t mask)
+{
+    if (peer->halow_pending_presentations & mask) return ROB_ERR_NOT_READY;
+    peer->halow_pending_presentations |= mask;
+    return ROB_OK;
+}
+void robusto_halow_end_presentation(robusto_peer_t *peer, uint8_t mask)
+{
+    peer->halow_pending_presentations &= (uint8_t)~mask;
+}
+#endif
+queue_context_t *mock_get_queue_context(void)
+{
+    ++send_calls;
+    return queue_sends ? &send_queue : NULL;
+}
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+queue_context_t *halow_get_queue_context(void) { return mock_get_queue_context(); }
+#endif
+rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t length, robusto_media_types exclude, e_media_type *result)
+{
+    (void)peer; (void)length; (void)exclude; (void)result;
+    CHECK(false); /* HI/HIR has no receipt and must never fall back to other media. */
+    return ROB_ERR_NOT_SUPPORTED;
+}
+void add_to_history(robusto_media_t *info, bool sending, rob_ret_val_t result)
+{
+    (void)info; (void)sending; (void)result;
+}
+static rob_ret_val_t local_send(robusto_peer_t *peer, uint8_t *data, uint32_t length, bool receipt)
+{
+    (void)peer; (void)data; (void)length;
+    CHECK(!receipt);
+    if (timeout_during_send) {
+        timeout_during_send = false;
+        CHECK((*active_state)[0] == QUEUE_STATE_RUNNING);
+        unsigned freed = free_count;
+        robusto_free_queue_state(active_state);
+        CHECK((*active_state)[0] == QUEUE_STATE_DROPPED && free_count == freed);
+    }
+    return ROB_OK;
+}
+static void *first_pending(queue_context_t *context) { (void)context; return STAILQ_FIRST(&pending); }
+static void insert_pending(queue_context_t *context, void *item)
+{
+    STAILQ_INSERT_TAIL(&pending, (media_queue_item_t *)item, items);
+    ++context->count;
+}
+static void drain_one(void)
+{
+    media_queue_item_t *item = STAILQ_FIRST(&pending);
+    CHECK(item != NULL);
+    STAILQ_REMOVE_HEAD(&pending, items);
+    --send_queue.count;
+    robusto_peer_t *peer = item->peer;
+    uint8_t mask = item->presentation_mask;
+    active_state = item->state;
+    draining = true;
+    send_work_item(item, &dummy_media, robusto_mt_mock, local_send, NULL, &send_queue);
+    draining = false;
+    active_state = NULL;
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    robusto_halow_end_presentation(peer, mask);
+#else
+    (void)mask;
+#endif
+    peer->state = PEER_KNOWN_INSECURE;
+}
 bool add_relation(uint8_t *mac_address, uint32_t relation_id_incoming, uint32_t relation_id_outgoing, robusto_media_types supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
                   , const rob_mac_address *halow_mac_address, bool halow_address_valid
@@ -324,6 +455,148 @@ static void test_malformed_rejected(void)
     CHECK(add_relation_calls == 1);
 }
 
+static void test_queue_state_ownership(void)
+{
+    struct { queue_state state; uint8_t canary[2]; } storage = {{0}, {0xA7, 0xB8}};
+    robusto_set_queue_state_result(&storage.state, ROB_ERR_SEND_FAIL);
+    CHECK(storage.canary[0] == 0xA7 && storage.canary[1] == 0xB8);
+    rob_ret_val_t result = ROB_OK;
+    CHECK(!robusto_waitfor_queue_state(&storage.state, 6000, &result));
+    CHECK(result == ROB_ERR_SEND_FAIL);
+    robusto_set_queue_state_result(&storage.state, ROB_OK);
+    CHECK(robusto_waitfor_queue_state(&storage.state, 6000, &result));
+    CHECK(result == ROB_OK);
+
+    queue_state *state = robusto_malloc(sizeof(*state));
+    robusto_set_queue_state_queued_on_ok(state, ROB_OK);
+    robusto_free_queue_state(state);
+    CHECK((*state)[0] == QUEUE_STATE_DROPPED);
+    robusto_set_queue_state_running(state);
+    CHECK((*state)[0] == QUEUE_STATE_DROPPED);
+    robusto_set_queue_state_trying(state);
+    CHECK((*state)[0] == QUEUE_STATE_DROPPED);
+    unsigned freed = free_count;
+    robusto_set_queue_state_result(state, ROB_OK);
+    CHECK(free_count == freed + 1);
+}
+
+static void test_pending_presentations(void)
+{
+    track_allocations = true;
+    test_queue_state_ownership();
+    queue_sends = true;
+    memset(&send_queue, 0, sizeof(send_queue));
+    STAILQ_INIT(&pending);
+    send_queue.normal_max_count = 3;
+    send_queue.important_max_count = 5;
+    send_queue.watchdog_timeout = 10;
+    send_queue.blocked = true;
+    send_queue.first_queue_item_cb = first_pending;
+    send_queue.insert_tail_cb = insert_pending;
+    robusto_peer_t peer;
+    reset_peer(&peer, 1);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    host_media = robusto_mt_halow;
+    peer.supported_media_types = host_media;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_ERR_TIMEOUT);
+    CHECK(send_queue.count == 1);
+    media_queue_item_t *original = STAILQ_FIRST(&pending);
+    CHECK(original->important && original->queue_item_type == media_qit_recovery);
+    CHECK((*original->state)[0] == QUEUE_STATE_DROPPED);
+    unsigned allocated = allocation_count;
+    peer.relation_id_incoming = 0x98765432;
+    for (unsigned i = 0; i < 12; ++i) {
+        CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_ERR_NOT_READY);
+        CHECK(send_queue.count == 1 && STAILQ_FIRST(&pending) == original);
+        CHECK(peer.relation_id_incoming == 0x98765432);
+        CHECK(allocation_count == allocated);
+    }
+    uint8_t *ordinary = robusto_malloc(8);
+    CHECK(send_message_raw(&peer, robusto_mt_halow, ordinary, 8, NULL, false) == ROB_OK);
+    CHECK(STAILQ_NEXT(original, items)->presentation_mask == 0);
+    /* Replies, different reasons and other peers must remain independent. */
+    CHECK(robusto_send_presentation(&peer, host_media, true, presentation_reply) == ROB_ERR_TIMEOUT);
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_add) == ROB_ERR_TIMEOUT);
+    robusto_peer_t other;
+    reset_peer(&other, 2);
+    other.supported_media_types = host_media;
+    CHECK(robusto_send_presentation(&other, host_media, false, presentation_recover) == ROB_ERR_TIMEOUT);
+    CHECK(send_queue.count == 5);
+    /* A rejected reply must not release the request reservation or leak data. */
+    CHECK(robusto_send_presentation(&peer, host_media, true, presentation_reply) == ROB_ERR_QUEUE_FULL);
+    CHECK(peer.halow_pending_presentations == ((1U << presentation_recover) | (1U << presentation_add)));
+    set_queue_blocked(&send_queue, false);
+    while (send_queue.count != 0) drain_one();
+    CHECK(peer.halow_pending_presentations == 0 && other.halow_pending_presentations == 0);
+    peer.state = PEER_UNKNOWN;
+    complete_on_yield = true;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_OK);
+    CHECK(send_queue.count == 0 && peer.halow_pending_presentations == 0);
+
+    /* Queue completion at the exact timeout boundary must still release once. */
+    peer.state = PEER_UNKNOWN;
+    complete_on_yield = complete_at_timeout = true;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_OK);
+    complete_at_timeout = false;
+
+    /* Worker may finish after admission unlocks, before enqueue returns. */
+    peer.state = PEER_UNKNOWN;
+    drain_on_unlock = true;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_OK);
+    CHECK(!drain_on_unlock && peer.halow_pending_presentations == 0);
+
+    send_queue.count = send_queue.important_max_count;
+    peer.state = PEER_UNKNOWN;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_ERR_QUEUE_FULL);
+    CHECK(peer.halow_pending_presentations == 0);
+    send_queue.count = 0;
+
+    for (int i = 0; i < 4; ++i) {
+        peer.state = PEER_UNKNOWN;
+        fail_after = i; /* state, construction buffer, envelope, queue item */
+        CHECK(robusto_send_presentation(&peer, host_media, false, presentation_recover) == ROB_ERR_OUT_OF_MEMORY);
+        fail_after = -1;
+        CHECK(peer.halow_pending_presentations == 0 && send_queue.count == 0);
+        CHECK(allocation_count == free_count);
+    }
+
+    /* Caller timeout after dequeue, while the worker still owns the state. */
+    const uint8_t mask = 1U << presentation_recover;
+    CHECK(robusto_halow_begin_presentation(&peer, mask) == ROB_OK);
+    queue_state *state = robusto_malloc(sizeof(*state));
+    uint8_t *payload = robusto_malloc(8);
+    CHECK(send_presentation_raw_internal(&peer, host_media, payload, 8, state, false,
+          media_qit_recovery, 0, 0, true, mask) == ROB_OK);
+    timeout_during_send = true;
+    drain_one();
+    CHECK(!timeout_during_send && peer.halow_pending_presentations == 0);
+    CHECK(allocation_count == free_count);
+
+    /* Each selected medium must own a distinct payload and result state. */
+    host_media |= robusto_mt_mock;
+    peer.supported_media_types = host_media;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_add) == ROB_ERR_TIMEOUT);
+    CHECK(send_queue.count == 2);
+    media_queue_item_t *first = STAILQ_FIRST(&pending);
+    media_queue_item_t *second = STAILQ_NEXT(first, items);
+    CHECK(first->state != second->state && first->data != second->data);
+    drain_one();
+    drain_one();
+#else
+    host_media = robusto_mt_mock;
+    peer.supported_media_types = host_media;
+    CHECK(robusto_send_presentation(&peer, host_media, false, presentation_add) == ROB_ERR_TIMEOUT);
+    CHECK(send_queue.count == 1);
+    drain_one();
+#endif
+    CHECK(allocation_count == free_count);
+    /* Clean up leaked states when demonstrating a failing ownership regression. */
+    for (unsigned i = 0; i < allocation_count; ++i) {
+        if (allocations[i].live) free(allocations[i].pointer);
+    }
+    track_allocations = false;
+}
+
 int main(void)
 {
     memset(&host_peer, 0, sizeof(host_peer));
@@ -338,6 +611,7 @@ int main(void)
     test_halow_mapping_preserved();
     test_malformed_rejected();
     CHECK(send_calls == 0);
+    test_pending_presentations();
 
     if (failures)
     {
