@@ -39,8 +39,12 @@
 extern "C"
 {
 #endif
-/* The current protocol version */
+/* HaLow presentations use v1 to carry the high media-mask byte. */
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#define ROBUSTO_PROTOCOL_VERSION 0x01
+#else
 #define ROBUSTO_PROTOCOL_VERSION 0x00
+#endif
 
 /* Lowest supported protocol version */
 #define ROBUSTO_PROTOCOL_VERSION_MIN 0x00

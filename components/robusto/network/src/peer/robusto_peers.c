@@ -383,7 +383,7 @@ robusto_peer_t * robusto_add_init_new_peer(const char *peer_name, rob_mac_addres
         memcpy((uint8_t *)&(peer->base_mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN);
         peer->supported_media_types = media_types;
         
-        ROB_LOGI(peers_log_prefix, "Supported media types %hhu, Mac:", peer->supported_media_types);
+        ROB_LOGI(peers_log_prefix, "Supported media types 0x%04x, Mac:", (unsigned)peer->supported_media_types);
         rob_log_bit_mesh(ROB_LOG_INFO, peers_log_prefix, (uint8_t *)mac_address, ROBUSTO_MAC_ADDR_LEN);
 
         init_supported_media_types(peer);

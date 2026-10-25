@@ -32,6 +32,7 @@
  */
 
 #include "robusto_media.h"
+#include "robusto_peer.h"
 #include "robusto_system.h"
 #include "robusto_logging.h"
 #include <robusto_time.h>
@@ -53,6 +54,9 @@
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include "lora/lora_control.h"
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
 #endif
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
 #include "mock/mock_control.h"
@@ -103,6 +107,10 @@ void list_media_types(robusto_media_types media_types, char *log_str)
     {
         strcat(log_str, " MOCK,");
     }
+    if (media_types & robusto_mt_halow)
+    {
+        strcat(log_str, " HaLow,");
+    }
     if (media_types > 0)
     {
         // Remove last ","
@@ -146,6 +154,10 @@ char *media_type_to_str(robusto_media_types media_type)
     {
         return "MOCK";
     } else
+    if (media_type == robusto_mt_halow)
+    {
+        return "HaLow";
+    } else
     {
         return "Unknown/multiple";
     }
@@ -170,6 +182,14 @@ void robusto_media_stop() {
 
     #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     robusto_lora_stop();
+    #endif
+
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    rob_ret_val_t halow_stop_result = robusto_halow_stop();
+    if (halow_stop_result != ROB_OK)
+    {
+        ROB_LOGE(media_log_prefix, "HaLow stop failed: %i", halow_stop_result);
+    }
     #endif
 
 }
@@ -230,6 +250,32 @@ void robusto_media_start() {
     
     #endif
 
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    ROB_LOGW("mem", "Starting robusto_halow_start");
+    mem_before = get_free_mem();
+    time_before = r_millis();
+    rob_ret_val_t halow_start_result = robusto_halow_start();
+    if (halow_start_result != ROB_OK)
+    {
+        ROB_LOGE(media_log_prefix, "HaLow start failed: %i", halow_start_result);
+    }
+    ROB_LOGW("mem", "Started robusto_halow_start with result %i, took %llu ms and %llu bytes.",
+             halow_start_result, r_millis() - time_before, mem_before - get_free_mem());
+    #ifdef CONFIG_ROBUSTO_HALOW_RESET_AFTER_START
+    ROB_LOGW(media_log_prefix, "Configured HaLow module reset: one attempt after initial HaLow startup");
+    rob_ret_val_t halow_reset_result = robusto_halow_reset_and_reinitialize();
+    if (halow_reset_result != ROB_OK)
+    {
+        ROB_LOGE(media_log_prefix, "Configured HaLow reset/reinitialization failed: %i; no further attempt",
+                 halow_reset_result);
+    }
+    else
+    {
+        ROB_LOGI(media_log_prefix, "Configured HaLow reset/reinitialization completed");
+    }
+    #endif
+    #endif
+
 
 }
 
@@ -256,10 +302,21 @@ void robusto_media_init(char * _log_prefix) {
     robusto_espnow_init(media_log_prefix);
     #endif
 
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    rob_ret_val_t halow_init_result = robusto_halow_init(media_log_prefix);
+    if (halow_init_result != ROB_OK)
+    {
+        ROB_LOGE(media_log_prefix, "HaLow initialization failed: %i", halow_init_result);
+    }
+    else
+    {
+        add_host_supported_media_type(robusto_mt_halow);
+    }
+    #endif
+
     #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
     ROBUSTO_NETWORK_MOCK_TESTING_init(media_log_prefix);
     #endif
 
 
 }
-

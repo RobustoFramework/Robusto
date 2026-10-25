@@ -1149,10 +1149,10 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         if ((uint32_t)(r_millis() - frag_msg->start_time) > FRAG_SEND_TOTAL_WAIT_MS)
         {
             ROB_LOGE(fragmentation_log_prefix,
-                     "Fragmented message exceeded send timeout (%lu ms), closing the transmission. peer=%s mt=%hhu bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
+                     "Fragmented message exceeded send timeout (%lu ms), closing the transmission. peer=%s mt=%u bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
                      (uint32_t)FRAG_SEND_TOTAL_WAIT_MS,
                      peer->name,
-                     media_type,
+                     (unsigned)media_type,
                      data_length,
                      fragment_count,
                      frag_msg->state,
@@ -1169,10 +1169,10 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             (uint32_t)(r_millis() - frag_msg->retry_start_time) > FRAG_RETRY_TOTAL_WAIT_MS)
         {
             ROB_LOGE(fragmentation_log_prefix,
-                     "Fragmented message exceeded retry timeout (%lu ms), closing the transmission. peer=%s mt=%hhu bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
+                     "Fragmented message exceeded retry timeout (%lu ms), closing the transmission. peer=%s mt=%u bytes=%lu fragments=%lu state=%u rssi_valid=%u rssi_dbm=%i",
                      (uint32_t)FRAG_RETRY_TOTAL_WAIT_MS,
                      peer->name,
-                     media_type,
+                     (unsigned)media_type,
                      data_length,
                      fragment_count,
                      frag_msg->state,

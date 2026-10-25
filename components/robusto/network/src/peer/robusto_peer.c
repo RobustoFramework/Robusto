@@ -56,6 +56,9 @@
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
 #include "../media/lora/lora_peer.h"
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_BLE
 #include "../media/ble/ble_spp.h"
 #endif
@@ -78,7 +81,7 @@
 struct robusto_peer robusto_host = {};
 
 /* Just a random 32 bit number that is highly unlikely to occurr (CRC32 polynomial) */
-#define HAS_RELATIONS_POLYNOMIAL 0x82F63B78
+#define HAS_RELATIONS_POLYNOMIAL 0xA17C3E91
 
 /**
  * @brief  This is an an array with all relations
@@ -151,7 +154,6 @@ void init_supported_media_types(robusto_peer_t *peer)
         int rc = ROB_OK;
     }
 #endif
-
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
     if (peer->supported_media_types & robusto_mt_lora)
     {
@@ -165,6 +167,12 @@ void init_supported_media_types(robusto_peer_t *peer)
     {
         i2c_peer_init_peer(peer);
         // TODO: We probably won't need to do something for LoRa here.
+    }
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (peer->supported_media_types & robusto_mt_halow)
+    {
+        halow_peer_init_peer(peer);
     }
 #endif
 }
@@ -221,6 +229,13 @@ void recover_relations() {
         relations[rel_idx].mac_address[0], relations[rel_idx].mac_address[1], relations[rel_idx].mac_address[2],
         relations[rel_idx].mac_address[3], relations[rel_idx].mac_address[4], relations[rel_idx].mac_address[5]);
         new_peer = robusto_add_init_new_peer(NULL, &relations[rel_idx].mac_address, relations[rel_idx].supported_media_types);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        new_peer->halow_address_valid = relations[rel_idx].halow_address_valid;
+        if (new_peer->halow_address_valid)
+        {
+            memcpy(new_peer->halow_mac_address, relations[rel_idx].halow_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        }
+#endif
         #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
             new_peer->i2c_address = relations[rel_idx].i2c_address;
         #endif
@@ -254,12 +269,16 @@ rob_mac_address *relation_id_incoming_to_mac_address(uint32_t relation_id)
 }
 
 bool add_relation(uint8_t *mac_address, uint32_t relation_id_incoming, 
-uint32_t relation_id_outgoing, uint8_t supported_media_types
+uint32_t relation_id_outgoing, robusto_media_types supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
                   , uint8_t i2c_address
 #endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
                   , uint8_t canbus_address
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+                  , const rob_mac_address *halow_mac_address,
+                  bool halow_address_valid
 #endif
 )
 {
@@ -269,6 +288,22 @@ uint32_t relation_id_outgoing, uint8_t supported_media_types
     {
         if (memcmp(&(relations[rel_idx].mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN) == 0)
         {
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+            relations[rel_idx].supported_media_types = supported_media_types;
+            relations[rel_idx].relation_id_incoming = relation_id_incoming;
+            relations[rel_idx].relation_id_outgoing = relation_id_outgoing;
+            relations[rel_idx].halow_address_valid = halow_address_valid;
+            if (halow_address_valid)
+            {
+                memcpy(relations[rel_idx].halow_mac_address, *halow_mac_address, ROBUSTO_MAC_ADDR_LEN);
+            }
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+            relations[rel_idx].i2c_address = i2c_address;
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+            relations[rel_idx].canbus_address = canbus_address;
+#endif
+#endif
             return false;
         }
         rel_idx++;
@@ -287,6 +322,13 @@ uint32_t relation_id_outgoing, uint8_t supported_media_types
         relations[relation_count].relation_id_outgoing = relation_id_outgoing;
         relations[relation_count].supported_media_types = supported_media_types;
         memcpy(&(relations[relation_count].mac_address), mac_address, ROBUSTO_MAC_ADDR_LEN);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        relations[relation_count].halow_address_valid = halow_address_valid;
+        if (halow_address_valid)
+        {
+            memcpy(relations[relation_count].halow_mac_address, *halow_mac_address, ROBUSTO_MAC_ADDR_LEN);
+        }
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
         relations[relation_count].i2c_address = i2c_address;
 #endif
@@ -299,6 +341,31 @@ uint32_t relation_id_outgoing, uint8_t supported_media_types
         has_relations_indicator = HAS_RELATIONS_POLYNOMIAL;
         return true;
     }
+}
+
+void robusto_peer_update_relation(robusto_peer_t *peer)
+{
+    if (peer == NULL || peer->state < PEER_KNOWN_INSECURE)
+    {
+        return;
+    }
+
+    add_relation((uint8_t *)&peer->base_mac_address, peer->relation_id_incoming,
+                 peer->relation_id_outgoing, peer->supported_media_types
+#ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
+                 ,
+                 peer->i2c_address
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
+                 ,
+                 peer->canbus_address
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+                 ,
+                 &peer->halow_mac_address,
+                 peer->halow_address_valid
+#endif
+    );
 }
 
 
@@ -335,8 +402,13 @@ robusto_media_t * get_media_info(robusto_peer_t * peer, e_media_type media_type)
         return &peer->mock_info;
     }
     #endif       
+    #ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        return &peer->halow_info;
+    }
+    #endif
 
-    ROB_LOGE(peer_log_prefix, "Invalid media type (%u) in get_media_info for peer %s", media_type, peer->name);
+    ROB_LOGE(peer_log_prefix, "Invalid media type (%u) in get_media_info for peer %s", (unsigned)media_type, peer->name);
     r_delay(1000);
     return NULL;
 }
@@ -393,7 +465,7 @@ float score_peer(robusto_peer_t *peer, e_media_type media_type, int data_length)
     return total_score;
 }
 
-rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_media_type exclude, e_media_type *result)
+rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, robusto_media_types exclude, e_media_type *result)
 {
     // 
     float score = -49;
@@ -452,6 +524,16 @@ rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_m
         }
     }
     #endif   
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if ((peer->supported_media_types & robusto_mt_halow) && !(exclude & robusto_mt_halow)) {
+        new_score = score_peer(peer, robusto_mt_halow, data_length);
+
+        if (new_score > score && peer->halow_info.state < media_state_recovering) {
+            score = new_score;
+            *result = robusto_mt_halow;
+        }
+    }
+#endif
     if (score < -40)
     {
         return ROB_FAIL;

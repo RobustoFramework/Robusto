@@ -81,10 +81,10 @@ static void log_large_pubsub_message(const char *phase, const robusto_message_t 
     payload_length = message->binary_data_length - 5U;
 
     ROB_LOGW(incoming_log_prefix,
-             "Large PubSub %s peer=%s media=%hhu topic_hash=%lu payload=%lu raw=%lu conv=%u",
+             "Large PubSub %s peer=%s media=%u topic_hash=%lu payload=%lu raw=%lu conv=%u",
              phase,
              message->peer->name,
-             message->media_type,
+             (unsigned)message->media_type,
              (unsigned long)topic_hash,
              (unsigned long)payload_length,
              (unsigned long)message->raw_data_length,
@@ -136,10 +136,10 @@ rob_ret_val_t robusto_handle_incoming(uint8_t *data, uint32_t data_length, robus
     {
         log_large_pubsub_message("queue_rejected", message);
         ROB_LOGW(incoming_log_prefix,
-                 "Failed adding incoming message to queue, retval=%i peer=%s media=%hhu raw=%lu",
+                 "Failed adding incoming message to queue, retval=%i peer=%s media=%u raw=%lu",
                  queue_retval,
                  peer->name,
-                 media_type,
+                 (unsigned)media_type,
                  (unsigned long)data_length);
         robusto_message_free(message);
         robusto_free(queue_item);
@@ -185,11 +185,11 @@ void incoming_do_on_incoming_cb(incoming_queue_item_t *queue_item)
     {
         if (strcmp(queue_item->message->peer->name, "") == 0)
         {
-            ROB_LOGD(incoming_log_prefix, "Freeing message from null-named peer, type %hhu.", queue_item->message->media_type);
+            ROB_LOGD(incoming_log_prefix, "Freeing message from null-named peer, type %u.", (unsigned)queue_item->message->media_type);
         }
         else
         {
-            ROB_LOGD(incoming_log_prefix, "Freeing message from %s, type %hhu", queue_item->message->peer->name, queue_item->message->media_type);
+            ROB_LOGD(incoming_log_prefix, "Freeing message from %s, type %u", queue_item->message->peer->name, (unsigned)queue_item->message->media_type);
         }
         ROB_LOGD(incoming_log_prefix, "Message to be freed : ");
         rob_log_bit_mesh(ROB_LOG_DEBUG, incoming_log_prefix, queue_item->message->raw_data, queue_item->message->raw_data_length);

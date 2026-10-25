@@ -140,6 +140,11 @@ uint32_t robusto_calc_suitability(e_media_type media_type, uint32_t payloadSize)
         // TODO: We should create a kind of CANBUS_MESSAGE_OFFSET for LoRa and use here and in code.
             phc = 80 - (payloadSize - ROBUSTO_CRC_LENGTH / 10); // Decrease with size
             break;
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        case robusto_mt_halow:
+            phc = 50; // Neutral until the backend provides measured size suitability.
+            break;
+#endif
         default:
             ROB_LOGE(scoring_log_prefix, "robusto_calc_suitability: Unsupported media type: %s", media_type_to_str(media_type));
             phc = 50; // Default case
@@ -198,7 +203,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
     }
 
     curr_info->failure_rate = add_to_failure_rate_history(curr_info, failure_rate);
-    ROB_LOGD(scoring_log_prefix, "Scored peer %s, media %hhu, avg failure rate %f", peer->name, media_type, curr_info->failure_rate );
+    ROB_LOGD(scoring_log_prefix, "Scored peer %s, media %u, avg failure rate %f", peer->name, (unsigned)media_type, curr_info->failure_rate );
 #define FAILURE_COUNT 4
     // We do not want large numbers at all, as this makes new change not matter
     if ((curr_info->send_successes + curr_info->send_failures) > 5)
@@ -236,7 +241,7 @@ void update_score(robusto_peer_t *peer, e_media_type media_type)
 void peer_scoring(robusto_peer_t *peer)
 {
 
-    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < ROBUSTO_MEDIA_TYPE_LIMIT; media_type = media_type * 2)
     {
         if ((peer->supported_media_types & media_type) != media_type)
         {
@@ -289,6 +294,12 @@ void peer_scoring(robusto_peer_t *peer)
         {
 
             update_score(peer, robusto_mt_mock);
+        }
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (media_type == robusto_mt_halow)
+        {
+            update_score(peer, robusto_mt_halow);
         }
 #endif
     }

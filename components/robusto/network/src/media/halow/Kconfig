@@ -1,0 +1,86 @@
+menu "HaLow"
+    depends on ROBUSTO_SUPPORTS_HALOW
+
+config ROBUSTO_HALOW_SPI
+    bool "Huge-IC SPI backend (ESP32-P4)"
+    depends on IDF_TARGET_ESP32P4
+    default n
+    help
+        Build and register the pinned Huge-IC non-OS SPI backend.
+        Uses SPI2, mode 0, 40 MHz and peripheral chip select per transfer.
+        Configure the board's pins below. Other backends can instead use
+        robusto_halow_register_driver() with this option disabled.
+
+if ROBUSTO_HALOW_SPI
+
+choice ROBUSTO_HALOW_SPI_ROLE
+    prompt "HaLow module role"
+    default ROBUSTO_HALOW_SPI_ROLE_STA
+
+config ROBUSTO_HALOW_SPI_ROLE_STA
+    bool "Station (STA)"
+
+config ROBUSTO_HALOW_SPI_ROLE_AP
+    bool "Access point (AP)"
+    help
+        Set AP mode and require mode readback plus a raw-interface loopback.
+        Local AP availability is separate from individual STA association
+        and Robusto peer readiness. Stored RF/security settings are retained.
+        This does not configure credentials, channels or regulatory settings.
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_SCLK_GPIO
+    int "SPI clock GPIO"
+    range -1 54
+    default -1
+
+config ROBUSTO_HALOW_SPI_MOSI_GPIO
+    int "SPI MOSI GPIO"
+    range -1 54
+    default -1
+
+config ROBUSTO_HALOW_SPI_MISO_GPIO
+    int "SPI MISO GPIO"
+    range -1 54
+    default -1
+
+config ROBUSTO_HALOW_SPI_CS_GPIO
+    int "SPI chip-select GPIO"
+    range -1 54
+    default -1
+
+config ROBUSTO_HALOW_SPI_IRQ_GPIO
+    int "Module interrupt GPIO"
+    range -1 54
+    default -1
+
+config ROBUSTO_HALOW_SPI_DEBUG_RX_GPIO
+    int "Module debug UART RX GPIO (diagnostics only)"
+    range -1 54
+    default -1
+    help
+        Connected to the module's debug TX, captured using UART2 at 115200.
+        Not claimed unless detailed diagnostics are enabled. No UART TX.
+
+config ROBUSTO_HALOW_SPI_DIAGNOSTICS
+    bool "Enable detailed SPI startup diagnostics"
+    default n
+    help
+        Capture SPI sequences, DMA backing memory, SDIO registers and
+        receive-only module debug UART output. Diagnostic setup or DMA
+        validation failures fail the operation. Disabled builds do not
+        claim UART2 or require access to the SPI DMA descriptor.
+
+config ROBUSTO_HALOW_RESET_AFTER_START
+    bool "Request one module reset/reinitialization after HaLow startup"
+    default n
+    help
+        Invoke the explicit reset API once after the initial HaLow start,
+        whether it succeeded or failed. This requests a HaLow module reboot,
+        not an ESP32 reboot or factory reset. Failures are logged without
+        retries. Disabled by default; manual reset remains available.
+
+endif
+
+endmenu

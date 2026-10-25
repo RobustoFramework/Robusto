@@ -95,7 +95,7 @@ extern "C"
      * @param result A pointer to an e_media_type that receives the result
      * @return rob_ret_val_t Returns ROB_OK if successful
      */
-    rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, e_media_type exclude, e_media_type *result);
+    rob_ret_val_t set_suitable_media(robusto_peer_t *peer, uint16_t data_length, robusto_media_types exclude, e_media_type *result);
 
     /**
      * @brief Reset a media's statistics
@@ -270,7 +270,11 @@ extern "C"
         uint32_t relation_id_incoming;
         uint32_t relation_id_outgoing;
         rob_mac_address mac_address;
-        uint8_t supported_media_types;
+        robusto_media_types supported_media_types;
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        rob_mac_address halow_mac_address;
+        bool halow_address_valid;
+#endif
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
         uint8_t i2c_address;
 #endif
@@ -311,7 +315,7 @@ extern "C"
      * @note There is a hard limit to the number of relations set in ROBUSTO_MAX_PEERS.
      *
      */
-    bool add_relation(uint8_t *mac_address, uint32_t relation_id_incoming, uint32_t relation_id_outgoing, uint8_t supported_media_types
+    bool add_relation(uint8_t *mac_address, uint32_t relation_id_incoming, uint32_t relation_id_outgoing, robusto_media_types supported_media_types
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
                       ,
                       uint8_t i2c_address
@@ -320,7 +324,17 @@ extern "C"
                       ,
                       uint8_t canbus_address
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+                      ,
+                      const rob_mac_address *halow_mac_address,
+                      bool halow_address_valid
+#endif
     );
+    /**
+     * @brief Persist updated peer relation data after an established peer mapping changes.
+     * Does nothing for peers without an established presentation relation.
+     */
+    void robusto_peer_update_relation(robusto_peer_t *peer);
 
 #ifdef __cplusplus
 } /* extern "C" */

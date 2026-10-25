@@ -51,6 +51,9 @@
 #include "../media/mock/mock_messaging.h"
 #include "../media/mock/mock_queue.h"
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
+#endif
 #include <robusto_qos.h>
 #include <robusto_concurrency.h>
 
@@ -115,6 +118,12 @@ static queue_context_t *get_send_queue_context(e_media_type media_type)
         queue_ctx = mock_get_queue_context();
     }
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow)
+    {
+        queue_ctx = halow_get_queue_context();
+    }
+#endif
 
     return queue_ctx;
 }
@@ -130,20 +139,20 @@ bool robusto_send_queue_accepts_large_message(e_media_type media_type)
 
     if (robusto_mutex_take(queue_ctx->__x_queue_mutex, 1000) != ROB_OK) {
         ROB_LOGW(message_sending_log_prefix,
-                 "Large send queue preflight failed: queue mutex unavailable media=%hhu",
-                 media_type);
+                 "Large send queue preflight failed: queue mutex unavailable media=%u",
+                 (unsigned)media_type);
         return false;
     }
 
     if (robusto_mutex_take(queue_ctx->__x_task_state_mutex, 1000) != ROB_OK) {
         ROB_LOGW(message_sending_log_prefix,
-                 "Large send queue preflight failed: task mutex unavailable media=%hhu count=%u",
-                 media_type,
+                 "Large send queue preflight failed: task mutex unavailable media=%u count=%u",
+                 (unsigned)media_type,
                  queue_ctx->count);
         if (robusto_mutex_give(queue_ctx->__x_queue_mutex) != ROB_OK) {
             ROB_LOGE(message_sending_log_prefix,
-                     "Large send queue preflight failed to release queue mutex media=%hhu",
-                     media_type);
+                     "Large send queue preflight failed to release queue mutex media=%u",
+                     (unsigned)media_type);
         }
         return false;
     }
@@ -153,8 +162,8 @@ bool robusto_send_queue_accepts_large_message(e_media_type media_type)
               queue_ctx->count < queue_ctx->normal_max_count;
 
     ROB_LOGD(message_sending_log_prefix,
-             "Large normal send queue preflight media=%hhu accepts=%u count=%u normal_max=%u important_max=%u blocked=%u tasks=%u shutdown=%u",
-             media_type,
+             "Large normal send queue preflight media=%u accepts=%u count=%u normal_max=%u important_max=%u blocked=%u tasks=%u shutdown=%u",
+             (unsigned)media_type,
              accepts ? 1U : 0U,
              queue_ctx->count,
              queue_ctx->normal_max_count,
@@ -165,14 +174,14 @@ bool robusto_send_queue_accepts_large_message(e_media_type media_type)
 
     if (robusto_mutex_give(queue_ctx->__x_task_state_mutex) != ROB_OK) {
         ROB_LOGE(message_sending_log_prefix,
-                 "Large send queue preflight failed to release task mutex media=%hhu",
-                 media_type);
+                 "Large send queue preflight failed to release task mutex media=%u",
+                 (unsigned)media_type);
         accepts = false;
     }
     if (robusto_mutex_give(queue_ctx->__x_queue_mutex) != ROB_OK) {
         ROB_LOGE(message_sending_log_prefix,
-                 "Large send queue preflight failed to release queue mutex media=%hhu",
-                 media_type);
+                 "Large send queue preflight failed to release queue mutex media=%u",
+                 (unsigned)media_type);
         accepts = false;
     }
 
@@ -206,6 +215,14 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
             }
             else
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+            // HaLow addresses peers through the external radio MAC.
+            if (media_type == robusto_mt_halow)
+            {
+                prefix_length = 0;
+            }
+            else
+#endif
                 // Others, like LoRa, uses either MAC-address (UNKNOWN) or RelationId
                 if (peer->state == PEER_UNKNOWN)
                 {
@@ -218,7 +235,7 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
     return prefix_length;
 }
 
-rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, uint8_t exclude_media_types, bool important)
+rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important)
 {
 
     rob_ret_val_t retval = ROB_FAIL;
@@ -265,6 +282,12 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         rob_log_bit_mesh(ROB_LOG_INFO, message_sending_log_prefix, data, data_length);
     }
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow)
+    {
+        ROB_LOGD(message_sending_log_prefix, ">> Sending %lu bytes using HaLow..", data_length);
+    }
+#endif
 
     if (queue_ctx != NULL)
     {
@@ -284,9 +307,9 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         new_item->state = state;
         new_item->important = important;
         ROB_LOGD(message_sending_log_prefix,
-                 ">> Queue add attempt peer=%s mt=%hhu bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                 ">> Queue add attempt peer=%s mt=%u bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
                  peer->name,
-                 media_type,
+                 (unsigned)media_type,
                  data_length,
                  queue_item_type,
                  important,
@@ -303,8 +326,8 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         if (retval == ROB_OK)
         {
             ROB_LOGD(message_sending_log_prefix,
-                     ">> Queue add result peer=%s mt=%hhu retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-                     peer->name, media_type, retval, queue_ctx->count,
+                     ">> Queue add result peer=%s mt=%u retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                     peer->name, (unsigned)media_type, retval, queue_ctx->count,
                      queue_ctx->normal_max_count, queue_ctx->important_max_count,
                      queue_ctx->blocked, queue_ctx->task_count,
                      media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
@@ -313,8 +336,8 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
         else
         {
             ROB_LOGW(message_sending_log_prefix,
-                     ">> Queue add failed peer=%s mt=%hhu retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-                     peer->name, media_type, retval, queue_ctx->count,
+                     ">> Queue add failed peer=%s mt=%u retval=%hi count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                     peer->name, (unsigned)media_type, retval, queue_ctx->count,
                      queue_ctx->normal_max_count, queue_ctx->important_max_count,
                      queue_ctx->blocked, queue_ctx->task_count,
                      media_info != NULL && media_info->latest_rssi_valid ? 1U : 0U,
@@ -327,7 +350,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
     }
     else
     {
-        ROB_LOGE(message_sending_log_prefix, "Internal error: send_message_raw_internal for peer %s called with invalid media type: %u.", peer->name, media_type);
+        ROB_LOGE(message_sending_log_prefix, "Internal error: send_message_raw_internal for peer %s called with invalid media type: %u.", peer->name, (unsigned)media_type);
         return ROB_FAIL;
     }
 
@@ -344,7 +367,7 @@ rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media
 
             info->send_failures++;
             // If we get a problem here, there might be an internal issue, it is immidiately considered a problem.
-            ROB_LOGE(message_sending_log_prefix, "Failed sending to %s, mt %hhu, res %hi, ", peer->name, media_type, retval);
+            ROB_LOGE(message_sending_log_prefix, "Failed sending to %s, mt %u, res %hi, ", peer->name, (unsigned)media_type, retval);
         }
     }
 
@@ -427,9 +450,9 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
     int send_retries = 0;
 
     ROB_LOGD(message_sending_log_prefix,
-             ">> Work send start peer=%s mt=%hhu bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu media_state=%hhu media_problem=%hhu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+             ">> Work send start peer=%s mt=%u bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu media_state=%hhu media_problem=%hhu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
              queue_item->peer->name,
-             media_type,
+             (unsigned)media_type,
              queue_item->data_length,
              queue_item->queue_item_type,
              queue_item->important,
@@ -489,14 +512,14 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
     else
     {
 
-        ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %i is recovering, we might need to try some other media for a message (%i, %i)", queue_item->peer->name, media_type, info->state, queue_item->queue_item_type);
+        ROB_LOGI(message_sending_log_prefix, ">> As the %s, mt %u is recovering, we might need to try some other media for a message (%i, %i)", queue_item->peer->name, (unsigned)media_type, info->state, queue_item->queue_item_type);
     }
 
     if (retval == ROB_OK)
     {
         ROB_LOGD(message_sending_log_prefix,
-                 ">> Work send result peer=%s mt=%hhu retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-                 queue_item->peer->name, media_type, retval, send_retries,
+                 ">> Work send result peer=%s mt=%u retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                 queue_item->peer->name, (unsigned)media_type, retval, send_retries,
                  queue_item->queue_item_type, queue_item->important, queue_item->receipt,
                  info->state, info->problem, info->send_failures, info->send_successes,
                  queue_context->count, queue_context->blocked, queue_context->task_count,
@@ -505,8 +528,8 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
     else
     {
         ROB_LOGW(message_sending_log_prefix,
-                 ">> Work send failed peer=%s mt=%hhu retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
-                 queue_item->peer->name, media_type, retval, send_retries,
+                 ">> Work send failed peer=%s mt=%u retval=%i retries=%i qtype=%hhu important=%u receipt=%u media_state=%hhu media_problem=%hhu send_failures=%lu send_successes=%lu count=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
+                 queue_item->peer->name, (unsigned)media_type, retval, send_retries,
                  queue_item->queue_item_type, queue_item->important, queue_item->receipt,
                  info->state, info->problem, info->send_failures, info->send_successes,
                  queue_context->count, queue_context->blocked, queue_context->task_count,
@@ -542,14 +565,14 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
             rob_ret_val_t retry_res = send_message_raw_internal(queue_item->peer, next_media_type, queue_item->data, queue_item->data_length, new_state, queue_item->receipt, queue_item->queue_item_type, queue_item->depth, queue_item->exclude_media, queue_item->important);
             if (retry_res != ROB_OK)
             {
-                ROB_LOGE(message_sending_log_prefix, "Error queueing retry: %i %i", retry_res, next_media_type);
+                ROB_LOGE(message_sending_log_prefix, "Error queueing retry: %i %u", retry_res, (unsigned)next_media_type);
                 robusto_set_queue_state_result(queue_item->state, ROB_FAIL);
                 robusto_free(queue_item->data);
             }
             else if (!robusto_waitfor_queue_state(new_state, 6000, &retry_retval))
             {
-                ROB_LOGE(message_sending_log_prefix, "Failed retrying sending presentation to %s, using mt %hhu, queue state %hhu , reason code: %hi",
-                         queue_item->peer->name, next_media_type, *(uint8_t *)new_state[0], retry_retval);
+                ROB_LOGE(message_sending_log_prefix, "Failed retrying sending presentation to %s, using mt %u, queue state %hhu , reason code: %hi",
+                         queue_item->peer->name, (unsigned)next_media_type, *(uint8_t *)new_state[0], retry_retval);
                 robusto_set_queue_state_result(queue_item->state, retry_retval);
                 // Leaving this here to remind that the queue handling frees the queue when done
                 // robusto_free(queue_item->data);

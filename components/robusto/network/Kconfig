@@ -25,6 +25,13 @@ menu "Networking"
 	
 	orsource "src/media/lora/Kconfig"   
 
+	config ROBUSTO_SUPPORTS_HALOW
+		bool "Load HaLow libraries"
+		help
+			Set this option to enable the HaLow media backend.
+
+	orsource "src/media/halow/Kconfig"
+
 	config ROBUSTO_SUPPORTS_CANBUS
 		bool "Load CAN bus libraries"
 		help
@@ -207,6 +214,11 @@ menu "Networking"
                 depends on ROBUSTO_SUPPORTS_UMTS
                 help
                     Start testing with UMTS.
+            config ROBUSTO_NETWORK_TEST_SELECT_INITIAL_MEDIA_HALOW
+                bool "HaLow"
+                depends on ROBUSTO_SUPPORTS_HALOW
+                help
+                    Start testing with HaLow.
         endchoice
     endmenu
 endmenu

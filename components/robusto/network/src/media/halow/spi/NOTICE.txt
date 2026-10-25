@@ -1,0 +1,14 @@
+The SPI backend retrieves the external Huge-IC non-OS driver from:
+https://github.com/Xinyuan-LilyGO/T-Halow-P4
+Commit: 2bb0d61a91ef288ac237afa481d6dabf11087031
+Path: examples/halow_spi_single/components/huge-ic-nonos-driver-v2.0.0-31919
+
+Upstream files are fetched without modification into the build tree, retaining
+their copyright notices and the repository's root documentation. They are not
+relicensed by this component. The pinned repository has no root LICENSE file;
+the SDSPI source identifies COPYRIGHT 2021 HUGE-IC. Confirm redistribution
+permissions before distributing firmware containing that external driver.
+
+The LilyGO SPI example and C++ bus library are inspected for the hardware
+contract but are not compiled or vendored by this component. The example's
+GPL-3.0 header must not be mistaken for a standalone driver licensing grant.

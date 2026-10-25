@@ -20,6 +20,11 @@
 #include <robusto_network_service.h>
 #include <inttypes.h>
 #include <robusto_time.h>
+#ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW
+#include <stdlib.h>
+#include <robusto_peer.h>
+#include <robusto_halow.h>
+#endif
 static char *conductor_log_prefix;
 
 ROB_RTC_DATA_ATTR int availability_retry_count;
@@ -147,6 +152,8 @@ void robusto_add_conductor() {
         e_media_type media_type = robusto_mt_lora;
     #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C)
         e_media_type media_type = robusto_mt_i2c;
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW)
+        e_media_type media_type = robusto_mt_halow;
     #elif defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING)
         e_media_type media_type = robusto_mt_mock;
     #else
@@ -157,6 +164,8 @@ void robusto_add_conductor() {
         #error "The conductor I2C address must be defined when an I2C media is selected."
     #elif !defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS)  
         #error "The conductor MAC address must be defined when non-I2C-media is selected."
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW) && !defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_HALOW_MAC_ADDRESS)
+        #error "The conductor HaLow radio MAC address must be defined when HaLow media is selected."
     #endif
     // If we aren't in the first reset, the peer should already be there
     #ifdef CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
@@ -164,6 +173,31 @@ void robusto_add_conductor() {
         if (!main_conductor_peer) {
             main_conductor_peer = add_peer_by_i2c_address("CONDUCTOR_MAIN", CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS)
         }
+    #elif defined(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW)
+        // The base MAC is the peer identity; the HaLow radio MAC must be bound before presenting.
+        uint8_t *conductor_base_mac = kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS);
+        uint8_t *conductor_halow_mac = kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_HALOW_MAC_ADDRESS);
+        bool new_conductor_peer = false;
+        main_conductor_peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)conductor_base_mac);
+        if (!main_conductor_peer) {
+            main_conductor_peer = robusto_add_init_new_peer("CONDUCTOR_MAIN", (rob_mac_address *)conductor_base_mac, media_type);
+            new_conductor_peer = true;
+        }
+        if (!main_conductor_peer) {
+            ROB_LOGE(conductor_log_prefix, "Failed to add the HaLow conductor peer.");
+        } else {
+            rob_ret_val_t bind_retval = robusto_halow_bind_peer(main_conductor_peer, conductor_halow_mac);
+            if (bind_retval != ROB_OK) {
+                ROB_LOGE(conductor_log_prefix, "Failed to bind the conductor HaLow radio MAC, retval=%i.", bind_retval);
+            } else if (new_conductor_peer && (main_conductor_peer->state < PEER_PRESENTING)) {
+                rob_ret_val_t presentation_retval = robusto_send_presentation(main_conductor_peer, media_type, false, presentation_add);
+                if (presentation_retval != ROB_OK) {
+                    ROB_LOGE(conductor_log_prefix, "Failed to present to the HaLow conductor, retval=%i.", presentation_retval);
+                }
+            }
+        }
+        free(conductor_base_mac);
+        free(conductor_halow_mac);
     #else
         main_conductor_peer = robusto_peers_find_peer_by_base_mac_address((rob_mac_address *)kconfig_mac_to_6_bytes(CONFIG_ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MAC_ADDRESS));
         if (!main_conductor_peer) {

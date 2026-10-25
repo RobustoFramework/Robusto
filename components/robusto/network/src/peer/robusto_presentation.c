@@ -58,6 +58,7 @@ static char *presentation_log_prefix;
 #define REASON_POS 6
 #define REL_ID_IN_POS 7
 #define MAC_ADDR_POS 11
+#define HALOW_MEDIA_HIGH_POS (MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN)
 
 void do_presentation_callback(robusto_message_t *message)
 {
@@ -98,7 +99,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
     queue_state *q_state = robusto_malloc(sizeof(queue_state));
     e_media_type supported_mt = get_host_supported_media_types();
     rob_ret_val_t ret_val_flag = ROB_FAIL;
-    for (uint16_t media_type = 1; media_type < 25; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < ROBUSTO_MEDIA_TYPE_LIMIT; media_type = media_type * 2)
     {
         if ((!(media_types & media_type) || !(supported_mt & media_type)))
         {
@@ -113,12 +114,12 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
         */
         rob_ret_val_t queue_ret = send_message_raw_internal(peer, media_type, msg, msg_len, q_state, false, 
             (reason == presentation_recover) ?  media_qit_recovery : media_qit_normal, 
-            0, peer->supported_media_types & ~media_type, !is_reply || reason == presentation_recover);
+            0, (robusto_media_types)(peer->supported_media_types & ~media_type), !is_reply || reason == presentation_recover);
 
         if (queue_ret != ROB_OK)
         {
 
-            ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %i", queue_ret, media_type);
+            ROB_LOGE(presentation_log_prefix, ">> Error queueing presentation: %i %u", queue_ret, (unsigned)media_type);
             ret_val_flag = queue_ret;
         }
         else if (!robusto_waitfor_queue_state(q_state, PRESENTATION_QUEUE_WAIT_MS, &ret_val_flag))
@@ -141,7 +142,7 @@ rob_ret_val_t robusto_send_presentation(robusto_peer_t *peer, robusto_media_type
                 set_state(peer, info, media_type, media_state_problem, media_problem_send_problem);
             }
             
-            ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %hhu, queue state %hhu , reason code: %hi", peer->name, media_type, *(uint8_t *)q_state[0], ret_val_flag);
+            ROB_LOGE(presentation_log_prefix, ">> Failed sending presentation to %s, mt %u, queue state %hhu , reason code: %hi", peer->name, (unsigned)media_type, *(uint8_t *)q_state[0], ret_val_flag);
             if (queue_in_flight) {
                 ROB_LOGW(presentation_log_prefix,
                          ">> Presentation timeout while queue state still in-flight (%hhu), keeping media state unchanged",
@@ -189,9 +190,34 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 {
 
     // TODO: Here, or before/later, we need to detect if this is fraudulent or spam to prevent hijacking of peers.
-    if (message->peer == NULL)
+    if (message == NULL || message->peer == NULL || message->binary_data == NULL ||
+        message->binary_data_length <= MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN)
     {
-        ROB_LOGE(presentation_log_prefix, "<< Got a HI or HIR-message with information but message->peer is NULL, internal error!");
+        ROB_LOGE(presentation_log_prefix, "<< Got an invalid HI/HIR presentation (missing peer, data, or required fields).");
+        return ROB_FAIL;
+    }
+    uint8_t incoming_protocol_version = message->binary_data[PROT_VER_POS];
+    if (incoming_protocol_version > 1U)
+    {
+        ROB_LOGE(presentation_log_prefix, "<< Unsupported presentation protocol version %u.", incoming_protocol_version);
+        return ROB_FAIL;
+    }
+    uint32_t name_pos = MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN +
+                        (incoming_protocol_version == 1U ? 1U : 0U);
+    if (message->binary_data_length <= name_pos)
+    {
+        ROB_LOGE(presentation_log_prefix, "<< Presentation is missing its peer name.");
+        return ROB_FAIL;
+    }
+    uint32_t name_region_length = message->binary_data_length - name_pos;
+    const uint8_t *name_start = message->binary_data + name_pos;
+    const uint8_t *name_end = memchr(name_start, '\0', name_region_length);
+    if ((message->binary_data[HI_POS] != NET_HI && message->binary_data[HI_POS] != NET_HIR) ||
+        name_end == NULL || name_end == name_start ||
+        name_end != message->binary_data + message->binary_data_length - 1U ||
+        (uint32_t)(name_end - name_start) >= CONFIG_ROBUSTO_PEER_NAME_LENGTH)
+    {
+        ROB_LOGE(presentation_log_prefix, "<< Presentation peer name is not terminated or exceeds the configured limit.");
         return ROB_FAIL;
     }
     ROB_LOGW(presentation_log_prefix, "<< Got a %s-message through %s with information, length %lu.", message->binary_data[HI_POS] == NET_HI ? "HI": "HIR",
@@ -203,6 +229,13 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     robusto_peer_t *existing_peer = robusto_peers_find_duplicate_by_base_mac_address(message->peer);
     if (existing_peer)
     {
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (!existing_peer->halow_address_valid && message->peer->halow_address_valid)
+        {
+            memcpy(existing_peer->halow_mac_address, message->peer->halow_mac_address, ROBUSTO_MAC_ADDR_LEN);
+            existing_peer->halow_address_valid = true;
+        }
+#endif
         ROB_LOGW(presentation_log_prefix, "We already had a peer (%s) with the same base_mac_address (handle %u), removing the new one (%u)", existing_peer->name, existing_peer->peer_handle, message->peer->peer_handle );
         robusto_peers_delete_peer(message->peer->peer_handle);
         message->peer = existing_peer;
@@ -213,8 +246,19 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
     message->peer->min_protocol_version = message->binary_data[PROT_VER_MIN_POS];
 
     /* Set supported media types*/
-    bool new_supported_media_types = message->peer->supported_media_types != message->binary_data[MEDIA_T_POS];
-    message->peer->supported_media_types = message->binary_data[MEDIA_T_POS];
+    robusto_media_types incoming_media_types = message->binary_data[MEDIA_T_POS];
+    if (incoming_protocol_version == 1U)
+    {
+        incoming_media_types |= (robusto_media_types)message->binary_data[HALOW_MEDIA_HIGH_POS] << 8;
+    }
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (message->peer->halow_address_valid)
+    {
+        incoming_media_types |= robusto_mt_halow;
+    }
+#endif
+    bool new_supported_media_types = message->peer->supported_media_types != incoming_media_types;
+    message->peer->supported_media_types = incoming_media_types;
 
 #ifdef CONFIG_ROBUSTO_SUPPORTS_I2C
     /* Set I2C address */
@@ -235,7 +279,9 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 
    
     /* Set the name of the peer (the rest of the message) */
-    memcpy(&(message->peer->name), message->binary_data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, message->binary_data_length - MAC_ADDR_POS - ROBUSTO_MAC_ADDR_LEN);
+    memset(message->peer->name, 0, sizeof(message->peer->name));
+    memcpy(message->peer->name, name_start,
+           (size_t)(name_end - name_start) + 1U);
 
     /* A peer might have gotten or lost supported media */
     if (new_supported_media_types) {
@@ -256,6 +302,11 @@ rob_ret_val_t robusto_handle_presentation(robusto_message_t *message)
 #ifdef CONFIG_ROBUSTO_SUPPORTS_CANBUS
                  ,
                  message->peer->canbus_address
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+                 ,
+                 &message->peer->halow_mac_address,
+                 message->peer->halow_address_valid
 #endif
 
     );
@@ -335,7 +386,13 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
      * adresses: A list of addresses in the order of the bits in the media types byte.
      */
     uint32_t name_len = strlen((char *)&(get_host_peer()->name));
-    uint16_t data_len = MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN + name_len + 1; // + 1 to include null termination.
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    bool include_high_media_mask = (peer->supported_media_types & robusto_mt_halow) != 0;
+#else
+    bool include_high_media_mask = false;
+#endif
+    uint16_t data_len = MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN +
+                        (include_high_media_mask ? 1U : 0U) + name_len + 1U;
     // TODO: Null termination should be done at reception instead.
     uint8_t *data = robusto_malloc(data_len);
     if (data == NULL)
@@ -344,7 +401,7 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
     }
     data[HI_POS] = is_reply ? NET_HIR : NET_HI;
     /* Set the protocol versions*/
-    data[PROT_VER_POS] = ROBUSTO_PROTOCOL_VERSION;
+    data[PROT_VER_POS] = include_high_media_mask ? 1U : 0U;
     data[PROT_VER_MIN_POS] = ROBUSTO_PROTOCOL_VERSION_MIN;
     /* Set supported media types*/
     data[MEDIA_T_POS] = get_host_supported_media_types();
@@ -369,7 +426,14 @@ int robusto_make_presentation(robusto_peer_t *peer, uint8_t **msg, bool is_reply
 
     peer->relation_id_incoming = relation_id_incoming;
     memcpy(data + MAC_ADDR_POS, &(get_host_peer()->base_mac_address), ROBUSTO_MAC_ADDR_LEN);
-    strcpy((char *)data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN, (char *)&get_host_peer()->name);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (include_high_media_mask)
+    {
+        data[HALOW_MEDIA_HIGH_POS] = (uint8_t)(get_host_supported_media_types() >> 8);
+    }
+#endif
+    strcpy((char *)data + MAC_ADDR_POS + ROBUSTO_MAC_ADDR_LEN +
+           (include_high_media_mask ? 1U : 0U), (char *)&get_host_peer()->name);
     int message_length = robusto_make_multi_message_internal(
         MSG_NETWORK, 0, 0, NULL, 0, data, data_len, msg);
     robusto_free(data);

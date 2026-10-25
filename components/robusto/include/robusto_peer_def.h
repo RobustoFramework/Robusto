@@ -188,6 +188,11 @@ This library assumes this and may fail using other lengths for this setting.
 #if defined(CONFIG_ROBUSTO_NETWORK_MOCK_TESTING) || defined(CONFIG_ROBUSTO_NETWORK_QOS_TESTING)
         robusto_media_t mock_info;
 #endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        robusto_media_t halow_info;
+        rob_mac_address halow_mac_address;
+        bool halow_address_valid;
+#endif
         SLIST_ENTRY(robusto_peer)
         next;
 

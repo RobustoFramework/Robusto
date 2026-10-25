@@ -123,6 +123,11 @@ void runUnityTests(void *pvParameters)
 
     UNITY_BEGIN();
 
+    RUN_TEST(tst_media_mask_16bit);
+    robusto_yield();
+    RUN_TEST(tst_presentation_media_mask_protocol);
+    robusto_yield();
+
 #ifdef ROBUSTO_FRAGMENTATION_ONLY_TESTS
 #ifdef CONFIG_ROBUSTO_NETWORK_MOCK_TESTING
     RUN_TEST(tst_add_host_media_type_mock);

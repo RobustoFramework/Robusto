@@ -74,10 +74,16 @@ extern "C"
         // TTL? Onewire? Probably this should be implemented in some way. Or onewire. (perhaps separate for testing connections)
         */
         /* Special types */
-        robusto_mt_mock = 128U
+        robusto_mt_mock = 128U,
+
+        /* Wireless */
+        robusto_mt_halow = 0x0100U
     } e_media_type;
 
-    typedef uint8_t robusto_media_types;
+    typedef uint16_t robusto_media_types;
+
+    /* Exclusive upper bound for iterating single-bit media values. */
+#define ROBUSTO_MEDIA_TYPE_LIMIT 0x0200U
 
     extern const char *str_media_states[4];
 
@@ -202,7 +208,7 @@ extern "C"
         /* The queue item type. */
         e_media_queue_item_type queue_item_type;
         /* Media types to exclude */
-        e_media_type exclude_media;
+        robusto_media_types exclude_media;
         /* If true, we will wait for a receipt for the message. */
         bool receipt;
         /* How many levels have we recursed (trying other medias and so on)*/

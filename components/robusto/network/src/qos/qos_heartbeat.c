@@ -114,7 +114,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
     )
     {
         if (info->problem == media_problem_none) {
-            ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %hhu", peer->name, (uint8_t)media_type);
+            ROB_LOGD(heartbeat_log_prefix, "Sending heartbeat to %s, mt %u", peer->name, (unsigned)media_type);
         } else {
             ROB_LOGW(heartbeat_log_prefix, "Sending heartbeat to problematic peer %s using %s", peer->name, media_type_to_str(media_type));
         }
@@ -133,7 +133,7 @@ void send_heartbeat_message(robusto_peer_t *peer, e_media_type media_type)
             false, (info->state == media_state_recovering) ? media_qit_recovery : media_qit_heartbeat, 0, robusto_mt_none, false);
         if (queue_ret_val != ROB_OK && queue_ret_val != ROB_ERR_QUEUE_FULL) {
             // If we get a problem here that is not that the queue is full, there might be a more serious internal issue, it is immidiately considered a problem.
-            ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %hhu, res %hi, ", peer->name, (uint8_t)media_type, queue_ret_val);
+            ROB_LOGE(heartbeat_log_prefix, "Early error sending heartbeat to %s, mt %u, res %hi, ", peer->name, (unsigned)media_type, queue_ret_val);
             set_state(peer, info, media_type, media_state_problem, media_problem_technical);
         }
     }
@@ -156,7 +156,7 @@ void peer_heartbeat(robusto_peer_t *peer)
         uint64_t last_heartbeat = curr_time - HEARTBEAT_IDLE_MARGIN_MS;
     }
     
-    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < ROBUSTO_MEDIA_TYPE_LIMIT; media_type = media_type * 2)
     {
         if ((peer->supported_media_types & media_type) != media_type)
         {
@@ -208,6 +208,12 @@ void peer_heartbeat(robusto_peer_t *peer)
         if (media_type == robusto_mt_mock)
         {
             send_heartbeat_message(peer, robusto_mt_mock);
+        }
+#endif
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (media_type == robusto_mt_halow)
+        {
+            send_heartbeat_message(peer, robusto_mt_halow);
         }
 #endif
     }

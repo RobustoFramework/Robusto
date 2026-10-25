@@ -73,6 +73,21 @@ if(CONFIG_ROBUSTO_SUPPORTS_LORA)
     list(APPEND rob_network_requirements radiolib)
 endif()
 
+if(CONFIG_ROBUSTO_SUPPORTS_HALOW)
+    file(GLOB rob_halow_sources "network/src/media/halow/*.c")
+    list(APPEND rob_sources ${rob_halow_sources})
+endif()
+
+if(CMAKE_BUILD_EARLY_EXPANSION OR CONFIG_ROBUSTO_HALOW_SPI)
+    list(APPEND rob_halow_private_requirements esp_driver_spi esp_driver_uart)
+endif()
+if(CONFIG_ROBUSTO_HALOW_SPI AND NOT CMAKE_BUILD_EARLY_EXPANSION)
+    if(NOT CONFIG_IDF_TARGET_ESP32P4)
+        message(FATAL_ERROR "The Huge-IC HaLow SPI backend currently supports ESP32-P4 only")
+    endif()
+    include("network/src/media/halow/spi/backend.cmake")
+endif()
+
 if(CONFIG_ROBUSTO_UI)
     list(APPEND rob_ui_requirements lvgl esp_lvgl_port esp_lcd)
     if(CONFIG_ROBUSTO_UI_LVGL_LCD_CONTROLLER_SH1106 OR
@@ -140,6 +155,7 @@ idf_component_register(
     SRCS ${rob_sources} 
     INCLUDE_DIRS . include proxy/include proxy/transports/rsd1/include
     PRIV_INCLUDE_DIRS
+        ${rob_halow_private_includes}
         proxy/transports/esp_sdio/src/common
         proxy/transports/esp_sdio/src/p4
         proxy/transports/esp_sdio/src/c6
@@ -158,5 +174,5 @@ idf_component_register(
         ${rob_ui_requirements}
         # UMTS (note the esp_modem dependency)
         esp_netif esp_http_client esp-tls ${rob_umts_requirements}
-    PRIV_REQUIRES ${rob_proxy_private_requirements}
+    PRIV_REQUIRES ${rob_proxy_private_requirements} ${rob_halow_private_requirements}
 )

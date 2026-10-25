@@ -316,7 +316,7 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
         return ROB_OK;
     }
     // Loop all media types and check each
-    for (uint16_t media_type = 1; media_type < 256; media_type = media_type * 2)
+    for (uint16_t media_type = 1; media_type < ROBUSTO_MEDIA_TYPE_LIMIT; media_type = media_type * 2)
     {
         if (
             !(
@@ -338,7 +338,7 @@ rob_ret_val_t check_peer(robusto_peer_t *peer)
         }
 
         last_heartbeat_time = r_millis() - HEARTBEAT_DELAY - 100;
-        ROB_LOGD(qos_state_log_prefix, "In check_peer() media_type %hhu, state %hhu", media_type, info->state);
+        ROB_LOGD(qos_state_log_prefix, "In check_peer() media_type %u, state %hhu", (unsigned)media_type, info->state);
 
         // State machine transitions
         transition_state(peer, info, last_heartbeat_time, media_type);

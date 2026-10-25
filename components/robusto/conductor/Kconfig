@@ -58,6 +58,9 @@ menu "Conductor configuration"
                 config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_I2C
                     depends on ROBUSTO_SUPPORTS_I2C
                     bool "I2C"
+                config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW
+                    depends on ROBUSTO_SUPPORTS_HALOW
+                    bool "HaLow"
             endchoice
 
             config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_I2C_ADDRESS
@@ -75,6 +78,18 @@ menu "Conductor configuration"
                 default 0x000000000000
                 help
                     This is the MAC-address of the conductor
+                    Write it as a large hexadecimal number, for example 0x01AB11BB12BC : 6*8 bits
+                    When HaLow is selected, this is the conductor's Robusto base MAC (peer identity),
+                    not its HaLow radio MAC.
+
+            config ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_HALOW_MAC_ADDRESS
+                hex "The HaLow radio MAC-address of the conductor, a 6-byte hex value"
+                depends on ROBUSTO_CONDUCTOR_CLIENT_CONDUCTOR_MEDIA_HALOW
+                range 0x000000000000 0xFFFFFFFFFFFF
+                default 0x000000000000
+                help
+                    This is the HaLow radio MAC-address of the conductor, bound to the peer
+                    identified by the base MAC above. It is not derived from the base MAC.
                     Write it as a large hexadecimal number, for example 0x01AB11BB12BC : 6*8 bits
         
             config ROBUSTO_CONDUCTOR_RETRY_WAIT_S
