@@ -194,6 +194,8 @@ This library assumes this and may fail using other lengths for this setting.
         bool halow_address_valid;
         /* Pending HI reasons, protected by the HaLow queue mutex (not QoS statistics). */
         uint8_t halow_pending_presentations;
+        /* Queued/running fragmented send, protected by the HaLow queue mutex. */
+        bool halow_large_send_pending;
 #endif
         SLIST_ENTRY(robusto_peer)
         next;

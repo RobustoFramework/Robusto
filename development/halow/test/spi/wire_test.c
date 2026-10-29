@@ -25,7 +25,12 @@ void *memcpy(void *destination, const void *source, size_t length)
     return destination;
 }
 
-int printf(const char *format, ...) { (void)format; return 0; }
+static unsigned int cookie_warnings;
+int printf(const char *format, ...)
+{
+    if (strncmp(format, "cookie err:", 11) == 0) ++cookie_warnings;
+    return 0;
+}
 int sprintf(char *data, const char *format, ...) { (void)data; (void)format; return 0; }
 static unsigned int submitted_length;
 static bool test_sdspi;
@@ -186,18 +191,61 @@ int test_main(void)
     CHECK(!robusto_halow_spi_compact_read(&grouped, &repeated));
     unsigned char buffer[ROBUSTO_HALOW_SPI_RX_CAPACITY];
     robusto_halow_spi_packet_t packet;
+    robusto_halow_spi_reset_rx_cookie();
+    header(buffer, HGIC_HDR_TYPE_SOFTFC, sizeof(struct hgic_hdr));
+    put_unaligned_le16(7, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, sizeof(struct hgic_hdr), &packet));
+    CHECK(packet.flow_control && hgic.rxcookie == 0);
+    header(buffer, HGIC_HDR_TYPE_CMD2, CMD_HDR_LEN);
+    put_unaligned_le16(8, buffer + 6);
+    put_unaligned_le16(HGIC_CMD_SET_WORK_MODE, buffer + 8);
+    CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
+    CHECK(packet.command && hgic.rxcookie == 0);
+    header(buffer, HGIC_HDR_TYPE_EVENT, CMD_HDR_LEN);
+    put_unaligned_le16(9, buffer + 6);
+    buffer[8] = HGIC_EVENT_CONECT_START;
+    CHECK(robusto_halow_spi_parse(buffer, CMD_HDR_LEN, &packet));
+    CHECK(packet.event && hgic.rxcookie == 0);
     header(buffer, HGIC_HDR_TYPE_FRM2, 1664);
     buffer[14] = 0x12; /* Ethernet source starts at vendor offset 8+6. */
     buffer[20] = 0x66;
     buffer[21] = 0xaa;
     buffer[22] = 'R';
     CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(cookie_warnings == 0);
     CHECK(packet.length == 1642);
     CHECK(packet.frame == buffer + 22 && packet.frame[0] == 'R');
     CHECK(packet.source[0] == 0x12);
+    CHECK(!packet.cookie_discontinuity && hgic.rxcookie == 0);
+    put_unaligned_le16(1, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(!packet.cookie_discontinuity && hgic.rxcookie == 1);
+    put_unaligned_le16(3, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(packet.cookie_discontinuity && packet.cookie_previous == 1 &&
+          packet.cookie_expected == 2 && packet.cookie_received == 3);
+    CHECK(packet.frame == buffer + 22 && packet.length == 1642 &&
+          packet.frame[0] == 'R' && packet.source[0] == 0x12);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(packet.cookie_discontinuity && packet.cookie_expected == 4 &&
+          packet.cookie_received == 3);
+    put_unaligned_le16(2, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(packet.cookie_discontinuity && packet.cookie_previous == 3 &&
+          packet.cookie_received == 2);
+    robusto_halow_spi_reset_rx_cookie();
+    put_unaligned_le16(65535, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(!packet.cookie_discontinuity && hgic.rxcookie == 65535);
+    put_unaligned_le16(0, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 1664, &packet));
+    CHECK(!packet.cookie_discontinuity && packet.cookie_expected == 0 &&
+          hgic.rxcookie == 0);
     /* SDIO block padding must not become payload. */
     CHECK(robusto_halow_spi_parse(buffer, 1728, &packet));
     CHECK(packet.length == 1642);
+    CHECK(packet.cookie_discontinuity);
+    put_unaligned_le16(100, buffer + 6);
     put_unaligned_le16(1665, buffer + 4);
     CHECK(!robusto_halow_spi_parse(buffer, 1728, &packet));
     put_unaligned_le16(1664, buffer + 4);
@@ -212,6 +260,7 @@ int test_main(void)
     for (unsigned i = 0; i < sizeof(struct hgic_hdr); ++i) {
         CHECK(!robusto_halow_spi_parse(buffer, i, &packet));
     }
+    CHECK(hgic.rxcookie == 0);
     header(buffer, HGIC_HDR_TYPE_TEST2, 32);
     CHECK(robusto_halow_spi_parse(buffer, 32, &packet));
     CHECK(packet.loopback && !packet.loopback_valid && packet.length == 0);
@@ -219,7 +268,35 @@ int test_main(void)
     memcpy(buffer + sizeof(struct hgic_hdr), ROBUSTO_HALOW_SPI_AP_PROBE, 4);
     CHECK(robusto_halow_spi_parse(buffer, sizeof(struct hgic_hdr) + 4, &packet));
     CHECK(packet.loopback && packet.loopback_valid && packet.frame == NULL);
+    CHECK(packet.loopback_length == 4 &&
+          packet.loopback_payload == buffer + sizeof(struct hgic_hdr));
     CHECK(!robusto_halow_spi_parse(buffer, sizeof(struct hgic_hdr) + 3, &packet));
+    const unsigned int echo_sizes[] = {278, 406, 470, 512, 513, 534, 1046};
+    for (unsigned int i = 0; i < sizeof(echo_sizes) / sizeof(echo_sizes[0]); ++i) {
+        unsigned int total = echo_sizes[i];
+        header(buffer, HGIC_HDR_TYPE_TEST2, total);
+        memset(buffer + sizeof(struct hgic_hdr), 0x5a, total - sizeof(struct hgic_hdr));
+        CHECK(robusto_halow_spi_parse(buffer, (total + 63U) & ~63U, &packet));
+        CHECK(packet.loopback && !packet.loopback_valid && packet.frame == NULL);
+        CHECK(packet.length == 0 && packet.loopback_length == total - sizeof(struct hgic_hdr));
+        CHECK(packet.loopback_payload[packet.loopback_length - 1] == 0x5a);
+        CHECK(!robusto_halow_spi_parse(buffer, total - 1U, &packet));
+    }
+    CHECK(hgic.rxcookie == 0 && cookie_warnings == 0);
+    header(buffer, HGIC_HDR_TYPE_FRM2, 23);
+    buffer[20] = 0x66;
+    buffer[21] = 0xaa;
+    put_unaligned_le16(1, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 23, &packet));
+    CHECK(!packet.cookie_discontinuity && hgic.rxcookie == 1);
+    robusto_halow_spi_reset_rx_cookie();
+    put_unaligned_le16(100, buffer + 6);
+    buffer[20] = 0;
+    CHECK(!robusto_halow_spi_parse(buffer, 23, &packet));
+    buffer[20] = 0x66;
+    put_unaligned_le16(0, buffer + 6);
+    CHECK(robusto_halow_spi_parse(buffer, 23, &packet));
+    CHECK(!packet.cookie_discontinuity && hgic.rxcookie == 0);
 
     header(buffer, HGIC_HDR_TYPE_CMD2, CMD_HDR_LEN + 3);
     put_unaligned_le16(HGIC_CMD_GET_MODE, buffer + 8);
@@ -259,6 +336,7 @@ int test_main(void)
     const uint16_t settings[] = {
         HGIC_CMD_SET_SSID, HGIC_CMD_SET_WPA_PSK, HGIC_CMD_SET_KEY_MGMT,
         HGIC_CMD_SET_BSS_BW, HGIC_CMD_SET_CHAN_LIST, HGIC_CMD_RADIO_ONOFF,
+        HGIC_CMD_SET_FRG_THRESHOLD, HGIC_CMD_SET_ATCMD,
         HGIC_CMD_GET_SSID, HGIC_CMD_GET_KEY_MGMT,
         HGIC_CMD_GET_BSS_BW, HGIC_CMD_GET_CHAN_LIST
     };

@@ -24,7 +24,13 @@ def main():
         raise RuntimeError("No native C compiler found; set CC (e.g. python -m ziglang cc)")
     build = Path(tempfile.mkdtemp(prefix="robusto-presentation-"))
     try:
-        variants = (("halow", []), ("legacy", ["-DPRESENTATION_CONTRACT_NO_HALOW"]))
+        variants = (
+            ("halow", []),
+            ("legacy", ["-DPRESENTATION_CONTRACT_NO_HALOW"]),
+            ("all-media", ["-DPRESENTATION_CONTRACT_ALL_MEDIA"]),
+            ("all-media-no-halow", ["-DPRESENTATION_CONTRACT_ALL_MEDIA",
+                                   "-DPRESENTATION_CONTRACT_NO_HALOW"]),
+        )
         for name, defines in variants:
             executable = build / ("presentation_contract_" + name + (".exe" if os.name == "nt" else ""))
             compilation = subprocess.run([
@@ -32,12 +38,16 @@ def main():
                 "-Wno-unused-parameter",
                 # Pre-existing ESP32 uint32_t/%lu log formats are host-only warnings; keep them visible, nonfatal.
                 "-Wno-error=format", *defines,
+                "-DCONFIG_ROBUSTO_PUBSUB_SERVER=1",
+                "-include", str(tests / "presentation_support" / "media_queues.h"),
                 f"-I{tests / 'presentation_support'}", f"-I{component / 'include'}",
                 f"-I{component / 'base' / 'src' / 'system'}",
                 str(tests / "presentation_contract.c"),
                 str(component / "network" / "src" / "peer" / "robusto_presentation.c"),
                 str(component / "server" / "src" / "queue" / "robusto_queue.c"),
                 str(component / "network" / "src" / "message" / "robusto_message_sending.c"),
+                str(component / "misc" / "src" / "pubsub" / "robusto_pubsub_server.c"),
+                str(component / "base" / "src" / "system" / "compat_crc32.c"),
                 "-o", str(executable),
             ], capture_output=True, text=True)
             if compilation.returncode:

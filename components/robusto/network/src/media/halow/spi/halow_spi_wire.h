@@ -28,7 +28,16 @@ typedef struct {
     bool ap_mode;
     bool loopback;
     bool loopback_valid;
+    const uint8_t *loopback_payload;
+    size_t loopback_length;
+    bool cookie_discontinuity;
+    uint16_t cookie_previous;
+    uint16_t cookie_expected;
+    uint16_t cookie_received;
 } robusto_halow_spi_packet_t;
+
+/* Caller serializes with parsing; reset only when initializing the transport. */
+void robusto_halow_spi_reset_rx_cookie(void);
 
 /* Caller serializes this and all hgic accesses; buffer remains owned by caller. */
 bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,

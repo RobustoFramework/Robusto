@@ -235,11 +235,71 @@ int get_media_type_prefix_len(e_media_type media_type, robusto_peer_t *peer)
     return prefix_length;
 }
 
-static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask)
+static rob_ret_val_t prepare_send(robusto_peer_t *peer, e_media_type media_type,
+                                  uint32_t data_length, robusto_send_admission_t *admission,
+                                  bool before_allocation)
+{
+    if (peer == NULL || admission == NULL || data_length == 0 || admission->active) {
+        ROB_LOGE(message_sending_log_prefix, "Invalid send admission request");
+        return ROB_ERR_INVALID_ARG;
+    }
+    queue_context_t *queue = get_send_queue_context(media_type);
+    if (queue == NULL) {
+        ROB_LOGE(message_sending_log_prefix, "Send queue unavailable for media %u", (unsigned)media_type);
+        return ROB_FAIL;
+    }
+    if (queue->on_release_cb != NULL && queue->on_admit_cb == NULL) {
+        ROB_LOGE(message_sending_log_prefix, "Send queue has a release policy without admission");
+        return ROB_ERR_INVALID_ARG;
+    }
+    if (queue->on_admit_cb != NULL) {
+        rob_ret_val_t result = queue->on_admit_cb(peer, data_length, before_allocation);
+        if (result != ROB_OK) {
+            ROB_LOGW(message_sending_log_prefix, "Send admission rejected peer=%s media=%u rc=%hi",
+                     peer->name, (unsigned)media_type, result);
+            return result;
+        }
+    }
+    *admission = (robusto_send_admission_t){
+        .peer = peer, .queue = queue, .media_type = media_type,
+        .data_length = data_length, .on_release_cb = queue->on_release_cb, .active = true
+    };
+    return ROB_OK;
+}
+
+rob_ret_val_t robusto_prepare_send(robusto_peer_t *peer, e_media_type media_type,
+                                  uint32_t data_length, robusto_send_admission_t *admission)
+{
+    return prepare_send(peer, media_type, data_length, admission, true);
+}
+
+void robusto_cancel_send(robusto_send_admission_t *admission)
+{
+    if (admission == NULL) {
+        ROB_LOGE(message_sending_log_prefix, "Missing send admission to cancel");
+        return;
+    }
+    if (!admission->active) return;
+    admission->active = false;
+    if (admission->on_release_cb != NULL) {
+        admission->on_release_cb(admission->peer, admission->data_length);
+    }
+}
+
+static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask, robusto_send_admission_t *admission)
 {
 
     rob_ret_val_t retval = ROB_FAIL;
-    queue_context_t *queue_ctx = get_send_queue_context(media_type);
+    robusto_send_admission_t local_admission = {0};
+    if (admission == NULL) {
+        retval = prepare_send(peer, media_type, data_length, &local_admission, false);
+        if (retval != ROB_OK) {
+            robusto_set_queue_state_queued_on_ok(state, retval);
+            return retval;
+        }
+        admission = &local_admission;
+    }
+    queue_context_t *queue_ctx = admission->queue;
 
     // Log the selected queue path.
 #ifdef CONFIG_ROBUSTO_SUPPORTS_LORA
@@ -295,6 +355,8 @@ static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_
         media_queue_item_t *new_item = robusto_malloc(sizeof(media_queue_item_t));
         if (new_item == NULL)
         {
+            robusto_cancel_send(admission);
+            robusto_set_queue_state_queued_on_ok(state, ROB_ERR_OUT_OF_MEMORY);
             return ROB_ERR_OUT_OF_MEMORY;
         }
         new_item->peer = peer;
@@ -307,6 +369,7 @@ static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_
         new_item->state = state;
         new_item->important = important;
         new_item->presentation_mask = presentation_mask;
+        new_item->on_release_cb = admission->on_release_cb;
         ROB_LOGD(message_sending_log_prefix,
                  ">> Queue add attempt peer=%s mt=%u bytes=%lu qtype=%hhu important=%u receipt=%u depth=%hhu count=%u normal_max=%u important_max=%u blocked=%u tasks=%u rssi_valid=%u rssi_dbm=%i",
                  peer->name,
@@ -325,6 +388,7 @@ static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_
                  media_info != NULL ? (int)media_info->latest_rssi_dbm : 0);
         /* Publish before admission: the worker may complete and free new_item as soon as it is visible. */
         robusto_set_queue_state_queued_on_ok(state, ROB_OK);
+        admission->active = false;
         retval = safe_add_work_queue(queue_ctx, new_item, important);
         if (retval == ROB_OK)
         {
@@ -349,11 +413,15 @@ static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_
         if (retval != ROB_OK)
         {
             robusto_set_queue_state_queued_on_ok(state, retval);
+            if (new_item->on_release_cb != NULL) {
+                new_item->on_release_cb(peer, data_length);
+            }
             robusto_free(new_item);
         }
     }
     else
     {
+        robusto_cancel_send(admission);
         ROB_LOGE(message_sending_log_prefix, "Internal error: send_message_raw_internal for peer %s called with invalid media type: %u.", peer->name, (unsigned)media_type);
         return ROB_FAIL;
     }
@@ -380,12 +448,30 @@ static rob_ret_val_t queue_message_raw(robusto_peer_t *peer, e_media_type media_
 
 rob_ret_val_t send_message_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important)
 {
-    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, 0);
+    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, 0, NULL);
 }
 
 rob_ret_val_t send_presentation_raw_internal(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt, e_media_queue_item_type queue_item_type, uint8_t depth, robusto_media_types exclude_media_types, bool important, uint8_t presentation_mask)
 {
-    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, presentation_mask);
+    return queue_message_raw(peer, media_type, data, data_length, state, receipt, queue_item_type, depth, exclude_media_types, important, presentation_mask, NULL);
+}
+
+rob_ret_val_t send_message_raw_admitted(robusto_send_admission_t *admission, uint8_t *data,
+                                       queue_state *state, bool receipt)
+{
+    if (admission == NULL || !admission->active) {
+        ROB_LOGE(message_sending_log_prefix, "Missing active send admission");
+        robusto_set_queue_state_queued_on_ok(state, ROB_ERR_INVALID_ARG);
+        return ROB_ERR_INVALID_ARG;
+    }
+    if (data == NULL) {
+        robusto_cancel_send(admission);
+        ROB_LOGE(message_sending_log_prefix, "Admitted send has no payload");
+        robusto_set_queue_state_queued_on_ok(state, ROB_ERR_INVALID_ARG);
+        return ROB_ERR_INVALID_ARG;
+    }
+    return queue_message_raw(admission->peer, admission->media_type, data, admission->data_length,
+                             state, receipt, media_qit_normal, 0, robusto_mt_none, false, 0, admission);
 }
 
 rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, uint32_t data_length, queue_state *state, bool receipt)
@@ -604,6 +690,9 @@ void send_work_item(media_queue_item_t *queue_item, robusto_media_t *info, e_med
     }
     // Letting those monitoring the queue state react
     robusto_yield();
+    if (queue_item->on_release_cb != NULL) {
+        queue_item->on_release_cb(queue_item->peer, queue_item->data_length);
+    }
     // TODO: Instead of yielding, we can just let the one that created the state free it.
     robusto_free(queue_item);
 }

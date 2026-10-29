@@ -1,6 +1,27 @@
 menu "HaLow"
     depends on ROBUSTO_SUPPORTS_HALOW
 
+config ROBUSTO_HALOW_RX_TRACE
+    bool "Temporary receive-entry trace"
+    default n
+    help
+        Log metadata before HaLow envelope validation and before SPI wire
+        parsing. Headers are unvalidated, not proof of delivery or integrity.
+        No payload dumps. Log the first 128 entries/reads, then every 64th;
+        separately log the first 32 fragment-data candidates, then every 64th.
+        Disable after capturing the receive failure.
+
+config ROBUSTO_HALOW_TX_FRAME_MAX
+    int "Maximum transmitted raw HaLow frame size"
+    range 256 1642
+    default 1024
+    help
+        Includes the 20-byte Robusto envelope, excludes vendor/Ethernet headers.
+        The default matches the pinned vendor raw-data test payload size.
+        The 1642-byte SPI capacity is not evidence of an over-the-air MTU.
+        Receive capacity remains 1642 bytes. Fragment requests advertise the
+        selected chunk size, so receiving peers need not use the same TX limit.
+
 config ROBUSTO_HALOW_SPI
     bool "Huge-IC SPI backend (ESP32-P4)"
     depends on IDF_TARGET_ESP32P4
@@ -12,6 +33,143 @@ config ROBUSTO_HALOW_SPI
         robusto_halow_register_driver() with this option disabled.
 
 if ROBUSTO_HALOW_SPI
+
+config ROBUSTO_HALOW_SPI_TX_MCS_MIN
+    int "Minimum transmit MCS (-1 leaves module setting unchanged)"
+    range -1 7
+    default -1
+    help
+        Apply AT+TX_MCS_MIN during every normal startup and explicit
+        reinitialization. Require both the SPI command acknowledgement and
+        the module's value report, then independently query and verify it.
+        Failure prevents startup readiness. This changes the automatic rate
+        floor, not the channel bandwidth or a fixed transmission rate.
+        Firmware 1.6.4.5-38054 also uses this floor for packet-length admission:
+        its 1 MHz/minimum-zero branch has a 383-byte internal length budget.
+        Higher floors restrict weak-link rate adaptation. Default -1 preserves
+        existing module settings without issuing these AT commands.
+
+config ROBUSTO_HALOW_SPI_RADIO_OFF_AT_START
+    bool "Disable module radio before startup commands"
+    default n
+    help
+        Make command 65 with argument zero the first module command after
+        SPI initialization, including after reset/reinitialization. Require
+        acknowledgement before querying
+        firmware info. Failure stops startup without fallback.
+        The normal later radio-enable command is retained. An acknowledgement
+        is not independent RF-off verification, and later mode/configuration
+        commands may reactivate the radio.
+
+config ROBUSTO_HALOW_SPI_ECHO_SWEEP
+    bool "Temporary byte-exact module-local SPI echo sweep"
+    default n
+    help
+        Before publishing startup readiness, run TEST2 local echo at vendor
+        packet lengths equivalent to raw frames of 256, 384, 448, 490, 491,
+        512 and 1024 bytes (raw length plus 22 vendor/Ethernet bytes).
+        Verify every echoed payload byte in ten distinct trials per size.
+        Fail startup on submission/receive error, mismatch or timeout, with
+        no diagnostic retry or fallback. Reapplied after explicit reset.
+        Does not change the 40 MHz clock, normal raw-frame TX ceiling, or
+        normal radio-data framing. Does not require peer/RF delivery and
+        does not exercise the module's normal radio-data processing path.
+        The existing small AP readiness probe is retained. Default off on
+        other devices; disable after collecting the seven PASS summaries.
+
+config ROBUSTO_HALOW_SPI_FRM2_SWEEP_RX
+    bool "Temporary byte-exact normal FRM2 sweep receiver"
+    default n
+    help
+        Consume HLOWFS01 coarse, HLOWFS02 one-byte and HLOWFS03 randomized
+        tight-scan diagnostic packets
+        before Robusto envelope dispatch.
+        Verify all bytes, source, run identity and exact raw length, and report
+        missing, corrupt and duplicate packets at every tested size. Normal
+        traffic remains unchanged. Requires a separately enabled peer sender.
+        This tests normal FRM2 delivery, not TEST2 module-local echo.
+
+config ROBUSTO_HALOW_SPI_FRM2_SWEEP_TX
+    bool "Temporary paced normal FRM2 sweep sender"
+    depends on ROBUSTO_HALOW_TX_FRAME_MAX >= 512
+    select ROBUSTO_HALOW_SPI_FRM2_SWEEP_RX
+    default n
+    help
+        By default send ten individual patterned raw frames at each of 256, 384, 448,
+        490, 491 and 512 bytes, one per second, using hgic_raw_send unchanged.
+        Select the first unicast source of a normal received frame as the
+        destination and wait five seconds before a small start marker.
+        A small end marker follows the 60 data packets. No acknowledgements,
+        retries, JPEG fragmentation or recovery. Submission errors abort the
+        sweep explicitly; only peer RX results establish delivery.
+        Use on one sender in a controlled two-device setup with the peer
+        receiver enabled. Collector pauses its example publisher in this mode.
+        Runs once per backend start, including reset/reinitialization.
+        The pattern choice below can replace the coarse size sequence.
+
+choice ROBUSTO_HALOW_SPI_FRM2_SWEEP_PATTERN
+    prompt "FRM2 sweep pattern"
+    depends on ROBUSTO_HALOW_SPI_FRM2_SWEEP_TX
+    default ROBUSTO_HALOW_SPI_FRM2_COARSE_TX
+
+config ROBUSTO_HALOW_SPI_FRM2_COARSE_TX
+    bool "Coarse 256/384/448/490/491/512 sweep"
+
+config ROBUSTO_HALOW_SPI_FRM2_BYTE_SCAN_TX
+    bool "Use one-byte 256..384 scan instead of coarse FRM2 sweep"
+    help
+        Send every raw length from 256 through 384 bytes three times:
+        ascending, descending, then ascending. All 387 data packets are
+        distinct trials, one per second, with no diagnostic retries.
+        Takes about 6.5 minutes plus startup. Uses HLOWFS02, requiring the
+        updated receiver on the peer; the coarse HLOWFS01 option is preserved.
+        Report per-byte 0..3 counts and only identify an adjacent-byte boundary
+        when every tested size is consistently delivered below it and missing
+        above it, with both markers and no corrupt or duplicate packets.
+        Otherwise explicitly report an inconclusive/non-monotonic result.
+        Clock, raw-send API, ceilings and example publisher pause are unchanged.
+
+config ROBUSTO_HALOW_SPI_FRM2_TIGHT_SCAN_TX
+    bool "Randomized 337..342 scan, five packets per size"
+    help
+        Shuffle a balanced set of 30 packets: five each of raw lengths
+        337, 338, 339, 340, 341 and 342. A hardware-random 64-bit run value
+        seeds a reproducible Fisher-Yates shuffle. Receiver derives the same
+        schedule from that value and verifies every byte and expected length.
+        Uses HLOWFS03; deploy its updated receiver first. Report six counts
+        out of five and an observed adjacent boundary only if supported.
+        One packet per second, no diagnostic retries. The normal start/end
+        markers, receive grace, SPI settings and publisher pause are retained.
+        Random interleaving tests timing/order effects; a precise boundary
+        alone does not establish a software cause or rule out power issues.
+
+endchoice
+
+config ROBUSTO_HALOW_SPI_WRITE_CHECKS
+    bool "Check raw-frame SDSPI block writes"
+    default n
+    help
+        Observe the unchanged pinned driver's SPI callbacks for each raw frame.
+        Check CMD53/block counts, submitted bytes, accepted data-response tokens,
+        stop token and busy release. Reject locally detected failures instead
+        of trusting the vendor's outer byte-count return. No additional I/O,
+        retries, clock changes or vendor-source edits.
+        Log all failures; successful metadata is limited to the first four
+        writes, the first of each block count, then every 64th write.
+        Tokens/busy bytes are logged, never payloads or configuration keys.
+        Acceptance does not prove over-the-air transmission or peer delivery.
+
+config ROBUSTO_HALOW_SPI_TX_TRACE
+    bool "Temporary first fragmented-transfer SPI TX trace"
+    default n
+    help
+        Capture the first outgoing fragmented transfer's request and initial
+        data pass in fixed memory (request plus up to 64 fragment records).
+        Record local returns, credit windows and raw CMD53/block responses.
+        The outgoing worker prints the capture after the initial pass or
+        request failure, outside transport locks. Overflow is explicit.
+        No payload/key dumps, extra I/O, retries or timeout changes.
+        Disable after diagnosis. The capture is one-shot until host reboot.
 
 choice ROBUSTO_HALOW_SPI_ROLE
     prompt "HaLow module role"

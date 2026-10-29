@@ -95,6 +95,12 @@ static void log_large_publish_snapshot(const char *phase,
 #endif
 }
 
+static uint32_t peer_publish_message_length(uint32_t data_length)
+{
+    return ROBUSTO_PREFIX_BYTES + ROBUSTO_CRC_LENGTH + ROBUSTO_CONTEXT_BYTE_LEN +
+           sizeof(uint16_t) + 5U + data_length;
+}
+
 static uint8_t *build_peer_publish_message(uint32_t topic_hash,
                                            uint8_t *data,
                                            uint32_t data_length,
@@ -102,11 +108,7 @@ static uint8_t *build_peer_publish_message(uint32_t topic_hash,
                                            uint32_t *message_length_out)
 {
     const uint32_t payload_length = data_length + 5U;
-    const uint32_t message_length = ROBUSTO_PREFIX_BYTES +
-                                    ROBUSTO_CRC_LENGTH +
-                                    ROBUSTO_CONTEXT_BYTE_LEN +
-                                    sizeof(uint16_t) +
-                                    payload_length;
+    const uint32_t message_length = peer_publish_message_length(data_length);
     message_context_t context = {
         .message_type = MSG_MESSAGE,
         .is_service_call = true,
@@ -207,12 +209,8 @@ static rob_ret_val_t prepare_peer_publish(robusto_peer_t *peer,
         return ROB_FAIL;
     }
 
-    if (data_length <= 500U) {
-        *media_type_out = media_type;
-        return ROB_OK;
-    }
-
-    if (media_type == robusto_mt_espnow &&
+    bool preflight_large = media_type == robusto_mt_espnow && data_length > 500U;
+    if (preflight_large &&
         !robusto_send_queue_accepts_large_message(media_type)) {
         ROB_LOGW(pubsub_log_prefix,
                  "PubSub prepare failed topic=%s peer=%s data_len=%lu stage=queue_preflight rc=%d selected_media=%s peer_state=%u media_state=%u media_problem=%u send_failures=%lu send_successes=%lu rssi_valid=%u rssi_dbm=%d",
@@ -598,6 +596,15 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
             return prepare_rc;
         }
 
+        robusto_send_admission_t admission = {0};
+        rob_ret_val_t reserve_rc = robusto_prepare_send(subscriber->peer, media_type,
+                                                       peer_publish_message_length(data_length), &admission);
+        if (reserve_rc != ROB_OK) {
+            ROB_LOGW(pubsub_log_prefix,
+                     "PubSub publish not admitted before allocation: topic=%s peer=%s rc=%i",
+                     topic->name, subscriber->peer->name, reserve_rc);
+            return reserve_rc;
+        }
         ROB_LOGD(pubsub_log_prefix, "Publishing %s to peer %s.", topic->name, subscriber->peer->name);
         uint8_t *msg = build_peer_publish_message(topic->hash,
                                                   data,
@@ -605,6 +612,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
                                                   prefer_spiram,
                                                   &message_length);
         if (!msg) {
+            robusto_cancel_send(&admission);
             ROB_LOGE(pubsub_log_prefix, "Failed allocating memory to publish %s to peer %s.", topic->name, subscriber->peer->name);
             log_peer_publish_alloc_failure(topic->name,
                                            subscriber->peer->name,
@@ -614,12 +622,7 @@ rob_ret_val_t publish_topic(pubsub_server_topic_t * topic, pubsub_server_subscri
             return ROB_ERR_OUT_OF_MEMORY;
         }
 
-        rob_ret_val_t pubretval = send_message_raw(subscriber->peer,
-                                                   media_type,
-                                                   msg,
-                                                   message_length,
-                                                   NULL,
-                                                   true);
+        rob_ret_val_t pubretval = send_message_raw_admitted(&admission, msg, NULL, true);
         if (pubretval != ROB_OK) {
             robusto_media_t *media_info = get_media_info(subscriber->peer, media_type);
             robusto_free(msg);

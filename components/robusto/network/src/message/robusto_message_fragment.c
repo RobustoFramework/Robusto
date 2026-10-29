@@ -36,7 +36,13 @@
 #include <robusto_qos.h>
 #include <robusto_states.h>
 #include <robusto_time.h>
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+#include <robusto_halow.h>
+#include <robusto_concurrency.h>
+#include <stdlib.h>
+#endif
 #ifdef USE_ESPIDF
+#include <esp_random.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/queue.h>
@@ -64,8 +70,203 @@
 #define FRAG_NO_REQUESTED_FRAGMENT UINT32_MAX
 #define FRAG_COMPLETION_CACHE_SIZE 8
 #define FRAG_COMPLETION_CACHE_TTL_MS ((FRAG_RESULT_WAIT_MS + FRAG_STATUS_WAIT_MS) * 4U)
-
+#define HALOW_FRAGMENT_V2 0x80U
+#define HALOW_FRAGMENT_EXTENSION 12U
 static char *fragmentation_log_prefix = "NOT SET";
+
+static uint64_t fragment_read_id(const uint8_t *data)
+{
+    uint64_t value = 0;
+    for (unsigned i = 0; i < 8; ++i) value |= (uint64_t)data[i] << (8U * i);
+    return value;
+}
+
+static uint32_t fragment_read_round(const uint8_t *data)
+{
+    return (uint32_t)data[0] | ((uint32_t)data[1] << 8) |
+           ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
+}
+
+static rob_ret_val_t send_fragment_wire(robusto_peer_t *peer, e_media_type media_type,
+                                        uint64_t transfer_id, uint32_t round,
+                                        uint8_t *data, uint32_t length, bool receipt,
+                                        cb_send_message *send_message)
+{
+    if (media_type != robusto_mt_halow) return send_message(peer, data, length, receipt);
+    uint8_t *wire = robusto_malloc(length + HALOW_FRAGMENT_EXTENSION);
+    if (wire == NULL) {
+        ROB_LOGE(fragmentation_log_prefix, "HaLow v2 packet allocation failed");
+        return ROB_ERR_OUT_OF_MEMORY;
+    }
+    memcpy(wire, data, 6);
+    wire[5] |= HALOW_FRAGMENT_V2;
+    for (unsigned i = 0; i < 8; ++i) wire[6 + i] = (uint8_t)(transfer_id >> (8U * i));
+    for (unsigned i = 0; i < 4; ++i) wire[14 + i] = (uint8_t)(round >> (8U * i));
+    memcpy(wire + 18, data + 6, length - 6);
+    rob_ret_val_t result = send_message(peer, wire, length + HALOW_FRAGMENT_EXTENSION, receipt);
+    robusto_free(wire);
+    return result;
+}
+
+static void send_wait_yield(e_media_type media_type)
+{
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) robusto_halow_service_small_queue();
+#endif
+    (void)media_type;
+    robusto_yield();
+}
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+static uint32_t halow_transfer_nonce;
+static uint32_t halow_transfer_counter;
+/* One outgoing HaLow worker. RX owns no references to its transfer state. */
+static mutex_ref_t halow_feedback_mutex;
+static struct {
+    robusto_peer_t *peer;
+    uint32_t hash;
+    uint64_t transfer_id;
+    uint32_t round;
+    bool round_open;
+    uint32_t count;
+    uint8_t *map;
+    bool resend;
+    bool result_pending;
+    int16_t result;
+} halow_feedback;
+
+static struct {
+    robusto_peer_t *peer;
+    uint32_t hash;
+    uint64_t transfer_id;
+    uint32_t round;
+    int16_t result;
+    uint32_t completed_at;
+} halow_completed_feedback[FRAG_COMPLETION_CACHE_SIZE];
+static unsigned halow_completed_feedback_next;
+
+static bool halow_feedback_lock(void)
+{
+    if (halow_feedback_mutex == NULL ||
+        robusto_mutex_take(halow_feedback_mutex, CONFIG_ROB_RECEIPT_TIMEOUT_MS) != ROB_OK) {
+        ROB_LOGE(fragmentation_log_prefix, "HaLow fragment feedback mutex unavailable");
+        return false;
+    }
+    return true;
+}
+
+static void halow_feedback_unlock(void)
+{
+    if (robusto_mutex_give(halow_feedback_mutex) != ROB_OK) {
+        ROB_LOGE(fragmentation_log_prefix, "HaLow fragment feedback mutex release failed");
+        abort();
+    }
+}
+
+static rob_ret_val_t halow_feedback_begin(fragmented_message_t *message)
+{
+    uint8_t *map = robusto_malloc(message->fragment_count);
+    if (map == NULL) {
+        ROB_LOGE(fragmentation_log_prefix, "HaLow fragment feedback map allocation failed");
+        return ROB_ERR_OUT_OF_MEMORY;
+    }
+    if (!halow_feedback_lock()) {
+        robusto_free(map);
+        return ROB_ERR_MUTEX;
+    }
+    if (halow_feedback.peer != NULL) {
+        halow_feedback_unlock();
+        robusto_free(map);
+        ROB_LOGE(fragmentation_log_prefix, "Concurrent outgoing HaLow fragment transfer");
+        return ROB_ERR_QUEUE_FULL;
+    }
+    halow_feedback.peer = message->peer;
+    halow_feedback.hash = message->hash;
+    halow_feedback.transfer_id = message->transfer_id;
+    halow_feedback.count = message->fragment_count;
+    halow_feedback.map = map;
+    halow_feedback.resend = false;
+    halow_feedback.result_pending = false;
+    halow_feedback_unlock();
+    return ROB_OK;
+}
+
+static void halow_feedback_end(void)
+{
+    if (!halow_feedback_lock()) abort();
+    uint8_t *map = halow_feedback.map;
+    memset(&halow_feedback, 0, sizeof(halow_feedback));
+    halow_feedback_unlock();
+    robusto_free(map);
+}
+
+static void halow_record_feedback(robusto_peer_t *peer, const uint8_t *data, int length, bool resend,
+                                  uint64_t transfer_id, uint32_t round)
+{
+    uint32_t hash;
+    memcpy(&hash, data, sizeof(hash));
+    if (!halow_feedback_lock()) return;
+    if (halow_feedback.peer == NULL || halow_feedback.peer != peer ||
+        halow_feedback.hash != hash || halow_feedback.transfer_id != transfer_id) {
+        if (!resend && length == 8) {
+            int16_t result;
+            memcpy(&result, data + ROBUSTO_CRC_LENGTH + 2, sizeof(result));
+            for (unsigned i = 0; i < FRAG_COMPLETION_CACHE_SIZE; ++i) {
+                if (halow_completed_feedback[i].peer == peer &&
+                    halow_completed_feedback[i].hash == hash &&
+                    halow_completed_feedback[i].transfer_id == transfer_id &&
+                    halow_completed_feedback[i].result == result &&
+                    round <= halow_completed_feedback[i].round &&
+                    (uint32_t)(r_millis() - halow_completed_feedback[i].completed_at) <=
+                        FRAG_COMPLETION_CACHE_TTL_MS) {
+                    halow_feedback_unlock();
+                    ROB_LOGD(fragmentation_log_prefix,
+                             "Duplicate completed HaLow fragment result hash=%lu id=%016llx round=%lu",
+                             (unsigned long)hash, (unsigned long long)transfer_id,
+                             (unsigned long)round);
+                    return;
+                }
+            }
+        }
+        halow_feedback_unlock();
+        ROB_LOGW(fragmentation_log_prefix, "Ignoring late/unmatched HaLow fragment feedback hash=%lu id=%016llx round=%lu",
+                 (unsigned long)hash, (unsigned long long)transfer_id, (unsigned long)round);
+        return;
+    }
+    if (resend) {
+        if (length < ROBUSTO_CRC_LENGTH + 2 ||
+            (uint32_t)(length - (ROBUSTO_CRC_LENGTH + 2)) != halow_feedback.count) {
+            halow_feedback_unlock();
+            ROB_LOGE(fragmentation_log_prefix, "Wrong HaLow resend map length: %i", length);
+            return;
+        }
+        if (!halow_feedback.round_open || round != halow_feedback.round) {
+            halow_feedback_unlock();
+            ROB_LOGD(fragmentation_log_prefix, "Ignoring duplicate/stale HaLow recovery round");
+            return;
+        }
+        for (uint32_t i = 0; i < halow_feedback.count; ++i) {
+            if (data[6 + i] > 1U) {
+                halow_feedback_unlock();
+                ROB_LOGE(fragmentation_log_prefix, "Invalid HaLow receipt bitmap value");
+                return;
+            }
+        }
+        memcpy(halow_feedback.map, data + 6, halow_feedback.count);
+        halow_feedback.round_open = false;
+        halow_feedback.resend = true;
+    } else {
+        if (length != 8 || round > halow_feedback.round) {
+            halow_feedback_unlock();
+            ROB_LOGE(fragmentation_log_prefix, "Invalid HaLow completion length/round");
+            return;
+        }
+        memcpy(&halow_feedback.result, data + ROBUSTO_CRC_LENGTH + 2, sizeof(int16_t));
+        halow_feedback.result_pending = true;
+    }
+    halow_feedback_unlock();
+}
+#endif
 
 SLIST_HEAD(slist_fragmented_messages_head, fragmented_message);
 
@@ -82,6 +283,7 @@ typedef struct completed_fragment_transfer
     robusto_peer_t *peer;
     e_media_type media_type;
     uint32_t hash;
+    uint64_t transfer_id;
     rob_ret_val_t result;
     uint32_t completed_at;
     bool valid;
@@ -208,7 +410,14 @@ fragmented_message_t *get_last_frag_message()
 
 void remove_fragmented_message(fragmented_message_t *frag_msg)
 {
-
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (frag_msg->media_type == robusto_mt_halow && !frag_msg->is_receiver) {
+        halow_feedback_end();
+        robusto_free(frag_msg->received_fragments);
+        robusto_free(frag_msg);
+        return;
+    }
+#endif
     SLIST_REMOVE(&fragmented_messages_head, frag_msg, fragmented_message, fragmented_messages);
     if (last_frag_msg == frag_msg)
     {
@@ -246,11 +455,12 @@ static void remove_stale_fragment_receives(uint32_t now)
 static fragmented_message_t *find_fragmented_message(robusto_peer_t *peer,
                                                       e_media_type media_type,
                                                       uint32_t hash,
-                                                      bool is_receiver)
+                                                      bool is_receiver, uint64_t transfer_id)
 {
     if (last_frag_msg && last_frag_msg->peer == peer &&
         last_frag_msg->media_type == media_type && last_frag_msg->hash == hash &&
-        last_frag_msg->is_receiver == is_receiver)
+        last_frag_msg->is_receiver == is_receiver &&
+        last_frag_msg->transfer_id == transfer_id)
     {
         ROB_LOGD(fragmentation_log_prefix, "Matched with cached frag");
         return last_frag_msg->abort_transmission ? NULL : last_frag_msg;
@@ -260,7 +470,8 @@ static fragmented_message_t *find_fragmented_message(robusto_peer_t *peer,
     SLIST_FOREACH(curr, &fragmented_messages_head, fragmented_messages)
     {
         if (curr->peer == peer && curr->media_type == media_type &&
-            curr->hash == hash && curr->is_receiver == is_receiver)
+            curr->hash == hash && curr->is_receiver == is_receiver &&
+            curr->transfer_id == transfer_id)
         {
             last_frag_msg = curr;
             return curr->abort_transmission ? NULL : curr;
@@ -292,16 +503,19 @@ static void remove_abandoned_fragment_receive(robusto_peer_t *peer, e_media_type
 static completed_fragment_transfer_t *find_completed_fragment_transfer(robusto_peer_t *peer,
                                                                        e_media_type media_type,
                                                                        uint32_t hash,
-                                                                       uint32_t now)
+                                                                       uint32_t now, uint64_t transfer_id)
 {
     for (uint32_t index = 0; index < FRAG_COMPLETION_CACHE_SIZE; ++index)
     {
         completed_fragment_transfer_t *completed = &completed_fragment_transfers[index];
-        if (completed->valid && (uint32_t)(now - completed->completed_at) > FRAG_COMPLETION_CACHE_TTL_MS)
+        uint32_t ttl = completed->media_type == robusto_mt_halow ? FRAG_SEND_TOTAL_WAIT_MS :
+                                                       FRAG_COMPLETION_CACHE_TTL_MS;
+        if (completed->valid && (uint32_t)(now - completed->completed_at) > ttl)
         {
             completed->valid = false;
         }
-        if (completed->valid && completed->peer == peer && completed->media_type == media_type && completed->hash == hash)
+        if (completed->valid && completed->peer == peer && completed->media_type == media_type &&
+            completed->hash == hash && completed->transfer_id == transfer_id)
         {
             return completed;
         }
@@ -313,10 +527,10 @@ static completed_fragment_transfer_t *find_completed_fragment_transfer(robusto_p
 static void remember_completed_fragment_transfer(robusto_peer_t *peer,
                                                   e_media_type media_type,
                                                   uint32_t hash,
-                                                  rob_ret_val_t result)
+                                                  rob_ret_val_t result, uint64_t transfer_id)
 {
     uint32_t now = (uint32_t)r_millis();
-    completed_fragment_transfer_t *slot = find_completed_fragment_transfer(peer, media_type, hash, now);
+    completed_fragment_transfer_t *slot = find_completed_fragment_transfer(peer, media_type, hash, now, transfer_id);
     if (slot == NULL)
     {
         uint32_t oldest_age = 0;
@@ -340,6 +554,7 @@ static void remember_completed_fragment_transfer(robusto_peer_t *peer,
     slot->peer = peer;
     slot->media_type = media_type;
     slot->hash = hash;
+    slot->transfer_id = transfer_id;
     slot->result = result;
     slot->completed_at = now;
     slot->valid = true;
@@ -348,7 +563,8 @@ static void remember_completed_fragment_transfer(robusto_peer_t *peer,
 static rob_ret_val_t send_result_hash(robusto_peer_t *peer,
                                       uint32_t hash,
                                       rob_ret_val_t return_value,
-                                      cb_send_message *send_message)
+                                      cb_send_message *send_message, e_media_type media_type,
+                                      uint64_t transfer_id, uint32_t round)
 {
     uint8_t *buffer = robusto_malloc(ROBUSTO_CRC_LENGTH + 4);
     if (buffer == NULL)
@@ -361,16 +577,18 @@ static rob_ret_val_t send_result_hash(robusto_peer_t *peer,
 
     int16_t tmp_retval = return_value;
     memcpy(buffer + ROBUSTO_CRC_LENGTH + 2, &tmp_retval, sizeof(int16_t));
-    rob_ret_val_t rc = send_message(peer, buffer, ROBUSTO_CRC_LENGTH + 2 + sizeof(int16_t), false);
+    rob_ret_val_t rc = send_fragment_wire(peer, media_type, transfer_id, round, buffer,
+                                         ROBUSTO_CRC_LENGTH + 2 + sizeof(int16_t), false, send_message);
     robusto_free(buffer);
     return rc;
 }
 
 static void replay_completed_fragment_result(robusto_peer_t *peer,
                                              const completed_fragment_transfer_t *completed,
-                                             cb_send_message *send_message)
+                                             cb_send_message *send_message, uint32_t round)
 {
-    rob_ret_val_t rc = send_result_hash(peer, completed->hash, completed->result, send_message);
+    rob_ret_val_t rc = send_result_hash(peer, completed->hash, completed->result, send_message,
+                                       completed->media_type, completed->transfer_id, round);
     if (rc != ROB_OK)
     {
         ROB_LOGE(fragmentation_log_prefix,
@@ -390,7 +608,8 @@ static void replay_completed_fragment_result(robusto_peer_t *peer,
  */
 static rob_ret_val_t send_result(robusto_peer_t *peer, fragmented_message_t *frag_msg, rob_ret_val_t return_value, cb_send_message *send_message)
 {
-    return send_result_hash(peer, frag_msg->hash, return_value, send_message);
+    return send_result_hash(peer, frag_msg->hash, return_value, send_message,
+                            frag_msg->media_type, frag_msg->transfer_id, frag_msg->recovery_round);
 }
 
 /**
@@ -401,7 +620,7 @@ static rob_ret_val_t send_result(robusto_peer_t *peer, fragmented_message_t *fra
  * @param len
  * @param fragment_size
  */
-void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message, uint64_t transfer_id)
 {
     robusto_media_t *media = get_media_info(peer, media_type);
     // Manually check CRC32 hash
@@ -429,14 +648,14 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     uint32_t now = (uint32_t)r_millis();
     remove_stale_fragment_receives(now);
 
-    completed_fragment_transfer_t *completed = find_completed_fragment_transfer(peer, media_type, hash, now);
+    completed_fragment_transfer_t *completed = find_completed_fragment_transfer(peer, media_type, hash, now, transfer_id);
     if (completed != NULL)
     {
         ROB_LOGD(fragmentation_log_prefix,
                  "Replaying completed fragment result for duplicate request hash=%lu result=%i.",
                  (unsigned long)hash,
                  completed->result);
-        replay_completed_fragment_result(peer, completed, send_message);
+        replay_completed_fragment_result(peer, completed, send_message, 0);
         media->last_receive = now;
         return;
     }
@@ -448,7 +667,14 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     memcpy(&fragment_count, data + ROBUSTO_CRC_LENGTH + 6, 4);
     memcpy(&requested_fragment_size, data + ROBUSTO_CRC_LENGTH + 10, 4);
 
-    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, hash, true);
+    if (receive_buffer_length == 0 || requested_fragment_size == 0 ||
+        (media_type == robusto_mt_halow && requested_fragment_size > fragment_size) ||
+        fragment_count != receive_buffer_length / requested_fragment_size +
+                          (receive_buffer_length % requested_fragment_size != 0)) {
+        ROB_LOGE(fragmentation_log_prefix, "Invalid fragment request dimensions");
+        return;
+    }
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, hash, true, transfer_id);
     bool new_fragment_message = false;
     if (!frag_msg)
     {
@@ -469,6 +695,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
         frag_msg->fragment_count = fragment_count;
         frag_msg->fragment_size = requested_fragment_size;
         frag_msg->hash = hash;
+        frag_msg->transfer_id = transfer_id;
         new_fragment_message = true;
     }
     else
@@ -488,7 +715,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
             ROB_LOGD(fragmentation_log_prefix,
                      "Duplicate fragment request ignored for active hash %lu.",
                      (unsigned long)hash);
-            frag_msg->start_time = (uint32_t)r_millis();
+            if (media_type != robusto_mt_halow) frag_msg->start_time = (uint32_t)r_millis();
             media->last_receive = r_millis();
             return;
         }
@@ -542,6 +769,13 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
 
     last_frag_msg = frag_msg;
     media->last_receive = r_millis();
+    if (media_type == robusto_mt_halow) {
+        ROB_LOGI(fragmentation_log_prefix,
+                 "HaLow RX transfer request hash=%lu bytes=%lu fragments=%lu chunk=%lu id=%016llx",
+                 (unsigned long)frag_msg->hash, (unsigned long)frag_msg->receive_buffer_length,
+                 (unsigned long)frag_msg->fragment_count, (unsigned long)frag_msg->fragment_size,
+                 (unsigned long long)frag_msg->transfer_id);
+    }
 }
 
 void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message, bool send_resend_request)
@@ -581,7 +815,29 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
                (unsigned long)fragment_first_missing(frag_msg),
                (unsigned long)frag_msg->last_requested,
                (unsigned long)frag_msg->hash);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (media_type == robusto_mt_halow && missing_fragments == frag_msg->fragment_count) {
+            robusto_halow_rx_stats_t rx = {0};
+            rob_ret_val_t spi_result = robusto_halow_get_rx_stats(&rx);
+            ROB_LOGW(fragmentation_log_prefix,
+                     "HaLow RX all-missing hash=%lu scope=totals stats_level=%u rx_req=%lu rx_msg=%lu invalid_ref=%lu invalid_index=%lu wrong_len=%lu crc=%lu oom=%lu spi_rc=%d spi_frames=%lu spi_unready=%lu envelopes=%lu",
+                     (unsigned long)frag_msg->hash, (unsigned)fragment_stats_level,
+                     (unsigned long)fragment_stats.request_received,
+                     (unsigned long)fragment_stats.message_received,
+                     (unsigned long)fragment_stats.invalid_fragment_reference,
+                     (unsigned long)fragment_stats.invalid_fragment_index,
+                     (unsigned long)fragment_stats.wrong_fragment_length,
+                     (unsigned long)fragment_stats.full_message_crc_mismatch,
+                     (unsigned long)fragment_stats.fragment_oom, spi_result,
+                     (unsigned long)rx.spi_frames, (unsigned long)rx.spi_unready,
+                     (unsigned long)rx.envelopes);
+        }
+#endif
         uint8_t *missing = robusto_malloc(ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
+        if (missing == NULL) {
+            ROB_LOGE(fragmentation_log_prefix, "Fragment feedback allocation failed");
+            return;
+        }
         memcpy(missing, &frag_msg->hash, 4);
         missing[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
         missing[ROBUSTO_CRC_LENGTH + 1] = FRAG_RESEND;
@@ -591,7 +847,12 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
             missing[ROBUSTO_CRC_LENGTH + 2 + missing_counter] = frag_msg->received_fragments[missing_counter];
         }
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count);
-        send_message(peer, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count, false);
+        rob_ret_val_t feedback_rc = send_fragment_wire(peer, media_type, frag_msg->transfer_id,
+            frag_msg->recovery_round, missing, ROBUSTO_CRC_LENGTH + 2 + frag_msg->fragment_count,
+            false, send_message);
+        if (feedback_rc != ROB_OK) {
+            ROB_LOGE(fragmentation_log_prefix, "Fragment feedback write failed rc=%i", feedback_rc);
+        }
         robusto_free(missing);
         return;
     }
@@ -602,7 +863,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         {
             fragment_stats_add(&fragment_stats.full_message_crc_mismatch, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
             ROB_LOGE(fragmentation_log_prefix, "The full message did not match with the hash");
-            remember_completed_fragment_transfer(peer, media_type, frag_msg->hash, ROB_ERR_WRONG_CRC);
+            remember_completed_fragment_transfer(peer, media_type, frag_msg->hash, ROB_ERR_WRONG_CRC, frag_msg->transfer_id);
             rob_ret_val_t result_rc = send_result(peer, frag_msg, ROB_ERR_WRONG_CRC, send_message);
             if (result_rc != ROB_OK)
             {
@@ -616,11 +877,12 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         {
             ROB_LOGD(fragmentation_log_prefix, "The assembled %lu-byte multimessage matched the hash, passing to incoming.", frag_msg->receive_buffer_length);
             // rob_log_bit_mesh(ROB_LOG_INFO, fragmentation_log_prefix, frag_msg->receive_buffer, frag_msg->receive_buffer_length > 100 ? 100:frag_msg->receive_buffer_length);
-            remember_completed_fragment_transfer(peer, media_type, frag_msg->hash, ROB_OK);
-            rob_ret_val_t result_rc = send_result(peer, frag_msg, ROB_OK, send_message);
-            if (result_rc != ROB_OK)
-            {
-                ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment OK result hash=%lu rc=%i", (unsigned long)frag_msg->hash, result_rc);
+            if (media_type != robusto_mt_halow) {
+                remember_completed_fragment_transfer(peer, media_type, frag_msg->hash, ROB_OK, frag_msg->transfer_id);
+                rob_ret_val_t result_rc = send_result(peer, frag_msg, ROB_OK, send_message);
+                if (result_rc != ROB_OK) {
+                    ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment OK result hash=%lu rc=%i", (unsigned long)frag_msg->hash, result_rc);
+                }
             }
             ROB_LOGD(fragmentation_log_prefix,
                      "Fragment receive complete hash=%lu bytes=%lu fragments=%lu",
@@ -628,7 +890,28 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
                      (unsigned long)frag_msg->receive_buffer_length,
                      (unsigned long)frag_msg->fragment_count);
 
-            add_to_history(get_media_info(peer, media_type), false, robusto_handle_incoming(frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, media_type, 0));
+            rob_ret_val_t incoming_result = robusto_handle_incoming(
+                frag_msg->receive_buffer, frag_msg->receive_buffer_length, peer, media_type, 0);
+            add_to_history(get_media_info(peer, media_type), false, incoming_result);
+            if (media_type == robusto_mt_halow) {
+                remember_completed_fragment_transfer(peer, media_type, frag_msg->hash, incoming_result, frag_msg->transfer_id);
+                rob_ret_val_t result_rc = send_result(peer, frag_msg, incoming_result, send_message);
+                if (result_rc != ROB_OK) {
+                    ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment handoff result hash=%lu rc=%i", (unsigned long)frag_msg->hash, result_rc);
+                }
+                if (incoming_result == ROB_OK) {
+                    ROB_LOGI(fragmentation_log_prefix,
+                             "HaLow RX reassembled hash=%lu bytes=%lu fragments=%lu incoming_rc=%d id=%016llx",
+                             (unsigned long)frag_msg->hash, (unsigned long)frag_msg->receive_buffer_length,
+                             (unsigned long)frag_msg->fragment_count, incoming_result,
+                             (unsigned long long)frag_msg->transfer_id);
+                } else {
+                    ROB_LOGE(fragmentation_log_prefix,
+                             "HaLow RX incoming handoff failed hash=%lu bytes=%lu rc=%d",
+                             (unsigned long)frag_msg->hash, (unsigned long)frag_msg->receive_buffer_length,
+                             incoming_result);
+                }
+            }
             frag_msg->receive_buffer = NULL;
             remove_fragmented_message(frag_msg);
             return;
@@ -636,7 +919,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
         
     }
 }
-void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message, uint64_t transfer_id, uint32_t round)
 {
     // Initiate a new fragmented  (...stream?)
     fragment_stats_add(&fragment_stats.message_received, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
@@ -650,11 +933,23 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     {
         rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
     }
-    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, true);
+    uint32_t hash;
+    memcpy(&hash, data, 4);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, hash, true, transfer_id);
     if (!frag_msg)
     {
+        completed_fragment_transfer_t *completed = find_completed_fragment_transfer(
+            peer, media_type, hash, (uint32_t)r_millis(), transfer_id);
+        if (completed != NULL && media_type == robusto_mt_halow) {
+            replay_completed_fragment_result(peer, completed, send_message, round);
+            return;
+        }
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
         ROB_LOGW(fragmentation_log_prefix, "Invalid fragment reference.");
+        return;
+    }
+    if (media_type == robusto_mt_halow && round > frag_msg->recovery_round) {
+        ROB_LOGE(fragmentation_log_prefix, "Fragment belongs to an unrequested recovery round");
         return;
     }
 
@@ -687,11 +982,21 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
 
     // Length of the data checks out
     ROB_LOGD(fragmentation_log_prefix, "Storing fragment: %lu. Offset: %lu, length: %i", msg_frag_count, fragment_size * msg_frag_count, len - FRAG_HEADER_LEN);
+    bool first_reception = frag_msg->received_fragments[msg_frag_count] == 0;
     memcpy(frag_msg->receive_buffer + (frag_msg->fragment_size * msg_frag_count), data + FRAG_HEADER_LEN, len - FRAG_HEADER_LEN);
     frag_msg->received_fragments[msg_frag_count] = 1;
+    if (media_type == robusto_mt_halow && first_reception &&
+        (msg_frag_count == 0 || (msg_frag_count + 1U) % 32U == 0 ||
+         msg_frag_count == frag_msg->fragment_count - 1U)) {
+        ROB_LOGI(fragmentation_log_prefix,
+                 "HaLow RX fragment stored hash=%lu index=%lu count=%lu bytes=%lu",
+                 (unsigned long)frag_msg->hash, (unsigned long)msg_frag_count,
+                 (unsigned long)frag_msg->fragment_count, (unsigned long)curr_frag_size);
+    }
 
     // Are we at the last, or last requested, fragment, no less?
-    if ((frag_msg->last_requested != FRAG_NO_REQUESTED_FRAGMENT && msg_frag_count == frag_msg->last_requested) ||
+    if ((media_type == robusto_mt_halow && fragment_missing_count(frag_msg) == 0) ||
+        (frag_msg->last_requested != FRAG_NO_REQUESTED_FRAGMENT && msg_frag_count == frag_msg->last_requested) ||
         (msg_frag_count == frag_msg->fragment_count - 1))
     {
         uint32_t missing_after_store = fragment_missing_count(frag_msg);
@@ -721,9 +1026,40 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
         // Note that w  e probably do not want to handle larger data typically, even though SPIRAM may support it. A larger ESP-NOW frame size would change that though.
 
         bool is_requested_fragment = frag_msg->last_requested != FRAG_NO_REQUESTED_FRAGMENT && msg_frag_count == frag_msg->last_requested;
-        check_fragments(peer, media_type, frag_msg, send_message, is_requested_fragment);
+        check_fragments(peer, media_type, frag_msg, send_message,
+                        media_type != robusto_mt_halow && is_requested_fragment);
     }
     ROB_LOGD(fragmentation_log_prefix, "Returning from handle_frag_message");
+}
+
+static rob_ret_val_t send_fragment_packet(robusto_peer_t *peer, e_media_type media_type,
+                                          fragmented_message_t *frag_msg, uint8_t *data,
+                                          uint32_t length, bool receipt, cb_send_message *send_message)
+{
+    rob_ret_val_t result = send_fragment_wire(peer, media_type, frag_msg->transfer_id,
+                                             frag_msg->recovery_round, data, length, receipt, send_message);
+    if (media_type != robusto_mt_halow || result != ROB_ERR_QUEUE_FULL) return result;
+    uint32_t waiting_since = (uint32_t)r_millis();
+    ROB_LOGW(fragmentation_log_prefix,
+             "Waiting for HaLow credits hash=%lu subtype=%u; retaining unsent packet",
+             (unsigned long)frag_msg->hash, (unsigned)data[ROBUSTO_CRC_LENGTH + 1]);
+    do {
+        send_wait_yield(media_type);
+        if ((uint32_t)(r_millis() - frag_msg->start_time) >= FRAG_SEND_TOTAL_WAIT_MS) {
+            ROB_LOGE(fragmentation_log_prefix, "HaLow transfer deadline exceeded waiting for credits");
+            frag_msg->state = ROB_ST_TIMED_OUT;
+            return ROB_ERR_TIMEOUT;
+        }
+        result = send_fragment_wire(peer, media_type, frag_msg->transfer_id,
+                                     frag_msg->recovery_round, data, length, receipt, send_message);
+    } while (result == ROB_ERR_QUEUE_FULL);
+    if (result == ROB_OK) {
+        ROB_LOGI(fragmentation_log_prefix,
+                 "HaLow credits available after %lu ms; submitted retained packet subtype=%u",
+                 (unsigned long)((uint32_t)r_millis() - waiting_since),
+                 (unsigned)data[ROBUSTO_CRC_LENGTH + 1]);
+    }
+    return result;
 }
 
 void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)
@@ -738,6 +1074,12 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
     // Allocate a buffer big enough for the largest fragment
     buffer = robusto_malloc(frag_msg->fragment_size + FRAG_HEADER_LEN);
+    if (buffer == NULL) {
+        ROB_LOGE(fragmentation_log_prefix, "Fragment send buffer allocation failed");
+        fragment_stats_add(&fragment_stats.fragment_oom, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+        frag_msg->state = ROB_ST_FAILED;
+        return;
+    }
     // We always send the same hash, as an identifier
     memcpy(buffer, &frag_msg->hash, 4);
     buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
@@ -745,12 +1087,19 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
     for (uint32_t curr_fragment = 0; curr_fragment < frag_msg->fragment_count; curr_fragment++)
     {
+        if (media_type == robusto_mt_halow &&
+            (uint32_t)(r_millis() - frag_msg->start_time) >= FRAG_SEND_TOTAL_WAIT_MS) {
+            ROB_LOGE(fragmentation_log_prefix, "HaLow transfer deadline exceeded during fragment submission");
+            frag_msg->state = ROB_ST_TIMED_OUT;
+            robusto_free(buffer);
+            return;
+        }
         if (frag_msg->abort_transmission)
         {
             robusto_free(buffer);
             return;
         }
-        if (frag_msg->state == ROB_ST_RETRYING &&
+        if (media_type != robusto_mt_halow && frag_msg->state == ROB_ST_RETRYING &&
             frag_msg->retry_start_time != 0U &&
             (uint32_t)(r_millis() - frag_msg->retry_start_time) > FRAG_RETRY_TOTAL_WAIT_MS)
         {
@@ -804,16 +1153,22 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
 
         if (SKIP_FRAGMENT_TEST)
         {
-            if (frag_msg->state == ROB_ST_RETRYING)
+            if (media_type != robusto_mt_halow && frag_msg->state == ROB_ST_RETRYING)
             {
                 fragment_stats_add(&fragment_stats.fragments_resent, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
             }
-            else
+            else if (media_type != robusto_mt_halow)
             {
                 fragment_stats_add(&fragment_stats.fragments_sent, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
             }
 
-            rob_ret_val_t send_retval = send_message(peer, buffer, FRAG_HEADER_LEN + curr_frag_size, false);
+            rob_ret_val_t send_retval = send_fragment_packet(
+                peer, media_type, frag_msg, buffer, FRAG_HEADER_LEN + curr_frag_size, false, send_message);
+            if (media_type == robusto_mt_halow && send_retval == ROB_OK) {
+                fragment_stats_add(frag_msg->state == ROB_ST_RETRYING ?
+                                   &fragment_stats.fragments_resent : &fragment_stats.fragments_sent,
+                                   1U, ROBUSTO_STATS_LEVEL_VERBOSE);
+            }
             if (curr_fragment == 10U)
             {
                 ROB_LOGD(fragmentation_log_prefix,
@@ -827,6 +1182,13 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
             }
             if (send_retval != ROB_OK)
             {
+                if (media_type == robusto_mt_halow) {
+                    ROB_LOGE(fragmentation_log_prefix, "Stopping HaLow fragment burst at index=%lu hash=%lu rc=%i",
+                             (unsigned long)curr_fragment, (unsigned long)frag_msg->hash, send_retval);
+                    if (frag_msg->state != ROB_ST_TIMED_OUT) frag_msg->state = ROB_ST_FAILED;
+                    robusto_free(buffer);
+                    return;
+                }
                 ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment [%" PRIu32 "].", curr_fragment);
             }
         }
@@ -860,13 +1222,19 @@ void send_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_me
  * @param send_message
  */
 
-void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message, uint64_t transfer_id, uint32_t round)
 {
     fragment_stats_add(&fragment_stats.resend_request_received, 1U, ROBUSTO_STATS_LEVEL_BASIC);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        halow_record_feedback(peer, data, len, true, transfer_id, round);
+        return;
+    }
+#endif
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_resend");
     robusto_media_t *media = get_media_info(peer, media_type);
 
-    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, false);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, false, 0);
     if (!frag_msg)
     {
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -908,11 +1276,11 @@ void handle_frag_resend(robusto_peer_t *peer, e_media_type media_type, const uin
  * @param send_message
  */
 
-void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message, uint64_t transfer_id, uint32_t round)
 {
     fragment_stats_add(&fragment_stats.check_received, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
     ROB_LOGD(fragmentation_log_prefix, "In handle_frag_check");
-    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, true);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, true, transfer_id);
     if (!frag_msg)
     {
         uint32_t hash;
@@ -920,14 +1288,14 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
         completed_fragment_transfer_t *completed = find_completed_fragment_transfer(peer,
                                                                                      media_type,
                                                                                      hash,
-                                                                                     (uint32_t)r_millis());
+                                                                                     (uint32_t)r_millis(), transfer_id);
         if (completed != NULL)
         {
             ROB_LOGD(fragmentation_log_prefix,
                      "Replaying completed fragment result for status check hash=%lu result=%i.",
                      (unsigned long)hash,
                      completed->result);
-            replay_completed_fragment_result(peer, completed, send_message);
+            replay_completed_fragment_result(peer, completed, send_message, round);
             return;
         }
         fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -935,6 +1303,13 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
     }
     else
     {
+        if (media_type == robusto_mt_halow) {
+            if (round < frag_msg->recovery_round) {
+                ROB_LOGD(fragmentation_log_prefix, "Ignoring stale HaLow status check");
+                return;
+            }
+            frag_msg->recovery_round = round;
+        }
         check_fragments(peer, media_type, frag_msg, send_message, true);
     }
 }
@@ -950,19 +1325,8 @@ void handle_frag_check(robusto_peer_t *peer, e_media_type media_type, const uint
  * @param send_message
  */
 
-void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
+static void apply_fragment_result(fragmented_message_t *frag_msg, int16_t result)
 {
-    ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
-    rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
-    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, false);
-    if (!frag_msg)
-    {
-        fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
-        return;
-    }
-    int16_t result;
-    memcpy(&result, data + ROBUSTO_CRC_LENGTH + 2, 2);
-
     ROB_LOGD(fragmentation_log_prefix, "result: %" PRIi16, result);
     switch (result)
     {
@@ -988,10 +1352,73 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, const uin
         break;
     default:
         fragment_stats_add(&fragment_stats.result_fail_received, 1U, ROBUSTO_STATS_LEVEL_BASIC);
-        ROB_LOGE(fragmentation_log_prefix, "Unhandled fragmentation result code: %i", result);
+        if (frag_msg->media_type == robusto_mt_halow) {
+            ROB_LOGE(fragmentation_log_prefix, "Receiver reports fragmented-message failure rc=%i", result);
+            frag_msg->state = ROB_ST_FAILED;
+        } else {
+            ROB_LOGE(fragmentation_log_prefix, "Unhandled fragmentation result code: %i", result);
+        }
         break;
     }
 }
+
+void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, const uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message, uint64_t transfer_id, uint32_t round)
+{
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        halow_record_feedback(peer, data, len, false, transfer_id, round);
+        return;
+    }
+#endif
+    ROB_LOGD(fragmentation_log_prefix, "In handle_frag_result");
+    rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, data, len);
+    fragmented_message_t *frag_msg = find_fragmented_message(peer, media_type, *(uint32_t *)data, false, 0);
+    if (frag_msg == NULL) {
+        fragment_stats_add(&fragment_stats.invalid_fragment_reference, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+        return;
+    }
+    int16_t result;
+    memcpy(&result, data + ROBUSTO_CRC_LENGTH + 2, sizeof(result));
+    apply_fragment_result(frag_msg, result);
+}
+
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+static bool halow_consume_feedback(fragmented_message_t *message)
+{
+    if (!halow_feedback_lock()) return false;
+    bool result_pending = halow_feedback.result_pending;
+    bool resend_pending = halow_feedback.resend && !result_pending;
+    int16_t result = halow_feedback.result;
+    if (resend_pending) {
+        for (uint32_t i = 0; i < message->fragment_count; ++i) {
+            message->received_fragments[i] |= halow_feedback.map[i];
+        }
+        message->state = ROB_ST_RETRYING;
+    }
+    halow_feedback.resend = false;
+    halow_feedback.result_pending = false;
+    if (result_pending) {
+        unsigned slot = halow_completed_feedback_next;
+        halow_completed_feedback_next = (slot + 1U) % FRAG_COMPLETION_CACHE_SIZE;
+        halow_completed_feedback[slot].peer = halow_feedback.peer;
+        halow_completed_feedback[slot].hash = halow_feedback.hash;
+        halow_completed_feedback[slot].transfer_id = halow_feedback.transfer_id;
+        halow_completed_feedback[slot].round = halow_feedback.round;
+        halow_completed_feedback[slot].result = result;
+        halow_completed_feedback[slot].completed_at = (uint32_t)r_millis();
+    }
+    halow_feedback_unlock();
+    if (resend_pending) {
+        ROB_LOGW(fragmentation_log_prefix,
+                 "Applying HaLow resend feedback hash=%lu missing=%lu first_missing=%lu id=%016llx round=%lu on outgoing worker",
+                 (unsigned long)message->hash, (unsigned long)fragment_missing_count(message),
+                 (unsigned long)fragment_first_missing(message),
+                 (unsigned long long)message->transfer_id, (unsigned long)message->recovery_round);
+    }
+    if (result_pending) apply_fragment_result(message, result);
+    return true;
+}
+#endif
 
 /**
  * @brief Handled fragmented messages
@@ -1004,23 +1431,53 @@ void handle_frag_result(robusto_peer_t *peer, e_media_type media_type, const uin
 bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *data, int len, uint32_t fragment_size, cb_send_message *send_message)
 {
     bool receipt = false;
+    uint64_t transfer_id = 0;
+    uint32_t round = 0;
+    if (data == NULL || len < 6) {
+        ROB_LOGE(fragmentation_log_prefix, "Truncated fragmented packet");
+        robusto_free(data);
+        return false;
+    }
+    if (media_type == robusto_mt_halow) {
+        uint8_t type = data[5] & ~HALOW_FRAGMENT_V2;
+        if (!(data[5] & HALOW_FRAGMENT_V2) || len < 18) {
+            ROB_LOGE(fragmentation_log_prefix, "HaLow fragmentation v2 required; update both peers");
+            robusto_free(data);
+            return false;
+        }
+        transfer_id = fragment_read_id(data + 6);
+        round = fragment_read_round(data + 14);
+        bool shape_ok = (type == FRAG_REQUEST && len == 34 && round == 0) ||
+                        (type == FRAG_MESSAGE && len >= 22) ||
+                        (type == FRAG_CHECK && len == 18 && round != 0) ||
+                        (type == FRAG_RESULT && len == 20) ||
+                        (type == FRAG_RESEND && len >= 19 && round != 0);
+        if (transfer_id == 0 || !shape_ok) {
+            ROB_LOGE(fragmentation_log_prefix, "Malformed HaLow v2 fragment header/type/length");
+            robusto_free(data);
+            return false;
+        }
+        data[5] = type;
+        memmove(data + 6, data + 18, (size_t)len - 18U);
+        len -= HALOW_FRAGMENT_EXTENSION;
+    }
     switch (data[ROBUSTO_CRC_LENGTH + 1])
     {
     case FRAG_REQUEST:
-        handle_frag_request(peer, media_type, data, len, fragment_size, send_message);
+        handle_frag_request(peer, media_type, data, len, fragment_size, send_message, transfer_id);
         receipt = true;
         break;
     case FRAG_MESSAGE:
-        handle_frag_message(peer, media_type, data, len, fragment_size, send_message);
+        handle_frag_message(peer, media_type, data, len, fragment_size, send_message, transfer_id, round);
         break;
     case FRAG_RESEND:
-        handle_frag_resend(peer, media_type, data, len, fragment_size, send_message);
+        handle_frag_resend(peer, media_type, data, len, fragment_size, send_message, transfer_id, round);
         break;
     case FRAG_RESULT:
-        handle_frag_result(peer, media_type, data, len, fragment_size, send_message);
+        handle_frag_result(peer, media_type, data, len, fragment_size, send_message, transfer_id, round);
         break;
     case FRAG_CHECK:
-        handle_frag_check(peer, media_type, data, len, fragment_size, send_message);
+        handle_frag_check(peer, media_type, data, len, fragment_size, send_message, transfer_id, round);
         break;
     default:
         fragment_stats_add(&fragment_stats.invalid_fragment_type, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
@@ -1038,6 +1495,15 @@ bool handle_fragmented(robusto_peer_t *peer, e_media_type media_type, uint8_t *d
 rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fragmented_message_t *frag_msg, cb_send_message *send_message)
 {
 
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        if (!halow_feedback_lock()) return ROB_ERR_MUTEX;
+        ++frag_msg->recovery_round;
+        halow_feedback.round = frag_msg->recovery_round;
+        halow_feedback.round_open = true;
+        halow_feedback_unlock();
+    }
+#endif
     fragment_stats_add(&fragment_stats.check_sent, 1U, ROBUSTO_STATS_LEVEL_VERBOSE);
     ROB_LOGD(fragmentation_log_prefix, "In send_frag_check");
     uint8_t *msg_frag_check = robusto_malloc(ROBUSTO_CRC_LENGTH + 2);
@@ -1049,7 +1515,8 @@ rob_ret_val_t send_frag_check(robusto_peer_t *peer, e_media_type media_type, fra
     msg_frag_check[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
     msg_frag_check[ROBUSTO_CRC_LENGTH + 1] = FRAG_CHECK;
 
-    rob_ret_val_t rc = send_message(peer, msg_frag_check, ROBUSTO_CRC_LENGTH + 2, false);
+    rob_ret_val_t rc = send_fragment_packet(
+        peer, media_type, frag_msg, msg_frag_check, ROBUSTO_CRC_LENGTH + 2, false, send_message);
     // TODO: We should probably free data here as well. And duplicate the data in the test send_message call back.
     robusto_free(msg_frag_check);
     return rc;
@@ -1101,6 +1568,24 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     frag_msg->fragment_count = fragment_count;
     frag_msg->fragment_size = fragment_size;
     frag_msg->hash = robusto_crc32(0, data, data_length);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        if (halow_transfer_counter == UINT32_MAX) {
+            ROB_LOGE(fragmentation_log_prefix, "HaLow transfer counter exhausted; restart required");
+            robusto_free(frag_msg);
+            rc = ROB_ERR_INVALID_ARG;
+            goto finish_buffer_only;
+        }
+        if (halow_transfer_counter == 0) {
+#ifdef USE_ESPIDF
+            halow_transfer_nonce = esp_random();
+#else
+            halow_transfer_nonce = (uint32_t)r_micros();
+#endif
+        }
+        frag_msg->transfer_id = ((uint64_t)halow_transfer_nonce << 32) | ++halow_transfer_counter;
+    }
+#endif
     frag_msg->received_fragments = robusto_malloc(frag_msg->fragment_count);
     if (frag_msg->received_fragments == NULL)
     {
@@ -1114,7 +1599,20 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     frag_msg->abort_transmission = false;
     frag_msg->state = ROB_ST_RUNNING;
     frag_msg->start_time = (uint32_t)r_millis();
-    SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    if (media_type == robusto_mt_halow) {
+        rc = halow_feedback_begin(frag_msg);
+        if (rc != ROB_OK) {
+            robusto_free(frag_msg->received_fragments);
+            robusto_free(frag_msg);
+            goto finish_buffer_only;
+        }
+    } else
+#endif
+    {
+        SLIST_INSERT_HEAD(&fragmented_messages_head, frag_msg, fragmented_messages);
+        last_frag_msg = frag_msg;
+    }
 
     // Encode into a message
     buffer[ROBUSTO_CRC_LENGTH] = MSG_FRAGMENTED;
@@ -1124,25 +1622,32 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
     memcpy(buffer + ROBUSTO_CRC_LENGTH + 10, &frag_msg->fragment_size, 4);
     memcpy(buffer + ROBUSTO_CRC_LENGTH + 14, &frag_msg->hash, 4);
 
-    last_frag_msg = frag_msg;
-
     uint32_t msg_hash = robusto_crc32(0, buffer + 4, 18);
     memcpy(buffer, &msg_hash, 4);
 
     ROB_LOGD(fragmentation_log_prefix, "Sending a fragment request:");
     rob_log_bit_mesh(ROB_LOG_DEBUG, fragmentation_log_prefix, buffer, ROBUSTO_CRC_LENGTH + 18);
 
-    if (send_message(peer, buffer, ROBUSTO_CRC_LENGTH + 18, true) != ROB_OK)
+    rob_ret_val_t request_rc = send_fragment_packet(
+        peer, media_type, frag_msg, buffer, ROBUSTO_CRC_LENGTH + 18, true, send_message);
+    if (request_rc != ROB_OK)
     {
         ROB_LOGE(fragmentation_log_prefix, "Could not initiate fragmented messaging, got a failure sending");
-        rc = ROB_FAIL;
+        rc = media_type == robusto_mt_halow ? request_rc : ROB_FAIL;
+        if (media_type == robusto_mt_halow && request_rc == ROB_ERR_TIMEOUT) {
+            fragment_stats_add(&fragment_stats.send_timed_out, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+        }
         goto finish;
     }
 
     send_fragments(peer, media_type, frag_msg, send_message);
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+    if (media_type == robusto_mt_halow) robusto_halow_dump_tx_trace();
+#endif
     ROB_LOGD(fragmentation_log_prefix, "Waiting for fragmented message to complete, current state: %u, start time: %lu", frag_msg->state, frag_msg->start_time);
     
     uint32_t starttime;
+    uint32_t halow_status_start = (uint32_t)r_millis();
     // A state machine that handles the probes
     while (1)
     {
@@ -1164,7 +1669,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             goto finish;
         }
 
-        if (frag_msg->state == ROB_ST_RETRYING &&
+        if (media_type != robusto_mt_halow && frag_msg->state == ROB_ST_RETRYING &&
             frag_msg->retry_start_time != 0U &&
             (uint32_t)(r_millis() - frag_msg->retry_start_time) > FRAG_RETRY_TOTAL_WAIT_MS)
         {
@@ -1184,12 +1689,42 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             goto finish;
         }
 
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+        if (media_type == robusto_mt_halow) {
+            if (!halow_consume_feedback(frag_msg)) {
+                rc = ROB_ERR_MUTEX;
+                goto finish;
+            }
+            if (frag_msg->state == ROB_ST_RETRYING) {
+                send_fragments(peer, media_type, frag_msg, send_message);
+                halow_status_start = (uint32_t)r_millis();
+                continue;
+            }
+            if (frag_msg->state == ROB_ST_DONE || frag_msg->state == ROB_ST_PAUSED) {
+                if ((uint32_t)(r_millis() - halow_status_start) >= FRAG_RESULT_WAIT_MS) {
+                    frag_msg->state = ROB_ST_PAUSED;
+                    rc = send_frag_check(peer, media_type, frag_msg, send_message);
+                    if (rc != ROB_OK) {
+                        if (rc == ROB_ERR_TIMEOUT) {
+                            fragment_stats_add(&fragment_stats.send_timed_out, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
+                        }
+                        goto finish;
+                    }
+                    halow_status_start = (uint32_t)r_millis();
+                }
+                send_wait_yield(media_type);
+                continue;
+            }
+        }
+#else
+        (void)halow_status_start;
+#endif
         starttime = r_millis();
         uint32_t wait_ms = frag_msg->state == ROB_ST_PAUSED ? FRAG_STATUS_WAIT_MS : FRAG_RUNNING_WAIT_MS;
         // First, we identify that we are at least done.
         while (frag_msg->state < ROB_ST_DONE && (r_millis() < starttime + wait_ms))
         {
-            robusto_yield();
+            send_wait_yield(media_type);
         }
         if (r_millis() > (starttime + wait_ms))
         {
@@ -1206,7 +1741,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             starttime = r_millis();
             while ((frag_msg->state == ROB_ST_DONE) && (r_millis() < starttime + FRAG_RESULT_WAIT_MS))
             {
-                robusto_yield();
+                send_wait_yield(media_type);
             }
             if (frag_msg->state == ROB_ST_DONE)
             {
@@ -1255,7 +1790,7 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
             goto finish;
             break;
         case ROB_ST_FAILED:
-            ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message failed (likely bad CRC).");
+            ROB_LOGE(fragmentation_log_prefix, "Sending fragmented message failed; see local send or receiver result errors.");
             rc = ROB_FAIL;
             fragment_stats_add(&fragment_stats.send_failed, 1U, ROBUSTO_STATS_LEVEL_ERRORS);
             goto finish;
@@ -1277,6 +1812,9 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type media_t
         }
     }
 finish:
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+    if (media_type == robusto_mt_halow) robusto_halow_dump_tx_trace();
+#endif
     if (media != NULL)
     {
         media->postpone_qos = false;
@@ -1291,6 +1829,16 @@ finish_buffer_only:
 void robusto_message_fragment_init(char *_log_prefix)
 {
     fragmentation_log_prefix = _log_prefix;
+#ifdef CONFIG_ROBUSTO_SUPPORTS_HALOW
+    memset(halow_completed_feedback, 0, sizeof(halow_completed_feedback));
+    halow_completed_feedback_next = 0;
+    if (halow_feedback_mutex == NULL) {
+        halow_feedback_mutex = robusto_mutex_init();
+        if (halow_feedback_mutex == NULL) {
+            ROB_LOGE(fragmentation_log_prefix, "HaLow fragment feedback mutex initialization failed");
+        }
+    }
+#endif
     last_frag_msg = NULL;
     robusto_fragment_stats_reset();
     robusto_fragment_stats_set_level(ROBUSTO_STATS_LEVEL_VERBOSE);

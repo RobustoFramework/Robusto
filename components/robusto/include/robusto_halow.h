@@ -15,6 +15,18 @@ typedef struct queue_context queue_context_t;
 #define ROBUSTO_HALOW_FRAME_MAX 1642U
 #define ROBUSTO_HALOW_HEADER_SIZE 20U
 #define ROBUSTO_HALOW_PAYLOAD_MAX (ROBUSTO_HALOW_FRAME_MAX - ROBUSTO_HALOW_HEADER_SIZE)
+#ifdef CONFIG_ROBUSTO_HALOW_TX_FRAME_MAX
+#define ROBUSTO_HALOW_TX_FRAME_MAX CONFIG_ROBUSTO_HALOW_TX_FRAME_MAX
+#else
+#define ROBUSTO_HALOW_TX_FRAME_MAX 1024U
+#endif
+#define ROBUSTO_HALOW_TX_PAYLOAD_MAX (ROBUSTO_HALOW_TX_FRAME_MAX - ROBUSTO_HALOW_HEADER_SIZE)
+
+typedef struct {
+    uint32_t spi_frames;
+    uint32_t spi_unready;
+    uint32_t envelopes;
+} robusto_halow_rx_stats_t;
 
 typedef struct {
     void *context;
@@ -24,6 +36,8 @@ typedef struct {
      * Synchronously consume/copy the frame. Return its full length, a short
      * count, or a negative error. Exclude vendor headers from the count.
      * This is local submission, not radio delivery. Do not call receive here.
+     * ROB_ERR_QUEUE_FULL means nothing was submitted and may be retried when
+     * credits replenish. Other short/failed writes are not retried here.
      */
     int (*write)(void *context, const uint8_t destination[6],
                  const uint8_t *frame, uint32_t length);
@@ -34,6 +48,8 @@ typedef struct {
      * Do not call the public reset function recursively or retry automatically.
      */
     rob_ret_val_t (*reset_and_reinitialize)(void *context);
+    /* Optional diagnostic snapshot; populate SPI fields only, without I/O. */
+    rob_ret_val_t (*get_rx_stats)(void *context, robusto_halow_rx_stats_t *out);
 } robusto_halow_driver_t;
 
 /*
@@ -63,10 +79,24 @@ rob_ret_val_t robusto_halow_receive(const uint8_t source[6], const uint8_t *fram
                                    uint32_t length, const int16_t *rssi_dbm);
 rob_ret_val_t robusto_halow_bind_peer(robusto_peer_t *peer, const uint8_t radio_mac[6]);
 
+/*
+ * RX-task context only, serialized with receive and outside the backend lock.
+ * Envelopes remain valid if SPI counters return ROB_ERR_NOT_SUPPORTED or an error.
+ * SPI counters are meaningful only when ROB_OK is returned.
+ */
+rob_ret_val_t robusto_halow_get_rx_stats(robusto_halow_rx_stats_t *out);
+
 queue_context_t *halow_get_queue_context(void);
 /* Internal HI reservation, held through queueing and worker completion. */
 rob_ret_val_t robusto_halow_begin_presentation(robusto_peer_t *peer, uint8_t reason_mask);
 void robusto_halow_end_presentation(robusto_peer_t *peer, uint8_t reason_mask);
+/* Internal large-message reservation, acquired before PubSub allocation or raw admission. */
+rob_ret_val_t robusto_halow_begin_large_send(robusto_peer_t *peer);
+void robusto_halow_end_large_send(robusto_peer_t *peer);
+/* Outgoing-worker-only service point; never call from the receive task. */
+void robusto_halow_service_small_queue(void);
+/* Temporary outgoing-worker trace dump; no-op unless SPI TX tracing is enabled. */
+void robusto_halow_dump_tx_trace(void);
 void halow_peer_init_peer(robusto_peer_t *peer);
 
 #ifdef __cplusplus

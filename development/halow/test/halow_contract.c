@@ -35,6 +35,24 @@ static rob_ret_val_t stop_result = ROB_OK;
 static rob_ret_val_t work_result;
 static bool free_work_item;
 static bool reject_queue_lock;
+static unsigned busy_writes, credit_delays, held_locks;
+static bool always_busy, check_credit_unlock, lose_link_on_delay, receipt_on_write;
+static bool rx_fragment_backpressure;
+static bool compare_credit_frame, check_large_owned;
+static uint8_t credit_frame[ROBUSTO_HALOW_FRAME_MAX];
+static uint32_t credit_frame_length;
+static rob_ret_val_t fragmented_result = ROB_OK;
+static bool exercise_small_service;
+static media_queue_item_t *first_small, *second_small;
+static unsigned small_completed;
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+static unsigned trace_dumps;
+void robusto_halow_spi_dump_tx_trace(void)
+{
+    assert(held_locks == 0);
+    ++trace_dumps;
+}
+#endif
 #ifdef ROBUSTO_HALOW_TEST_WITH_RESET
 static unsigned resets;
 static rob_ret_val_t reset_result;
@@ -72,11 +90,26 @@ static void seal(uint8_t *frame, uint32_t length)
 
 void *robusto_malloc(size_t size) { return malloc(size); }
 void robusto_free(void *data) { free(data); }
+bool robusto_send_queue_accepts_large_message(e_media_type medium)
+{
+    assert(medium == robusto_mt_halow);
+    queue_context_t *queue = halow_get_queue_context();
+    return queue != NULL && !queue->blocked && !queue->shutdown &&
+           queue->count < queue->normal_max_count;
+}
 unsigned long r_millis(void) { return now; }
 unsigned long r_micros(void) { return now * 1000; }
 void r_delay(unsigned long delay)
 {
     now += delay;
+    if (check_credit_unlock) {
+        assert(held_locks == 0);
+        ++credit_delays;
+        if (lose_link_on_delay) {
+            lose_link_on_delay = false;
+            assert(robusto_halow_set_link_ready(false) == ROB_OK);
+        }
+    }
     if (return_receipt) {
         uint8_t ack[ROBUSTO_HALOW_HEADER_SIZE];
         uint8_t source[6];
@@ -97,7 +130,9 @@ void r_delay(unsigned long delay)
 
 void rob_log_write(rob_log_level_t level, const char *tag, const char *format, ...)
 {
-    (void)level; (void)tag; (void)format;
+    (void)tag;
+    (void)level;
+    assert(strstr(format, "HaLow fragment local write complete") == NULL);
     ++logs;
 }
 
@@ -111,6 +146,7 @@ rob_ret_val_t robusto_mutex_take(mutex_ref_t mutex, int timeout)
         mutex == halow_get_queue_context()->__x_queue_mutex) return ROB_ERR_MUTEX;
     assert(*(uint8_t *)mutex == 0);
     *(uint8_t *)mutex = 1;
+    ++held_locks;
     return ROB_OK;
 }
 rob_ret_val_t robusto_mutex_give(mutex_ref_t mutex)
@@ -118,6 +154,8 @@ rob_ret_val_t robusto_mutex_give(mutex_ref_t mutex)
     assert(mutex != NULL);
     assert(*(uint8_t *)mutex == 1);
     *(uint8_t *)mutex = 0;
+    assert(held_locks > 0);
+    --held_locks;
     return ROB_OK;
 }
 
@@ -183,8 +221,14 @@ bool handle_fragmented(robusto_peer_t *peer, e_media_type medium, uint8_t *data,
                        int length, uint32_t fragment_size, cb_send_message *send)
 {
     assert(peer == &remote && medium == robusto_mt_halow && length >= 6);
-    assert(fragment_size == ROBUSTO_HALOW_PAYLOAD_MAX - 10);
+    assert(fragment_size == ROBUSTO_HALOW_PAYLOAD_MAX - 22);
     assert(send != NULL);
+    if (rx_fragment_backpressure) {
+        unsigned long before = now;
+        uint8_t response[6] = {0};
+        assert(send(peer, response, sizeof(response), false) == ROB_ERR_QUEUE_FULL);
+        assert(now == before);
+    }
     ++received_fragments;
     free(data);
     return false;
@@ -194,11 +238,65 @@ rob_ret_val_t send_message_fragmented(robusto_peer_t *peer, e_media_type medium,
                                       uint32_t fragment_size, cb_send_message *send)
 {
     assert(peer == &remote && medium == robusto_mt_halow);
-    assert(length == ROBUSTO_HALOW_PAYLOAD_MAX + 1);
-    assert(fragment_size + 10 == ROBUSTO_HALOW_PAYLOAD_MAX);
+    assert(length == ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1);
+    assert(fragment_size + 22 == ROBUSTO_HALOW_TX_PAYLOAD_MAX);
     assert(data != NULL && send != NULL);
+    if (check_large_owned) {
+        assert(robusto_halow_begin_large_send(peer) == ROB_ERR_QUEUE_FULL);
+    }
+    if (exercise_small_service) {
+        queue_context_t *context = halow_get_queue_context();
+        assert(context->count == 3);
+        reject_queue_lock = true;
+        robusto_halow_service_small_queue();
+        reject_queue_lock = false;
+        assert(context->count == 3 && small_completed == 0);
+        context->blocked = true;
+        robusto_halow_service_small_queue();
+        assert(context->count == 3 && small_completed == 0);
+        context->blocked = false;
+        uint8_t incoming[ROBUSTO_HALOW_HEADER_SIZE + 18] = {'R', 'H', 1, 0};
+        memcpy(incoming + 8, remote.base_mac_address, 6);
+        incoming[14] = 18;
+        incoming[ROBUSTO_HALOW_HEADER_SIZE + 4] = MSG_FRAGMENTED;
+        incoming[ROBUSTO_HALOW_HEADER_SIZE + 5] = FRAG_CHECK | 0x80U;
+        incoming[ROBUSTO_HALOW_HEADER_SIZE + 6] = 1;
+        incoming[ROBUSTO_HALOW_HEADER_SIZE + 14] = 1;
+        seal(incoming, sizeof(incoming));
+        busy_writes = 1;
+        rx_fragment_backpressure = true;
+        unsigned long before = now;
+        assert(robusto_halow_receive(radio_mac, incoming, sizeof(incoming), NULL) == ROB_OK);
+        rx_fragment_backpressure = false;
+        assert(now == before && context->count == 3 && small_completed == 0);
+        assert(send(peer, data, 10, false) == ROB_OK);
+        assert(context->count == 2 && small_completed == 1);
+        assert(send(peer, data, 10, false) == ROB_OK);
+        assert(context->count == 1 && small_completed == 2);
+        uint8_t fragment[10] = {0};
+        fragment[4] = MSG_FRAGMENTED;
+        fragment[5] = FRAG_MESSAGE;
+        uint32_t hash = 1852465904U, index = 42U;
+        memcpy(fragment, &hash, sizeof(hash));
+        memcpy(fragment + 6, &index, sizeof(index));
+        busy_writes = 1;
+        before = now;
+        assert(send(peer, fragment, sizeof(fragment), false) == ROB_ERR_QUEUE_FULL);
+        assert(now == before);
+        assert(send(peer, fragment, sizeof(fragment), false) == ROB_OK);
+        short_write = 1;
+        assert(send(peer, fragment, sizeof(fragment), false) == ROB_ERR_SEND_FAIL);
+        short_write = 0;
+        assert(send(peer, fragment, 6, false) == ROB_OK);
+        assert(robusto_halow_begin_large_send(peer) == ROB_ERR_QUEUE_FULL);
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+        unsigned before_dumps = trace_dumps;
+        robusto_halow_dump_tx_trace();
+        assert(trace_dumps == before_dumps + 1);
+#endif
+    }
     ++fragmented_sends;
-    return ROB_OK;
+    return fragmented_result;
 }
 void send_work_item(media_queue_item_t *item, robusto_media_t *info, e_media_type medium,
                     send_callback_cb *send, poll_callback_cb *poll, queue_context_t *queue)
@@ -210,7 +308,15 @@ void send_work_item(media_queue_item_t *item, robusto_media_t *info, e_media_typ
         assert(robusto_halow_begin_presentation(item->peer, item->presentation_mask) == ROB_ERR_NOT_READY);
     }
     work_result = send(item->peer, item->data, item->data_length, item->receipt);
-    if (free_work_item) {
+    if (item->on_release_cb != NULL) item->on_release_cb(item->peer, item->data_length);
+    bool small_owned = item == first_small || item == second_small;
+    if (small_owned) {
+        assert(held_locks == 0);
+        if (item == first_small) first_small = NULL;
+        if (item == second_small) second_small = NULL;
+        ++small_completed;
+    }
+    if (free_work_item || small_owned) {
         robusto_free(item->data);
         memset(item, 0xA5, sizeof(*item));
         robusto_free(item);
@@ -225,22 +331,199 @@ static int write_data(void *context, const uint8_t destination[6],
     (void)context;
     assert(memcmp(destination, radio_mac, 6) == 0);
     assert(length <= ROBUSTO_HALOW_FRAME_MAX);
+    if (compare_credit_frame) {
+        if (credit_frame_length == 0) {
+            memcpy(credit_frame, frame, length);
+            credit_frame_length = length;
+        } else {
+            assert(credit_frame_length == length && memcmp(credit_frame, frame, length) == 0);
+        }
+    }
+    if (always_busy || busy_writes != 0) {
+        if (busy_writes != 0) --busy_writes;
+        return ROB_ERR_QUEUE_FULL;
+    }
     memcpy(written, frame, length);
     written_length = length;
     ++writes;
+    if (receipt_on_write && frame[3] == 1) return_receipt = true;
     return short_write ? (int)length - 1 : (int)length;
 }
 
 static rob_ret_val_t send_payload(uint32_t length, bool receipt)
 {
-    uint8_t data[ROBUSTO_PREFIX_BYTES + ROBUSTO_HALOW_PAYLOAD_MAX + 1] = {0};
+    uint8_t data[ROBUSTO_PREFIX_BYTES + ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1] = {0};
     media_queue_item_t item = {0};
     item.peer = &remote;
     item.data = data;
     item.data_length = ROBUSTO_PREFIX_BYTES + length;
+    item.on_release_cb = halow_get_queue_context()->on_release_cb;
     item.receipt = receipt;
     halow_get_queue_context()->on_work_cb(&item);
     return work_result;
+}
+
+static void test_backpressure(void)
+{
+    unsigned long before = now;
+    unsigned before_writes = writes;
+    check_credit_unlock = true;
+    credit_delays = 0;
+    compare_credit_frame = true;
+    busy_writes = 2;
+    assert(send_payload(10, false) == ROB_OK);
+    compare_credit_frame = false;
+    assert(credit_delays == 2 && now - before == 20 && writes == before_writes + 1);
+    busy_writes = 2;
+    receipt_on_write = true;
+    assert(send_payload(10, true) == ROB_OK);
+    receipt_on_write = false;
+
+    always_busy = true;
+    before = now;
+    before_writes = writes;
+    assert(send_payload(10, false) == ROB_ERR_TIMEOUT);
+    assert(now - before >= CONFIG_ROB_RECEIPT_TIMEOUT_MS);
+    assert(now - before <= CONFIG_ROB_RECEIPT_TIMEOUT_MS + 10U);
+    assert(writes == before_writes);
+    always_busy = false;
+    busy_writes = 1;
+    lose_link_on_delay = true;
+    assert(send_payload(10, false) == ROB_ERR_NOT_READY);
+    assert(robusto_halow_set_link_ready(true) == ROB_OK);
+    check_credit_unlock = false;
+
+    uint8_t frame[ROBUSTO_HALOW_HEADER_SIZE + 6] = {'R', 'H', 1, 1};
+    memcpy(frame + 8, remote.base_mac_address, 6);
+    frame[14] = 6;
+    frame[ROBUSTO_HALOW_HEADER_SIZE + 4] = MSG_MESSAGE;
+    seal(frame, sizeof(frame));
+    busy_writes = 1;
+    before = now;
+    assert(robusto_halow_receive(radio_mac, frame, sizeof(frame), NULL) == ROB_ERR_QUEUE_FULL);
+    assert(now == before);
+    uint8_t check[ROBUSTO_HALOW_HEADER_SIZE + 18] = {'R', 'H', 1, 0};
+    memcpy(check + 8, remote.base_mac_address, 6);
+    check[14] = 18;
+    check[ROBUSTO_HALOW_HEADER_SIZE + 4] = MSG_FRAGMENTED;
+    check[ROBUSTO_HALOW_HEADER_SIZE + 5] = FRAG_CHECK | 0x80U;
+    check[ROBUSTO_HALOW_HEADER_SIZE + 6] = 1;
+    check[ROBUSTO_HALOW_HEADER_SIZE + 14] = 1;
+    seal(check, sizeof(check));
+    busy_writes = 1;
+    rx_fragment_backpressure = true;
+    assert(robusto_halow_receive(radio_mac, check, sizeof(check), NULL) == ROB_OK);
+    rx_fragment_backpressure = false;
+    assert(now == before && busy_writes == 0);
+    received_fragments = 0;
+}
+
+static void test_large_send_reservation(void)
+{
+    queue_context_t *queue = halow_get_queue_context();
+    assert(queue->on_admit_cb != NULL && queue->on_release_cb != NULL);
+    uint32_t boundary = ROBUSTO_PREFIX_BYTES + ROBUSTO_HALOW_TX_PAYLOAD_MAX;
+    bool was_blocked = queue->blocked;
+    queue->blocked = true;
+    assert(queue->on_admit_cb(&remote, boundary, true) == ROB_OK);
+    queue->on_release_cb(&remote, boundary);
+    assert(!remote.halow_large_send_pending);
+    assert(queue->on_admit_cb(&remote, boundary + 1, true) == ROB_ERR_QUEUE_FULL);
+    assert(!remote.halow_large_send_pending);
+    assert(queue->on_admit_cb(&remote, boundary + 1, false) == ROB_OK);
+    assert(remote.halow_large_send_pending);
+    queue->on_release_cb(&remote, boundary + 1);
+    queue->blocked = false;
+    queue->count = queue->normal_max_count;
+    assert(queue->on_admit_cb(&remote, boundary + 1, true) == ROB_ERR_QUEUE_FULL);
+    queue->count = 0;
+    assert(queue->on_admit_cb(&remote, boundary + 1, true) == ROB_OK);
+    assert(queue->on_admit_cb(&remote, boundary + 1, true) == ROB_ERR_QUEUE_FULL);
+    assert(queue->on_admit_cb(&remote, boundary, true) == ROB_OK);
+    queue->on_release_cb(&remote, boundary);
+    assert(remote.halow_large_send_pending);
+    queue->on_release_cb(&remote, boundary + 1);
+    assert(!remote.halow_large_send_pending);
+    queue->blocked = was_blocked;
+    robusto_peer_t other = {0};
+    assert(robusto_halow_begin_large_send(NULL) == ROB_ERR_INVALID_ARG);
+    reject_queue_lock = true;
+    assert(robusto_halow_begin_large_send(&remote) == ROB_ERR_MUTEX);
+    reject_queue_lock = false;
+    assert(!remote.halow_large_send_pending);
+    assert(robusto_halow_begin_large_send(&remote) == ROB_OK);
+    assert(robusto_halow_begin_large_send(&remote) == ROB_ERR_QUEUE_FULL);
+    assert(send_payload(10, false) == ROB_OK);
+    assert(remote.halow_large_send_pending);
+    assert(robusto_halow_begin_large_send(&other) == ROB_OK);
+    robusto_halow_end_large_send(&other);
+    assert(!other.halow_large_send_pending && remote.halow_large_send_pending);
+    assert(send_payload(ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1, false) == ROB_OK);
+    assert(!remote.halow_large_send_pending);
+    assert(robusto_halow_begin_large_send(&remote) == ROB_OK);
+    media_queue_item_t *item = robusto_malloc(sizeof(*item));
+    assert(item != NULL);
+    memset(item, 0, sizeof(*item));
+    item->peer = &remote;
+    item->data_length = ROBUSTO_PREFIX_BYTES + ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1;
+    item->on_release_cb = halow_get_queue_context()->on_release_cb;
+    item->data = robusto_malloc(item->data_length);
+    assert(item->data != NULL);
+    free_work_item = check_large_owned = true;
+    fragmented_result = ROB_ERR_SEND_FAIL;
+    halow_get_queue_context()->on_work_cb(item);
+    assert(work_result == ROB_ERR_SEND_FAIL && !remote.halow_large_send_pending);
+    free_work_item = check_large_owned = false;
+    fragmented_result = ROB_OK;
+}
+
+static media_queue_item_t *queued_item(robusto_peer_t *peer, uint32_t payload_length)
+{
+    media_queue_item_t *item = calloc(1, sizeof(*item));
+    assert(item != NULL);
+    item->peer = peer;
+    item->data_length = ROBUSTO_PREFIX_BYTES + payload_length;
+    item->data = calloc(1, item->data_length);
+    assert(item->data != NULL);
+    halow_get_queue_context()->insert_tail_cb(halow_get_queue_context(), item);
+    return item;
+}
+
+static void test_small_message_service(void)
+{
+    robusto_peer_t other = {0};
+    assert(robusto_halow_begin_large_send(&remote) == ROB_OK);
+    assert(robusto_halow_begin_large_send(&other) == ROB_OK);
+    media_queue_item_t *large = queued_item(&other, ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1);
+    first_small = queued_item(&remote, 10);
+    second_small = queued_item(&remote, 11);
+    first_small->receipt = true;
+    second_small->receipt = true;
+    return_receipt = true;
+    exercise_small_service = true;
+    assert(send_payload(ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1, false) == ROB_OK);
+    exercise_small_service = false;
+    return_receipt = false;
+    assert(!remote.halow_large_send_pending && other.halow_large_send_pending);
+    assert(first_small == NULL && second_small == NULL);
+    assert(halow_get_queue_context()->first_queue_item_cb(halow_get_queue_context()) == large);
+    halow_get_queue_context()->remove_first_queueitem_cb(halow_get_queue_context());
+    robusto_free(large->data);
+    robusto_free(large);
+    robusto_halow_end_large_send(&other);
+    assert(halow_get_queue_context()->count == 0);
+    received_fragments = 0;
+
+    uint8_t frame[ROBUSTO_HALOW_FRAME_MAX] = {'R', 'H', 1, 0};
+    memcpy(frame + 8, remote.base_mac_address, 6);
+    frame[14] = (uint8_t)ROBUSTO_HALOW_PAYLOAD_MAX;
+    frame[15] = (uint8_t)(ROBUSTO_HALOW_PAYLOAD_MAX >> 8);
+    frame[ROBUSTO_HALOW_HEADER_SIZE + 4] = MSG_MESSAGE;
+    seal(frame, sizeof(frame));
+    unsigned before = received_messages;
+    assert(robusto_halow_receive(radio_mac, frame, sizeof(frame), NULL) == ROB_OK);
+    assert(received_messages == before + 1);
+    received_messages = before;
 }
 
 static void test_presentation_reservation(void)
@@ -320,6 +603,9 @@ int main(void)
     assert(robusto_halow_register_driver(&binding) == ROB_OK);
 #endif
     assert(robusto_halow_init("contract") == ROB_OK);
+    robusto_halow_rx_stats_t rx_stats = {0};
+    assert(robusto_halow_get_rx_stats(&rx_stats) == ROB_ERR_NOT_SUPPORTED);
+    assert(rx_stats.spi_frames == 0 && rx_stats.spi_unready == 0 && rx_stats.envelopes == 0);
 #ifdef CONFIG_ROBUSTO_HALOW_SPI
     assert(spi_registrations == 2);
 #endif
@@ -348,11 +634,14 @@ int main(void)
     assert(robusto_halow_set_link_ready(true) == ROB_OK);
     assert(!halow_get_queue_context()->blocked);
 
-    assert(send_payload(ROBUSTO_HALOW_PAYLOAD_MAX, false) == ROB_OK);
-    assert(written_length == 1642);
+    assert(send_payload(ROBUSTO_HALOW_TX_PAYLOAD_MAX, false) == ROB_OK);
+    assert(written_length == ROBUSTO_HALOW_TX_FRAME_MAX);
     assert(written[0] == 'R' && written[1] == 'H' && written[2] == 1 && written[3] == 0);
-    assert(send_payload(ROBUSTO_HALOW_PAYLOAD_MAX + 1, false) == ROB_OK);
+    assert(send_payload(ROBUSTO_HALOW_TX_PAYLOAD_MAX + 1, false) == ROB_OK);
     assert(fragmented_sends == 1);
+    test_backpressure();
+    test_large_send_reservation();
+    test_small_message_service();
     short_write = 1;
     assert(send_payload(10, false) == ROB_ERR_SEND_FAIL);
     short_write = 0;
@@ -406,11 +695,24 @@ int main(void)
     frame[14] = 6;
     frame[ROBUSTO_HALOW_HEADER_SIZE + 5] = FRAG_CHECK;
     seal(frame, sizeof(frame));
-    assert(robusto_halow_receive(radio_mac, frame, sizeof(frame), NULL) == ROB_OK);
+    assert(robusto_halow_receive(radio_mac, frame, sizeof(frame), NULL) == ROB_ERR_PARSING_FAILED);
+    uint8_t check_v2[ROBUSTO_HALOW_HEADER_SIZE + 18] = {'R', 'H', 1, 0};
+    memcpy(check_v2 + 8, remote.base_mac_address, 6);
+    check_v2[14] = 18;
+    check_v2[ROBUSTO_HALOW_HEADER_SIZE + 4] = MSG_FRAGMENTED;
+    check_v2[ROBUSTO_HALOW_HEADER_SIZE + 5] = FRAG_CHECK | 0x80U;
+    seal(check_v2, sizeof(check_v2));
+    assert(robusto_halow_receive(radio_mac, check_v2, sizeof(check_v2), NULL) == ROB_ERR_PARSING_FAILED);
+    check_v2[ROBUSTO_HALOW_HEADER_SIZE + 6] = 1;
+    seal(check_v2, sizeof(check_v2));
+    assert(robusto_halow_receive(radio_mac, check_v2, sizeof(check_v2), NULL) == ROB_ERR_PARSING_FAILED);
+    check_v2[ROBUSTO_HALOW_HEADER_SIZE + 14] = 1;
+    seal(check_v2, sizeof(check_v2));
+    assert(robusto_halow_receive(radio_mac, check_v2, sizeof(check_v2), NULL) == ROB_OK);
     assert(received_fragments == 1);
     const uint8_t subtypes[] = { FRAG_REQUEST, FRAG_MESSAGE, FRAG_RESULT };
     for (unsigned i = 0; i < sizeof(subtypes); ++i) {
-        frame[ROBUSTO_HALOW_HEADER_SIZE + 5] = subtypes[i];
+        frame[ROBUSTO_HALOW_HEADER_SIZE + 5] = subtypes[i] | 0x80U;
         seal(frame, sizeof(frame));
         old_writes = writes;
         assert(robusto_halow_receive(radio_mac, frame, sizeof(frame), NULL) == ROB_ERR_MESSAGE_TOO_SHORT);

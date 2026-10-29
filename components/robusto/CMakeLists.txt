@@ -79,7 +79,7 @@ if(CONFIG_ROBUSTO_SUPPORTS_HALOW)
 endif()
 
 if(CMAKE_BUILD_EARLY_EXPANSION OR CONFIG_ROBUSTO_HALOW_SPI)
-    list(APPEND rob_halow_private_requirements esp_driver_spi esp_driver_uart)
+    list(APPEND rob_halow_private_requirements esp_driver_spi esp_driver_uart esp_hw_support)
 endif()
 if(CONFIG_ROBUSTO_HALOW_SPI AND NOT CMAKE_BUILD_EARLY_EXPANSION)
     if(NOT CONFIG_IDF_TARGET_ESP32P4)

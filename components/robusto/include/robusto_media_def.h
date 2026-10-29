@@ -217,6 +217,8 @@ extern "C"
         bool important;
         /* Reserved presentation reason bit; zero for ordinary work and replies. */
         uint8_t presentation_mask;
+        /* Admission ownership follows the work item, independently of queue depth. */
+        release_work_cb *on_release_cb;
         /* Queue reference */
         STAILQ_ENTRY(media_queue_item)
         items;

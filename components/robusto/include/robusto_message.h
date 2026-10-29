@@ -105,6 +105,22 @@ rob_ret_val_t send_message_multi(robusto_peer_t *peer, uint16_t service_id, uint
  * @return rob_ret_val_t Was the message successfully built and put on the queue for sending?
  */
 rob_ret_val_t send_message_raw(robusto_peer_t *peer, e_media_type media_type,  uint8_t *data, uint32_t data_length, queue_state *state, bool receipt);
+typedef struct robusto_send_admission {
+    robusto_peer_t *peer;
+    queue_context_t *queue;
+    e_media_type media_type;
+    uint32_t data_length;
+    release_work_cb *on_release_cb;
+    bool active;
+} robusto_send_admission_t;
+
+/* Zero-initialize; do not copy an active token. Prepare before allocating; cancel on construction failure. */
+rob_ret_val_t robusto_prepare_send(robusto_peer_t *peer, e_media_type media_type,
+                                  uint32_t data_length, robusto_send_admission_t *admission);
+void robusto_cancel_send(robusto_send_admission_t *admission);
+/* Consumes admission on success or failure; payload ownership transfers only on ROB_OK. */
+rob_ret_val_t send_message_raw_admitted(robusto_send_admission_t *admission, uint8_t *data,
+                                       queue_state *state, bool receipt);
 bool robusto_send_queue_accepts_large_message(e_media_type media_type);
 /**
  * @brief For internal use, like send_message_raw but takes more parameters for recursion and heartbeats
@@ -163,6 +179,9 @@ typedef struct fragmented_message
     bool is_receiver;
     // The hash of the message, used to identify the message
     uint32_t hash;
+    /* HaLow v2 separates transfer identity and recovery rounds from the CRC. */
+    uint64_t transfer_id;
+    uint32_t recovery_round;
     // We do not reuse the data pointer to:
     // 1. save memory on sender, 2. make testing in the same space possible
     // The data to send

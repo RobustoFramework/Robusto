@@ -96,6 +96,10 @@ static bool espnow_drop_full_item(void *queued_item)
              item->peer != NULL ? (int)item->peer->espnow_info.latest_rssi_dbm : 0);
 
     robusto_set_queue_state_result(item->state, ROB_ERR_QUEUE_FULL);
+    if (item->on_release_cb != NULL) {
+        item->on_release_cb(item->peer, item->data_length);
+        item->on_release_cb = NULL;
+    }
     if (item->data != NULL) {
         robusto_free(item->data);
         item->data = NULL;

@@ -151,6 +151,10 @@ extern "C"
 
     typedef void(poll_callback)(void *q_context);
 
+    /* before_allocation allows optional early preflight without changing ordinary enqueue policy. */
+    typedef rob_ret_val_t(admit_work_cb)(void *owner, uint32_t data_length, bool before_allocation);
+    typedef void(release_work_cb)(void *owner, uint32_t data_length);
+
     typedef struct queue_context
     {
         /* Queue management callbacks, needed because of the difficulties in passing queues as pointers */
@@ -162,6 +166,9 @@ extern "C"
         insert_queue_item *insert_head_cb;
         /* Mandatory callback that handles incoming work items */
         work_callback *on_work_cb;
+        /* Optional policy; message workers and media discard callbacks release successful admission. */
+        admit_work_cb *on_admit_cb;
+        release_work_cb *on_release_cb;
 
         /* Log prefix */
         const char *log_prefix;

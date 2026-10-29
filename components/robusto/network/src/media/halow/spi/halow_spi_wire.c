@@ -3,6 +3,7 @@
 #include <string.h>
 
 extern struct hgic_raw hgic;
+static bool rx_cookie_valid;
 extern unsigned char crc7_be(unsigned char crc, const unsigned char *buffer,
                             unsigned int length);
 
@@ -32,6 +33,12 @@ bool robusto_halow_spi_register_response(const uint8_t response[18],
 
 _Static_assert(sizeof(struct hgic_frm_hdr2) + sizeof(struct eth_hdr) == 22,
                "Vendor raw frame overhead changed");
+
+void robusto_halow_spi_reset_rx_cookie(void)
+{
+    rx_cookie_valid = false;
+    hgic.rxcookie = 0;
+}
 
 const char *robusto_halow_spi_event_name(uint16_t id)
 {
@@ -107,6 +114,8 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
     uint8_t type = buffer[2];
     if (type == HGIC_HDR_TYPE_TEST2) {
         packet->loopback = true;
+        packet->loopback_payload = buffer + sizeof(struct hgic_hdr);
+        packet->loopback_length = wire_length - sizeof(struct hgic_hdr);
         packet->loopback_valid =
             wire_length == sizeof(struct hgic_hdr) + sizeof(ROBUSTO_HALOW_SPI_AP_PROBE) - 1 &&
             memcmp(buffer + sizeof(struct hgic_hdr), ROBUSTO_HALOW_SPI_AP_PROBE,
@@ -128,15 +137,17 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
             buffer[21] != (HGIC_RAW_ETHTYPE & 0xff)) {
             return false;
         }
-        unsigned char *data = buffer;
-        unsigned int data_length = wire_length;
-        if (hgic_raw_rx(&data, &data_length) != HGIC_RAW_RX_TYPE_DATA ||
-            data_length != wire_length - sizeof(struct hgic_frm_hdr2)) {
-            return false;
-        }
+        packet->cookie_previous = hgic.rxcookie;
+        packet->cookie_expected = (uint16_t)(hgic.rxcookie + 1U);
+        packet->cookie_received = get_unaligned_le16(buffer + 6);
+        packet->cookie_discontinuity = rx_cookie_valid &&
+            packet->cookie_received != packet->cookie_expected;
+        hgic.rxcookie = packet->cookie_received;
+        rx_cookie_valid = true;
+        const uint8_t *data = buffer + sizeof(struct hgic_frm_hdr2);
         memcpy(packet->source, data + 6, 6);
         packet->frame = data + sizeof(struct eth_hdr);
-        packet->length = data_length - sizeof(struct eth_hdr);
+        packet->length = wire_length - overhead;
         return true;
     }
     if (wire_length < CMD_HDR_LEN) {
@@ -169,12 +180,14 @@ bool robusto_halow_spi_parse(uint8_t *buffer, size_t length,
             hgic.status.conn_state = status == 9;
             break;
         case HGIC_CMD_SET_WORK_MODE:
+        case HGIC_CMD_SET_FRG_THRESHOLD:
         case HGIC_CMD_RADIO_ONOFF:
         case HGIC_CMD_SET_SSID:
         case HGIC_CMD_SET_KEY_MGMT:
         case HGIC_CMD_SET_WPA_PSK:
         case HGIC_CMD_SET_BSS_BW:
         case HGIC_CMD_SET_CHAN_LIST:
+        case HGIC_CMD_SET_ATCMD:
         case HGIC_CMD_GET_SSID:
         case HGIC_CMD_GET_KEY_MGMT:
         case HGIC_CMD_GET_BSS_BW:

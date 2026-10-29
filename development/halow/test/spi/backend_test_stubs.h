@@ -205,9 +205,19 @@ static inline int spi_bus_add_device(int host, const spi_device_interface_config
 }
 static inline int spi_device_get_actual_freq(spi_device_handle_t handle, int *frequency)
 { (void)handle; *frequency = 40000; return ESP_OK; }
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+int test_spi_transmit(spi_transaction_t *transaction);
+#endif
 static inline int spi_device_polling_transmit(spi_device_handle_t handle,
                                              spi_transaction_t *transaction)
-{ (void)handle; (void)transaction; assert(false); return ESP_FAIL; }
+{
+    (void)handle;
+#ifdef CONFIG_ROBUSTO_HALOW_SPI_TX_TRACE
+    return test_spi_transmit(transaction);
+#else
+    (void)transaction; assert(false); return ESP_FAIL;
+#endif
+}
 static inline int spi_bus_remove_device(spi_device_handle_t handle)
 {
     (void)handle;
@@ -233,6 +243,7 @@ static inline int gpio_config(const gpio_config_t *config) { (void)config; retur
 static inline int gpio_reset_pin(int pin) { (void)pin; return ESP_OK; }
 static inline int gpio_get_level(int pin) { (void)pin; return 0; }
 static inline int64_t esp_timer_get_time(void) { return (int64_t)test_ticks * 1000; }
+uint32_t esp_random(void);
 
 #define UART_NUM_2 2
 #define UART_DATA_8_BITS 8
