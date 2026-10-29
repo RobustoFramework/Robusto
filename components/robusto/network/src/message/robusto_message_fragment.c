@@ -770,7 +770,7 @@ void handle_frag_request(robusto_peer_t *peer, e_media_type media_type, const ui
     last_frag_msg = frag_msg;
     media->last_receive = r_millis();
     if (media_type == robusto_mt_halow) {
-        ROB_LOGI(fragmentation_log_prefix,
+        ROB_LOGD(fragmentation_log_prefix,
                  "HaLow RX transfer request hash=%lu bytes=%lu fragments=%lu chunk=%lu id=%016llx",
                  (unsigned long)frag_msg->hash, (unsigned long)frag_msg->receive_buffer_length,
                  (unsigned long)frag_msg->fragment_count, (unsigned long)frag_msg->fragment_size,
@@ -900,7 +900,7 @@ void check_fragments(robusto_peer_t *peer, e_media_type media_type, fragmented_m
                     ROB_LOGE(fragmentation_log_prefix, "Failed sending fragment handoff result hash=%lu rc=%i", (unsigned long)frag_msg->hash, result_rc);
                 }
                 if (incoming_result == ROB_OK) {
-                    ROB_LOGI(fragmentation_log_prefix,
+                    ROB_LOGD(fragmentation_log_prefix,
                              "HaLow RX reassembled hash=%lu bytes=%lu fragments=%lu incoming_rc=%d id=%016llx",
                              (unsigned long)frag_msg->hash, (unsigned long)frag_msg->receive_buffer_length,
                              (unsigned long)frag_msg->fragment_count, incoming_result,
@@ -988,7 +988,7 @@ void handle_frag_message(robusto_peer_t *peer, e_media_type media_type, const ui
     if (media_type == robusto_mt_halow && first_reception &&
         (msg_frag_count == 0 || (msg_frag_count + 1U) % 32U == 0 ||
          msg_frag_count == frag_msg->fragment_count - 1U)) {
-        ROB_LOGI(fragmentation_log_prefix,
+        ROB_LOGD(fragmentation_log_prefix,
                  "HaLow RX fragment stored hash=%lu index=%lu count=%lu bytes=%lu",
                  (unsigned long)frag_msg->hash, (unsigned long)msg_frag_count,
                  (unsigned long)frag_msg->fragment_count, (unsigned long)curr_frag_size);

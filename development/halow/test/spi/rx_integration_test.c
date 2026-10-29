@@ -97,15 +97,15 @@ void rob_log_write(rob_log_level_t level, const char *tag, const char *format, .
         ++envelope_logs;
     }
     if (strstr(format, "HaLow RX transfer request") != NULL) {
-        assert(level == ROB_LOG_INFO);
+        assert(level == ROB_LOG_DEBUG);
         ++request_logs;
     }
     if (strstr(format, "HaLow RX fragment stored") != NULL) {
-        assert(level == ROB_LOG_INFO);
+        assert(level == ROB_LOG_DEBUG);
         ++progress_logs;
     }
     if (strstr(format, "HaLow RX reassembled") != NULL) {
-        assert(level == ROB_LOG_INFO);
+        assert(level == ROB_LOG_DEBUG);
         ++completion_logs;
     }
     if (strstr(format, "HaLow RX incoming handoff failed") != NULL) {
@@ -140,6 +140,12 @@ rob_ret_val_t init_work_queue(queue_context_t *queue, const char *prefix, const 
     return ROB_OK;
 }
 void set_queue_blocked(queue_context_t *queue, bool blocked) { queue->blocked = blocked; }
+bool robusto_send_queue_accepts_large_message(e_media_type medium)
+{
+    (void)medium;
+    assert(!"RX integration must not preflight the outgoing queue");
+    return false;
+}
 void send_work_item(media_queue_item_t *item, robusto_media_t *info, e_media_type medium,
                     send_callback_cb *send, poll_callback_cb *poll, queue_context_t *queue)
 {
@@ -447,7 +453,8 @@ int main(void)
         unsigned before = deliveries;
         request();
         request();
-        assert(request_logs == 1 && receipts == 2);
+        unsigned details_enabled = CONFIG_ROB_LOG_MAXIMUM_LEVEL >= ROB_LOG_DEBUG ? 1U : 0U;
+        assert(request_logs == details_enabled && receipts == 2);
         for (uint32_t i = 0; i < fragments; ++i) {
             if (i != 1) fragment(i, false);
             if (i == 0) fragment(i, false);
@@ -457,12 +464,13 @@ int main(void)
         assert(resends == 1);
         fragment(1, false);
         assert(deliveries == before + 1 && allocations == persistent_allocations);
-        assert(results == 1 && last_result == ROB_OK && completion_logs == 1);
+        assert(results == 1 && last_result == ROB_OK && completion_logs == details_enabled);
         unsigned expected_progress = 1 + fragments / 32U + (fragments % 32U != 0);
-        assert(progress_logs == expected_progress);
+        assert(progress_logs == expected_progress * details_enabled);
         check();
         assert(results == 2 && deliveries == before + 1);
-        printf("Integrated SPI/HaLow RX: 55KB chunk=%u, padded reads, duplicates, missing-fragment recovery and bounded INFO logs passed\n", chunk);
+        printf("Integrated SPI/HaLow RX: 55KB chunk=%u, padded reads, duplicates, recovery and %s transfer logs passed\n",
+               chunk, details_enabled ? "bounded DEBUG" : "quiet INFO");
     }
     assert(envelope_logs == 1 + wire_receives / 64U);
     test_all_missing_snapshot();

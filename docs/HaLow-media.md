@@ -1184,14 +1184,18 @@ restart on transport initialization; adapter counts span the initialized medium'
 lifetime. Frames withheld because the link is not ready are reported separately,
 on the first occurrence and every 64th occurrence.
 
-HaLow transfer diagnostics report one newly initialized receive request with its
+At DEBUG level, HaLow transfer diagnostics report one newly initialized receive request with its
 hash, total bytes, fragment count and advertised chunk size. Stored-fragment
 progress is logged for index zero, every 32nd index and the last index, only on
 first reception of those indices. Duplicate packets do not repeat progress logs.
 After full-message CRC verification, the incoming handoff is reported with its
 return code; a rejected handoff is an ERROR, not a successful-delivery message.
 An accepted handoff does not prove that an application callback has run.
-No payload bytes or keys are included in these INFO diagnostics.
+Normal INFO logging omits receive-request details, stored-fragment progress and
+successful-reassembly details. They are controlled by the normal Robusto log
+level, not the optional `CONFIG_ROBUSTO_HALOW_RX_TRACE` setting. Startup/readback
+summaries, warnings and errors remain at their existing levels. No payload bytes
+or keys are included in these diagnostics.
 
 Every HaLow check that finds all fragments missing now emits an adjacent WARN
 snapshot, `HaLow RX all-missing`, with the transfer hash, statistics level,
@@ -1278,7 +1282,7 @@ It injects 55002-byte transfers with 214-, 982- and 1600-byte v2 chunks (includi
 full 1664-byte vendor frames), padded reads, duplicate requests/fragments,
 missing-fragment recovery, CRC errors and incoming-handoff rejection. It verifies
 byte-for-byte reconstructed content, protocol replies, allocation cleanup and
-the bounded INFO progress/completion logs. Only platform services, peer lookup,
+quiet INFO logging and the bounded DEBUG progress/completion logs. Only platform services, peer lookup,
 the physical writer and final incoming consumer are simulated; this is not an
 over-the-air or application/PubSub callback test.
 Cooperative-service tests cover large-item bypass, one small item per service

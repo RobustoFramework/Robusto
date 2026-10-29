@@ -52,30 +52,32 @@ if ($LASTEXITCODE -ne 0) { throw "SDSPI check compilation failed ($LASTEXITCODE)
 & $checksExecutable
 if ($LASTEXITCODE -ne 0) { throw "SDSPI check assertions failed ($LASTEXITCODE)" }
 
-$rxExecutable = Join-Path $output 'rx-integration-test.exe'
-$rxArguments = @()
-if ((Split-Path $Compiler -Leaf) -eq 'zig.exe') { $rxArguments += 'cc' }
-$rxArguments += @(
-    '-std=c11', '-Wall', '-Wextra', '-Wno-unused-parameter',
-    '-DCONFIG_ROB_LOG_MAXIMUM_LEVEL=3',
-    '-DCONFIG_ROBUSTO_HALOW_RX_TRACE=1',
-    '-I', (Join-Path $PSScriptRoot '..\support'),
-    '-I', (Join-Path $repo 'components\robusto\include'),
-    '-I', (Join-Path $repo 'components\robusto\base\src\system'),
-    '-I', $component, '-I', $VendorSource,
-    (Join-Path $component 'halow_spi_wire.c'),
-    (Join-Path $component '..\halow.c'),
-    (Join-Path $repo 'components\robusto\network\src\message\robusto_message_fragment.c'),
-    (Join-Path $repo 'components\robusto\base\src\system\compat_crc32.c'),
-    (Join-Path $PSScriptRoot 'rx_integration_test.c'),
-    '-o', $rxExecutable
-)
-& $Compiler @rxArguments
-if ($LASTEXITCODE -ne 0) {
-    throw "RX integration compilation failed ($LASTEXITCODE)"
+foreach ($logLevel in @(3, 4)) {
+    $rxExecutable = Join-Path $output "rx-integration-test-$logLevel.exe"
+    $rxArguments = @()
+    if ((Split-Path $Compiler -Leaf) -eq 'zig.exe') { $rxArguments += 'cc' }
+    $rxArguments += @(
+        '-std=c11', '-Wall', '-Wextra', '-Wno-unused-parameter',
+        "-DCONFIG_ROB_LOG_MAXIMUM_LEVEL=$logLevel",
+        '-DCONFIG_ROBUSTO_HALOW_RX_TRACE=1',
+        '-I', (Join-Path $PSScriptRoot '..\support'),
+        '-I', (Join-Path $repo 'components\robusto\include'),
+        '-I', (Join-Path $repo 'components\robusto\base\src\system'),
+        '-I', $component, '-I', $VendorSource,
+        (Join-Path $component 'halow_spi_wire.c'),
+        (Join-Path $component '..\halow.c'),
+        (Join-Path $repo 'components\robusto\network\src\message\robusto_message_fragment.c'),
+        (Join-Path $repo 'components\robusto\base\src\system\compat_crc32.c'),
+        (Join-Path $PSScriptRoot 'rx_integration_test.c'),
+        '-o', $rxExecutable
+    )
+    & $Compiler @rxArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "RX integration compilation failed at log level $logLevel ($LASTEXITCODE)"
+    }
+    & $rxExecutable
+    if ($LASTEXITCODE -ne 0) { throw "RX integration assertions failed at log level $logLevel ($LASTEXITCODE)" }
 }
-& $rxExecutable
-if ($LASTEXITCODE -ne 0) { throw "RX integration assertions failed ($LASTEXITCODE)" }
 
 $stubs = Join-Path $output 'idf-stubs'
 $stubHeaders = @(
